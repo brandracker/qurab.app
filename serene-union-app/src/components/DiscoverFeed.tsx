@@ -3,7 +3,7 @@ import type { UserProfile, FilterState } from '../types';
 import { FilterModal } from './FilterModal';
 import { MutualMatchModal } from './MutualMatchModal';
 import { ProfileDetailModal } from './ProfileDetailModal';
-import { dbService, API_BASE } from '../services/dbService';
+import { dbService } from '../services/dbService';
 
 interface Props {
   onOpenChat: (convId: string) => void;
@@ -30,6 +30,8 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
   useEffect(() => {
     setIsLoading(true);
     dbService.fetchLiveProfiles().then(live => {
@@ -47,25 +49,23 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
     setProfiles(updated);
   };
 
-  const handleLike = (profile: UserProfile) => {
-    const user = dbService.getCurrentUser();
-    try {
-      fetch(`${API_BASE}/matches/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          senderId: user.id,
-          receiverId: profile.id,
-          action: 'liked'
-        })
-      });
-    } catch {}
+  const handleLike = async (profile: UserProfile) => {
+    // Remove from current view
+    setProfiles(prev => prev.filter(p => p.id !== profile.id));
 
-    // Show celebration modal
-    setMatchedProfile(profile);
+    const result = await dbService.sendMatchAction(profile.id, 'liked');
+    if (result.isMutual) {
+      // True mutual match celebration
+      setMatchedProfile(profile);
+    } else {
+      // One-sided like feedback toast
+      setToastMessage(`Interest expressed to ${profile.fullName.split(' ')[0]}. You will be notified when they connect!`);
+      setTimeout(() => setToastMessage(null), 3500);
+    }
   };
 
   const handlePass = (profileId: string) => {
+    dbService.sendMatchAction(profileId, 'passed');
     setProfiles(prev => prev.filter(p => p.id !== profileId));
   };
 
@@ -116,6 +116,19 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
           )}
         </button>
       </header>
+
+      {/* Action Toast Feedback */}
+      {toastMessage && (
+        <div className="bg-primary/95 text-on-primary px-4 py-2.5 text-xs font-semibold flex items-center justify-between shadow-md animate-fade-in z-30">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-sm">check_circle</span>
+            <span>{toastMessage}</span>
+          </div>
+          <button onClick={() => setToastMessage(null)} className="text-white/80 hover:text-white">
+            <span className="material-symbols-outlined text-xs">close</span>
+          </button>
+        </div>
+      )}
 
       {/* Main Content Canvas - Scrollable Feed */}
       <main className="flex-1 overflow-y-auto px-container-padding pb-28 pt-2 space-y-6">

@@ -125,7 +125,46 @@ class DBService {
 
   getConversations(): Conversation[] {
     const data = localStorage.getItem(this.conversationsKey);
-    return data ? JSON.parse(data) : [];
+    if (data) {
+      try {
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch {}
+    }
+
+    const defaultProfile = this.getAllProfiles().find(p => p.id === 'usr_001') || this.getAllProfiles()[0];
+    const user = this.getCurrentUser();
+    const convId = `conv_${[user.id, defaultProfile.id].sort().join('_')}`;
+
+    const initialSeed: Conversation[] = [
+      {
+        id: convId,
+        participantOne: user.id,
+        participantTwo: defaultProfile.id,
+        otherUser: defaultProfile,
+        lastMessageText: "Assalamu Alaikum! May Allah bless our search for a righteous spouse.",
+        lastMessageSenderId: defaultProfile.id,
+        lastMessageTime: "10:30 AM",
+        unreadCount: 1,
+        waliObserverId: 'wali_001',
+        waliName: 'Tariq Al-Mansoor (Father)',
+        status: 'active',
+        messages: [
+          {
+            id: 'msg_seed_1',
+            senderId: defaultProfile.id,
+            senderName: defaultProfile.fullName,
+            text: 'Assalamu Alaikum! May Allah bless our search for a righteous spouse.',
+            timestamp: '10:30 AM',
+            isRead: true,
+            waliNotified: true
+          }
+        ]
+      }
+    ];
+
+    localStorage.setItem(this.conversationsKey, JSON.stringify(initialSeed));
+    return initialSeed;
   }
 
   async sendLiveMessage(conversationId: string, text: string): Promise<ChatMessage> {
@@ -205,6 +244,54 @@ class DBService {
     user.blurPhotosByDefault = blurPhotos;
     user.profileVisibility = visibility;
     this.setCurrentUser(user);
+  }
+
+  async sendMatchAction(targetUserId: string, action: 'liked' | 'passed'): Promise<{ isMutual: boolean; conversationId?: string; message?: string }> {
+    const user = this.getCurrentUser();
+    try {
+      const res = await fetch(`${API_BASE}/matches/action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          senderId: user.id,
+          receiverId: targetUserId,
+          action
+        })
+      });
+      const data = await res.json();
+      return {
+        isMutual: Boolean(data.isMutual),
+        conversationId: data.conversationId,
+        message: data.message
+      };
+    } catch {
+      return { isMutual: false };
+    }
+  }
+
+  async fetchLikedYouCandidates(): Promise<UserProfile[]> {
+    const user = this.getCurrentUser();
+    try {
+      const res = await fetch(`${API_BASE}/matches/received?userId=${user.id}`);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.candidates)) {
+        return data.candidates;
+      }
+    } catch {}
+    // Fallback: return discover profiles excluding current user
+    return this.getDiscoverFeed().slice(0, 4);
+  }
+
+  async fetchMutualMatches(): Promise<UserProfile[]> {
+    const user = this.getCurrentUser();
+    try {
+      const res = await fetch(`${API_BASE}/matches/mutual?userId=${user.id}`);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.matches)) {
+        return data.matches;
+      }
+    } catch {}
+    return [];
   }
 
   async fetchLiveConversations(): Promise<Conversation[]> {

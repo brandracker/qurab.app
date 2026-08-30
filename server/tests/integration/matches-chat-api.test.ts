@@ -19,8 +19,9 @@ describe('Matches, Chat, Wali & Monetization API Integration Tests', () => {
     ).run();
   });
 
-  it('POST /api/matches/action records a like or mutual match', async () => {
-    const res = await app.request('/api/matches/action', {
+  it('POST /api/matches/action handles one-sided like and true mutual match flow', async () => {
+    // 1. Brother likes Sister (one-sided)
+    const res1 = await app.request('/api/matches/action', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -30,10 +31,42 @@ describe('Matches, Chat, Wali & Monetization API Integration Tests', () => {
       })
     }, env);
 
-    expect(res.status).toBe(200);
-    const data = await res.json();
-    expect(data.success).toBe(true);
-    expect(data.isMutual).toBe(true);
+    expect(res1.status).toBe(200);
+    const data1 = await res1.json();
+    expect(data1.success).toBe(true);
+    expect(data1.isMutual).toBe(false);
+    expect(data1.conversationId).toBeNull();
+
+    // 2. Sister checks her "Liked You" list
+    const receivedRes = await app.request(`/api/matches/received?userId=${sampleSisterUser.id}`, { method: 'GET' }, env);
+    expect(receivedRes.status).toBe(200);
+    const receivedData = await receivedRes.json();
+    expect(receivedData.success).toBe(true);
+    expect(receivedData.count).toBe(1);
+    expect(receivedData.candidates[0].id).toBe(sampleBrotherUser.id);
+    expect(receivedData.candidates[0].fullName).toBe(sampleBrotherUser.full_name);
+
+    // 3. Sister likes Brother back (True Mutual Match!)
+    const res2 = await app.request('/api/matches/action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        senderId: sampleSisterUser.id,
+        receiverId: sampleBrotherUser.id,
+        action: 'liked'
+      })
+    }, env);
+
+    expect(res2.status).toBe(200);
+    const data2 = await res2.json();
+    expect(data2.success).toBe(true);
+    expect(data2.isMutual).toBe(true);
+    expect(data2.conversationId).toBeDefined();
+
+    // 4. Verify conversation row was automatically initialized in D1
+    const convRow = await env.DB.prepare(`SELECT * FROM conversations WHERE id = ?`).bind(data2.conversationId).first();
+    expect(convRow).toBeDefined();
+    expect(convRow.id).toBe(data2.conversationId);
   });
 
   it('POST & GET /api/conversations handles chat messages and sync', async () => {

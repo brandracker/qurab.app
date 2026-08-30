@@ -10,21 +10,31 @@ interface Props {
 
 export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDiscover }) => {
   const currentUser = dbService.getCurrentUser();
-  const allProfiles = dbService.getDiscoverFeed({
-    minAge: 18, maxAge: 60, maxDistance: 100, sects: [], practiceLevels: [], marriageTimelines: [], languages: []
-  });
+  const [interestedProfiles, setInterestedProfiles] = useState<UserProfile[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const [isVip, setIsVip] = useState<boolean>(() => {
     return Boolean(localStorage.getItem(`serene_vip_${currentUser.id}`) || currentUser.isVip);
   });
   const [showUpgradeModal, setShowUpgradeModal] = useState<boolean>(false);
 
-  // Simulated list of candidates who liked the current user
-  const interestedProfiles = allProfiles.slice(0, 4);
+  React.useEffect(() => {
+    setIsLoading(true);
+    dbService.fetchLikedYouCandidates().then(list => {
+      setInterestedProfiles(list || []);
+    }).finally(() => {
+      setIsLoading(false);
+    });
+  }, []);
 
-  const handleInstantMatch = (candidate: UserProfile) => {
+  const handleInstantMatch = async (candidate: UserProfile) => {
+    const res = await dbService.sendMatchAction(candidate.id, 'liked');
+    // Remove from received list
+    setInterestedProfiles(prev => prev.filter(p => p.id !== candidate.id));
+    
+    const convId = res.conversationId || `conv_${[currentUser.id, candidate.id].sort().join('_')}`;
     const newConv = dbService.createMatchConversation(candidate);
-    onOpenChat(newConv.id);
+    onOpenChat(convId || newConv.id);
   };
 
   return (
@@ -75,14 +85,20 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
           Prospective Seekers ({interestedProfiles.length})
         </h2>
 
-        <div className="grid grid-cols-2 gap-3">
-          {interestedProfiles.map(candidate => {
-            const photo = candidate.photos?.[0] || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500';
-            return (
-              <div
-                key={candidate.id}
-                className="bg-surface rounded-2xl border border-surface-variant/40 overflow-hidden flex flex-col shadow-sm relative group"
-              >
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <span className="material-symbols-outlined text-4xl text-primary animate-spin mb-2">progress_activity</span>
+            <p className="text-xs text-secondary">Checking candidates who expressed interest...</p>
+          </div>
+        ) : interestedProfiles.length > 0 ? (
+          <div className="grid grid-cols-2 gap-3">
+            {interestedProfiles.map(candidate => {
+              const photo = candidate.photos?.[0] || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500';
+              return (
+                <div
+                  key={candidate.id}
+                  className="bg-surface rounded-2xl border border-surface-variant/40 overflow-hidden flex flex-col shadow-sm relative group"
+                >
                 {/* Photo with VIP blur control */}
                 <div className="relative aspect-[3/4] bg-surface-container-high overflow-hidden">
                   <img
@@ -141,6 +157,15 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
             );
           })}
         </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-16 text-center px-4 bg-surface-container-low rounded-3xl border border-surface-variant/30">
+            <span className="material-symbols-outlined text-4xl text-outline mb-2">favorite_border</span>
+            <h3 className="font-serif font-bold text-sm text-on-surface">No New Likes Yet</h3>
+            <p className="text-xs text-secondary mt-1 max-w-xs">
+              When prospective matches like your profile on Discover, they will appear here for you to connect!
+            </p>
+          </div>
+        )}
 
         {/* Discover more button */}
         <div className="pt-6 text-center">

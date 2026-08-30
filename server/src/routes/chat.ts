@@ -110,8 +110,8 @@ chatRouter.get('/:id/messages', async (c) => {
 chatRouter.post('/:id/messages', async (c) => {
   try {
     const convId = c.req.param('id');
-    const { senderId, senderName, text, receiverId } = await c.req.json();
-    const msgId = `msg_${Date.now()}`;
+    const { senderId, senderName, text, receiverId, id } = await c.req.json();
+    const msgId = id || `msg_${Date.now()}`;
 
     if (!text || !text.trim()) {
       return c.json({ success: false, error: 'Message text is required' }, 400);

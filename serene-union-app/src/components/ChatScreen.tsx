@@ -72,22 +72,14 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
           const curr = convs.find(c => c.id === activeConvId || c.id === targetRoomId || (activeConv.otherUser && c.otherUser?.id === activeConv.otherUser.id));
           if (curr) {
             curr.id = targetRoomId;
-            const messageMap = new Map<string, ChatMessage>();
 
-            // 1. Keep local messages so they never disappear
-            (curr.messages || []).forEach(m => {
-              const key = m.id || `${m.senderId}_${m.text}`;
-              messageMap.set(key, m);
-            });
-
-            // 2. Overlay verified D1 messages
-            data.messages.forEach((m: any) => {
-              const key = m.id || `${m.senderId}_${m.text}`;
-              const formattedTime = m.timestamp && (m.timestamp.includes('T') || m.timestamp.includes('-'))
-                ? new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            // Format D1 confirmed messages
+            const formattedMessages: ChatMessage[] = data.messages.map((m: any) => {
+              const formattedTime = m.timestamp && (m.timestamp.includes('T') || m.timestamp.includes('-') || m.timestamp.includes(':'))
+                ? (m.timestamp.includes('T') || m.timestamp.includes('-') ? new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : m.timestamp)
                 : (m.timestamp || 'Just now');
 
-              messageMap.set(key, {
+              return {
                 id: m.id,
                 senderId: m.senderId,
                 senderName: m.senderName || 'Member',
@@ -95,17 +87,20 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                 timestamp: formattedTime,
                 isRead: true,
                 waliNotified: true
-              });
+              };
             });
 
-            const merged = Array.from(messageMap.values());
-            curr.messages = merged;
-            if (merged.length > 0) {
-              curr.lastMessageText = merged[merged.length - 1].text;
-              curr.lastMessageTime = merged[merged.length - 1].timestamp;
+            if (formattedMessages.length > 0) {
+              const remoteIds = new Set(formattedMessages.map(m => m.id));
+              // Keep pending local messages that haven't reached server yet
+              const pendingLocal = (curr.messages || []).filter(m => m.id && !remoteIds.has(m.id) && m.senderId === currentUser.id);
+              const merged = [...formattedMessages, ...pendingLocal];
+              curr.messages = merged;
+              curr.lastMessageText = merged[merged.length - 1]?.text || '';
+              curr.lastMessageTime = merged[merged.length - 1]?.timestamp || '';
+              localStorage.setItem('serene_conversations_v1', JSON.stringify(convs));
+              setConversations([...convs]);
             }
-            localStorage.setItem('serene_conversations_v1', JSON.stringify(convs));
-            setConversations([...convs]);
           }
         }
       } catch {}
@@ -167,6 +162,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          id: newMsg.id,
           senderId: user.id,
           senderName: user.fullName || 'Member',
           text,

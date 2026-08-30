@@ -1,0 +1,288 @@
+import React, { useState } from 'react';
+import type { UserProfile } from '../types';
+import { CompatibilityComparisonModal } from './CompatibilityComparisonModal';
+import { dbService } from '../services/dbService';
+
+interface Props {
+  profile: UserProfile;
+  isOpen: boolean;
+  onClose: () => void;
+  onLike: (profile: UserProfile) => void;
+  onPass: (profileId: string) => void;
+}
+
+export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, onLike, onPass }) => {
+  const [selectedPhotoIdx, setSelectedPhotoIdx] = useState<number>(0);
+  const [isUnblurred, setIsUnblurred] = useState<boolean>(!profile.blurPhotosByDefault || Boolean(profile.photoRevealApproved));
+  const [showCompatibilityModal, setShowCompatibilityModal] = useState<boolean>(false);
+  const currentUser = dbService.getCurrentUser();
+
+  if (!isOpen) return null;
+
+  const photos = profile.photos && profile.photos.length > 0 
+    ? profile.photos 
+    : ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80'];
+
+  const rel = profile.religiousProfile;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-md animate-fade-in p-0 sm:p-4 font-sans">
+      <div className="w-full max-w-[480px] h-[92vh] sm:h-[88vh] bg-surface rounded-t-[32px] sm:rounded-[32px] shadow-2xl border border-surface-variant flex flex-col overflow-hidden animate-slide-up relative">
+        
+        {/* Sticky Top Header */}
+        <header className="sticky top-0 bg-surface/90 backdrop-blur-md px-5 py-3.5 border-b border-surface-variant/30 flex items-center justify-between z-30">
+          <button
+            onClick={onClose}
+            className="w-9 h-9 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface hover:bg-surface-variant transition-colors"
+          >
+            <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+          </button>
+          <span className="font-serif text-sm font-bold text-primary">Matrimonial Profile</span>
+          <button
+            onClick={() => setIsUnblurred(!isUnblurred)}
+            className="text-xs text-primary font-semibold flex items-center gap-1 bg-primary/10 px-2.5 py-1 rounded-full"
+          >
+            <span className="material-symbols-outlined text-[15px]">
+              {isUnblurred ? 'visibility_off' : 'visibility'}
+            </span>
+            <span>{isUnblurred ? 'Blur' : 'Unblur'}</span>
+          </button>
+        </header>
+
+        {/* Scrollable Profile Body */}
+        <main className="flex-1 overflow-y-auto pb-28">
+          {/* Main Photo Banner */}
+          <div className="relative w-full h-96 bg-surface-container-high overflow-hidden">
+            <img
+              src={photos[selectedPhotoIdx]}
+              alt={profile.fullName}
+              className={`w-full h-full object-cover transition-all duration-300 ${
+                !isUnblurred ? 'filter blur-xl scale-110 opacity-85' : 'scale-100'
+              }`}
+            />
+            {!isUnblurred && (
+              <div 
+                onClick={() => setIsUnblurred(true)}
+                className="absolute inset-0 flex items-center justify-center bg-black/25 cursor-pointer"
+              >
+                <div className="bg-background/90 backdrop-blur-md px-5 py-2.5 rounded-full text-xs font-semibold text-on-surface flex items-center gap-2 shadow-md">
+                  <span className="material-symbols-outlined text-[18px] text-primary">visibility</span>
+                  <span>Tap to reveal photo</span>
+                </div>
+              </div>
+            )}
+            <div className="absolute top-4 left-4 bg-background/80 backdrop-blur-sm px-3 py-1.5 rounded-full flex items-center gap-1 text-xs font-semibold text-on-surface">
+              <span className="material-symbols-outlined text-[16px] text-primary">location_on</span>
+              <span>{profile.location || 'Global'}</span>
+            </div>
+            {profile.wali && (
+              <div className="absolute top-4 right-4 bg-primary/90 backdrop-blur-sm text-white px-3 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-semibold shadow">
+                <span className="material-symbols-outlined text-[16px]">verified_user</span>
+                <span>Wali Verified</span>
+              </div>
+            )}
+          </div>
+
+          {/* Photo Thumbnails */}
+          {photos.length > 1 && (
+            <div className="flex gap-2 px-5 py-3 overflow-x-auto bg-surface-container-low border-b border-surface-variant/20">
+              {photos.map((p, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setSelectedPhotoIdx(idx)}
+                  className={`w-14 h-16 rounded-xl overflow-hidden shrink-0 border-2 transition-all ${
+                    selectedPhotoIdx === idx ? 'border-primary scale-105 shadow-sm' : 'border-transparent opacity-60'
+                  }`}
+                >
+                  <img src={p} alt={`Thumb ${idx + 1}`} className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Profile Core Header */}
+          <div className="p-5 space-y-5">
+            <div>
+              <h1 className="font-serif text-3xl font-bold text-on-surface">
+                {profile.fullName}, {profile.age}
+              </h1>
+              <p className="text-xs text-primary font-bold mt-1">
+                {rel?.sect || 'Sunni'} ({rel?.madhhab || 'Hanafi'}) · {profile.profession || 'Professional'}
+              </p>
+            </div>
+
+            {/* Values Alignment Banner Button */}
+            <button
+              type="button"
+              onClick={() => setShowCompatibilityModal(true)}
+              className="w-full p-4 rounded-2xl bg-gradient-to-r from-primary/15 to-tertiary-container/20 border border-primary/30 flex items-center justify-between text-left hover:brightness-105 transition-all shadow-sm group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center shadow-sm">
+                  <span className="material-symbols-outlined text-[20px]">psychology</span>
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-on-surface flex items-center gap-1.5">
+                    <span>94% Islamic Values Match</span>
+                    <span className="bg-primary/20 text-primary text-[9px] px-1.5 py-0.2 rounded font-mono font-bold">High</span>
+                  </h4>
+                  <p className="text-[11px] text-secondary">Tap to view 4-Pillars alignment breakdown</p>
+                </div>
+              </div>
+              <span className="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">
+                chevron_right
+              </span>
+            </button>
+
+            {/* 1. Deen & Religious Practice (Deep Faith Habits) */}
+            <div className="bg-primary/5 rounded-2xl p-4 border border-primary/20 space-y-3">
+              <h3 className="font-serif text-sm font-bold text-primary flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px]">mosque</span>
+                <span>Deen & Religious Practice</span>
+              </h3>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="bg-surface p-2.5 rounded-xl border border-surface-variant/40">
+                  <span className="text-[10px] text-secondary font-medium block">Daily Prayers</span>
+                  <strong className="text-on-surface">{rel?.prayerFrequency || '5 times daily'}</strong>
+                </div>
+                <div className="bg-surface p-2.5 rounded-xl border border-surface-variant/40">
+                  <span className="text-[10px] text-secondary font-medium block">Quran Engagement</span>
+                  <strong className="text-on-surface capitalize">{rel?.quranRecitation || 'Daily'}</strong>
+                </div>
+                <div className="bg-surface p-2.5 rounded-xl border border-surface-variant/40">
+                  <span className="text-[10px] text-secondary font-medium block">Modesty & Attire</span>
+                  <strong className="text-on-surface capitalize">{rel?.modestyPractice?.replace('_', ' ') || 'Modest'}</strong>
+                </div>
+                <div className="bg-surface p-2.5 rounded-xl border border-surface-variant/40">
+                  <span className="text-[10px] text-secondary font-medium block">Hajj & Umrah</span>
+                  <strong className="text-on-surface capitalize">{rel?.hajjUmrahStatus || 'Planning'}</strong>
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Family Setup & Post-Marriage Living (Critical Alignment) */}
+            <div className="bg-surface-container-low rounded-2xl p-4 border border-surface-variant/30 space-y-3">
+              <h3 className="text-xs font-bold text-secondary uppercase tracking-wider flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[16px] text-primary">home</span>
+                <span>Family & Living Arrangements</span>
+              </h3>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="bg-surface p-2.5 rounded-xl border border-surface-variant/40">
+                  <span className="text-[10px] text-secondary font-medium block">Living Post-Marriage</span>
+                  <strong className="text-on-surface capitalize text-primary">
+                    {profile.livingPreference?.replace('_', ' ') || 'Independent'}
+                  </strong>
+                </div>
+                <div className="bg-surface p-2.5 rounded-xl border border-surface-variant/40">
+                  <span className="text-[10px] text-secondary font-medium block">Family Structure</span>
+                  <strong className="text-on-surface capitalize">
+                    {profile.familyStructure || 'Nuclear'} ({profile.siblingsCount ?? 2} Siblings)
+                  </strong>
+                </div>
+                <div className="bg-surface p-2.5 rounded-xl border border-surface-variant/40">
+                  <span className="text-[10px] text-secondary font-medium block">Relocation Outlook</span>
+                  <strong className="text-on-surface capitalize">
+                    {profile.willingnessToRelocate?.replace('_', ' ') || 'Open'}
+                  </strong>
+                </div>
+                <div className="bg-surface p-2.5 rounded-xl border border-surface-variant/40">
+                  <span className="text-[10px] text-secondary font-medium block">Smoking & Habits</span>
+                  <strong className="text-on-surface capitalize">
+                    {profile.smokingStatus?.replace('_', ' ') || 'Non-Smoker'}
+                  </strong>
+                </div>
+              </div>
+            </div>
+
+            {/* 3. Career, Education & Mahr Philosophy */}
+            <div className="bg-surface-container-low rounded-2xl p-4 border border-surface-variant/30 space-y-3">
+              <h3 className="text-xs font-bold text-secondary uppercase tracking-wider flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[16px] text-primary">school</span>
+                <span>Education & Career Pedigree</span>
+              </h3>
+              <div className="space-y-2 text-xs">
+                <div className="flex items-center gap-2 text-on-surface">
+                  <span className="material-symbols-outlined text-[16px] text-primary">school</span>
+                  <span>{profile.education} {profile.university ? `· ${profile.university}` : ''}</span>
+                </div>
+                <div className="flex items-center gap-2 text-on-surface">
+                  <span className="material-symbols-outlined text-[16px] text-primary">work</span>
+                  <span>{profile.profession}</span>
+                </div>
+                <div className="flex items-center gap-2 text-on-surface">
+                  <span className="material-symbols-outlined text-[16px] text-primary">translate</span>
+                  <span>Languages: {profile.languagesSpoken || 'English, Urdu'}</span>
+                </div>
+                <div className="flex items-center gap-2 text-on-surface">
+                  <span className="material-symbols-outlined text-[16px] text-primary">favorite_border</span>
+                  <span className="capitalize">Mahr Outlook: {profile.mahrPhilosophy?.replace('_', ' ') || 'Mutual Agreement'}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 4. About My Deen & Bio Essay */}
+            <div className="bg-surface-container-low rounded-2xl p-4 border border-surface-variant/30 space-y-2">
+              <h3 className="text-xs font-bold text-secondary uppercase tracking-wider">About Me & My Faith</h3>
+              <p className="text-xs text-on-surface-variant leading-relaxed">
+                {profile.bio || rel?.deenRelationshipBio || "Seeking a pious spouse to build a righteous Islamic household founded on mutual love and respect."}
+              </p>
+            </div>
+
+            {/* 5. Wali & Chaperone Info */}
+            {profile.wali && (
+              <div className="bg-surface-container-low rounded-2xl p-4 border border-surface-variant/30 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/15 text-primary flex items-center justify-center">
+                    <span className="material-symbols-outlined text-[20px]">supervisor_account</span>
+                  </div>
+                  <div>
+                    <h4 className="font-serif font-semibold text-xs text-on-surface">Wali: {profile.wali.name}</h4>
+                    <p className="text-[11px] text-secondary">{profile.wali.relationship} · Verified Chaperone</p>
+                  </div>
+                </div>
+                <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-1 rounded">
+                  Chaperoned
+                </span>
+              </div>
+            )}
+          </div>
+        </main>
+
+        {/* Fixed Action Footer */}
+        <footer className="absolute bottom-0 left-0 right-0 bg-surface/95 backdrop-blur-md px-6 py-4 border-t border-surface-variant/30 flex items-center justify-between z-40">
+          <button
+            onClick={() => {
+              onPass(profile.id);
+              onClose();
+            }}
+            className="flex-1 max-w-[120px] py-3 rounded-full border border-secondary text-secondary font-sans text-xs font-bold hover:bg-surface-variant active:scale-95 transition-all flex items-center justify-center gap-1.5"
+          >
+            <span className="material-symbols-outlined text-[18px]">close</span>
+            <span>Pass</span>
+          </button>
+
+          <button
+            onClick={() => {
+              onLike(profile);
+              onClose();
+            }}
+            className="flex-1 ml-4 py-3 rounded-full bg-primary text-on-primary font-sans text-xs font-bold shadow-md shadow-primary/20 hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-1.5"
+          >
+            <span className="material-symbols-outlined text-[18px] fill">favorite</span>
+            <span>Express Interest (Like)</span>
+          </button>
+        </footer>
+
+        {/* Values Alignment Breakdown Modal */}
+        {showCompatibilityModal && (
+          <CompatibilityComparisonModal
+            currentUser={currentUser}
+            profile={profile}
+            isOpen={showCompatibilityModal}
+            onClose={() => setShowCompatibilityModal(false)}
+          />
+        )}
+      </div>
+    </div>
+  );
+};

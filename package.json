@@ -1,0 +1,12 @@
+{
+  "name": "serene-union-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev:server",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix serene-union-app run dev",
+    "test": "npm --prefix server test",
+    "test:watch": "npm --prefix server run test:watch"
+  }
+}

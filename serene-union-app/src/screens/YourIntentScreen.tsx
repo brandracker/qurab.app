@@ -1,0 +1,216 @@
+import React, { useState } from 'react';
+
+interface Props {
+  data?: {
+    education?: string;
+    university?: string;
+    profession?: string;
+    mahrPhilosophy?: string;
+    timeline?: string;
+    childrenDesire?: string;
+    bio?: string;
+  };
+  onBack: () => void;
+  onContinue: (careerData: {
+    education: string;
+    university: string;
+    profession: string;
+    mahrPhilosophy: string;
+    timeline: string;
+    childrenDesire: string;
+    bio: string;
+  }) => void;
+}
+
+export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) => {
+  const [education, setEducation] = useState<string>(data?.education || 'Bachelors Degree');
+  const [university, setUniversity] = useState<string>(data?.university || '');
+  const [profession, setProfession] = useState<string>(data?.profession || 'Software Engineer');
+  const [mahrPhilosophy, setMahrPhilosophy] = useState<string>(data?.mahrPhilosophy || 'mutual_agreement');
+  const [timeline, setTimeline] = useState<string>(data?.timeline || 'within_1_year');
+  const [childrenDesire, setChildrenDesire] = useState<string>(data?.childrenDesire || 'desires_children');
+  const [bio, setBio] = useState<string>(data?.bio || '');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onContinue({
+      education,
+      university,
+      profession,
+      mahrPhilosophy,
+      timeline,
+      childrenDesire,
+      bio: bio.trim() || 'Striving on the path of deen and seeking a pious partner.'
+    });
+  };
+
+  return (
+    <div className="w-full h-full flex flex-col justify-between p-6 bg-background font-sans overflow-y-auto pb-32">
+      <div>
+        {/* Header & Progress */}
+        <div className="flex items-center justify-between mb-4">
+          <button
+            onClick={onBack}
+            className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface hover:bg-surface-variant transition-colors"
+          >
+            <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+          </button>
+          <span className="text-xs font-bold text-primary tracking-widest uppercase">Step 4 of 5</span>
+          <div className="w-10" />
+        </div>
+
+        <div className="w-full bg-surface-variant h-1.5 rounded-full overflow-hidden mb-6">
+          <div className="bg-primary h-full w-[80%] transition-all duration-300" />
+        </div>
+
+        <h1 className="font-serif text-2xl font-bold text-on-surface mb-1">
+          Career, Mahr & Intent
+        </h1>
+        <p className="text-xs text-secondary mb-6 leading-relaxed">
+          Define your educational pedigree, financial outlook, and matrimonial timeline.
+        </p>
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Education & University */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-on-surface mb-1.5">Education Level</label>
+              <select
+                value={education}
+                onChange={(e) => setEducation(e.target.value)}
+                className="w-full bg-surface-container-high border border-surface-variant rounded-2xl px-3 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary"
+              >
+                {['Bachelors Degree', 'Masters Degree', 'Doctorate / PhD', 'Medical Doctor / MBBS', 'Islamic Scholar / Alimiyyah', 'Diploma / Associate', 'High School'].map(deg => (
+                  <option key={deg} value={deg}>{deg}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-on-surface mb-1.5">University / College</label>
+              <input
+                type="text"
+                value={university}
+                onChange={(e) => setUniversity(e.target.value)}
+                placeholder="e.g. LUMS / Oxford"
+                className="w-full bg-surface-container-high border border-surface-variant rounded-2xl px-3 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+          </div>
+
+          {/* Profession */}
+          <div>
+            <label className="block text-xs font-bold text-on-surface mb-1.5">Current Profession / Job Title</label>
+            <input
+              type="text"
+              required
+              value={profession}
+              onChange={(e) => setProfession(e.target.value)}
+              placeholder="e.g. Senior Software Architect, Doctor, Entrepreneur"
+              className="w-full bg-surface-container-high border border-surface-variant rounded-2xl px-4 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+
+          {/* Marriage Timeline */}
+          <div>
+            <label className="block text-xs font-bold text-on-surface mb-2">Target Nikah Timeline</label>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { id: '1_to_3_months', label: '1–3 Months (Immediate)' },
+                { id: 'within_1_year', label: 'Within 1 Year' },
+                { id: 'right_person', label: 'When Right Person Found' }
+              ].map(opt => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setTimeline(opt.id)}
+                  className={`p-2.5 rounded-xl border text-[11px] font-semibold text-center transition-all ${
+                    timeline === opt.id
+                      ? 'border-primary bg-primary/10 text-primary font-bold'
+                      : 'border-surface-variant bg-surface text-secondary hover:bg-surface-container-low'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Mahr Philosophy */}
+          <div>
+            <label className="block text-xs font-bold text-on-surface mb-2">Mahr Philosophy</label>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { id: 'sunnah_modest', label: 'Sunnah Modest Mahr', desc: 'Simple, unburdensome Mahr upon Sunnah' },
+                { id: 'mutual_agreement', label: 'Mutual Agreement', desc: 'Discussed & agreed respectfully with Wali' }
+              ].map(opt => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setMahrPhilosophy(opt.id)}
+                  className={`p-3 rounded-2xl text-left border transition-all ${
+                    mahrPhilosophy === opt.id
+                      ? 'border-primary bg-primary/10 text-on-surface shadow-sm'
+                      : 'border-surface-variant bg-surface text-secondary hover:bg-surface-container-low'
+                  }`}
+                >
+                  <strong className="text-xs block text-on-surface">{opt.label}</strong>
+                  <span className="text-[10px] text-secondary leading-tight block mt-0.5">{opt.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Children Intent */}
+          <div>
+            <label className="block text-xs font-bold text-on-surface mb-2">Children & Family Plans</label>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { id: 'desires_children', label: 'Desires Children' },
+                { id: 'open', label: 'Open / InshaAllah' },
+                { id: 'later', label: 'Discuss Later' }
+              ].map(opt => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setChildrenDesire(opt.id)}
+                  className={`py-2 px-1 rounded-xl border text-[11px] font-semibold text-center transition-all ${
+                    childrenDesire === opt.id
+                      ? 'border-primary bg-primary/10 text-primary font-bold'
+                      : 'border-surface-variant bg-surface text-secondary hover:bg-surface-container-low'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* About My Deen & Bio Essay */}
+          <div>
+            <label className="block text-xs font-bold text-on-surface mb-1.5">
+              About My Deen & Personal Reflections
+            </label>
+            <textarea
+              rows={3}
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              placeholder="Share what practicing Islam means in your daily life, your character values, and what kind of partner you hope to build a home with..."
+              className="w-full bg-surface-container-high border border-surface-variant rounded-2xl p-3.5 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary leading-relaxed"
+            />
+          </div>
+        </form>
+      </div>
+
+      {/* Bottom Action */}
+      <div className="pt-6">
+        <button
+          onClick={handleSubmit}
+          className="w-full py-4 rounded-full bg-primary text-on-primary font-sans text-xs font-bold shadow-md shadow-primary/20 hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2"
+        >
+          <span>Continue to Photos & Modesty</span>
+          <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+        </button>
+      </div>
+    </div>
+  );
+};

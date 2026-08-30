@@ -1,0 +1,94 @@
+export type Gender = 'male' | 'female' | 'other';
+export type MarriageTimeline = '1_to_3_months' | 'within_1_year' | 'right_person' | 'exploring';
+export type PracticeLevel = 'practicing' | 'moderately_practicing' | 'cultural' | 'revert';
+export type Sect = 'Sunni' | 'Shia' | 'Just Muslim' | 'Other';
+export type Madhhab = 'Hanafi' | 'Shafi\'i' | 'Maliki' | 'Hanbali' | 'Jafari' | 'Prefer not to say';
+
+export interface UserProfile {
+  id: string;
+  phone: string;
+  email?: string;
+  fullName: string;
+  dob: string;
+  age: number;
+  gender: Gender;
+  location: string;
+  city?: string;
+  country?: string;
+  profession: string;
+  education: string;
+  university?: string;
+  height: string;
+  ethnicity: string;
+  familyStructure?: 'nuclear' | 'joint';
+  livingPreference?: 'independent' | 'with_in_laws' | 'flexible';
+  siblingsCount?: number;
+  willingnessToRelocate?: 'willing' | 'not_willing' | 'open';
+  smokingStatus?: 'non_smoker' | 'trying_to_quit' | 'occasional';
+  languagesSpoken?: string;
+  mahrPhilosophy?: string;
+  childrenDesire?: string;
+  marriageTimeline: string;
+  bio: string;
+  blurPhotosByDefault: boolean;
+  profileVisibility: string;
+  photos: string[];
+  religiousProfile: {
+    practiceLevel: PracticeLevel;
+    sect: Sect;
+    madhhab?: string;
+    prayerFrequency: string;
+    halalDiet: string;
+    quranRecitation?: string;
+    modestyPractice?: string;
+    hajjUmrahStatus?: string;
+    deenRelationshipBio?: string;
+  };
+  wali?: {
+    name: string;
+    relationship: string;
+    phone: string;
+    isVerified: boolean;
+  };
+  photoRevealRequested?: boolean;
+  photoRevealApproved?: boolean;
+  isVip?: boolean;
+  isSpotlightActive?: boolean;
+}
+
+export interface ChatMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  text: string;
+  timestamp: string;
+  isRead: boolean;
+  waliNotified: boolean;
+}
+
+export interface Conversation {
+  id: string;
+  participantOne: string;
+  participantTwo: string;
+  otherUser: UserProfile;
+  lastMessageText: string;
+  lastMessageSenderId: string;
+  lastMessageTime: string;
+  unreadCount: number;
+  waliObserverId?: string;
+  waliName?: string;
+  status: 'active' | 'respectfully_closed' | 'blocked';
+  messages: ChatMessage[];
+}
+
+export interface FilterState {
+  minAge: number;
+  maxAge: number;
+  maxDistance: number;
+  sects: string[];
+  practiceLevels: string[];
+  marriageTimelines: string[];
+  livingPreferences?: string[];
+  willingnessToRelocate?: string[];
+  languages: string[];
+}

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Serene Union - Create Profile</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Playfair+Display:wght@500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-container": "#d2e4fb",
+                        "primary-fixed-dim": "#a1d494",
+                        "inverse-primary": "#a1d494",
+                        "on-secondary-container": "#556679",
+                        "primary-fixed": "#bcf0ae",
+                        "on-secondary-fixed-variant": "#38485a",
+                        "surface-variant": "#e4e2dd",
+                        "on-tertiary-fixed-variant": "#574500",
+                        "tertiary-fixed-dim": "#e9c349",
+                        "on-error-container": "#93000a",
+                        "surface-container-high": "#eae8e3",
+                        "secondary": "#4f6073",
+                        "surface-dim": "#dbdad5",
+                        "inverse-on-surface": "#f2f1ec",
+                        "on-surface-variant": "#42493e",
+                        "on-primary": "#ffffff",
+                        "on-secondary-fixed": "#0b1d2d",
+                        "secondary-fixed-dim": "#b7c8de",
+                        "on-primary-container": "#9dd090",
+                        "on-tertiary-container": "#4f3d00",
+                        "on-tertiary": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "surface": "#fbf9f4",
+                        "tertiary-container": "#cca730",
+                        "on-surface": "#1b1c19",
+                        "surface-tint": "#3b6934",
+                        "on-error": "#ffffff",
+                        "primary-container": "#2d5a27",
+                        "surface-container-highest": "#e4e2dd",
+                        "primary": "#154212",
+                        "tertiary-fixed": "#ffe088",
+                        "background": "#fbf9f4",
+                        "secondary-fixed": "#d2e4fb",
+                        "surface-bright": "#fbf9f4",
+                        "on-primary-fixed": "#002201",
+                        "outline-variant": "#c2c9bb",
+                        "on-primary-fixed-variant": "#23501e",
+                        "on-tertiary-fixed": "#241a00",
+                        "error": "#ba1a1a",
+                        "tertiary": "#735c00",
+                        "on-background": "#1b1c19",
+                        "inverse-surface": "#30312e",
+                        "surface-container": "#f0eee9",
+                        "outline": "#72796e",
+                        "surface-container-low": "#f5f3ee",
+                        "error-container": "#ffdad6"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-gap": "16px",
+                        "unit": "8px",
+                        "max-width": "480px",
+                        "container-padding": "24px",
+                        "section-gap": "40px"
+                    },
+                    "fontFamily": {
+                        "body-sm": ["Inter"],
+                        "headline-sm": ["Playfair Display"],
+                        "label-sm": ["Inter"],
+                        "display-lg": ["Playfair Display"],
+                        "headline-lg": ["Playfair Display"],
+                        "body-md": ["Inter"],
+                        "label-md": ["Inter"],
+                        "headline-md": ["Playfair Display"],
+                        "body-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "display-lg": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "label-md": ["14px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #2D5A27;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #2D5A27;
+        }
+        .toggle-checkbox:checked + .toggle-label:after {
+            transform: translateX(100%);
+            border-color: white;
+        }
+        .toggle-label {
+            width: 3rem;
+            height: 1.5rem;
+            background-color: #e4e2dd;
+            border-radius: 9999px;
+            position: relative;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .toggle-label:after {
+            content: '';
+            position: absolute;
+            top: 0.125rem;
+            left: 0.125rem;
+            width: 1.25rem;
+            height: 1.25rem;
+            background-color: white;
+            border-radius: 9999px;
+            transition: transform 0.2s ease-in-out;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md antialiased max-w-max-width mx-auto pb-24">
+<!-- TopAppBar -->
+<header class="bg-background dark:bg-background text-primary dark:text-primary-fixed-dim font-headline-sm text-headline-sm-mobile md:text-headline-sm w-full top-0 sticky flex items-center justify-between px-container-padding h-16 w-full max-w-max-width mx-auto z-40 bg-background dark:bg-background flat no shadows transition-opacity duration-200 active:scale-95">
+<button aria-label="Go back" class="flex items-center justify-center p-2 rounded-full hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h1 class="font-headline-sm text-headline-sm">Create Profile</h1>
+<div class="w-10"></div> <!-- Spacer for centering -->
+</header>
+<main class="px-container-padding py-stack-gap flex flex-col gap-section-gap">
+<!-- Photo Upload Section -->
+<section class="flex flex-col gap-stack-gap">
+<div class="flex items-center justify-between bg-surface-container-low p-4 rounded-xl border border-surface-variant">
+<div class="flex flex-col pr-4">
+<span class="font-body-md text-body-md font-medium text-on-surface">Blur my photos</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Until I approve a match</span>
+</div>
+<div class="relative inline-block w-12 align-middle select-none transition duration-200 ease-in">
+<input checked="" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 opacity-0" id="blur-toggle" name="toggle" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-6 rounded-full bg-surface-variant cursor-pointer" for="blur-toggle"></label>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-3">
+<!-- Photo Slot 1 (Preview) -->
+<div class="aspect-[3/4] relative rounded-xl overflow-hidden shadow-sm">
+<div class="bg-cover bg-center w-full h-full filter blur-md transform scale-110" data-alt="A softly blurred, artistic portrait of a person in a serene, natural outdoor setting. The light is warm and golden, filtering through leaves. The subject is completely unidentifiable due to a strong gaussian blur effect, serving as a privacy placeholder. The overall mood is calm, respectful, and high-quality, fitting a premium faith-based app." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCi8YDg_xBOMOGPesbwzyKtshL6f_AeOMyPZTMKnPhAUSruxmJJm8xLQY4EJVm51y6SKbl6ZdT6GJUo2m3Ja2UDiw9zU4LNnARfCnhX43H3j2JplrXNe37L7gD8voNGKenye0RCxf_rL-WsABKZnyIPLpma8Jbg8HBDirAY7XMrs9mUkqyJ_vnWa7mZoqtcsPKXJDTkbZbSmD70kqTTSv3JBYktYTC1JEc53U2dyMtmXOt-YbC34X8djA')"></div>
+<div class="absolute inset-0 flex items-center justify-center bg-black/10">
+<span class="material-symbols-outlined text-white" style="font-variation-settings: 'FILL' 1;">visibility_off</span>
+</div>
+</div>
+<!-- Photo Slot 2 -->
+<button class="aspect-[3/4] rounded-xl border-2 border-dashed border-outline-variant bg-surface flex flex-col items-center justify-center text-outline hover:bg-surface-variant hover:border-primary-container transition-colors group">
+<span class="material-symbols-outlined text-3xl group-hover:text-primary-container transition-colors">add</span>
+</button>
+<!-- Photo Slot 3 -->
+<button class="aspect-[3/4] rounded-xl border-2 border-dashed border-outline-variant bg-surface flex flex-col items-center justify-center text-outline hover:bg-surface-variant hover:border-primary-container transition-colors group">
+<span class="material-symbols-outlined text-3xl group-hover:text-primary-container transition-colors">add</span>
+</button>
+<!-- Photo Slot 4 -->
+<button class="aspect-[3/4] rounded-xl border-2 border-dashed border-outline-variant bg-surface flex flex-col items-center justify-center text-outline hover:bg-surface-variant hover:border-primary-container transition-colors group">
+<span class="material-symbols-outlined text-3xl group-hover:text-primary-container transition-colors">add</span>
+</button>
+<!-- Photo Slot 5 -->
+<button class="aspect-[3/4] rounded-xl border-2 border-dashed border-outline-variant bg-surface flex flex-col items-center justify-center text-outline hover:bg-surface-variant hover:border-primary-container transition-colors group">
+<span class="material-symbols-outlined text-3xl group-hover:text-primary-container transition-colors">add</span>
+</button>
+<!-- Photo Slot 6 -->
+<button class="aspect-[3/4] rounded-xl border-2 border-dashed border-outline-variant bg-surface flex flex-col items-center justify-center text-outline hover:bg-surface-variant hover:border-primary-container transition-colors group">
+<span class="material-symbols-outlined text-3xl group-hover:text-primary-container transition-colors">add</span>
+</button>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant text-center mt-2">Add at least 3 photos to improve your profile.</p>
+</section>
+<!-- About My Deen Section -->
+<section class="flex flex-col gap-stack-gap">
+<h2 class="font-headline-md text-headline-md text-primary-container">About My Deen</h2>
+<div class="flex flex-wrap gap-2">
+<button class="px-4 py-2 rounded-full border border-primary-container text-primary-container font-label-md text-label-md hover:bg-primary-container hover:text-white transition-colors bg-surface">
+                    My relationship with faith
+                </button>
+<button class="px-4 py-2 rounded-full border border-primary-container text-primary-container font-label-md text-label-md hover:bg-primary-container hover:text-white transition-colors bg-surface">
+                    What marriage means to me
+                </button>
+<button class="px-4 py-2 rounded-full border border-primary-container text-primary-container font-label-md text-label-md hover:bg-primary-container hover:text-white transition-colors bg-surface">
+                    My family's role
+                </button>
+</div>
+<div class="relative">
+<textarea class="w-full bg-[#F2EFE9] border-0 rounded-xl p-4 font-body-md text-body-md text-on-surface min-h-[120px] focus:ring-1 focus:ring-primary-container focus:border-primary-container transition-shadow resize-none" placeholder="Tap a prompt above to start writing..."></textarea>
+<div class="absolute bottom-3 right-3 text-on-surface-variant font-label-sm text-label-sm">0/300</div>
+</div>
+</section>
+<!-- Basic Details Section -->
+<section class="flex flex-col gap-stack-gap">
+<h2 class="font-headline-md text-headline-md text-primary-container">Personal Details</h2>
+<div class="flex flex-col gap-4">
+<!-- Dropdown Form Group -->
+<div class="relative">
+<label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Height</label>
+<div class="relative">
+<select class="w-full bg-[#F2EFE9] border-0 rounded-lg p-3 pr-10 font-body-md text-body-md text-on-surface appearance-none focus:ring-1 focus:ring-primary-container focus:border-primary-container">
+<option disabled="" selected="" value="">Select Height</option>
+<option>5'0" (152 cm)</option>
+<option>5'5" (165 cm)</option>
+<option>5'10" (178 cm)</option>
+<option>6'0" (183 cm)</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">expand_more</span>
+</div>
+</div>
+<div class="relative">
+<label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Sect</label>
+<div class="relative">
+<select class="w-full bg-[#F2EFE9] border-0 rounded-lg p-3 pr-10 font-body-md text-body-md text-on-surface appearance-none focus:ring-1 focus:ring-primary-container focus:border-primary-container">
+<option disabled="" selected="" value="">Select Sect</option>
+<option>Sunni</option>
+<option>Shia</option>
+<option>Just Muslim</option>
+<option>Other</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">expand_more</span>
+</div>
+</div>
+<div class="relative">
+<label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Madhhab (Optional)</label>
+<div class="relative">
+<select class="w-full bg-[#F2EFE9] border-0 rounded-lg p-3 pr-10 font-body-md text-body-md text-on-surface appearance-none focus:ring-1 focus:ring-primary-container focus:border-primary-container">
+<option disabled="" selected="" value="">Select Madhhab</option>
+<option>Hanafi</option>
+<option>Maliki</option>
+<option>Shafi'i</option>
+<option>Hanbali</option>
+<option>Jafari</option>
+<option>Prefer not to say</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">expand_more</span>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Sticky Footer -->
+<div class="fixed bottom-0 left-0 w-full bg-gradient-to-t from-background via-background to-transparent pt-12 pb-6 px-container-padding max-w-max-width mx-auto z-50">
+<button class="w-full bg-primary-container text-on-primary py-4 rounded-xl font-label-md text-label-md shadow-sm hover:brightness-110 active:scale-95 transition-all flex justify-center items-center gap-2">
+            Save &amp; Continue
+            <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</div>
+</body></html>

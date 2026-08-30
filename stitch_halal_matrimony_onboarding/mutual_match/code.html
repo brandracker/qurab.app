@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mutual Match - Serene Union</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts: Playfair Display & Inter -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Playfair+Display:wght@500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "outline-variant": "#c2c9bb",
+                        "on-secondary": "#ffffff",
+                        "secondary-container": "#d2e4fb",
+                        "on-tertiary-fixed": "#241a00",
+                        "secondary": "#4f6073",
+                        "on-error": "#ffffff",
+                        "inverse-surface": "#30312e",
+                        "tertiary-fixed": "#ffe088",
+                        "surface-container": "#f0eee9",
+                        "on-primary-container": "#9dd090",
+                        "surface-container-highest": "#e4e2dd",
+                        "error-container": "#ffdad6",
+                        "surface-bright": "#fbf9f4",
+                        "tertiary": "#735c00",
+                        "secondary-fixed-dim": "#b7c8de",
+                        "error": "#ba1a1a",
+                        "primary-fixed": "#bcf0ae",
+                        "on-primary-fixed-variant": "#23501e",
+                        "on-secondary-fixed-variant": "#38485a",
+                        "surface": "#fbf9f4",
+                        "primary-container": "#2d5a27",
+                        "on-tertiary-container": "#4f3d00",
+                        "secondary-fixed": "#d2e4fb",
+                        "on-primary": "#ffffff",
+                        "primary": "#154212",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-high": "#eae8e3",
+                        "on-tertiary-fixed-variant": "#574500",
+                        "on-tertiary": "#ffffff",
+                        "background": "#fbf9f4",
+                        "on-surface": "#1b1c19",
+                        "surface-dim": "#dbdad5",
+                        "on-background": "#1b1c19",
+                        "on-error-container": "#93000a",
+                        "tertiary-fixed-dim": "#e9c349",
+                        "on-secondary-fixed": "#0b1d2d",
+                        "outline": "#72796e",
+                        "on-surface-variant": "#42493e",
+                        "inverse-on-surface": "#f2f1ec",
+                        "primary-fixed-dim": "#a1d494",
+                        "inverse-primary": "#a1d494",
+                        "on-primary-fixed": "#002201",
+                        "surface-container-low": "#f5f3ee",
+                        "surface-tint": "#3b6934",
+                        "surface-variant": "#e4e2dd",
+                        "tertiary-container": "#cca730",
+                        "on-secondary-container": "#556679"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-gap": "16px",
+                        "unit": "8px",
+                        "max-width": "480px",
+                        "section-gap": "40px",
+                        "container-padding": "24px"
+                    },
+                    "fontFamily": {
+                        "label-sm": ["Inter"],
+                        "headline-sm": ["Playfair Display"],
+                        "body-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-lg": ["Playfair Display"],
+                        "label-md": ["Inter"],
+                        "headline-md": ["Playfair Display"],
+                        "body-lg": ["Inter"],
+                        "display-lg": ["Playfair Display"]
+                    },
+                    "fontSize": {
+                        "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "600" }],
+                        "label-md": ["14px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "display-lg": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        /* Custom animations for a subtle, premium entry */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes scaleIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .animate-fade-in-up { animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .animate-scale-in { animation: scaleIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .delay-100 { animation-delay: 100ms; }
+        .delay-200 { animation-delay: 200ms; }
+        .delay-300 { animation-delay: 300ms; }
+        .opacity-0-init { opacity: 0; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md antialiased min-h-screen flex items-center justify-center">
+<!-- 
+      Note: Shared Navigational Shell (TopAppBar/BottomNavBar) is intentionally suppressed here.
+      According to the Logic Mandate, linear/transactional screens and "Success/Confirmation" 
+      splash screens must prioritize the content canvas and hide the global navigation.
+    -->
+<main class="w-full max-w-max-width px-container-padding flex flex-col items-center justify-center relative z-10 py-section-gap">
+<!-- Photographic Cluster -->
+<div class="relative flex items-center justify-center mb-stack-gap animate-scale-in opacity-0-init w-full max-w-[280px]">
+<!-- User 1 -->
+<div class="w-28 h-28 md:w-32 md:h-32 rounded-full overflow-hidden border-4 border-background z-10 translate-x-4 shadow-[0_12px_32px_rgba(26,43,60,0.05)] bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="A portrait of a young adult Middle Eastern man in smart casual attire, smiling softly. Cinematic lighting, soft shadows, warm tones. Shot on 85mm lens, shallow depth of field. High quality, professional photography suitable for a dignified matching profile." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD8dF1iJhrHsPEm1ZdYIi5jQp38fhKIO3jIoA9ZkHZbDtPOc81aoQuxosG9tZzD_z0F53ZT6ZEm_nTSU2hsO6ILzzQemoYXW90AkEpEODoda29tdFF3OrfG1qTUwUhDpOES-EdhurDBwODe9ZFDW29A363nOdJaxrW3eaOD5kN_-J1KbmkUIWIrqBaCYkvvL8LNp8bKfJqS3JwazfPgJWZxZvFcrS2s3NDePUP028a3EKcy7-8dWIDOFg"/>
+</div>
+<!-- User 2 (Aisha) -->
+<div class="w-28 h-28 md:w-32 md:h-32 rounded-full overflow-hidden border-4 border-background z-20 -translate-x-4 shadow-[0_12px_32px_rgba(26,43,60,0.05)] bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="A portrait of a young adult Middle Eastern woman wearing a stylish, modest beige hijab, smiling warmly. Cinematic lighting, soft shadows, warm tones. Shot on 85mm lens, shallow depth of field. High quality, professional photography suitable for a dignified matching profile." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCJkx6KCfBetIARTHs_d215AXgIOyLn7Dr-cKaBxiphIk_7kbJqD1MDnODkjuEpY1XlI-AX9361SeBCeH3Z9AxiryO4TUKasUa9dGSh4hlew-Tocl25E2iEJLjCLBNN2DzBLTK8OiuEdRsopjH_hACpfyHtWhl98s7MeUHDpM5CXha7R4Sjrx2qtEsHwZdeCjZMEHjB09w3NQgSJyAS7MBZKw4Kv0v3tAmH5WaWVyPDuSjKwG8qsLh5xg"/>
+</div>
+<!-- Geometric Accent Badge -->
+<div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-30 bg-background rounded-full p-1.5 shadow-[0_4px_12px_rgba(26,43,60,0.1)]">
+<div class="bg-primary-container text-on-primary w-10 h-10 rounded-full flex items-center justify-center shadow-inner">
+<!-- Elegant 8-point star (Rub el Hizb inspired) SVG -->
+<svg class="opacity-90" fill="none" height="20" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" viewbox="0 0 24 24" width="20">
+<path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" fill="currentColor" fill-opacity="0.2"></path>
+<rect height="14" rx="2" transform="rotate(45 12 12)" width="14" x="5" y="5"></rect>
+<rect height="14" rx="2" width="14" x="5" y="5"></rect>
+</svg>
+</div>
+</div>
+</div>
+<!-- Typography -->
+<div class="text-center animate-fade-in-up opacity-0-init delay-100 max-w-sm">
+<h1 class="font-headline-lg text-headline-lg text-on-surface mb-unit">
+                You have a mutual match with Aisha
+            </h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant">
+                You can now start a conversation.
+            </p>
+</div>
+<!-- Action Buttons -->
+<div class="w-full max-w-sm mt-section-gap flex flex-col gap-stack-gap animate-fade-in-up opacity-0-init delay-200">
+<button class="w-full bg-primary-container text-on-primary font-label-md text-label-md py-4 rounded-full shadow-[0_12px_32px_rgba(26,43,60,0.05)] transition-transform active:scale-[0.98] hover:opacity-95 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">chat_bubble</span>
+                Send a Message
+            </button>
+<button class="w-full border border-outline text-on-surface font-label-md text-label-md py-4 rounded-full transition-colors hover:bg-surface-container active:bg-surface-container-high bg-transparent">
+                Keep Browsing
+            </button>
+</div>
+<!-- Privacy Note -->
+<div class="mt-section-gap animate-fade-in-up opacity-0-init delay-300 w-full max-w-sm border-t border-surface-variant pt-stack-gap">
+<p class="font-body-sm text-body-sm text-outline text-center flex items-center justify-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-outline-variant">verified_user</span>
+                A guardian has been notified of this match.
+            </p>
+</div>
+</main>
+</body></html>

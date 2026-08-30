@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Tell us about yourself</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-secondary": "#ffffff",
+                        "secondary": "#4f6073",
+                        "on-secondary-fixed": "#0b1d2d",
+                        "primary-fixed": "#bcf0ae",
+                        "tertiary-fixed": "#ffe088",
+                        "on-secondary-container": "#556679",
+                        "inverse-primary": "#a1d494",
+                        "tertiary-fixed-dim": "#e9c349",
+                        "on-background": "#1b1c19",
+                        "primary-fixed-dim": "#a1d494",
+                        "inverse-on-surface": "#f2f1ec",
+                        "tertiary": "#735c00",
+                        "outline-variant": "#c2c9bb",
+                        "surface-container": "#f0eee9",
+                        "surface-variant": "#e4e2dd",
+                        "on-error": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "surface-container-low": "#f5f3ee",
+                        "on-surface": "#1b1c19",
+                        "primary-container": "#2d5a27",
+                        "primary": "#154212",
+                        "on-primary": "#ffffff",
+                        "secondary-fixed": "#d2e4fb",
+                        "inverse-surface": "#30312e",
+                        "on-tertiary-fixed": "#241a00",
+                        "surface": "#fbf9f4",
+                        "on-error-container": "#93000a",
+                        "surface-bright": "#fbf9f4",
+                        "error": "#ba1a1a",
+                        "surface-dim": "#dbdad5",
+                        "on-surface-variant": "#42493e",
+                        "secondary-container": "#d2e4fb",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary-container": "#9dd090",
+                        "surface-container-highest": "#e4e2dd",
+                        "on-secondary-fixed-variant": "#38485a",
+                        "on-primary-fixed": "#002201",
+                        "on-tertiary": "#ffffff",
+                        "outline": "#72796e",
+                        "surface-tint": "#3b6934",
+                        "on-primary-fixed-variant": "#23501e",
+                        "tertiary-container": "#cca730",
+                        "surface-container-high": "#eae8e3",
+                        "background": "#fbf9f4",
+                        "on-tertiary-container": "#4f3d00",
+                        "secondary-fixed-dim": "#b7c8de",
+                        "on-tertiary-fixed-variant": "#574500"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-gap": "16px",
+                        "max-width": "480px",
+                        "container-padding": "24px",
+                        "unit": "8px",
+                        "section-gap": "40px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Playfair Display"],
+                        "headline-sm": ["Playfair Display"],
+                        "body-lg": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "label-md": ["Inter"],
+                        "headline-md": ["Playfair Display"],
+                        "body-md": ["Inter"],
+                        "display-lg": ["Playfair Display"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "600" }],
+                        "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "label-md": ["14px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "display-lg": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .progress-bar-fill {
+            width: 50%; /* Step 4 of 8 */
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md min-h-screen flex justify-center">
+<div class="w-full max-w-max-width bg-background min-h-screen flex flex-col relative pb-32">
+<!-- TopAppBar (Transactional) -->
+<header class="w-full top-0 sticky bg-background text-primary flex items-center justify-between px-container-padding h-16 mx-auto z-40">
+<button class="w-12 h-12 flex items-center justify-start hover:opacity-80 transition-opacity duration-200 active:scale-95 text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+<div class="font-headline-sm text-headline-sm">Basic Info</div>
+<div class="w-12"></div> <!-- Spacer -->
+</header>
+<!-- Progress Indicator -->
+<div class="w-full px-container-padding mt-unit">
+<div class="h-1 bg-surface-variant rounded-full w-full overflow-hidden">
+<div class="h-full bg-tertiary-container rounded-full progress-bar-fill"></div>
+</div>
+<div class="text-right mt-2 font-label-sm text-label-sm text-on-surface-variant">Step 4 of 8</div>
+</div>
+<main class="flex-grow px-container-padding pt-section-gap flex flex-col gap-stack-gap">
+<h1 class="font-headline-lg text-headline-lg text-on-background mb-4 text-center">Tell us about yourself</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant text-center mb-8 px-4">
+                This helps us personalize your experience and connect you with the right community.
+            </p>
+<form class="flex flex-col gap-6">
+<!-- Full Name -->
+<div class="relative group">
+<input class="block w-full px-4 pt-6 pb-2 rounded-lg bg-surface-container-low border-transparent focus:border-primary focus:ring-1 focus:ring-primary text-on-background font-body-md peer transition-colors placeholder-transparent focus:outline-none" id="fullName" placeholder="Full Name" required="" type="text"/>
+<label class="absolute left-4 top-2 text-on-surface-variant font-label-sm text-label-sm transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:font-body-md peer-placeholder-shown:text-body-md peer-focus:top-2 peer-focus:font-label-sm peer-focus:text-label-sm peer-focus:text-primary pointer-events-none" for="fullName">Full Name</label>
+</div>
+<!-- Date of Birth -->
+<div class="relative group">
+<input class="block w-full px-4 pt-6 pb-2 rounded-lg bg-surface-container-low border-transparent focus:border-primary focus:ring-1 focus:ring-primary text-on-background font-body-md peer transition-colors focus:outline-none" id="dob" required="" type="date"/>
+<label class="absolute left-4 top-2 text-on-surface-variant font-label-sm text-label-sm transition-all text-primary pointer-events-none" for="dob">Date of Birth</label>
+</div>
+<!-- Gender (Segmented Control style via Radio Buttons) -->
+<div>
+<label class="block text-on-surface-variant font-label-sm text-label-sm mb-2 ml-4">Gender</label>
+<div class="flex p-1 bg-surface-container-low rounded-lg gap-1">
+<label class="flex-1 text-center cursor-pointer">
+<input class="peer sr-only" name="gender" type="radio" value="male"/>
+<div class="py-3 px-4 rounded-md font-label-md text-label-md text-on-surface-variant peer-checked:bg-primary peer-checked:text-on-primary transition-colors">Male</div>
+</label>
+<label class="flex-1 text-center cursor-pointer">
+<input class="peer sr-only" name="gender" type="radio" value="female"/>
+<div class="py-3 px-4 rounded-md font-label-md text-label-md text-on-surface-variant peer-checked:bg-primary peer-checked:text-on-primary transition-colors">Female</div>
+</label>
+<label class="flex-1 text-center cursor-pointer">
+<input class="peer sr-only" name="gender" type="radio" value="other"/>
+<div class="py-3 px-4 rounded-md font-label-md text-label-md text-on-surface-variant peer-checked:bg-primary peer-checked:text-on-primary transition-colors">Other</div>
+</label>
+</div>
+</div>
+<!-- Location -->
+<div class="relative group">
+<span class="absolute left-4 top-4 material-symbols-outlined text-on-surface-variant peer-focus:text-primary pointer-events-none">location_on</span>
+<input class="block w-full pl-12 pr-4 pt-6 pb-2 rounded-lg bg-surface-container-low border-transparent focus:border-primary focus:ring-1 focus:ring-primary text-on-background font-body-md peer transition-colors placeholder-transparent focus:outline-none" id="location" placeholder="Location" required="" type="text"/>
+<label class="absolute left-12 top-2 text-on-surface-variant font-label-sm text-label-sm transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:font-body-md peer-placeholder-shown:text-body-md peer-focus:top-2 peer-focus:font-label-sm peer-focus:text-label-sm peer-focus:text-primary pointer-events-none" for="location">Location</label>
+</div>
+</form>
+</main>
+<!-- BottomNavBar (Transactional logic - suppressing standard shell, providing localized action) -->
+<div class="fixed bottom-0 left-0 w-full flex justify-between gap-stack-gap px-container-padding pb-8 pt-4 max-w-max-width mx-auto bg-background z-50">
+<button class="flex flex-col items-center justify-center text-secondary border border-secondary rounded-full px-6 py-4 font-label-md text-label-md hover:brightness-95 active:scale-98 transition-transform w-24">
+<span>Back</span>
+</button>
+<button class="flex flex-1 items-center justify-center bg-primary text-on-primary rounded-full px-6 py-4 font-label-md text-label-md hover:brightness-95 active:scale-98 transition-transform shadow-[0_12px_32px_rgba(26,43,60,0.05)]">
+<span>Continue</span>
+</button>
+</div>
+</div>
+</body></html>

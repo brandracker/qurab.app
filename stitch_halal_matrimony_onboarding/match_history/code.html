@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Salam - Matches</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Playfair+Display:wght@500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-secondary": "#ffffff",
+                        "surface-container": "#f0eee9",
+                        "on-error": "#ffffff",
+                        "on-tertiary-fixed": "#241a00",
+                        "secondary-fixed": "#d2e4fb",
+                        "primary-fixed-dim": "#a1d494",
+                        "secondary-fixed-dim": "#b7c8de",
+                        "inverse-on-surface": "#f2f1ec",
+                        "on-background": "#1b1c19",
+                        "tertiary-fixed-dim": "#e9c349",
+                        "tertiary": "#735c00",
+                        "on-secondary-container": "#556679",
+                        "surface-container-highest": "#e4e2dd",
+                        "tertiary-container": "#cca730",
+                        "tertiary-fixed": "#ffe088",
+                        "on-surface-variant": "#42493e",
+                        "inverse-primary": "#a1d494",
+                        "surface-container-low": "#f5f3ee",
+                        "on-secondary-fixed": "#0b1d2d",
+                        "surface-tint": "#3b6934",
+                        "surface": "#fbf9f4",
+                        "background": "#fbf9f4",
+                        "inverse-surface": "#30312e",
+                        "surface-bright": "#fbf9f4",
+                        "error": "#ba1a1a",
+                        "on-primary-fixed": "#002201",
+                        "surface-dim": "#dbdad5",
+                        "primary": "#154212",
+                        "primary-container": "#2d5a27",
+                        "error-container": "#ffdad6",
+                        "surface-variant": "#e4e2dd",
+                        "on-primary-container": "#9dd090",
+                        "on-surface": "#1b1c19",
+                        "primary-fixed": "#bcf0ae",
+                        "outline": "#72796e",
+                        "outline-variant": "#c2c9bb",
+                        "surface-container-high": "#eae8e3",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-fixed-variant": "#574500",
+                        "on-error-container": "#93000a",
+                        "secondary": "#4f6073",
+                        "on-secondary-fixed-variant": "#38485a",
+                        "on-tertiary": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "on-primary-fixed-variant": "#23501e",
+                        "on-tertiary-container": "#4f3d00",
+                        "secondary-container": "#d2e4fb"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "unit": "8px",
+                        "section-gap": "40px",
+                        "stack-gap": "16px",
+                        "max-width": "480px",
+                        "container-padding": "24px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "headline-md": ["Playfair Display"],
+                        "display-lg": ["Playfair Display"],
+                        "headline-lg": ["Playfair Display"],
+                        "headline-sm": ["Playfair Display"],
+                        "label-md": ["Inter"],
+                        "body-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "display-lg": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "600" }],
+                        "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "label-md": ["14px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background dark:bg-background text-on-background font-body-md min-h-screen">
+<div class="max-w-max-width mx-auto pb-24 shadow-sm min-h-screen relative bg-surface-bright">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky z-40 bg-background dark:bg-background flex justify-between items-center px-container-padding h-16 max-w-max-width mx-auto">
+<button class="text-primary dark:text-primary-fixed-dim hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors rounded-full p-2 active:scale-95 transition-transform duration-150">
+<span class="material-symbols-outlined" data-icon="spa" data-weight="fill" style="font-variation-settings: 'FILL' 1;">spa</span>
+</button>
+<h1 class="font-headline-md text-headline-md text-primary dark:text-primary-fixed-dim tracking-tight">Matches</h1>
+<button class="text-primary dark:text-primary-fixed-dim hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors rounded-full p-2 active:scale-95 transition-transform duration-150">
+<span class="material-symbols-outlined" data-icon="tune">tune</span>
+</button>
+</header>
+<!-- Horizontal Tab Bar -->
+<div class="px-container-padding py-2 bg-surface-bright sticky top-16 z-30 flex gap-4 overflow-x-auto no-scrollbar border-b border-surface-container-high pb-4 mb-stack-gap">
+<button class="px-4 py-2 rounded-full font-label-md text-label-md bg-primary-container text-on-primary whitespace-nowrap">Active</button>
+<button class="px-4 py-2 rounded-full font-label-md text-label-md text-secondary border border-surface-container-high bg-surface-container-lowest hover:bg-surface-container-low whitespace-nowrap">Sent</button>
+<button class="px-4 py-2 rounded-full font-label-md text-label-md text-secondary border border-surface-container-high bg-surface-container-lowest hover:bg-surface-container-low whitespace-nowrap">Received</button>
+<button class="px-4 py-2 rounded-full font-label-md text-label-md text-secondary border border-surface-container-high bg-surface-container-lowest hover:bg-surface-container-low whitespace-nowrap">Expired</button>
+</div>
+<!-- Vertical List of Profiles (Active State) -->
+<main class="px-container-padding flex flex-col gap-stack-gap">
+<!-- Profile Card 1 -->
+<article class="bg-surface-container-lowest p-4 rounded-xl shadow-[0_12px_32px_rgba(26,43,60,0.05)] flex gap-4 items-center">
+<div class="relative w-20 h-20 shrink-0">
+<img class="w-full h-full object-cover rounded-full" data-alt="A dignified, softly lit profile portrait of a young Muslim woman wearing a modern hijab in subtle earth tones. The background is a soft, blurred botanical setting, emphasizing tranquility. High-end lifestyle photography, warm lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuARE--D0TsoxyPjynYnel4D45q6yJJYBk5GQPwhnsTDWf6APwPgmD4BizR3KT3h-Ku7EDYkdQTutyjEqtN6hXuzSSmP8zsbTuGxz7yRPNP12eqAEOCxy-8nF1Pizy1zgX-4R_qDoxQj3qlhFWBVRCj39K-nPKwD5HpljWwPGlg0dHoN0n06j_2wEofUmI8sBumPQxPm3oEVjTRITz0iDn9gUN1Xc_S5pPmfFK80_sUEwwK33xIf7YDYjg"/>
+</div>
+<div class="flex-grow">
+<div class="flex items-center gap-2">
+<h2 class="font-headline-sm text-headline-sm text-primary">Aisha, 26</h2>
+<span class="material-symbols-outlined text-secondary text-sm" data-icon="shield_person" title="Wali Monitored">shield_person</span>
+</div>
+<p class="font-body-sm text-body-sm text-secondary mb-1">London, UK</p>
+<p class="font-label-sm text-label-sm text-surface-tint">Matched 3 days ago</p>
+</div>
+<button class="bg-primary-container text-on-primary px-6 py-3 rounded-full font-label-md text-label-md shrink-0 hover:bg-primary transition-colors">
+                    Message
+                </button>
+</article>
+<!-- Profile Card 2 -->
+<article class="bg-surface-container-lowest p-4 rounded-xl shadow-[0_12px_32px_rgba(26,43,60,0.05)] flex gap-4 items-center">
+<div class="relative w-20 h-20 shrink-0">
+<img class="w-full h-full object-cover rounded-full filter blur-[2px]" data-alt="A softly blurred profile portrait of a young Muslim woman, emphasizing privacy. The colors are muted pastels and warm creams. The lighting is gentle and flattering, creating a serene and respectful mood." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDfLJ28RLvIau0GDJWRAG9hDDF0VOelS11PKMDbVx4F6OiIwHeYxHvANnP6SVG4R_N54nHEV6l-0o_ispm7xR9Ps8yi-nn_SCavAuxlZu9UkmNHvRZKDD4iq0dgoqCagykmKWzfmSJqb139QXXXpCqtR1mFX2ze57fw57hOrPOaE-hsv0H2yV_xwnEFfgvleQG3cwZnIC1axHAQZQkuEZs6JGdv_nKkv9ClmiVO_qHQY4R54FOd7SGTDA"/>
+</div>
+<div class="flex-grow">
+<div class="flex items-center gap-2">
+<h2 class="font-headline-sm text-headline-sm text-primary">Fatima, 24</h2>
+</div>
+<p class="font-body-sm text-body-sm text-secondary mb-1">Manchester, UK</p>
+<p class="font-label-sm text-label-sm text-surface-tint">Matched 1 week ago</p>
+</div>
+<button class="bg-primary-container text-on-primary px-6 py-3 rounded-full font-label-md text-label-md shrink-0 hover:bg-primary transition-colors">
+                    Message
+                </button>
+</article>
+<!-- Profile Card 3 -->
+<article class="bg-surface-container-lowest p-4 rounded-xl shadow-[0_12px_32px_rgba(26,43,60,0.05)] flex gap-4 items-center">
+<div class="relative w-20 h-20 shrink-0">
+<img class="w-full h-full object-cover rounded-full" data-alt="A dignified profile portrait of a young Muslim woman wearing a modern hijab in subtle earth tones. The background is a soft, blurred botanical setting, emphasizing tranquility. High-end lifestyle photography, warm lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCpg40CHxMXQLn2bduaTUSXAS2sJ-68eMniobM5LSu30jejnXYrriaPNf0II9WLhF7ikhdbEiUz_55hlQE5rik7cPNh6-_qNqw8xTxUVefYiW2WT34mqB2msf_VDmYSYrcNwrS7EcH6RSL4ewbXWUM3dbOVZ7wlyoxTzPTzFn7Nf_JCiJ7nenSzjPIxif6xdgp1yD7goAwONz6fxYAswWD8EQORC_TmJu75g5oz8DEjIlKQeKj6UWrWFQ"/>
+</div>
+<div class="flex-grow">
+<div class="flex items-center gap-2">
+<h2 class="font-headline-sm text-headline-sm text-primary">Zainab, 28</h2>
+<span class="material-symbols-outlined text-secondary text-sm" data-icon="shield_person" title="Wali Monitored">shield_person</span>
+</div>
+<p class="font-body-sm text-body-sm text-secondary mb-1">Birmingham, UK</p>
+<p class="font-label-sm text-label-sm text-surface-tint">Matched today</p>
+</div>
+<button class="bg-primary-container text-on-primary px-6 py-3 rounded-full font-label-md text-label-md shrink-0 hover:bg-primary transition-colors">
+                    Message
+                </button>
+</article>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-3 max-w-max-width left-1/2 -translate-x-1/2 bg-surface-container-low dark:bg-surface-container-highest shadow-[0_-4px_12px_rgba(26,43,60,0.02)] rounded-t-xl shadow-sm md:hidden">
+<button class="flex flex-col items-center justify-center text-secondary dark:text-secondary-fixed-dim opacity-70 hover:opacity-100 active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined mb-1" data-icon="explore">explore</span>
+<span class="font-label-sm text-label-sm">Discover</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-primary dark:bg-primary-container text-on-primary dark:text-on-primary-container rounded-full px-4 py-1.5 active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined mb-1" data-icon="favorite_border">favorite_border</span>
+<span class="font-label-sm text-label-sm">Interests</span>
+</button>
+<button class="flex flex-col items-center justify-center text-secondary dark:text-secondary-fixed-dim opacity-70 hover:opacity-100 active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined mb-1" data-icon="chat_bubble_outline">chat_bubble_outline</span>
+<span class="font-label-sm text-label-sm">Messages</span>
+</button>
+<button class="flex flex-col items-center justify-center text-secondary dark:text-secondary-fixed-dim opacity-70 hover:opacity-100 active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined mb-1" data-icon="person_outline">person_outline</span>
+<span class="font-label-sm text-label-sm">Settings</span>
+</button>
+</nav>
+</div>
+</body></html>

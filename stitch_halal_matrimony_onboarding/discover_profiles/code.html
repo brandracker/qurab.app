@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Serene Union - Discover</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-secondary": "#ffffff",
+                      "tertiary-fixed-dim": "#e9c349",
+                      "on-secondary-fixed-variant": "#38485a",
+                      "outline-variant": "#c2c9bb",
+                      "on-primary": "#ffffff",
+                      "background": "#fbf9f4",
+                      "tertiary": "#735c00",
+                      "on-secondary-fixed": "#0b1d2d",
+                      "surface-container-low": "#f5f3ee",
+                      "on-tertiary": "#ffffff",
+                      "on-primary-fixed": "#002201",
+                      "surface-tint": "#3b6934",
+                      "on-primary-fixed-variant": "#23501e",
+                      "outline": "#72796e",
+                      "inverse-on-surface": "#f2f1ec",
+                      "surface": "#fbf9f4",
+                      "on-error": "#ffffff",
+                      "primary-fixed-dim": "#a1d494",
+                      "surface-variant": "#e4e2dd",
+                      "on-background": "#1b1c19",
+                      "secondary-fixed-dim": "#b7c8de",
+                      "surface-container-lowest": "#ffffff",
+                      "tertiary-fixed": "#ffe088",
+                      "surface-dim": "#dbdad5",
+                      "surface-container-high": "#eae8e3",
+                      "on-surface": "#1b1c19",
+                      "surface-container-highest": "#e4e2dd",
+                      "on-tertiary-fixed": "#241a00",
+                      "secondary-container": "#d2e4fb",
+                      "secondary-fixed": "#d2e4fb",
+                      "primary-container": "#2d5a27",
+                      "primary": "#154212",
+                      "inverse-primary": "#a1d494",
+                      "inverse-surface": "#30312e",
+                      "primary-fixed": "#bcf0ae",
+                      "surface-bright": "#fbf9f4",
+                      "secondary": "#4f6073",
+                      "on-tertiary-fixed-variant": "#574500",
+                      "on-surface-variant": "#42493e",
+                      "on-secondary-container": "#556679",
+                      "error-container": "#ffdad6",
+                      "surface-container": "#f0eee9",
+                      "on-tertiary-container": "#4f3d00",
+                      "tertiary-container": "#cca730",
+                      "error": "#ba1a1a",
+                      "on-primary-container": "#9dd090",
+                      "on-error-container": "#93000a"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "max-width": "480px",
+                      "section-gap": "40px",
+                      "container-padding": "24px",
+                      "unit": "8px",
+                      "stack-gap": "16px"
+              },
+              "fontFamily": {
+                      "headline-lg": [
+                              "Playfair Display"
+                      ],
+                      "headline-md": [
+                              "Playfair Display"
+                      ],
+                      "headline-sm": [
+                              "Playfair Display"
+                      ],
+                      "body-sm": [
+                              "Inter"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "label-md": [
+                              "Inter"
+                      ],
+                      "display-lg": [
+                              "Playfair Display"
+                      ],
+                      "label-sm": [
+                              "Inter"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-sm": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "body-sm": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "display-lg": [
+                              "40px",
+                              {
+                                      "lineHeight": "48px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "label-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        .blurred-bg {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        
+        /* Custom scrollbar to hide it for a cleaner app look */
+        ::-webkit-scrollbar {
+            width: 0px;
+            background: transparent;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md text-body-md antialiased w-full h-screen overflow-hidden flex flex-col md:items-center">
+<!-- Mobile Container (Max Width 480px for Desktop Preview) -->
+<div class="w-full max-w-max-width h-full flex flex-col relative bg-background shadow-none md:shadow-xl md:border md:border-surface-variant md:my-4 md:rounded-[32px] overflow-hidden">
+<!-- Top App Bar (Custom for Search) -->
+<header class="w-full sticky top-0 z-40 bg-background/90 backdrop-blur-md px-container-padding py-4 flex items-center justify-between gap-4">
+<div class="relative flex-1">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full bg-surface-container-high border-none rounded-full py-3 pl-12 pr-4 text-body-md text-on-surface focus:ring-2 focus:ring-primary-container outline-none transition-all placeholder:text-on-surface-variant" placeholder="Search profiles..." type="text"/>
+</div>
+<button aria-label="Filters" class="w-12 h-12 flex items-center justify-center rounded-full bg-surface-container-high text-on-surface hover:bg-surface-variant transition-colors flex-shrink-0">
+<span class="material-symbols-outlined">tune</span>
+</button>
+</header>
+<!-- Main Content Canvas - Scrollable Feed -->
+<main class="flex-1 overflow-y-auto px-container-padding pb-32 pt-2 space-y-6">
+<!-- Profile Card 1 -->
+<article class="bg-surface rounded-3xl overflow-hidden shadow-sm border border-surface-container-highest flex flex-col">
+<!-- Blurred Photo Area -->
+<div class="relative w-full h-80 bg-surface-container-high overflow-hidden group">
+<img alt="Private Profile Photo" class="w-full h-full object-cover blur-xl scale-110 opacity-80" data-alt="A softly blurred, highly abstract silhouette of a person wearing an elegant hijab, positioned against a warm, sunlit nature background. The image is intentionally heavily blurred to obscure facial features entirely, prioritizing privacy and creating a serene, mysterious aesthetic. The lighting is soft and natural, emphasizing the cream and earthy tones of the app's palette." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBug-DtmkGWKw6RLb3TdaqKJaFyyddHetU1Js35-mZDweHG0nnX9neXVUUyJyCgxPmlhRVy5DmI_hKgzpSRtbH7yYFt0ayMhxPLAZeFyfpIbrMi4c7d3Oi65u06bdHD28FmHdjqIm2j0NsJnUIkdSc_118fvgGVpoUtWrMOpCyjZbH8v__vJ1qN8bc8JNBgL8MZtbwICipnElB6vntjXI7cl-l4AHUWbfWcvxzNNB4pXEV0EPhOdN8GCA"/>
+<!-- Overlay Button -->
+<div class="absolute inset-0 flex items-center justify-center bg-black/10">
+<button class="bg-background/80 backdrop-blur-md px-6 py-3 rounded-full text-on-background font-label-md text-label-md shadow-sm flex items-center gap-2 hover:bg-background transition-colors">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+                            Tap to request photo
+                        </button>
+</div>
+<!-- Location Pill -->
+<div class="absolute top-4 left-4 bg-background/70 backdrop-blur-sm px-3 py-1.5 rounded-full flex items-center gap-1.5 text-on-surface">
+<span class="material-symbols-outlined text-[16px] text-primary">location_on</span>
+<span class="font-label-sm text-label-sm">London, UK</span>
+</div>
+</div>
+<!-- Info Area -->
+<div class="p-5 flex flex-col gap-2">
+<div class="flex items-end justify-between">
+<h2 class="font-headline-md text-headline-md text-on-surface">Aisha, 26</h2>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">mosque</span>
+<span class="font-body-md text-body-md">Practicing · Sunni</span>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant mt-1">
+<span class="material-symbols-outlined text-[18px]">work</span>
+<span class="font-body-sm text-body-sm">Data Analyst</span>
+</div>
+<!-- Action Buttons -->
+<div class="flex justify-center items-center gap-6 mt-6 pt-4 border-t border-surface-container-highest">
+<button aria-label="Pass" class="w-14 h-14 rounded-full border border-secondary text-secondary flex items-center justify-center hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-2xl">close</span>
+</button>
+<button aria-label="Like" class="w-16 h-16 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center shadow-md shadow-primary-container/20 hover:brightness-110 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">favorite</span>
+</button>
+</div>
+</div>
+</article>
+<!-- Profile Card 2 -->
+<article class="bg-surface rounded-3xl overflow-hidden shadow-sm border border-surface-container-highest flex flex-col">
+<!-- Blurred Photo Area -->
+<div class="relative w-full h-80 bg-surface-container-high overflow-hidden group">
+<img alt="Private Profile Photo" class="w-full h-full object-cover blur-xl scale-110 opacity-80" data-alt="A softly blurred, highly abstract silhouette of a person wearing an elegant hijab, positioned against a warm, sunlit nature background. The image is intentionally heavily blurred to obscure facial features entirely, prioritizing privacy and creating a serene, mysterious aesthetic. The lighting is soft and natural, emphasizing the cream and earthy tones of the app's palette." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBBMaLDaN-XFghNol_--Jwlv-gt1PT0dmaUznnZ-PbA8d6BR2NkhMOBI6p6aC98bSsfJKkoG8bRDW2GOiN9u-vz7mDyA4y7YyQej5406fpS_6CvHe3Tsb-aeFe_XySq9ELmJWx5oIAfynttmutziy6aoePb7PICFopowcCO6YR2ziUwA7u_lgSEOMbhdLgUEC2d06qlQu_zLgZSjiW78N4DTtUGirAZWvlATtAUMTZd0y7-C4u8u1uNzQ"/>
+<!-- Overlay Button -->
+<div class="absolute inset-0 flex items-center justify-center bg-black/10">
+<button class="bg-background/80 backdrop-blur-md px-6 py-3 rounded-full text-on-background font-label-md text-label-md shadow-sm flex items-center gap-2 hover:bg-background transition-colors">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+                            Tap to request photo
+                        </button>
+</div>
+<!-- Location Pill -->
+<div class="absolute top-4 left-4 bg-background/70 backdrop-blur-sm px-3 py-1.5 rounded-full flex items-center gap-1.5 text-on-surface">
+<span class="material-symbols-outlined text-[16px] text-primary">location_on</span>
+<span class="font-label-sm text-label-sm">Manchester, UK</span>
+</div>
+</div>
+<!-- Info Area -->
+<div class="p-5 flex flex-col gap-2">
+<div class="flex items-end justify-between">
+<h2 class="font-headline-md text-headline-md text-on-surface">Fatima, 24</h2>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">mosque</span>
+<span class="font-body-md text-body-md">Moderately practicing · Sunni</span>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant mt-1">
+<span class="material-symbols-outlined text-[18px]">school</span>
+<span class="font-body-sm text-body-sm">Master's Student</span>
+</div>
+<!-- Action Buttons -->
+<div class="flex justify-center items-center gap-6 mt-6 pt-4 border-t border-surface-container-highest">
+<button aria-label="Pass" class="w-14 h-14 rounded-full border border-secondary text-secondary flex items-center justify-center hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-2xl">close</span>
+</button>
+<button aria-label="Like" class="w-16 h-16 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center shadow-md shadow-primary-container/20 hover:brightness-110 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">favorite</span>
+</button>
+</div>
+</div>
+</article>
+<!-- Profile Card 3 -->
+<article class="bg-surface rounded-3xl overflow-hidden shadow-sm border border-surface-container-highest flex flex-col">
+<!-- Blurred Photo Area -->
+<div class="relative w-full h-80 bg-surface-container-high overflow-hidden group">
+<img alt="Private Profile Photo" class="w-full h-full object-cover blur-xl scale-110 opacity-80" data-alt="A softly blurred, highly abstract silhouette of a person wearing an elegant hijab, positioned against a warm, sunlit nature background. The image is intentionally heavily blurred to obscure facial features entirely, prioritizing privacy and creating a serene, mysterious aesthetic. The lighting is soft and natural, emphasizing the cream and earthy tones of the app's palette." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCmTnCqM1fbOjhs4t6LezN7x4wlX7IU_r_p_w-EtGncSZZscbrTbWUGE1kwoZM8mmosxMiCOPNBRQnFM1SbM45ShpqUmW7iituGCknw3Zysl4OKwB-ShL0o_eWKLgAtNvV_x8TVc3PRe2qe30KQcSOe6nh8kwvfUcZMJzWn4xb5nwSUPkY9upRC5VM1I6ThEEO6CHLCeDWTQVnigFd3GqsaYKRfbnqjjbQL9GRVzHLmpjplwFNIf-Qlaw"/>
+<!-- Overlay Button -->
+<div class="absolute inset-0 flex items-center justify-center bg-black/10">
+<button class="bg-background/80 backdrop-blur-md px-6 py-3 rounded-full text-on-background font-label-md text-label-md shadow-sm flex items-center gap-2 hover:bg-background transition-colors">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+                            Tap to request photo
+                        </button>
+</div>
+<!-- Location Pill -->
+<div class="absolute top-4 left-4 bg-background/70 backdrop-blur-sm px-3 py-1.5 rounded-full flex items-center gap-1.5 text-on-surface">
+<span class="material-symbols-outlined text-[16px] text-primary">location_on</span>
+<span class="font-label-sm text-label-sm">Birmingham, UK</span>
+</div>
+</div>
+<!-- Info Area -->
+<div class="p-5 flex flex-col gap-2">
+<div class="flex items-end justify-between">
+<h2 class="font-headline-md text-headline-md text-on-surface">Zainab, 28</h2>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">mosque</span>
+<span class="font-body-md text-body-md">Practicing · Shia</span>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant mt-1">
+<span class="material-symbols-outlined text-[18px]">medical_services</span>
+<span class="font-body-sm text-body-sm">Pharmacist</span>
+</div>
+<!-- Action Buttons -->
+<div class="flex justify-center items-center gap-6 mt-6 pt-4 border-t border-surface-container-highest">
+<button aria-label="Pass" class="w-14 h-14 rounded-full border border-secondary text-secondary flex items-center justify-center hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-2xl">close</span>
+</button>
+<button aria-label="Like" class="w-16 h-16 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center shadow-md shadow-primary-container/20 hover:brightness-110 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">favorite</span>
+</button>
+</div>
+</div>
+</article>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 w-full md:absolute flex justify-between px-6 pb-6 pt-4 max-w-max-width mx-auto bg-surface shadow-[0_-4px_24px_rgba(26,43,60,0.05)] rounded-t-2xl md:rounded-b-[32px] md:rounded-t-none z-50">
+<!-- Discover (Active) -->
+<button aria-label="Discover" class="flex flex-col items-center justify-center gap-1 group w-16">
+<div class="w-12 h-8 rounded-full bg-primary-container/20 flex items-center justify-center group-active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-primary-container" style="font-variation-settings: 'FILL' 1;">explore</span>
+</div>
+<span class="font-label-sm text-label-sm text-primary-container mt-1">Discover</span>
+</button>
+<!-- Matches -->
+<button aria-label="Matches" class="flex flex-col items-center justify-center gap-1 group w-16">
+<div class="w-12 h-8 rounded-full flex items-center justify-center group-active:scale-95 transition-transform group-hover:bg-surface-variant/50">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-on-surface transition-colors">favorite</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant group-hover:text-on-surface transition-colors mt-1">Matches</span>
+</button>
+<!-- Chats -->
+<button aria-label="Chats" class="flex flex-col items-center justify-center gap-1 group w-16">
+<div class="w-12 h-8 rounded-full flex items-center justify-center group-active:scale-95 transition-transform group-hover:bg-surface-variant/50 relative">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-on-surface transition-colors">chat_bubble</span>
+<span class="absolute top-0 right-1 w-2.5 h-2.5 bg-error rounded-full border-2 border-surface"></span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant group-hover:text-on-surface transition-colors mt-1">Chats</span>
+</button>
+<!-- Profile -->
+<button aria-label="Profile" class="flex flex-col items-center justify-center gap-1 group w-16">
+<div class="w-12 h-8 rounded-full flex items-center justify-center group-active:scale-95 transition-transform group-hover:bg-surface-variant/50">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-on-surface transition-colors">person</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant group-hover:text-on-surface transition-colors mt-1">Profile</span>
+</button>
+</nav>
+</div>
+</body></html>

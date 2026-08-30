@@ -54,16 +54,21 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
 
   // Live polling for real multi-device messages from Cloudflare D1
   useEffect(() => {
-    if (!activeConvId) return;
+    if (!activeConvId || !activeConv) return;
+
+    const targetRoomId = activeConv.otherUser?.id 
+      ? (`conv_${[currentUser.id, activeConv.otherUser.id].sort().join('_')}`)
+      : activeConvId;
 
     const fetchLiveMessages = async () => {
       try {
-        const res = await fetch(`${API_BASE}/conversations/${activeConvId}/messages`);
+        const res = await fetch(`${API_BASE}/conversations/${targetRoomId}/messages`);
         const data = await res.json();
         if (data.success && Array.isArray(data.messages)) {
           const convs = dbService.getConversations();
-          const curr = convs.find(c => c.id === activeConvId);
+          const curr = convs.find(c => c.id === activeConvId || (activeConv.otherUser && c.otherUser?.id === activeConv.otherUser.id));
           if (curr && data.messages.length > 0) {
+            curr.id = targetRoomId;
             curr.messages = data.messages;
             curr.lastMessageText = data.messages[data.messages.length - 1].text;
             localStorage.setItem('serene_conversations_v1', JSON.stringify(convs));
@@ -74,9 +79,9 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
     };
 
     fetchLiveMessages();
-    const interval = setInterval(fetchLiveMessages, 3000);
+    const interval = setInterval(fetchLiveMessages, 2500);
     return () => clearInterval(interval);
-  }, [activeConvId]);
+  }, [activeConvId, activeConv?.otherUser?.id]);
 
   // Real User-to-User Send Message
   const handleSendMessage = async () => {
@@ -90,6 +95,10 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
 
     const text = inputText.trim();
     const user = dbService.getCurrentUser();
+    const targetRoomId = activeConv.otherUser?.id 
+      ? (`conv_${[user.id, activeConv.otherUser.id].sort().join('_')}`)
+      : activeConvId;
+
     const newMsg: ChatMessage = {
       id: 'msg_' + Date.now(),
       senderId: user.id,
@@ -102,8 +111,9 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
 
     // Update locally immediately for instant feedback
     const convs = dbService.getConversations();
-    const current = convs.find(c => c.id === activeConvId);
+    const current = convs.find(c => c.id === activeConvId || (activeConv.otherUser && c.otherUser?.id === activeConv.otherUser.id));
     if (current) {
+      current.id = targetRoomId;
       current.messages.push(newMsg);
       current.lastMessageText = text;
       current.lastMessageSenderId = user.id;
@@ -116,13 +126,14 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
 
     // Save permanently to Cloudflare D1 SQL database
     try {
-      await fetch(`${API_BASE}/conversations/${activeConvId}/messages`, {
+      await fetch(`${API_BASE}/conversations/${targetRoomId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           senderId: user.id,
           senderName: user.fullName,
-          text
+          text,
+          receiverId: activeConv.otherUser?.id
         })
       });
     } catch {}

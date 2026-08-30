@@ -96,9 +96,9 @@ chatRouter.get('/:id/messages', async (c) => {
     const { results } = await c.env.DB.prepare(`
       SELECT id, conversation_id, sender_id as senderId, sender_name as senderName, text, created_at as timestamp
       FROM chat_messages
-      WHERE conversation_id = ?
+      WHERE conversation_id = ? OR conversation_id LIKE ?
       ORDER BY created_at ASC
-    `).bind(convId).all();
+    `).bind(convId, `%${convId}%`).all();
 
     return c.json({ success: true, messages: results || [] });
   } catch (error: any) {
@@ -117,28 +117,33 @@ chatRouter.post('/:id/messages', async (c) => {
       return c.json({ success: false, error: 'Message text is required' }, 400);
     }
 
-    // 1. Ensure conversation row exists in DB to prevent foreign key issues
-    const parts = convId.startsWith('conv_') ? convId.replace('conv_', '').split('_') : [];
-    const p1 = parts[0] || senderId || 'usr_p1';
-    const p2 = parts[1] || receiverId || 'usr_p2';
+    // 1. Check if conversation exists or use direct convId
+    const existingConv: any = await c.env.DB.prepare(`
+      SELECT id, participant_one, participant_two FROM conversations WHERE id = ?
+    `).bind(convId).first();
 
+    const targetConvId = existingConv ? existingConv.id : convId;
+    const p1 = existingConv ? existingConv.participant_one : (senderId || 'usr_p1');
+    const p2 = existingConv ? existingConv.participant_two : (receiverId || 'usr_p2');
+
+    // 2. Ensure conversation row exists in DB
     await c.env.DB.prepare(`
       INSERT OR IGNORE INTO conversations (id, participant_one, participant_two, jsonl_log_path, last_message_text, last_message_time)
       VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-    `).bind(convId, p1, p2, `logs/${convId}.jsonl`, text.trim()).run();
+    `).bind(targetConvId, p1, p2, `logs/${targetConvId}.jsonl`, text.trim()).run();
 
-    // 2. Insert into chat_messages
+    // 3. Insert into chat_messages
     await c.env.DB.prepare(`
       INSERT INTO chat_messages (id, conversation_id, sender_id, sender_name, text)
       VALUES (?, ?, ?, ?, ?)
-    `).bind(msgId, convId, senderId, senderName || 'Member', text.trim()).run();
+    `).bind(msgId, targetConvId, senderId, senderName || 'Member', text.trim()).run();
 
-    // 3. Update conversation last message
+    // 4. Update conversation last message
     await c.env.DB.prepare(`
       UPDATE conversations 
       SET last_message_text = ?, last_message_sender_id = ?, last_message_time = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).bind(text.trim(), senderId, convId).run();
+    `).bind(text.trim(), senderId, targetConvId).run();
 
     return c.json({
       success: true,

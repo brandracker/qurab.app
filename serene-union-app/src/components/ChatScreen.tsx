@@ -45,12 +45,15 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
     });
   }, [initialConvId]);
 
-  const activeConv = conversations.find(c => c.id === activeConvId);
+  const activeConv = conversations.find(c => 
+    c.id === activeConvId || 
+    (activeConvId && c.otherUser?.id && activeConvId.includes(c.otherUser.id))
+  );
 
   // Auto-scroll on new messages
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [activeConv?.messages]);
+  }, [activeConv?.messages?.length]);
 
   // Live polling for real multi-device messages from Cloudflare D1
   useEffect(() => {
@@ -66,11 +69,41 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
         const data = await res.json();
         if (data.success && Array.isArray(data.messages)) {
           const convs = dbService.getConversations();
-          const curr = convs.find(c => c.id === activeConvId || (activeConv.otherUser && c.otherUser?.id === activeConv.otherUser.id));
-          if (curr && data.messages.length > 0) {
+          const curr = convs.find(c => c.id === activeConvId || c.id === targetRoomId || (activeConv.otherUser && c.otherUser?.id === activeConv.otherUser.id));
+          if (curr) {
             curr.id = targetRoomId;
-            curr.messages = data.messages;
-            curr.lastMessageText = data.messages[data.messages.length - 1].text;
+            const messageMap = new Map<string, ChatMessage>();
+
+            // 1. Keep local messages so they never disappear
+            (curr.messages || []).forEach(m => {
+              const key = m.id || `${m.senderId}_${m.text}`;
+              messageMap.set(key, m);
+            });
+
+            // 2. Overlay verified D1 messages
+            data.messages.forEach((m: any) => {
+              const key = m.id || `${m.senderId}_${m.text}`;
+              const formattedTime = m.timestamp && (m.timestamp.includes('T') || m.timestamp.includes('-'))
+                ? new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                : (m.timestamp || 'Just now');
+
+              messageMap.set(key, {
+                id: m.id,
+                senderId: m.senderId,
+                senderName: m.senderName || 'Member',
+                text: m.text,
+                timestamp: formattedTime,
+                isRead: true,
+                waliNotified: true
+              });
+            });
+
+            const merged = Array.from(messageMap.values());
+            curr.messages = merged;
+            if (merged.length > 0) {
+              curr.lastMessageText = merged[merged.length - 1].text;
+              curr.lastMessageTime = merged[merged.length - 1].timestamp;
+            }
             localStorage.setItem('serene_conversations_v1', JSON.stringify(convs));
             setConversations([...convs]);
           }
@@ -111,15 +144,19 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
 
     // Update locally immediately for instant feedback
     const convs = dbService.getConversations();
-    const current = convs.find(c => c.id === activeConvId || (activeConv.otherUser && c.otherUser?.id === activeConv.otherUser.id));
+    const current = convs.find(c => c.id === activeConvId || c.id === targetRoomId || (activeConv.otherUser && c.otherUser?.id === activeConv.otherUser.id));
     if (current) {
       current.id = targetRoomId;
+      if (!current.messages) current.messages = [];
       current.messages.push(newMsg);
       current.lastMessageText = text;
       current.lastMessageSenderId = user.id;
       current.lastMessageTime = newMsg.timestamp;
       localStorage.setItem('serene_conversations_v1', JSON.stringify(convs));
       setConversations([...convs]);
+      if (activeConvId !== targetRoomId) {
+        setActiveConvId(targetRoomId);
+      }
     }
     setInputText('');
     setMessagesSentToday(prev => prev + 1);
@@ -131,7 +168,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           senderId: user.id,
-          senderName: user.fullName,
+          senderName: user.fullName || 'Member',
           text,
           receiverId: activeConv.otherUser?.id
         })

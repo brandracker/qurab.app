@@ -7,6 +7,8 @@ interface Props {
     gender?: string;
     location?: string;
     height?: string;
+    ethnicity?: string;
+    citizenship?: string;
     willingnessToRelocate?: 'willing' | 'not_willing' | 'open';
   };
   onBack: () => void;
@@ -16,6 +18,8 @@ interface Props {
     gender: string;
     location: string;
     height: string;
+    ethnicity: string;
+    citizenship: string;
     willingnessToRelocate: 'willing' | 'not_willing' | 'open';
   }) => void;
 }
@@ -24,8 +28,10 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
   const [fullName, setFullName] = useState(data?.fullName || '');
   const [dob, setDob] = useState(data?.dob || '1998-01-01');
   const [gender, setGender] = useState(data?.gender || 'male');
-  const [location, setLocation] = useState(data?.location || 'Lahore, Pakistan');
+  const [location, setLocation] = useState(data?.location || 'London, UK');
   const [height, setHeight] = useState(data?.height || "5'10\" (178 cm)");
+  const [ethnicity, setEthnicity] = useState(data?.ethnicity || 'South Asian');
+  const [citizenship, setCitizenship] = useState(data?.citizenship || 'Citizen');
   const [willingnessToRelocate, setWillingnessToRelocate] = useState<'willing' | 'not_willing' | 'open'>(
     data?.willingnessToRelocate || 'open'
   );
@@ -33,7 +39,7 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName.trim()) return;
-    onContinue({ fullName, dob, gender, location, height, willingnessToRelocate });
+    onContinue({ fullName, dob, gender, location, height, ethnicity, citizenship, willingnessToRelocate });
   };
 
   return (
@@ -129,6 +135,34 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
             </div>
           </div>
 
+          {/* Ethnicity / Cultural Heritage & Citizenship */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-on-surface mb-1.5">Heritage / Ethnicity</label>
+              <select
+                value={ethnicity}
+                onChange={(e) => setEthnicity(e.target.value)}
+                className="w-full bg-surface-container-high border border-surface-variant rounded-2xl px-3 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary"
+              >
+                {['South Asian', 'Arab / Middle Eastern', 'Turkish', 'Caucasian / European', 'African', 'East Asian', 'Hispanic / Latino', 'Mixed / Other'].map(eth => (
+                  <option key={eth} value={eth}>{eth}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-on-surface mb-1.5">Citizenship / Visa</label>
+              <select
+                value={citizenship}
+                onChange={(e) => setCitizenship(e.target.value)}
+                className="w-full bg-surface-container-high border border-surface-variant rounded-2xl px-3 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary"
+              >
+                {['Citizen', 'Permanent Resident / PR', 'Work Visa', 'Student Visa', 'Dual National', 'Prefer not to say'].map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           {/* Location */}
           <div>
             <label className="block text-xs font-bold text-on-surface mb-1.5">Current City & Country</label>
@@ -137,19 +171,19 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
               required
               value={location}
               onChange={(e) => setLocation(e.target.value)}
-              placeholder="e.g. Lahore, Pakistan or London, UK"
+              placeholder="e.g. London, UK or Lahore, Pakistan or Dallas, USA"
               className="w-full bg-surface-container-high border border-surface-variant rounded-2xl px-4 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
           {/* Willingness to Relocate */}
           <div>
-            <label className="block text-xs font-bold text-on-surface mb-1.5">Willingness to Relocate</label>
+            <label className="block text-xs font-bold text-on-surface mb-1.5">International Relocation</label>
             <div className="grid grid-cols-3 gap-2">
               {[
-                { id: 'willing', label: 'Willing to Relocate' },
-                { id: 'open', label: 'Open / Flexible' },
-                { id: 'not_willing', label: 'Prefer Local' }
+                { id: 'willing', label: '✈️ International' },
+                { id: 'open', label: '🌍 Flexible' },
+                { id: 'not_willing', label: '🏠 Current City' }
               ].map(opt => (
                 <button
                   key={opt.id}

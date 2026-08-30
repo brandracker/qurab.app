@@ -134,6 +134,35 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
               </span>
             </button>
 
+            {/* Quick Universal Badges Strip */}
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {profile.ethnicity && (
+                <span className="bg-primary/10 text-primary px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1">
+                  <span>🌍</span> {profile.ethnicity}
+                </span>
+              )}
+              {profile.citizenship && (
+                <span className="bg-surface-container-high text-on-surface px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1 border border-surface-variant/40">
+                  <span>🛂</span> {profile.citizenship}
+                </span>
+              )}
+              {profile.maritalStatus && (
+                <span className="bg-surface-container-high text-on-surface px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1 border border-surface-variant/40">
+                  <span>💍</span> {profile.maritalStatus.replace('_', ' ')}
+                </span>
+              )}
+              {profile.workArrangement && (
+                <span className="bg-surface-container-high text-on-surface px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1 border border-surface-variant/40 capitalize">
+                  <span>💻</span> {profile.workArrangement}
+                </span>
+              )}
+              {profile.incomeBracket && profile.incomeBracket !== 'undisclosed' && (
+                <span className="bg-surface-container-high text-on-surface px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1 border border-surface-variant/40">
+                  <span>💵</span> {profile.incomeBracket.replace('_', ' ')}
+                </span>
+              )}
+            </div>
+
             {/* 1. Deen & Religious Practice (Deep Faith Habits) */}
             <div className="bg-primary/5 rounded-2xl p-4 border border-primary/20 space-y-3">
               <h3 className="font-serif text-sm font-bold text-primary flex items-center gap-2">
@@ -154,13 +183,49 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
                   <strong className="text-on-surface capitalize">{rel?.modestyPractice?.replace('_', ' ') || 'Modest'}</strong>
                 </div>
                 <div className="bg-surface p-2.5 rounded-xl border border-surface-variant/40">
-                  <span className="text-[10px] text-secondary font-medium block">Hajj & Umrah</span>
-                  <strong className="text-on-surface capitalize">{rel?.hajjUmrahStatus || 'Planning'}</strong>
+                  <span className="text-[10px] text-secondary font-medium block">Dietary Standard</span>
+                  <strong className="text-on-surface capitalize">{rel?.halalDiet || 'Strictly Halal'}</strong>
                 </div>
               </div>
             </div>
 
-            {/* 2. Family Setup & Post-Marriage Living (Critical Alignment) */}
+            {/* 2. Interests, Hobbies & Personality Badges */}
+            {((profile.hobbies && profile.hobbies.length > 0) || (profile.personalityTraits && profile.personalityTraits.length > 0)) && (
+              <div className="bg-surface-container-low rounded-2xl p-4 border border-surface-variant/30 space-y-3">
+                <h3 className="text-xs font-bold text-secondary uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[16px] text-primary">interests</span>
+                  <span>Interests & Personality</span>
+                </h3>
+                
+                {profile.hobbies && profile.hobbies.length > 0 && (
+                  <div>
+                    <span className="text-[10px] text-secondary font-bold uppercase tracking-wider block mb-1.5">Hobbies & Passions</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {profile.hobbies.map((h, i) => (
+                        <span key={i} className="bg-surface px-2.5 py-1 rounded-full text-xs text-on-surface border border-surface-variant/50 shadow-2xs font-medium">
+                          {h}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {profile.personalityTraits && profile.personalityTraits.length > 0 && (
+                  <div>
+                    <span className="text-[10px] text-secondary font-bold uppercase tracking-wider block mb-1.5">Personality Traits</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {profile.personalityTraits.map((t, i) => (
+                        <span key={i} className="bg-primary/10 text-primary px-2.5 py-1 rounded-full text-xs font-medium">
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 3. Family Setup & Post-Marriage Living (Critical Alignment) */}
             <div className="bg-surface-container-low rounded-2xl p-4 border border-surface-variant/30 space-y-3">
               <h3 className="text-xs font-bold text-secondary uppercase tracking-wider flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-[16px] text-primary">home</span>
@@ -174,9 +239,9 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
                   </strong>
                 </div>
                 <div className="bg-surface p-2.5 rounded-xl border border-surface-variant/40">
-                  <span className="text-[10px] text-secondary font-medium block">Family Structure</span>
+                  <span className="text-[10px] text-secondary font-medium block">Dual-Income Preference</span>
                   <strong className="text-on-surface capitalize">
-                    {profile.familyStructure || 'Nuclear'} ({profile.siblingsCount ?? 2} Siblings)
+                    {profile.dualIncomePreference?.replace('_', ' ') || 'Career Supportive'}
                   </strong>
                 </div>
                 <div className="bg-surface p-2.5 rounded-xl border border-surface-variant/40">
@@ -194,7 +259,7 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
               </div>
             </div>
 
-            {/* 3. Career, Education & Mahr Philosophy */}
+            {/* 4. Career, Education & Mahr Philosophy */}
             <div className="bg-surface-container-low rounded-2xl p-4 border border-surface-variant/30 space-y-3">
               <h3 className="text-xs font-bold text-secondary uppercase tracking-wider flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-[16px] text-primary">school</span>
@@ -207,7 +272,7 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
                 </div>
                 <div className="flex items-center gap-2 text-on-surface">
                   <span className="material-symbols-outlined text-[16px] text-primary">work</span>
-                  <span>{profile.profession}</span>
+                  <span>{profile.profession} {profile.workArrangement ? `(${profile.workArrangement.toUpperCase()})` : ''}</span>
                 </div>
                 <div className="flex items-center gap-2 text-on-surface">
                   <span className="material-symbols-outlined text-[16px] text-primary">translate</span>
@@ -220,7 +285,7 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
               </div>
             </div>
 
-            {/* 4. About My Deen & Bio Essay */}
+            {/* 5. About My Deen & Bio Essay */}
             <div className="bg-surface-container-low rounded-2xl p-4 border border-surface-variant/30 space-y-2">
               <h3 className="text-xs font-bold text-secondary uppercase tracking-wider">About Me & My Faith</h3>
               <p className="text-xs text-on-surface-variant leading-relaxed">
@@ -228,7 +293,7 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
               </p>
             </div>
 
-            {/* 5. Wali & Chaperone Info */}
+            {/* 6. Wali & Chaperone Info */}
             {profile.wali && (
               <div className="bg-surface-container-low rounded-2xl p-4 border border-surface-variant/30 flex items-center justify-between">
                 <div className="flex items-center gap-3">

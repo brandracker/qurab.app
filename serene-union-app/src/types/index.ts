@@ -20,6 +20,17 @@ export interface UserProfile {
   university?: string;
   height: string;
   ethnicity: string;
+  citizenship?: string;
+  workArrangement?: 'remote' | 'hybrid' | 'onsite' | 'entrepreneur';
+  incomeBracket?: 'under_40k' | '40k_80k' | '80k_150k' | '150k_plus' | 'undisclosed';
+  islamicAttire?: 'hijab' | 'abaya' | 'niqab' | 'sunnah_beard' | 'trimmed_beard' | 'modest_contemporary';
+  dietaryStandard?: 'zabiha_only' | 'halal_always' | 'halal_home' | 'vegetarian';
+  revertStatus?: 'born_muslim' | 'revert';
+  housingStatus?: 'independent' | 'family_home' | 'rented';
+  dualIncomePreference?: 'career_supportive' | 'homemaker_focused' | 'flexible';
+  maritalStatus?: 'never_married' | 'divorced' | 'widowed' | 'single_parent';
+  hobbies?: string[];
+  personalityTraits?: string[];
   familyStructure?: 'nuclear' | 'joint';
   livingPreference?: 'independent' | 'with_in_laws' | 'flexible';
   siblingsCount?: number;

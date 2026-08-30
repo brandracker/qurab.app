@@ -5,6 +5,10 @@ interface Props {
     education?: string;
     university?: string;
     profession?: string;
+    workArrangement?: 'remote' | 'hybrid' | 'onsite' | 'entrepreneur';
+    incomeBracket?: 'under_40k' | '40k_80k' | '80k_150k' | '150k_plus' | 'undisclosed';
+    hobbies?: string[];
+    personalityTraits?: string[];
     mahrPhilosophy?: string;
     timeline?: string;
     childrenDesire?: string;
@@ -15,6 +19,10 @@ interface Props {
     education: string;
     university: string;
     profession: string;
+    workArrangement: 'remote' | 'hybrid' | 'onsite' | 'entrepreneur';
+    incomeBracket: 'under_40k' | '40k_80k' | '80k_150k' | '150k_plus' | 'undisclosed';
+    hobbies: string[];
+    personalityTraits: string[];
     mahrPhilosophy: string;
     timeline: string;
     childrenDesire: string;
@@ -26,6 +34,10 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
   const [education, setEducation] = useState<string>(data?.education || 'Bachelors Degree');
   const [university, setUniversity] = useState<string>(data?.university || '');
   const [profession, setProfession] = useState<string>(data?.profession || 'Software Engineer');
+  const [workArrangement, setWorkArrangement] = useState<'remote' | 'hybrid' | 'onsite' | 'entrepreneur'>(data?.workArrangement || 'remote');
+  const [incomeBracket, setIncomeBracket] = useState<'under_40k' | '40k_80k' | '80k_150k' | '150k_plus' | 'undisclosed'>(data?.incomeBracket || '40k_80k');
+  const [hobbies, setHobbies] = useState<string[]>(data?.hobbies || ['📚 Books & Islamic History', '✈️ Travel & Umrah', '☕ Specialty Coffee']);
+  const [personalityTraits, setPersonalityTraits] = useState<string[]>(data?.personalityTraits || ['🤍 Family-Oriented', '🌿 Calm & Patient']);
   const [mahrPhilosophy, setMahrPhilosophy] = useState<string>(data?.mahrPhilosophy || 'mutual_agreement');
   const [timeline, setTimeline] = useState<string>(data?.timeline || 'within_1_year');
   const [childrenDesire, setChildrenDesire] = useState<string>(data?.childrenDesire || 'desires_children');
@@ -37,6 +49,10 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
       education,
       university,
       profession,
+      workArrangement,
+      incomeBracket,
+      hobbies,
+      personalityTraits,
       mahrPhilosophy,
       timeline,
       childrenDesire,
@@ -110,7 +126,116 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
             />
           </div>
 
-          {/* Marriage Timeline */}
+          {/* Work Setup & Income Bracket */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-on-surface mb-1.5">Work Setup</label>
+              <select
+                value={workArrangement}
+                onChange={(e) => setWorkArrangement(e.target.value as any)}
+                className="w-full bg-surface-container-high border border-surface-variant rounded-2xl px-3 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary"
+              >
+                {[
+                  { id: 'remote', label: '💻 Remote / WFH' },
+                  { id: 'hybrid', label: '🌐 Hybrid' },
+                  { id: 'onsite', label: '🏢 On-Site' },
+                  { id: 'entrepreneur', label: '🚀 Entrepreneur / Business' }
+                ].map(w => (
+                  <option key={w.id} value={w.id}>{w.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-on-surface mb-1.5">Annual Income (USD / equiv.)</label>
+              <select
+                value={incomeBracket}
+                onChange={(e) => setIncomeBracket(e.target.value as any)}
+                className="w-full bg-surface-container-high border border-surface-variant rounded-2xl px-3 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary"
+              >
+                {[
+                  { id: 'under_40k', label: 'Under $40k' },
+                  { id: '40k_80k', label: '$40k – $80k' },
+                  { id: '80k_150k', label: '$80k – $150k' },
+                  { id: '150k_plus', label: '$150k+' },
+                  { id: 'undisclosed', label: 'Prefer not to say' }
+                ].map(inc => (
+                  <option key={inc.id} value={inc.id}>{inc.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Hobbies & Passions */}
+          <div>
+            <label className="block text-xs font-bold text-on-surface mb-2">Interests & Hobbies (Tap to select)</label>
+            <div className="flex flex-wrap gap-2">
+              {[
+                '📚 Books & Islamic History',
+                '✈️ Travel & Umrah',
+                '🏋️ Fitness & Gym',
+                '☕ Specialty Coffee',
+                '🍳 Cooking & Foodie',
+                '🌿 Nature & Hiking',
+                '💻 Tech & Coding',
+                '🎨 Art & Calligraphy'
+              ].map(tag => {
+                const isSelected = hobbies.includes(tag);
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => {
+                      if (isSelected) setHobbies(hobbies.filter(h => h !== tag));
+                      else setHobbies([...hobbies, tag]);
+                    }}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                      isSelected
+                        ? 'border-primary bg-primary text-white shadow-sm'
+                        : 'border-surface-variant bg-surface text-secondary hover:bg-surface-container-low'
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Personality Traits */}
+          <div>
+            <label className="block text-xs font-bold text-on-surface mb-2">Personality Traits</label>
+            <div className="flex flex-wrap gap-2">
+              {[
+                '🤍 Family-Oriented',
+                '🌿 Calm & Patient',
+                '🎯 Ambitious',
+                '😄 Humorous & Cheerful',
+                '🧠 Intellectual',
+                '🤲 Kind-Hearted'
+              ].map(trait => {
+                const isSelected = personalityTraits.includes(trait);
+                return (
+                  <button
+                    key={trait}
+                    type="button"
+                    onClick={() => {
+                      if (isSelected) setPersonalityTraits(personalityTraits.filter(t => t !== trait));
+                      else setPersonalityTraits([...personalityTraits, trait]);
+                    }}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                      isSelected
+                        ? 'border-primary bg-primary text-white shadow-sm'
+                        : 'border-surface-variant bg-surface text-secondary hover:bg-surface-container-low'
+                    }`}
+                  >
+                    {trait}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Target Nikah Timeline */}
           <div>
             <label className="block text-xs font-bold text-on-surface mb-2">Target Nikah Timeline</label>
             <div className="grid grid-cols-3 gap-2">

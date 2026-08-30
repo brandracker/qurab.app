@@ -225,7 +225,31 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
                 </div>
                 <div className="flex items-center gap-2 text-on-surface-variant text-xs mt-0.5">
                   <span className="material-symbols-outlined text-[18px] text-primary">work</span>
-                  <span>{profile.profession}</span>
+                  <span>{profile.profession} {profile.workArrangement ? `(${profile.workArrangement.toUpperCase()})` : ''}</span>
+                </div>
+
+                {/* Visual Quick Badges */}
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  {profile.ethnicity && (
+                    <span className="bg-surface-container-high text-on-surface text-[10px] font-semibold px-2 py-0.5 rounded-full border border-surface-variant/40">
+                      🌍 {profile.ethnicity}
+                    </span>
+                  )}
+                  {profile.citizenship && (
+                    <span className="bg-surface-container-high text-on-surface text-[10px] font-semibold px-2 py-0.5 rounded-full border border-surface-variant/40">
+                      🛂 {profile.citizenship}
+                    </span>
+                  )}
+                  {profile.willingnessToRelocate && (
+                    <span className="bg-primary/10 text-primary text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                      ✈️ {profile.willingnessToRelocate === 'willing' ? 'Relocation: Open' : 'Local Preference'}
+                    </span>
+                  )}
+                  {profile.hobbies && profile.hobbies.length > 0 && (
+                    <span className="bg-surface-container-high text-secondary text-[10px] font-semibold px-2 py-0.5 rounded-full border border-surface-variant/40">
+                      {profile.hobbies[0]}
+                    </span>
+                  )}
                 </div>
 
                 <p className="text-xs text-on-surface-variant mt-2 leading-relaxed line-clamp-2">

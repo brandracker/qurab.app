@@ -7,6 +7,8 @@ interface Props {
     siblingsCount?: number;
     smokingStatus?: 'non_smoker' | 'trying_to_quit' | 'occasional';
     languagesSpoken?: string;
+    maritalStatus?: 'never_married' | 'divorced' | 'widowed' | 'single_parent';
+    dualIncomePreference?: 'career_supportive' | 'homemaker_focused' | 'flexible';
   };
   onNext: (stepData: any) => void;
   onBack: () => void;
@@ -18,6 +20,8 @@ export const FamilyLifestyleScreen: React.FC<Props> = ({ data, onNext, onBack })
   const [siblingsCount, setSiblingsCount] = useState<number>(data.siblingsCount ?? 2);
   const [smokingStatus, setSmokingStatus] = useState<'non_smoker' | 'trying_to_quit' | 'occasional'>(data.smokingStatus || 'non_smoker');
   const [languagesSpoken, setLanguagesSpoken] = useState<string>(data.languagesSpoken || 'English, Urdu');
+  const [maritalStatus, setMaritalStatus] = useState<'never_married' | 'divorced' | 'widowed' | 'single_parent'>(data.maritalStatus || 'never_married');
+  const [dualIncomePreference, setDualIncomePreference] = useState<'career_supportive' | 'homemaker_focused' | 'flexible'>(data.dualIncomePreference || 'career_supportive');
 
   const handleContinue = () => {
     onNext({
@@ -25,7 +29,9 @@ export const FamilyLifestyleScreen: React.FC<Props> = ({ data, onNext, onBack })
       livingPreference,
       siblingsCount,
       smokingStatus,
-      languagesSpoken
+      languagesSpoken,
+      maritalStatus,
+      dualIncomePreference
     });
   };
 
@@ -139,6 +145,57 @@ export const FamilyLifestyleScreen: React.FC<Props> = ({ data, onNext, onBack })
             </div>
           </div>
 
+          {/* Marital Status */}
+          <div>
+            <label className="block text-xs font-bold text-on-surface mb-2">Marital Status</label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {[
+                { id: 'never_married', label: '💍 Never Married' },
+                { id: 'divorced', label: '🌱 Divorced' },
+                { id: 'widowed', label: '🕊️ Widowed' },
+                { id: 'single_parent', label: '👶 Single Parent' }
+              ].map(opt => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setMaritalStatus(opt.id as any)}
+                  className={`py-2.5 px-2 rounded-xl border text-[11px] font-semibold text-center transition-all ${
+                    maritalStatus === opt.id
+                      ? 'border-primary bg-primary/10 text-primary font-bold'
+                      : 'border-surface-variant bg-surface text-secondary hover:bg-surface-container-low'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Dual-Income / Career Support */}
+          <div>
+            <label className="block text-xs font-bold text-on-surface mb-2">Dual-Income & Working Spouse</label>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { id: 'career_supportive', label: '💼 Career Supportive' },
+                { id: 'homemaker_focused', label: '🏠 Homemaker Focus' },
+                { id: 'flexible', label: '🤝 Flexible / Open' }
+              ].map(opt => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setDualIncomePreference(opt.id as any)}
+                  className={`py-2.5 px-1 rounded-xl border text-[11px] font-semibold text-center transition-all ${
+                    dualIncomePreference === opt.id
+                      ? 'border-primary bg-primary/10 text-primary font-bold'
+                      : 'border-surface-variant bg-surface text-secondary hover:bg-surface-container-low'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Smoking & Substance */}
           <div>
             <label className="block text-xs font-bold text-on-surface mb-2">Smoking / Vaping Status</label>
@@ -171,7 +228,7 @@ export const FamilyLifestyleScreen: React.FC<Props> = ({ data, onNext, onBack })
               type="text"
               value={languagesSpoken}
               onChange={(e) => setLanguagesSpoken(e.target.value)}
-              placeholder="e.g. Urdu, English, Punjabi, Arabic"
+              placeholder="e.g. English, Arabic, Urdu, French"
               className="w-full bg-surface-container-high border border-surface-variant rounded-2xl px-4 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary"
             />
           </div>

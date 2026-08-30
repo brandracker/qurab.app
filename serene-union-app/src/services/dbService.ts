@@ -81,10 +81,13 @@ class DBService {
 
   getDiscoverFeed(filters?: FilterState): UserProfile[] {
     const user = this.getCurrentUser();
-    // Exclude current user and filter out any duplicates by ID
+    const targetGender = user.gender === 'female' ? 'male' : (user.gender === 'male' ? 'female' : undefined);
+
+    // Exclude current user, same gender (Islamic matrimony rule), and duplicates
     const seen = new Set<string>();
     const all = this.getAllProfiles().filter(p => {
       if (!p.id || p.id === user.id || seen.has(p.id)) return false;
+      if (targetGender && p.gender && p.gender.toLowerCase() !== targetGender) return false;
       seen.add(p.id);
       return true;
     });
@@ -278,8 +281,7 @@ class DBService {
         return data.candidates;
       }
     } catch {}
-    // Fallback: return discover profiles excluding current user
-    return this.getDiscoverFeed().slice(0, 4);
+    return [];
   }
 
   async fetchMutualMatches(): Promise<UserProfile[]> {

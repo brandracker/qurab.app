@@ -167,11 +167,20 @@ usersRouter.get('/:id', async (c) => {
 
 export const profilesRouter = new Hono<AppContext>();
 
-// 3. Discover Profiles
+// 3. Discover Profiles with Islamic Opposite-Gender Matching
 profilesRouter.get('/discover', async (c) => {
   try {
     const currentUserId = c.req.query('userId') || '';
     
+    let targetGender: string | null = null;
+    if (currentUserId) {
+      const userRow: any = await c.env.DB.prepare(`SELECT gender FROM users WHERE id = ?`).bind(currentUserId).first();
+      if (userRow?.gender) {
+        targetGender = userRow.gender.toLowerCase() === 'female' ? 'male' : (userRow.gender.toLowerCase() === 'male' ? 'female' : null);
+      }
+    }
+
+    const genderFilter = targetGender ? `AND LOWER(u.gender) = ?` : '';
     const query = `
       SELECT 
         u.id, u.phone, u.email, u.full_name as fullName, u.dob, u.gender, 
@@ -191,10 +200,15 @@ profilesRouter.get('/discover', async (c) => {
       LEFT JOIN religious_profiles rp ON u.id = rp.user_id
       LEFT JOIN wali_details w ON u.id = w.user_id
       WHERE u.id != ? AND u.email IS NOT NULL AND u.email != '' AND u.full_name != 'New Member'
+      ${genderFilter}
       ORDER BY u.created_at DESC
     `;
 
-    const { results } = await c.env.DB.prepare(query).bind(currentUserId).all();
+    const stmt = targetGender
+      ? c.env.DB.prepare(query).bind(currentUserId, targetGender)
+      : c.env.DB.prepare(query).bind(currentUserId);
+
+    const { results } = await stmt.all();
 
     // Fetch photos safely
     const userIds = (results || []).map((r: any) => r.id);

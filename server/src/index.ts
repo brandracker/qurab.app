@@ -19,7 +19,23 @@ app.use('*', cors({
   allowHeaders: ['Content-Type', 'Authorization'],
 }));
 
-// Global Health Check
+// Root & Health Check Endpoints
+app.get('/', (c) => {
+  return c.json({
+    service: 'Serene Union Halal Matrimony API',
+    status: 'online',
+    version: '2.0.0',
+    frontend: 'https://serene-union.pages.dev',
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/auth',
+      profiles: '/api/profiles/discover',
+      matches: '/api/matches',
+      conversations: '/api/conversations'
+    }
+  });
+});
+
 app.get('/api/health', (c) => {
   return c.json({
     status: 'ok',

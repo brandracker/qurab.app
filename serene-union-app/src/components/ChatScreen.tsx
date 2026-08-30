@@ -91,13 +91,9 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
             });
 
             if (formattedMessages.length > 0) {
-              const remoteIds = new Set(formattedMessages.map(m => m.id));
-              // Keep pending local messages that haven't reached server yet
-              const pendingLocal = (curr.messages || []).filter(m => m.id && !remoteIds.has(m.id) && m.senderId === currentUser.id);
-              const merged = [...formattedMessages, ...pendingLocal];
-              curr.messages = merged;
-              curr.lastMessageText = merged[merged.length - 1]?.text || '';
-              curr.lastMessageTime = merged[merged.length - 1]?.timestamp || '';
+              curr.messages = formattedMessages;
+              curr.lastMessageText = formattedMessages[formattedMessages.length - 1]?.text || '';
+              curr.lastMessageTime = formattedMessages[formattedMessages.length - 1]?.timestamp || '';
               localStorage.setItem('serene_conversations_v1', JSON.stringify(convs));
               setConversations([...convs]);
             }

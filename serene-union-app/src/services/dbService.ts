@@ -33,24 +33,7 @@ class DBService {
     return this.getAllProfiles();
   }
 
-  setCurrentUser(user: UserProfile): void {
-    this.currentUserId = user.id;
-    localStorage.setItem(this.userKey, JSON.stringify(user));
-  }
-
-  getCurrentUser(): UserProfile {
-    const saved = localStorage.getItem(this.userKey);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed?.fullName && (parsed.fullName.toLowerCase().includes('maryam') || parsed.fullName.toLowerCase().includes('sarah') || parsed.fullName.toLowerCase().includes('aisha')) && parsed.gender !== 'female') {
-          parsed.gender = 'female';
-          localStorage.setItem(this.userKey, JSON.stringify(parsed));
-        }
-        return parsed;
-      } catch {}
-    }
-
+  getGuestUser(): UserProfile {
     return {
       id: 'usr_guest',
       phone: '',
@@ -77,6 +60,30 @@ class DBService {
         halalDiet: 'Strictly Halal'
       }
     };
+  }
+
+  setCurrentUser(user: UserProfile): void {
+    if (this.currentUserId && this.currentUserId !== user.id) {
+      localStorage.removeItem(this.conversationsKey);
+    }
+    this.currentUserId = user.id;
+    localStorage.setItem(this.userKey, JSON.stringify(user));
+  }
+
+  getCurrentUser(): UserProfile {
+    const saved = localStorage.getItem(this.userKey);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed?.fullName && (parsed.fullName.toLowerCase().includes('maryam') || parsed.fullName.toLowerCase().includes('sarah') || parsed.fullName.toLowerCase().includes('aisha')) && parsed.gender !== 'female') {
+          parsed.gender = 'female';
+          localStorage.setItem(this.userKey, JSON.stringify(parsed));
+        }
+        return parsed;
+      } catch {}
+    }
+
+    return this.getGuestUser();
   }
 
   getAllProfiles(): UserProfile[] {
@@ -132,16 +139,19 @@ class DBService {
   }
 
   getConversations(): Conversation[] {
+    const user = this.getCurrentUser();
+    if (!user?.id || user.id === 'usr_guest') return [];
+
     const data = localStorage.getItem(this.conversationsKey);
     if (data) {
       try {
         const parsed = JSON.parse(data);
         if (Array.isArray(parsed)) {
-          // Filter out any legacy dummy seed conversation
-          const realOnly = (parsed as Conversation[]).filter((c: Conversation) => !c.messages?.some((m: ChatMessage) => m.id === 'msg_seed_1'));
-          if (realOnly.length !== parsed.length) {
-            localStorage.setItem(this.conversationsKey, JSON.stringify(realOnly));
-          }
+          // Filter out any legacy dummy seed conversation AND only return conversations belonging to this user
+          const realOnly = (parsed as Conversation[]).filter((c: Conversation) => {
+            if (c.messages?.some((m: ChatMessage) => m.id === 'msg_seed_1')) return false;
+            return c.participantOne === user.id || c.participantTwo === user.id;
+          });
           return realOnly;
         }
       } catch {}
@@ -278,41 +288,28 @@ class DBService {
   async fetchLiveConversations(): Promise<Conversation[]> {
     try {
       const user = this.getCurrentUser();
+      if (!user?.id || user.id === 'usr_guest') return [];
       const res = await fetch(`${API_BASE}/conversations?userId=${user.id}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.conversations)) {
-        const local = this.getConversations();
-        const mergedMap = new Map<string, Conversation>();
+        const userConversations: Conversation[] = data.conversations
+          .filter((rc: any) => rc.participantOne === user.id || rc.participantTwo === user.id)
+          .map((rc: any) => ({
+            id: rc.id,
+            participantOne: rc.participantOne,
+            participantTwo: rc.participantTwo,
+            otherUser: rc.otherUser,
+            lastMessageText: rc.lastMessageText || 'You matched! Start with Bismillah.',
+            lastMessageSenderId: rc.lastMessageSenderId || 'system',
+            lastMessageTime: rc.lastMessageTime || 'Just now',
+            unreadCount: 0,
+            waliName: rc.waliName,
+            status: rc.status || 'active',
+            messages: []
+          }));
 
-        // Local first
-        local.forEach(c => mergedMap.set(c.id, c));
-
-        // Merge remote
-        data.conversations.forEach((rc: any) => {
-          const existing = mergedMap.get(rc.id);
-          if (existing) {
-            if (rc.lastMessageText) existing.lastMessageText = rc.lastMessageText;
-            if (rc.lastMessageTime) existing.lastMessageTime = rc.lastMessageTime;
-          } else {
-            mergedMap.set(rc.id, {
-              id: rc.id,
-              participantOne: rc.participantOne,
-              participantTwo: rc.participantTwo,
-              otherUser: rc.otherUser,
-              lastMessageText: rc.lastMessageText || 'You matched! Start with Bismillah.',
-              lastMessageSenderId: rc.lastMessageSenderId || 'system',
-              lastMessageTime: rc.lastMessageTime || 'Just now',
-              unreadCount: 0,
-              waliName: rc.waliName,
-              status: rc.status || 'active',
-              messages: []
-            });
-          }
-        });
-
-        const result = Array.from(mergedMap.values());
-        localStorage.setItem(this.conversationsKey, JSON.stringify(result));
-        return result;
+        localStorage.setItem(this.conversationsKey, JSON.stringify(userConversations));
+        return userConversations;
       }
     } catch {}
     return this.getConversations();

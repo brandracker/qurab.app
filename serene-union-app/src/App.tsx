@@ -55,14 +55,15 @@ export const App: React.FC = () => {
 
   const handleAuthSuccess = (session: { token: string; user: any; isNewUser: boolean }) => {
     const user = session.user;
-    setOnboardingData({
-      userId: user?.id,
-      email: user?.email,
-      fullName: user?.fullName,
-      sessionToken: session.token
-    });
-
     if (session.isNewUser) {
+      setCurrentUser(dbService.getGuestUser());
+      setOnboardingData({
+        userId: user?.id,
+        email: user?.email,
+        fullName: user?.fullName,
+        photos: [],
+        sessionToken: session.token
+      });
       setCurrentStep('basic_info');
     } else {
       // Existing user with saved profile
@@ -226,6 +227,11 @@ export const App: React.FC = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('serene_current_user_v1');
+    localStorage.removeItem('serene_conversations_v1');
+    setOnboardingData({});
+    setCurrentUser(dbService.getGuestUser());
+    setActiveConvId(null);
+    setActiveTab('discover');
     setCurrentStep('welcome');
   };
 
@@ -302,7 +308,7 @@ export const App: React.FC = () => {
         {currentStep === 'photos_modesty' && (
           <CreateProfileScreen
             userId={onboardingData.userId || currentUser.id}
-            initialPhotos={currentUser.photos}
+            initialPhotos={onboardingData.photos || []}
             initialBlurPhotos={true}
             onBack={() => setCurrentStep('career_intent')}
             onComplete={handleFinishOnboarding}

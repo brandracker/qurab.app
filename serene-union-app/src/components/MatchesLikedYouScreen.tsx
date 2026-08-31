@@ -76,13 +76,15 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
     }
   };
 
+  const [mainSection, setMainSection] = useState<'activity' | 'privacy'>('activity');
+
   return (
     <div className="w-full h-full flex flex-col p-4 sm:p-6 overflow-y-auto pb-28 font-sans bg-background">
       {/* Top Header */}
       <header className="mb-4 flex items-center justify-between">
         <div>
-          <h1 className="font-serif text-2xl font-bold text-primary">Matches & Activity Hub</h1>
-          <p className="text-xs text-secondary">Your connections, sent interests & privacy history</p>
+          <h1 className="font-serif text-2xl font-bold text-primary">Matches & Activity</h1>
+          <p className="text-xs text-secondary">Manage your connections, sent interests & privacy history</p>
         </div>
         {isVip && (
           <span className="bg-primary/15 text-primary text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
@@ -92,34 +94,152 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
         )}
       </header>
 
-      {/* Activity Navigation Tabs */}
-      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-2 mb-4">
-        {[
-          { id: 'received', label: '💖 Liked You', count: interestedProfiles.length },
-          { id: 'sent', label: '🏹 You Liked', count: sentLikes.length },
-          { id: 'mutual', label: '🤝 Mutual', count: mutualMatches.length },
-          { id: 'passed', label: '↩️ Passed', count: passedProfiles.length },
-          { id: 'blocked', label: '🚫 Blocked', count: blockedProfiles.length }
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as TabType)}
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap transition-all ${
-              activeTab === tab.id
-                ? 'bg-primary text-white shadow-xs'
-                : 'bg-surface-container-high text-secondary hover:text-on-surface'
-            }`}
-          >
-            <span>{tab.label}</span>
-            {tab.count > 0 && (
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                activeTab === tab.id ? 'bg-white/25 text-white' : 'bg-surface text-primary'
-              }`}>
-                {tab.count}
-              </span>
-            )}
-          </button>
-        ))}
+      {/* Main 2-Section Segmented Control */}
+      <div className="bg-surface-container-high p-1 rounded-2xl flex items-center mb-3 border border-surface-variant/40 shadow-xs">
+        <button
+          onClick={() => {
+            setMainSection('activity');
+            if (activeTab === 'passed' || activeTab === 'blocked') {
+              setActiveTab('received');
+            }
+          }}
+          className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+            mainSection === 'activity'
+              ? 'bg-surface text-primary shadow-xs'
+              : 'text-secondary hover:text-on-surface'
+          }`}
+        >
+          <span className="material-symbols-outlined text-[17px]">favorite</span>
+          <span>Match Activity</span>
+          {(interestedProfiles.length + mutualMatches.length + sentLikes.length) > 0 && (
+            <span className="bg-primary/10 text-primary px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold">
+              {interestedProfiles.length + mutualMatches.length + sentLikes.length}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => {
+            setMainSection('privacy');
+            if (activeTab !== 'passed' && activeTab !== 'blocked') {
+              setActiveTab('passed');
+            }
+          }}
+          className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+            mainSection === 'privacy'
+              ? 'bg-surface text-primary shadow-xs'
+              : 'text-secondary hover:text-on-surface'
+          }`}
+        >
+          <span className="material-symbols-outlined text-[17px]">shield</span>
+          <span>Privacy & Passes</span>
+          {(passedProfiles.length + blockedProfiles.length) > 0 && (
+            <span className="bg-secondary/15 text-secondary px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold">
+              {passedProfiles.length + blockedProfiles.length}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* Sub-Tabs Selector based on Main Section */}
+      <div className="flex items-center gap-2 mb-4">
+        {mainSection === 'activity' ? (
+          <>
+            <button
+              onClick={() => setActiveTab('received')}
+              className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all border ${
+                activeTab === 'received'
+                  ? 'bg-primary text-white border-primary shadow-xs'
+                  : 'bg-surface text-secondary border-surface-variant/40 hover:bg-surface-container-high'
+              }`}
+            >
+              <span>Liked You</span>
+              {interestedProfiles.length > 0 && (
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                  activeTab === 'received' ? 'bg-white/25 text-white' : 'bg-primary/10 text-primary'
+                }`}>
+                  {interestedProfiles.length}
+                </span>
+              )}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('sent')}
+              className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all border ${
+                activeTab === 'sent'
+                  ? 'bg-primary text-white border-primary shadow-xs'
+                  : 'bg-surface text-secondary border-surface-variant/40 hover:bg-surface-container-high'
+              }`}
+            >
+              <span>You Liked</span>
+              {sentLikes.length > 0 && (
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                  activeTab === 'sent' ? 'bg-white/25 text-white' : 'bg-primary/10 text-primary'
+                }`}>
+                  {sentLikes.length}
+                </span>
+              )}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('mutual')}
+              className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all border ${
+                activeTab === 'mutual'
+                  ? 'bg-primary text-white border-primary shadow-xs'
+                  : 'bg-surface text-secondary border-surface-variant/40 hover:bg-surface-container-high'
+              }`}
+            >
+              <span>Mutual</span>
+              {mutualMatches.length > 0 && (
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                  activeTab === 'mutual' ? 'bg-white/25 text-white' : 'bg-primary/10 text-primary'
+                }`}>
+                  {mutualMatches.length}
+                </span>
+              )}
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              onClick={() => setActiveTab('passed')}
+              className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all border ${
+                activeTab === 'passed'
+                  ? 'bg-primary text-white border-primary shadow-xs'
+                  : 'bg-surface text-secondary border-surface-variant/40 hover:bg-surface-container-high'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[15px]">undo</span>
+              <span>Passed History</span>
+              {passedProfiles.length > 0 && (
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                  activeTab === 'passed' ? 'bg-white/25 text-white' : 'bg-secondary/20 text-secondary'
+                }`}>
+                  {passedProfiles.length}
+                </span>
+              )}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('blocked')}
+              className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all border ${
+                activeTab === 'blocked'
+                  ? 'bg-primary text-white border-primary shadow-xs'
+                  : 'bg-surface text-secondary border-surface-variant/40 hover:bg-surface-container-high'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[15px]">block</span>
+              <span>Blocked Profiles</span>
+              {blockedProfiles.length > 0 && (
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                  activeTab === 'blocked' ? 'bg-white/25 text-white' : 'bg-error/20 text-error'
+                }`}>
+                  {blockedProfiles.length}
+                </span>
+              )}
+            </button>
+          </>
+        )}
       </div>
 
       {/* Action Toast Feedback */}

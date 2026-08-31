@@ -196,28 +196,28 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
             {/* Quick Universal Badges Strip */}
             <div className="flex flex-wrap gap-1.5 pt-1">
               {profile.ethnicity && (
-                <span className="bg-primary/10 text-primary px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1">
-                  <span>🌍</span> {profile.ethnicity}
+                <span className="bg-primary/10 text-primary px-3 py-1 rounded-full text-[11px] font-semibold border border-primary/20">
+                  {profile.ethnicity}
                 </span>
               )}
               {profile.citizenship && (
-                <span className="bg-surface-container-high text-on-surface px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1 border border-surface-variant/40">
-                  <span>🛂</span> {profile.citizenship}
+                <span className="bg-surface-container-high text-on-surface px-3 py-1 rounded-full text-[11px] font-semibold border border-surface-variant/40">
+                  {profile.citizenship}
                 </span>
               )}
               {profile.maritalStatus && (
-                <span className="bg-surface-container-high text-on-surface px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1 border border-surface-variant/40">
-                  <span>💍</span> {profile.maritalStatus.replace('_', ' ')}
+                <span className="bg-surface-container-high text-on-surface px-3 py-1 rounded-full text-[11px] font-semibold border border-surface-variant/40 capitalize">
+                  {profile.maritalStatus.replace('_', ' ')}
                 </span>
               )}
               {profile.workArrangement && (
-                <span className="bg-surface-container-high text-on-surface px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1 border border-surface-variant/40 capitalize">
-                  <span>💻</span> {profile.workArrangement}
+                <span className="bg-surface-container-high text-on-surface px-3 py-1 rounded-full text-[11px] font-semibold border border-surface-variant/40 capitalize">
+                  {profile.workArrangement.replace('_', ' ')}
                 </span>
               )}
               {profile.incomeBracket && profile.incomeBracket !== 'undisclosed' && (
-                <span className="bg-surface-container-high text-on-surface px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1 border border-surface-variant/40">
-                  <span>💵</span> {profile.incomeBracket.replace('_', ' ')}
+                <span className="bg-surface-container-high text-on-surface px-3 py-1 rounded-full text-[11px] font-semibold border border-surface-variant/40 capitalize">
+                  {profile.incomeBracket.replace('_', ' ')}
                 </span>
               )}
             </div>

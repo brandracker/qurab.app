@@ -450,13 +450,13 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-surface-container-high/70 p-2 rounded-xl border border-surface-variant/30">
+                      <div className="bg-surface-container-high/70 p-2.5 rounded-xl border border-surface-variant/30">
                         <span className="text-[9px] text-secondary font-bold uppercase block">Work Arrangement</span>
-                        <strong className="text-on-surface capitalize text-[11px]">💻 {currentProfile.workArrangement || 'Full-Time'}</strong>
+                        <strong className="text-on-surface capitalize text-[11px]">{currentProfile.workArrangement?.replace('_', ' ') || 'Full-Time'}</strong>
                       </div>
-                      <div className="bg-surface-container-high/70 p-2 rounded-xl border border-surface-variant/30">
+                      <div className="bg-surface-container-high/70 p-2.5 rounded-xl border border-surface-variant/30">
                         <span className="text-[9px] text-secondary font-bold uppercase block">Annual Income</span>
-                        <strong className="text-on-surface text-[11px]">💵 {currentProfile.incomeBracket ? currentProfile.incomeBracket.replace('_', ' ') : 'Professional'}</strong>
+                        <strong className="text-on-surface text-[11px] capitalize">{currentProfile.incomeBracket ? currentProfile.incomeBracket.replace('_', ' ') : 'Professional'}</strong>
                       </div>
                     </div>
                   </div>
@@ -466,21 +466,21 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
                 {activeTab === 'family' && (
                   <div className="space-y-2.5 animate-fade-in">
                     <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="bg-surface-container-high/70 p-2 rounded-xl border border-surface-variant/30">
+                      <div className="bg-surface-container-high/70 p-2.5 rounded-xl border border-surface-variant/30">
                         <span className="text-[9px] text-secondary font-bold uppercase block">Living Preference</span>
                         <strong className="text-on-surface text-[11px] capitalize text-primary">{currentProfile.livingPreference?.replace('_', ' ') || 'Independent Home'}</strong>
                       </div>
-                      <div className="bg-surface-container-high/70 p-2 rounded-xl border border-surface-variant/30">
+                      <div className="bg-surface-container-high/70 p-2.5 rounded-xl border border-surface-variant/30">
                         <span className="text-[9px] text-secondary font-bold uppercase block">Marital Status</span>
-                        <strong className="text-on-surface text-[11px] capitalize">💍 {currentProfile.maritalStatus ? currentProfile.maritalStatus.replace('_', ' ') : 'Never Married'}</strong>
+                        <strong className="text-on-surface text-[11px] capitalize">{currentProfile.maritalStatus ? currentProfile.maritalStatus.replace('_', ' ') : 'Never Married'}</strong>
                       </div>
-                      <div className="bg-surface-container-high/70 p-2 rounded-xl border border-surface-variant/30">
+                      <div className="bg-surface-container-high/70 p-2.5 rounded-xl border border-surface-variant/30">
                         <span className="text-[9px] text-secondary font-bold uppercase block">Citizenship</span>
-                        <strong className="text-on-surface text-[11px]">🛂 {currentProfile.citizenship || 'Citizen'}</strong>
+                        <strong className="text-on-surface text-[11px]">{currentProfile.citizenship || 'Citizen'}</strong>
                       </div>
-                      <div className="bg-surface-container-high/70 p-2 rounded-xl border border-surface-variant/30">
+                      <div className="bg-surface-container-high/70 p-2.5 rounded-xl border border-surface-variant/30">
                         <span className="text-[9px] text-secondary font-bold uppercase block">Relocation</span>
-                        <strong className="text-on-surface text-[11px]">✈️ {currentProfile.willingnessToRelocate === 'willing' ? 'Open to Move' : 'Local'}</strong>
+                        <strong className="text-on-surface text-[11px]">{currentProfile.willingnessToRelocate === 'willing' ? 'Open to Relocate' : 'Local Only'}</strong>
                       </div>
                     </div>
                   </div>
@@ -494,10 +494,10 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
                     </p>
 
                     {currentProfile.hobbies && currentProfile.hobbies.length > 0 && (
-                      <div className="flex flex-wrap gap-1 pt-1">
-                        {currentProfile.hobbies.slice(0, 3).map((h, i) => (
-                          <span key={i} className="bg-primary/10 text-primary text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                            {h}
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {currentProfile.hobbies.slice(0, 4).map((h, i) => (
+                          <span key={i} className="bg-primary/10 text-primary text-[10px] font-semibold px-2.5 py-1 rounded-full border border-primary/20">
+                            {h.replace(/[^\w\s\(\)\-]/gi, '').trim()}
                           </span>
                         ))}
                       </div>

@@ -330,10 +330,16 @@ export const App: React.FC = () => {
           <div className="w-full h-full flex flex-col justify-between overflow-hidden relative">
             
             {/* Top Micro-Bar */}
-            <div className="w-full px-4 py-2 bg-surface flex items-center justify-between border-b border-surface-variant/20 z-10 text-[11px] text-secondary">
-              <span className="font-serif font-bold text-primary">Serene Union</span>
+            <div className="w-full px-4 py-2 bg-surface/95 backdrop-blur-md flex items-center justify-between border-b border-surface-variant/20 z-10 text-[11px] text-secondary">
+              <div className="flex items-center gap-2">
+                <img src="/icon.svg" alt="Qurab" className="w-5 h-5 object-contain" />
+                <span className="font-serif font-bold text-sm tracking-wide text-on-surface flex items-center gap-1.5">
+                  <span>Qurab</span>
+                  <span className="text-primary text-xs font-semibold">قُرب</span>
+                </span>
+              </div>
               <div className="flex items-center gap-3">
-                <button onClick={handleLogout} className="hover:text-error transition-colors">
+                <button onClick={handleLogout} className="hover:text-error transition-colors text-[10px] font-medium">
                   Sign Out / Reset
                 </button>
               </div>

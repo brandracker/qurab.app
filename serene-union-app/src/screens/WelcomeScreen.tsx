@@ -21,22 +21,25 @@ export const WelcomeScreen: React.FC<Props> = ({ onGetStarted, onLogin }) => {
 
       {/* Main Content Area */}
       <div className="flex-grow flex flex-col items-center justify-center space-y-section-gap text-center animate-fade-in my-auto">
-        {/* Logo Container with subtle glow */}
-        <div className="relative group cursor-pointer w-48 h-48 sm:w-56 sm:h-56">
-          <div className="absolute inset-0 bg-primary-container rounded-full opacity-10 blur-2xl scale-110 group-hover:scale-125 transition-transform duration-700"></div>
-          <div className="absolute inset-2 bg-surface-container-low rounded-full shadow-[0_12px_32px_rgba(26,43,60,0.05)] border border-surface-variant z-10 flex items-center justify-center overflow-hidden transition-all duration-300">
+        {/* Logo Container with luxury glow */}
+        <div className="relative group cursor-pointer w-44 h-44 sm:w-52 sm:h-52 flex items-center justify-center">
+          <div className="absolute inset-0 bg-primary/20 rounded-full blur-3xl scale-125 animate-pulse"></div>
+          <div className="w-full h-full bg-surface-container-low rounded-full shadow-2xl border border-surface-variant/50 z-10 flex items-center justify-center p-6 transition-all duration-300 hover:scale-105">
             <img
-              alt="Serene Union Logo"
-              className="w-full h-full object-cover p-4"
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuDkNUCBmUWhsT7EbneIajWVYwI_WgOdE7sGMdHw3XrsA2ksJOTWyb3gDCPKE60IRtNTfMyNXenGDBCQIgQtD9QTu9VIyJBKo2plv2Ztn1TCfIhEzv9AwasEYacUyBENbACcJuB0H-Hpz_eQR8ViFo8w11SrComXZTCppWo5pbjBUpF-bPA4g9GxNkXZzaFrSfqYEHrSUY3ckB4i9P97PvJKJj7_flXQUYGiCkxj4nK3CIYMAej2FzJoTw"
+              alt="Qurab Logo"
+              className="w-28 h-28 object-contain"
+              src="/icon.svg"
             />
           </div>
         </div>
 
         {/* Typography */}
         <div className="space-y-2">
-          <h1 className="font-serif text-4xl font-bold text-primary tracking-tight">Serene Union</h1>
-          <p className="font-serif text-xl text-secondary italic">Finding your spouse, the halal way.</p>
+          <div className="flex items-center justify-center gap-2">
+            <h1 className="font-serif text-4xl sm:text-5xl font-bold text-on-surface tracking-tight">Qurab</h1>
+            <span className="text-primary text-2xl font-bold">قُرب</span>
+          </div>
+          <p className="font-serif text-base text-secondary italic">Finding your spouse, the pure halal way.</p>
         </div>
       </div>
 

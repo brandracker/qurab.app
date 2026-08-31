@@ -44,7 +44,11 @@ export const OnboardingFlow: React.FC<Props> = ({ onComplete }) => {
           >
             <span className="material-symbols-outlined">arrow_back</span>
           </button>
-          <div className="font-serif font-semibold text-sm text-primary">Serene Union</div>
+          <div className="flex items-center gap-1.5 font-serif font-bold text-sm text-on-surface">
+            <img src="/icon.svg" alt="Qurab" className="w-4 h-4 object-contain" />
+            <span>Qurab</span>
+            <span className="text-primary text-xs font-semibold">قُرب</span>
+          </div>
           <div className="text-xs font-semibold text-secondary">Step {step} of 5</div>
         </header>
       )}
@@ -64,18 +68,21 @@ export const OnboardingFlow: React.FC<Props> = ({ onComplete }) => {
         <div className="flex-1 flex flex-col justify-between p-8 text-center islamic-pattern relative animate-fade-in">
           <div className="flex-1 flex flex-col items-center justify-center">
             {/* Logo Badge */}
-            <div className="w-24 h-24 rounded-3xl bg-primary text-on-primary flex items-center justify-center shadow-2xl mb-6 transform hover:scale-105 transition-transform">
-              <span className="material-symbols-outlined text-5xl">favorite</span>
+            <div className="w-24 h-24 rounded-3xl bg-surface-container-low border border-surface-variant/50 flex items-center justify-center shadow-2xl mb-6 p-4 transform hover:scale-105 transition-transform">
+              <img src="/icon.svg" alt="Qurab" className="w-16 h-16 object-contain" />
             </div>
 
             <span className="text-xs uppercase tracking-widest font-semibold text-tertiary-container mb-2">
               بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ
             </span>
-            <h1 className="font-serif text-4xl font-bold text-primary mb-3">
-              Serene Union
-            </h1>
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <h1 className="font-serif text-4xl font-bold text-on-surface">
+                Qurab
+              </h1>
+              <span className="text-primary text-2xl font-bold">قُرب</span>
+            </div>
             <p className="text-secondary text-sm max-w-[280px] leading-relaxed">
-              A dignified, faith-centered platform designed for intentional Muslim matrimony.
+              A dignified, faith-centered platform designed for pure halal Muslim matrimony.
             </p>
           </div>
 

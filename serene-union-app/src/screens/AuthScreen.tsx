@@ -224,15 +224,21 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
         >
           <span className="material-symbols-outlined text-[20px]">arrow_back</span>
         </button>
-        <span className="font-serif text-lg font-bold text-primary">Serene Union</span>
+        <div className="flex items-center gap-2">
+          <img src="/icon.svg" alt="Qurab" className="w-5 h-5 object-contain" />
+          <span className="font-serif text-lg font-bold text-on-surface flex items-center gap-1">
+            <span>Qurab</span>
+            <span className="text-primary text-xs font-semibold">قُرب</span>
+          </span>
+        </div>
         <div className="w-10" />
       </header>
 
       {/* Main Auth Form */}
       <main className="flex-1 flex flex-col justify-center my-6 max-w-sm mx-auto w-full">
         <div className="flex flex-col items-center text-center animate-fade-in">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4 text-primary shadow-sm">
-            <span className="material-symbols-outlined text-3xl">favorite</span>
+          <div className="w-16 h-16 rounded-2xl bg-surface-container-low border border-surface-variant/50 flex items-center justify-center mb-4 shadow-sm p-3">
+            <img src="/icon.svg" alt="Qurab" className="w-10 h-10 object-contain" />
           </div>
 
           <h1 className="font-serif text-3xl font-bold text-on-surface mb-1">
@@ -523,7 +529,7 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
 
       {/* Footer */}
       <footer className="w-full text-center py-2 text-[10px] text-secondary">
-        By signing up, you agree to Serene Union's <span className="underline">Halal Conduct & Privacy Policy</span>.
+        By signing up, you agree to Qurab's <span className="underline">Halal Conduct & Privacy Policy</span>.
       </footer>
     </div>
   );

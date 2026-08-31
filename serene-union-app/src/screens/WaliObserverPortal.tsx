@@ -13,11 +13,14 @@ export const WaliObserverPortal: React.FC<Props> = ({ onBackToApp }) => {
       {/* Top Banner */}
       <header className="w-full max-w-xl bg-surface border-b border-surface-variant/40 px-6 py-4 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-on-primary shadow-sm">
-            <span className="material-symbols-outlined text-xl">verified_user</span>
+          <div className="w-10 h-10 rounded-2xl bg-surface-container-low border border-surface-variant/40 flex items-center justify-center p-2 shadow-sm">
+            <img src="/icon.svg" alt="Qurab" className="w-6 h-6 object-contain" />
           </div>
           <div>
-            <h1 className="font-serif text-lg font-bold text-primary">Serene Union</h1>
+            <div className="flex items-center gap-1.5 font-serif text-base font-bold text-on-surface">
+              <span>Qurab</span>
+              <span className="text-primary text-xs font-semibold">قُرب</span>
+            </div>
             <p className="text-[10px] text-secondary font-medium uppercase tracking-wider">Official Wali Chaperone Portal</p>
           </div>
         </div>

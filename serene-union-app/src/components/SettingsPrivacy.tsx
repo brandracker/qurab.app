@@ -261,7 +261,7 @@ export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpda
             <h4 className="font-serif font-bold text-xs">Halal Matrimony Code of Conduct</h4>
           </div>
           <p className="text-xs text-on-surface-variant leading-relaxed">
-            Serene Union is designed for sincere, faith-first marriage intentions. Inappropriate behavior, disrespect, or harassment will result in permanent account removal to protect our community.
+            Qurab is designed for sincere, faith-first marriage intentions. Inappropriate behavior, disrespect, or harassment will result in permanent account removal to protect our community.
           </p>
         </section>
       </main>

@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { Conversation, ChatMessage } from '../types';
 import { dbService, API_BASE } from '../services/dbService';
-import { RewardedAdModal } from './RewardedAdModal';
-import { MembershipUpgradeModal } from './MembershipUpgradeModal';
 
 interface Props {
   initialConvId?: string;
@@ -14,10 +12,6 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
   const [activeConvId, setActiveConvId] = useState<string | null>(initialConvId || null);
   const [inputText, setInputText] = useState<string>('');
   const [showRespectfulCloseModal, setShowRespectfulCloseModal] = useState<boolean>(false);
-  const [showAdModal, setShowAdModal] = useState<boolean>(false);
-  const [showUpgradeModal, setShowUpgradeModal] = useState<boolean>(false);
-  const [messagesQuota, setMessagesQuota] = useState<number>(15);
-  const [messagesSentToday, setMessagesSentToday] = useState<number>(3);
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const currentUser = dbService.getCurrentUser();
 
@@ -103,12 +97,6 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
   const handleSendMessage = async () => {
     if (!inputText.trim() || !activeConvId || !activeConv) return;
 
-    // Check message quota
-    if (messagesSentToday >= messagesQuota) {
-      setShowAdModal(true);
-      return;
-    }
-
     const text = inputText.trim();
     const user = dbService.getCurrentUser();
     const targetRoomId = activeConv.otherUser?.id 
@@ -142,7 +130,6 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
       }
     }
     setInputText('');
-    setMessagesSentToday(prev => prev + 1);
 
     // Save permanently to Cloudflare D1 SQL database
     try {
@@ -328,21 +315,6 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
         <div ref={chatBottomRef} />
       </main>
 
-      {/* Message Quota Pill */}
-      <div className="px-4 py-1.5 bg-surface-container-low border-t border-surface-variant/20 flex items-center justify-between text-[11px]">
-        <div className="flex items-center gap-1.5 text-secondary">
-          <span className="material-symbols-outlined text-[15px] text-primary">chat</span>
-          <span>{Math.max(0, messagesQuota - messagesSentToday)} / {messagesQuota} Messages Left Today</span>
-        </div>
-        <button
-          onClick={() => setShowAdModal(true)}
-          className="text-primary font-bold hover:underline flex items-center gap-1"
-        >
-          <span className="material-symbols-outlined text-[14px]">smart_display</span>
-          <span>+10 Free (Watch Ad)</span>
-        </button>
-      </div>
-
       {/* Clean Message Input Footer */}
       <footer className="p-3 bg-surface border-t border-surface-variant/40 flex items-center gap-2 z-20">
         <input
@@ -363,28 +335,6 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
           <span className="material-symbols-outlined text-[18px]">send</span>
         </button>
       </footer>
-
-      {/* Rewarded Video Ad Modal */}
-      {showAdModal && (
-        <RewardedAdModal
-          userId={currentUser.id}
-          rewardType="messages"
-          isOpen={showAdModal}
-          onClose={() => setShowAdModal(false)}
-          onRewardClaimed={() => setMessagesQuota(prev => prev + 10)}
-        />
-      )}
-
-      {/* Membership Upgrade Modal */}
-      {showUpgradeModal && (
-        <MembershipUpgradeModal
-          userId={currentUser.id}
-          isOpen={showUpgradeModal}
-          onClose={() => setShowUpgradeModal(false)}
-          onPurchaseSuccess={() => setMessagesQuota(9999)}
-          onWatchAdClicked={() => setShowAdModal(true)}
-        />
-      )}
 
       {/* Respectful Close Modal */}
       {showRespectfulCloseModal && (

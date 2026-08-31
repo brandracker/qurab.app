@@ -136,43 +136,17 @@ class DBService {
     if (data) {
       try {
         const parsed = JSON.parse(data);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) {
+          // Filter out any legacy dummy seed conversation
+          const realOnly = (parsed as Conversation[]).filter((c: Conversation) => !c.messages?.some((m: ChatMessage) => m.id === 'msg_seed_1'));
+          if (realOnly.length !== parsed.length) {
+            localStorage.setItem(this.conversationsKey, JSON.stringify(realOnly));
+          }
+          return realOnly;
+        }
       } catch {}
     }
-
-    const defaultProfile = this.getAllProfiles().find(p => p.id === 'usr_001') || this.getAllProfiles()[0];
-    const user = this.getCurrentUser();
-    const convId = `conv_${[user.id, defaultProfile.id].sort().join('_')}`;
-
-    const initialSeed: Conversation[] = [
-      {
-        id: convId,
-        participantOne: user.id,
-        participantTwo: defaultProfile.id,
-        otherUser: defaultProfile,
-        lastMessageText: "Assalamu Alaikum! May Allah bless our search for a righteous spouse.",
-        lastMessageSenderId: defaultProfile.id,
-        lastMessageTime: "10:30 AM",
-        unreadCount: 1,
-        waliObserverId: 'wali_001',
-        waliName: 'Tariq Al-Mansoor (Father)',
-        status: 'active',
-        messages: [
-          {
-            id: 'msg_seed_1',
-            senderId: defaultProfile.id,
-            senderName: defaultProfile.fullName,
-            text: 'Assalamu Alaikum! May Allah bless our search for a righteous spouse.',
-            timestamp: '10:30 AM',
-            isRead: true,
-            waliNotified: true
-          }
-        ]
-      }
-    ];
-
-    localStorage.setItem(this.conversationsKey, JSON.stringify(initialSeed));
-    return initialSeed;
+    return [];
   }
 
   async sendLiveMessage(conversationId: string, text: string): Promise<ChatMessage> {

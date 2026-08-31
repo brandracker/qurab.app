@@ -11,10 +11,7 @@ interface Props {
 
 export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover }) => {
   const [conversations, setConversations] = useState<Conversation[]>(() => dbService.getConversations());
-  const [activeConvId, setActiveConvId] = useState<string | null>(() => {
-    const list = dbService.getConversations();
-    return initialConvId || (list.length > 0 ? list[0].id : null);
-  });
+  const [activeConvId, setActiveConvId] = useState<string | null>(initialConvId || null);
   const [inputText, setInputText] = useState<string>('');
   const [showRespectfulCloseModal, setShowRespectfulCloseModal] = useState<boolean>(false);
   const [showAdModal, setShowAdModal] = useState<boolean>(false);
@@ -30,17 +27,12 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
     setConversations(list);
     if (initialConvId) {
       setActiveConvId(initialConvId);
-    } else if (list.length > 0 && !activeConvId) {
-      setActiveConvId(list[0].id);
     }
 
     // Sync latest from live server
     dbService.fetchLiveConversations().then(liveList => {
-      if (liveList && liveList.length > 0) {
+      if (liveList) {
         setConversations([...liveList]);
-        if (!activeConvId && !initialConvId) {
-          setActiveConvId(liveList[0].id);
-        }
       }
     });
   }, [initialConvId]);

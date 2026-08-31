@@ -14,14 +14,13 @@ matchesRouter.post('/action', async (c) => {
     const matchId = `mat_${senderId}_${receiverId}`;
 
     if (action === 'liked') {
-      // Check if receiver has already liked the sender OR is an interactive demo profile
-      const isDemoProfile = receiverId.startsWith('usr_00');
+      // Check if receiver has already liked the sender for a true mutual match
       const reverseLike: any = await c.env.DB.prepare(`
         SELECT id, action FROM matches_and_likes 
         WHERE sender_id = ? AND receiver_id = ? AND (action = 'liked' OR action = 'mutual_match')
       `).bind(receiverId, senderId).first();
 
-      if (reverseLike || isDemoProfile) {
+      if (reverseLike) {
         // True Mutual Match!
         const convId = `conv_${[senderId, receiverId].sort().join('_')}`;
 

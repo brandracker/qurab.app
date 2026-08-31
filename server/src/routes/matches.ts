@@ -214,3 +214,124 @@ matchesRouter.get('/mutual', async (c) => {
     return c.json({ success: false, error: error.message }, 500);
   }
 });
+
+// 4. Full Activity Hub (Sent Likes, Mutual Matches, Passed History, Blocked List)
+matchesRouter.get('/activity', async (c) => {
+  try {
+    const userId = c.req.query('userId') || '';
+    if (!userId) {
+      return c.json({ success: false, error: 'userId is required' }, 400);
+    }
+
+    // A. Sent Likes
+    const { results: sentLikes } = await c.env.DB.prepare(`
+      SELECT 
+        u.id, u.full_name as fullName, u.location, u.profession, u.marriage_timeline as marriageTimeline,
+        m.action, m.created_at as actionTime
+      FROM matches_and_likes m
+      JOIN users u ON m.receiver_id = u.id
+      WHERE m.sender_id = ? AND (m.action = 'liked' OR m.action = 'mutual_match')
+      ORDER BY m.created_at DESC
+    `).bind(userId).all();
+
+    // B. Passed Profiles
+    const { results: passed } = await c.env.DB.prepare(`
+      SELECT 
+        u.id, u.full_name as fullName, u.location, u.profession,
+        m.created_at as actionTime
+      FROM matches_and_likes m
+      JOIN users u ON m.receiver_id = u.id
+      WHERE m.sender_id = ? AND m.action = 'passed'
+      ORDER BY m.created_at DESC
+    `).bind(userId).all();
+
+    // C. Blocked Users
+    const { results: blocked } = await c.env.DB.prepare(`
+      SELECT 
+        u.id, u.full_name as fullName, u.location, b.reason, b.created_at as actionTime
+      FROM blocked_users b
+      JOIN users u ON b.blocked_id = u.id
+      WHERE b.blocker_id = ?
+      ORDER BY b.created_at DESC
+    `).bind(userId).all();
+
+    return c.json({
+      success: true,
+      sentLikes: sentLikes || [],
+      passed: passed || [],
+      blocked: blocked || []
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// 5. Undo a Passed Profile
+matchesRouter.post('/undo-pass', async (c) => {
+  try {
+    const { userId, targetId } = await c.req.json();
+    if (!userId || !targetId) {
+      return c.json({ success: false, error: 'userId and targetId are required' }, 400);
+    }
+
+    await c.env.DB.prepare(`
+      DELETE FROM matches_and_likes 
+      WHERE sender_id = ? AND receiver_id = ? AND action = 'passed'
+    `).bind(userId, targetId).run();
+
+    return c.json({ success: true, message: 'Pass action undone successfully. Profile will reappear in your Discover feed.' });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// 6. Block a Profile
+matchesRouter.post('/block', async (c) => {
+  try {
+    const { userId, targetId, reason } = await c.req.json();
+    if (!userId || !targetId) {
+      return c.json({ success: false, error: 'userId and targetId are required' }, 400);
+    }
+
+    const blockId = `blk_${userId}_${targetId}`;
+    await c.env.DB.prepare(`
+      INSERT OR REPLACE INTO blocked_users (id, blocker_id, blocked_id, reason)
+      VALUES (?, ?, ?, ?)
+    `).bind(blockId, userId, targetId, reason || 'User requested block').run();
+
+    // Mark in matches_and_likes
+    await c.env.DB.prepare(`
+      INSERT OR REPLACE INTO matches_and_likes (id, sender_id, receiver_id, action)
+      VALUES (?, ?, ?, 'blocked')
+    `).bind(`mat_${userId}_${targetId}`, userId, targetId).run();
+
+    return c.json({ success: true, message: 'Profile blocked successfully.' });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// 7. Unblock a Profile
+matchesRouter.post('/unblock', async (c) => {
+  try {
+    const { userId, targetId } = await c.req.json();
+    if (!userId || !targetId) {
+      return c.json({ success: false, error: 'userId and targetId are required' }, 400);
+    }
+
+    await c.env.DB.prepare(`
+      DELETE FROM blocked_users 
+      WHERE blocker_id = ? AND blocked_id = ?
+    `).bind(userId, targetId).run();
+
+    await c.env.DB.prepare(`
+      DELETE FROM matches_and_likes 
+      WHERE sender_id = ? AND receiver_id = ? AND action = 'blocked'
+    `).bind(userId, targetId).run();
+
+    return c.json({ success: true, message: 'Profile unblocked successfully.' });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+

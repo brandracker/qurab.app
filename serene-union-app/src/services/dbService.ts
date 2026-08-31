@@ -285,6 +285,71 @@ class DBService {
     return [];
   }
 
+  async fetchActivityHub(): Promise<{
+    sentLikes: any[];
+    passed: any[];
+    blocked: any[];
+  }> {
+    const user = this.getCurrentUser();
+    try {
+      const res = await fetch(`${API_BASE}/matches/activity?userId=${user.id}`);
+      const data = await res.json();
+      if (data.success) {
+        return {
+          sentLikes: data.sentLikes || [],
+          passed: data.passed || [],
+          blocked: data.blocked || []
+        };
+      }
+    } catch {}
+    return { sentLikes: [], passed: [], blocked: [] };
+  }
+
+  async undoPass(targetId: string): Promise<boolean> {
+    const user = this.getCurrentUser();
+    try {
+      const res = await fetch(`${API_BASE}/matches/undo-pass`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, targetId })
+      });
+      const data = await res.json();
+      return Boolean(data.success);
+    } catch {
+      return false;
+    }
+  }
+
+  async blockProfile(targetId: string, reason?: string): Promise<boolean> {
+    const user = this.getCurrentUser();
+    try {
+      const res = await fetch(`${API_BASE}/matches/block`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, targetId, reason })
+      });
+      const data = await res.json();
+      return Boolean(data.success);
+    } catch {
+      return false;
+    }
+  }
+
+  async unblockProfile(targetId: string): Promise<boolean> {
+    const user = this.getCurrentUser();
+    try {
+      const res = await fetch(`${API_BASE}/matches/unblock`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, targetId })
+      });
+      const data = await res.json();
+      return Boolean(data.success);
+    } catch {
+      return false;
+    }
+  }
+
   async fetchLiveConversations(): Promise<Conversation[]> {
     try {
       const user = this.getCurrentUser();

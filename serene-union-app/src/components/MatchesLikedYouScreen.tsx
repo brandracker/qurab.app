@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { UserProfile } from '../types';
 import { dbService } from '../services/dbService';
 import { MembershipUpgradeModal } from './MembershipUpgradeModal';
+import { ProfileDetailModal } from './ProfileDetailModal';
 
 interface Props {
   onOpenChat: (convId: string) => void;
@@ -13,6 +14,7 @@ type TabType = 'received' | 'sent' | 'mutual' | 'passed' | 'blocked';
 export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDiscover }) => {
   const currentUser = dbService.getCurrentUser();
   const [activeTab, setActiveTab] = useState<TabType>('received');
+  const [selectedProfile, setSelectedProfile] = useState<UserProfile | null>(null);
   
   const [interestedProfiles, setInterestedProfiles] = useState<UserProfile[]>([]);
   const [mutualMatches, setMutualMatches] = useState<UserProfile[]>([]);
@@ -432,32 +434,65 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
               {mutualMatches.map(match => (
                 <div
                   key={match.id}
-                  className="bg-surface p-3.5 rounded-2xl border border-primary/30 shadow-xs flex items-center justify-between gap-3"
+                  onClick={() => setSelectedProfile(match)}
+                  className="bg-surface p-3.5 rounded-2xl border border-primary/30 shadow-xs flex items-center justify-between gap-3 hover:border-primary/70 hover:shadow-sm transition-all cursor-pointer group"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-full bg-surface-container-high overflow-hidden border-2 border-primary shrink-0">
+                    <div className="w-12 h-12 rounded-full bg-surface-container-high overflow-hidden border-2 border-primary shrink-0 group-hover:scale-105 transition-transform">
                       <img
                         src={match.photos?.[0] || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500'}
                         alt={match.fullName}
-                        className="w-full h-full object-cover"
+                        className={`w-full h-full object-cover ${
+                          match.blurPhotosByDefault && !match.photoRevealApproved ? 'blur-xs' : ''
+                        }`}
                       />
                     </div>
                     <div>
-                      <h4 className="font-serif font-bold text-xs text-on-surface">{match.fullName}</h4>
-                      <p className="text-[10px] text-primary font-semibold">{match.profession || 'Professional'} · {match.location}</p>
+                      <div className="flex items-center gap-1.5">
+                        <h4 className="font-serif font-bold text-sm text-on-surface group-hover:text-primary transition-colors">
+                          {match.fullName}
+                        </h4>
+                        {match.wali && (
+                          <span title="Wali Verified" className="material-symbols-outlined text-[14px] text-primary">
+                            verified_user
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-primary font-semibold">
+                        {match.profession || 'Professional'} · {match.location}
+                      </p>
+                      <span className="text-[10px] text-secondary">
+                        Tap to view complete biodata
+                      </span>
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => {
-                      const convId = `conv_${[currentUser.id, match.id].sort().join('_')}`;
-                      onOpenChat(convId);
-                    }}
-                    className="px-3.5 py-1.5 rounded-xl bg-primary text-white text-xs font-bold flex items-center gap-1 shadow-xs hover:brightness-110 active:scale-95 transition-all"
-                  >
-                    <span className="material-symbols-outlined text-[15px]">chat</span>
-                    <span>Chat</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedProfile(match);
+                      }}
+                      title="View Full Profile"
+                      className="w-8 h-8 rounded-xl bg-surface-container-high text-on-surface hover:bg-surface-variant flex items-center justify-center transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[17px]">visibility</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const convId = `conv_${[currentUser.id, match.id].sort().join('_')}`;
+                        onOpenChat(convId);
+                      }}
+                      className="px-3.5 py-2 rounded-xl bg-primary text-white text-xs font-bold flex items-center gap-1.5 shadow-xs hover:brightness-110 active:scale-95 transition-all"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">chat</span>
+                      <span>Chat</span>
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -581,6 +616,24 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
             }
           }}
           onWatchAdClicked={() => {}}
+        />
+      )}
+
+      {/* Full Profile Detail Modal */}
+      {selectedProfile && (
+        <ProfileDetailModal
+          profile={selectedProfile}
+          isOpen={Boolean(selectedProfile)}
+          onClose={() => setSelectedProfile(null)}
+          onLike={(p) => {
+            handleInstantMatch(p);
+            setSelectedProfile(null);
+          }}
+          onPass={(pid) => {
+            dbService.sendMatchAction(pid, 'passed');
+            setSelectedProfile(null);
+            loadAllData();
+          }}
         />
       )}
     </div>

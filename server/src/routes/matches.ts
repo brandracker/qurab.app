@@ -197,11 +197,22 @@ matchesRouter.get('/mutual', async (c) => {
 
     const query = `
       SELECT DISTINCT
-        u.id, u.full_name as fullName, u.dob, u.gender, u.location, u.profession, u.bio,
-        u.blur_photos_by_default as blurPhotosByDefault,
-        w.wali_name as waliName, w.wali_relationship as waliRelationship
+        u.id, u.phone, u.email, u.full_name as fullName, u.dob, u.gender, 
+        u.location, u.city, u.country, u.profession, u.education, u.university, u.height, 
+        u.ethnicity, u.marriage_timeline as marriageTimeline, u.bio, 
+        u.family_structure as familyStructure, u.living_preference as livingPreference,
+        u.siblings_count as siblingsCount, u.willingness_to_relocate as willingnessToRelocate,
+        u.smoking_status as smokingStatus, u.languages_spoken as languagesSpoken,
+        u.mahr_philosophy as mahrPhilosophy, u.children_desire as childrenDesire,
+        u.blur_photos_by_default as blurPhotosByDefault, u.profile_visibility as profileVisibility,
+        rp.practice_level as practiceLevel, rp.sect, rp.madhhab, rp.prayer_frequency as prayerFrequency, 
+        rp.halal_diet as halalDiet, rp.quran_recitation as quranRecitation,
+        rp.modesty_practice as modestyPractice, rp.hajj_umrah_status as hajjUmrahStatus,
+        rp.deen_relationship_bio as deenRelationshipBio,
+        w.wali_name as waliName, w.wali_relationship as waliRelationship, w.wali_phone as waliPhone, w.is_verified as waliVerified
       FROM matches_and_likes m
       JOIN users u ON (m.sender_id = u.id OR m.receiver_id = u.id) AND u.id != ?
+      LEFT JOIN religious_profiles rp ON u.id = rp.user_id
       LEFT JOIN wali_details w ON u.id = w.user_id
       WHERE (m.sender_id = ? OR m.receiver_id = ?) AND m.action = 'mutual_match'
       ORDER BY m.created_at DESC
@@ -209,7 +220,78 @@ matchesRouter.get('/mutual', async (c) => {
 
     const { results } = await c.env.DB.prepare(query).bind(userId, userId, userId).all();
 
-    return c.json({ success: true, count: (results || []).length, matches: results || [] });
+    // Fetch photos
+    const userIds = (results || []).map((r: any) => r.id);
+    let photoMap: Record<string, string[]> = {};
+
+    if (userIds.length > 0) {
+      const placeholders = userIds.map(() => '?').join(',');
+      const { results: allPhotos } = await c.env.DB.prepare(`
+        SELECT user_id, photo_url FROM user_photos 
+        WHERE user_id IN (${placeholders})
+        ORDER BY sort_order ASC
+      `).bind(...userIds).all();
+
+      (allPhotos || []).forEach((p: any) => {
+        if (!photoMap[p.user_id]) photoMap[p.user_id] = [];
+        photoMap[p.user_id].push(p.photo_url);
+      });
+    }
+
+    const formatted = (results || []).map((row: any) => {
+      const birthYear = new Date(row.dob).getFullYear();
+      const age = new Date().getFullYear() - (birthYear || 1998);
+      const userPhotos = photoMap[row.id] || [];
+
+      return {
+        id: row.id,
+        phone: row.phone,
+        email: row.email,
+        fullName: row.fullName,
+        age: age || 26,
+        gender: row.gender,
+        location: row.location || 'Global',
+        city: row.city,
+        country: row.country,
+        profession: row.profession || 'Professional',
+        education: row.education || 'Graduate',
+        university: row.university || '',
+        height: row.height || "5'11\"",
+        ethnicity: row.ethnicity || 'Global',
+        familyStructure: row.familyStructure || 'nuclear',
+        livingPreference: row.livingPreference || 'independent',
+        siblingsCount: row.siblingsCount || 0,
+        willingnessToRelocate: row.willingnessToRelocate || 'open',
+        smokingStatus: row.smokingStatus || 'non_smoker',
+        languagesSpoken: row.languagesSpoken || 'English, Urdu',
+        mahrPhilosophy: row.mahrPhilosophy || 'mutual_agreement',
+        childrenDesire: row.childrenDesire || 'desires_children',
+        marriageTimeline: row.marriageTimeline || 'within_1_year',
+        bio: row.bio || row.deenRelationshipBio || 'Seeking half my deen.',
+        blurPhotosByDefault: Boolean(row.blurPhotosByDefault),
+        profileVisibility: row.profileVisibility || 'all_users',
+        photos: userPhotos.length > 0 ? userPhotos : ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80'],
+        religiousProfile: {
+          practiceLevel: row.practiceLevel || 'practicing',
+          sect: row.sect || 'Sunni',
+          madhhab: row.madhhab || 'Hanafi',
+          prayerFrequency: row.prayerFrequency || '5 times daily',
+          halalDiet: row.halalDiet || 'Strictly Halal',
+          quranRecitation: row.quranRecitation || 'regular',
+          modestyPractice: row.modestyPractice || 'modest',
+          hajjUmrahStatus: row.hajjUmrahStatus || 'planning',
+          deenRelationshipBio: row.deenRelationshipBio
+        },
+        wali: row.waliName ? {
+          name: row.waliName,
+          relationship: row.waliRelationship,
+          phone: row.waliPhone,
+          isVerified: Boolean(row.waliVerified)
+        } : null
+      };
+    });
+
+    return c.json({ success: true, count: formatted.length, matches: formatted });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   }

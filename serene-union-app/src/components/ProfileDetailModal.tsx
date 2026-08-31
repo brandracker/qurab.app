@@ -52,7 +52,7 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
         {/* Scrollable Profile Body */}
         <main className="flex-1 overflow-y-auto pb-28">
           {/* Main Photo Banner */}
-          <div className="relative w-full h-96 bg-surface-container-high overflow-hidden">
+          <div className="relative w-full h-96 bg-surface-container-high overflow-hidden group">
             <img
               src={photos[selectedPhotoIdx]}
               alt={profile.fullName}
@@ -60,6 +60,46 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
                 !isUnblurred ? 'filter blur-xl scale-110 opacity-85' : 'scale-100'
               }`}
             />
+
+            {/* Segmented Story Bars for Multiple Photos */}
+            {photos.length > 1 && (
+              <div className="absolute top-2.5 inset-x-4 flex items-center gap-1.5 z-20">
+                {photos.map((_, pIdx) => (
+                  <div
+                    key={pIdx}
+                    onClick={() => setSelectedPhotoIdx(pIdx)}
+                    className={`h-1 flex-1 rounded-full cursor-pointer transition-all ${
+                      pIdx === selectedPhotoIdx
+                        ? 'bg-white shadow'
+                        : 'bg-white/40 hover:bg-white/60'
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Left / Right Photo Tap Controls */}
+            {photos.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setSelectedPhotoIdx(prev => (prev > 0 ? prev - 1 : photos.length - 1))}
+                  aria-label="Previous Photo"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 text-white flex items-center justify-center backdrop-blur-sm opacity-80 hover:opacity-100 hover:scale-105 active:scale-95 transition-all z-20"
+                >
+                  <span className="material-symbols-outlined text-[20px]">chevron_left</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedPhotoIdx(prev => (prev < photos.length - 1 ? prev + 1 : 0))}
+                  aria-label="Next Photo"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 text-white flex items-center justify-center backdrop-blur-sm opacity-80 hover:opacity-100 hover:scale-105 active:scale-95 transition-all z-20"
+                >
+                  <span className="material-symbols-outlined text-[20px]">chevron_right</span>
+                </button>
+              </>
+            )}
+
             {!isUnblurred && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
                 <div className="bg-background/90 backdrop-blur-md px-5 py-2.5 rounded-full text-xs font-semibold text-on-surface flex items-center gap-2 shadow-md border border-surface-variant/40">
@@ -68,12 +108,20 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
                 </div>
               </div>
             )}
-            <div className="absolute top-4 left-4 bg-background/80 backdrop-blur-sm px-3 py-1.5 rounded-full flex items-center gap-1 text-xs font-semibold text-on-surface">
-              <span className="material-symbols-outlined text-[16px] text-primary">location_on</span>
-              <span>{profile.location || 'Global'}</span>
+            <div className="absolute top-5 left-4 flex items-center gap-1.5 z-10">
+              <div className="bg-background/80 backdrop-blur-sm px-3 py-1.5 rounded-full flex items-center gap-1 text-xs font-semibold text-on-surface">
+                <span className="material-symbols-outlined text-[16px] text-primary">location_on</span>
+                <span>{profile.location || 'Global'}</span>
+              </div>
+              {photos.length > 1 && (
+                <div className="bg-black/60 backdrop-blur-sm px-2.5 py-1.5 rounded-full text-white text-xs font-semibold flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[14px]">photo_camera</span>
+                  <span>{selectedPhotoIdx + 1}/{photos.length}</span>
+                </div>
+              )}
             </div>
             {profile.wali && (
-              <div className="absolute top-4 right-4 bg-primary/90 backdrop-blur-sm text-white px-3 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-semibold shadow">
+              <div className="absolute top-5 right-4 bg-primary/90 backdrop-blur-sm text-white px-3 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-semibold shadow z-10">
                 <span className="material-symbols-outlined text-[16px]">verified_user</span>
                 <span>Wali Verified</span>
               </div>

@@ -15,8 +15,8 @@ interface Props {
 type CardTab = 'deen' | 'career' | 'family' | 'bio';
 
 export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
-  const [activeCategory, setActiveCategory] = useState<string>('all');
   const [currentIndex, setCurrentIndex] = useState<number>(0);
+  const [currentPhotoIdx, setCurrentPhotoIdx] = useState<number>(0);
   const [activeTab, setActiveTab] = useState<CardTab>('deen');
   
   const [filters, setFilters] = useState<FilterState>({
@@ -53,6 +53,7 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
     const updated = dbService.getDiscoverFeed(newFilters);
     setProfiles(updated);
     setCurrentIndex(0);
+    setCurrentPhotoIdx(0);
   };
 
   const handleLike = async (profile: UserProfile, e?: React.MouseEvent) => {
@@ -74,25 +75,13 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
     setProfiles(prev => prev.filter(p => p.id !== profileId));
   };
 
-  // Category & search filtering
+  // Search filtering
   const filteredFeed = profiles.filter(p => {
-    const matchesSearch = 
+    return (
       p.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.profession.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    if (!matchesSearch) return false;
-
-    if (activeCategory === 'practicing') {
-      return p.religiousProfile?.practiceLevel === 'practicing' || p.religiousProfile?.prayerFrequency?.includes('5');
-    }
-    if (activeCategory === 'relocation') {
-      return p.willingnessToRelocate === 'willing' || p.willingnessToRelocate === 'open';
-    }
-    if (activeCategory === 'citizens') {
-      return p.citizenship && p.citizenship.toLowerCase().includes('citizen');
-    }
-    return true;
+      p.profession.toLowerCase().includes(searchQuery.toLowerCase())
+    );
   });
 
   const currentProfile = filteredFeed[currentIndex] || null;
@@ -100,6 +89,7 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
   const handleNext = () => {
     if (currentIndex < filteredFeed.length - 1) {
       setCurrentIndex(prev => prev + 1);
+      setCurrentPhotoIdx(0);
       setActiveTab('deen');
     }
   };
@@ -107,75 +97,70 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
   const handlePrev = () => {
     if (currentIndex > 0) {
       setCurrentIndex(prev => prev - 1);
+      setCurrentPhotoIdx(0);
       setActiveTab('deen');
+    }
+  };
+
+  const photos = currentProfile?.photos && currentProfile.photos.length > 0
+    ? currentProfile.photos
+    : ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80'];
+
+  const handleNextPhoto = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (currentPhotoIdx < photos.length - 1) {
+      setCurrentPhotoIdx(prev => prev + 1);
+    } else {
+      setCurrentPhotoIdx(0);
+    }
+  };
+
+  const handlePrevPhoto = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (currentPhotoIdx > 0) {
+      setCurrentPhotoIdx(prev => prev - 1);
+    } else {
+      setCurrentPhotoIdx(photos.length - 1);
     }
   };
 
   return (
     <div className="w-full h-full flex flex-col relative bg-background overflow-hidden font-sans">
-      {/* Top Navigation & Search Bar */}
-      <header className="w-full sticky top-0 z-40 bg-background/95 backdrop-blur-md px-4 pt-3 pb-2 border-b border-surface-variant/30 space-y-2.5">
-        <div className="flex items-center gap-3">
-          <div className="relative flex-1">
-            <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">
-              search
-            </span>
-            <input
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setCurrentIndex(0);
-              }}
-              className="w-full bg-surface-container-high border-none rounded-full py-2.5 pl-10 pr-4 text-xs text-on-surface focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-secondary"
-              placeholder="Search by name, city, profession..."
-              type="text"
-            />
-          </div>
-
-          <button
-            onClick={() => setShowFilterModal(true)}
-            aria-label="Filters"
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container-high text-on-surface hover:bg-surface-variant transition-colors shrink-0 relative"
-          >
-            <span className="material-symbols-outlined text-[20px]">tune</span>
-            {(filters.sects.length > 0 || filters.practiceLevels.length > 0) && (
-              <span className="w-2.5 h-2.5 bg-primary rounded-full absolute top-1 right-1 border-2 border-surface" />
-            )}
-          </button>
+      {/* Top Header: Clean Search Bar + Filter Button + Counter */}
+      <header className="w-full sticky top-0 z-40 bg-background/95 backdrop-blur-md px-4 py-3 border-b border-surface-variant/30 flex items-center gap-3">
+        <div className="relative flex-1">
+          <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">
+            search
+          </span>
+          <input
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentIndex(0);
+              setCurrentPhotoIdx(0);
+            }}
+            className="w-full bg-surface-container-high border-none rounded-full py-2.5 pl-10 pr-4 text-xs text-on-surface focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-secondary"
+            placeholder="Search by name, city, profession..."
+            type="text"
+          />
         </div>
 
-        {/* Quick Category Filter Pills + Candidate Counter */}
-        <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar pb-1">
-          <div className="flex items-center gap-1.5 shrink-0">
-            {[
-              { id: 'all', label: 'All Matches' },
-              { id: 'practicing', label: '🕌 Practicing' },
-              { id: 'relocation', label: '✈️ Relocation Open' },
-              { id: 'citizens', label: '🛂 Citizens' }
-            ].map(cat => (
-              <button
-                key={cat.id}
-                onClick={() => {
-                  setActiveCategory(cat.id);
-                  setCurrentIndex(0);
-                }}
-                className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-all whitespace-nowrap ${
-                  activeCategory === cat.id
-                    ? 'bg-primary text-white shadow-xs'
-                    : 'bg-surface-container-high text-secondary hover:text-on-surface'
-                }`}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </div>
+        {filteredFeed.length > 0 && (
+          <span className="text-[11px] font-bold bg-primary/10 text-primary px-3 py-2 rounded-full shrink-0 border border-primary/20">
+            {currentIndex + 1} of {filteredFeed.length}
+          </span>
+        )}
 
-          {filteredFeed.length > 0 && (
-            <span className="text-[10px] font-bold bg-primary/10 text-primary px-2.5 py-1 rounded-full shrink-0">
-              {currentIndex + 1} of {filteredFeed.length}
-            </span>
+        <button
+          onClick={() => setShowFilterModal(true)}
+          aria-label="Filters"
+          className="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container-high text-on-surface hover:bg-surface-variant transition-colors shrink-0 relative"
+        >
+          <span className="material-symbols-outlined text-[20px]">tune</span>
+          {(filters.sects.length > 0 || filters.practiceLevels.length > 0) && (
+            <span className="w-2.5 h-2.5 bg-primary rounded-full absolute top-1 right-1 border-2 border-surface" />
           )}
-        </div>
+        </button>
       </header>
 
       {/* Action Toast Feedback */}
@@ -207,7 +192,6 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
             </p>
             <button
               onClick={() => {
-                setActiveCategory('all');
                 setSearchQuery('');
                 handleApplyFilters({
                   minAge: 18,
@@ -231,17 +215,59 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
           <div className="w-full flex flex-col flex-1 justify-between gap-3 animate-fade-in">
             {/* Card Shell */}
             <article className="w-full bg-surface rounded-3xl overflow-hidden border border-surface-variant/40 shadow-md flex flex-col">
-              {/* Top Photo & Identity Header */}
-              <div className="relative w-full h-64 bg-surface-container-high overflow-hidden">
+              {/* Top Photo & Multi-Image Header */}
+              <div className="relative w-full h-72 bg-surface-container-high overflow-hidden group">
                 <img
                   alt={currentProfile.fullName}
-                  src={currentProfile.photos[0] || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80'}
+                  src={photos[currentPhotoIdx] || photos[0]}
                   className={`w-full h-full object-cover transition-all duration-300 ${
                     currentProfile.blurPhotosByDefault && !currentProfile.photoRevealApproved
                       ? 'filter blur-xl scale-110 opacity-85'
                       : 'scale-100'
                   }`}
                 />
+
+                {/* Segmented Story/Progress Bars for Multiple Photos */}
+                {photos.length > 1 && (
+                  <div className="absolute top-2.5 inset-x-3 flex items-center gap-1.5 z-20">
+                    {photos.map((_, pIdx) => (
+                      <div
+                        key={pIdx}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCurrentPhotoIdx(pIdx);
+                        }}
+                        className={`h-1 flex-1 rounded-full cursor-pointer transition-all ${
+                          pIdx === currentPhotoIdx
+                            ? 'bg-white shadow'
+                            : 'bg-white/40 hover:bg-white/60'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* Left / Right Photo Tap Controls */}
+                {photos.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handlePrevPhoto}
+                      aria-label="Previous Photo"
+                      className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center backdrop-blur-sm opacity-80 hover:opacity-100 hover:scale-105 active:scale-95 transition-all z-20"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleNextPhoto}
+                      aria-label="Next Photo"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center backdrop-blur-sm opacity-80 hover:opacity-100 hover:scale-105 active:scale-95 transition-all z-20"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+                    </button>
+                  </>
+                )}
 
                 {/* Modesty Shield Badge */}
                 {currentProfile.blurPhotosByDefault && !currentProfile.photoRevealApproved && (
@@ -253,15 +279,23 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
                   </div>
                 )}
 
-                {/* Top Location Pill */}
-                <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm px-3 py-1 rounded-full text-white text-xs font-medium flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[14px] text-primary">location_on</span>
-                  <span>{currentProfile.location}</span>
+                {/* Top Location & Photo Counter Pill */}
+                <div className="absolute top-6 left-3 flex items-center gap-1.5 z-10">
+                  <div className="bg-black/60 backdrop-blur-sm px-3 py-1 rounded-full text-white text-xs font-medium flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[14px] text-primary">location_on</span>
+                    <span>{currentProfile.location}</span>
+                  </div>
+                  {photos.length > 1 && (
+                    <div className="bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-full text-white text-[10px] font-semibold flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[12px]">photo_camera</span>
+                      <span>{currentPhotoIdx + 1}/{photos.length}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Top Right Wali / Chaperone Badge */}
                 {currentProfile.wali && (
-                  <div className="absolute top-3 right-3 bg-primary/95 text-white text-[10px] font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-xs backdrop-blur-sm">
+                  <div className="absolute top-6 right-3 bg-primary/95 text-white text-[10px] font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-xs backdrop-blur-sm z-10">
                     <span className="material-symbols-outlined text-[13px]">verified_user</span>
                     <span>Wali Observed</span>
                   </div>

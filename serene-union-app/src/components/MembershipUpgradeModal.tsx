@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { API_BASE } from '../services/dbService';
+import { API_BASE, dbService } from '../services/dbService';
 
 interface Props {
   userId: string;
@@ -63,6 +63,17 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
 
   const handleConfirmGooglePlayBilling = async () => {
     setIsProcessing(true);
+    
+    // 1. Immediately persist VIP locally and broadcast event
+    if (currentItem.id === 'serene_barakah_monthly') {
+      localStorage.setItem(`serene_vip_${userId}`, 'true');
+      const cur = dbService.getCurrentUser();
+      if (cur.id === userId) {
+        dbService.setCurrentUser({ ...cur, isVip: true });
+      }
+      window.dispatchEvent(new CustomEvent('serene_vip_updated', { detail: { userId, isVip: true } }));
+    }
+
     try {
       await fetch(`${API_BASE}/wallet/purchase-google-play`, {
         method: 'POST',
@@ -71,7 +82,7 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
           userId,
           productId: currentItem.id,
           purchaseToken: `gp_token_${Date.now()}`,
-          amountCents: currentItem.id === 'serene_barakah_monthly' ? 999 : currentItem.id === 'serene_spotlight_boost_24h' ? 299 : 199,
+          amountCents: currentItem.id === 'serene_barakah_monthly' ? 299 : 99,
           currency: 'USD'
         })
       });
@@ -82,7 +93,7 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
     setTimeout(() => {
       onPurchaseSuccess(currentItem.id);
       onClose();
-    }, 1500);
+    }, 1200);
   };
 
   return (

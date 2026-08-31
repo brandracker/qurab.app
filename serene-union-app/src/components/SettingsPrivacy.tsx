@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { dbService } from '../services/dbService';
 import { MembershipUpgradeModal } from './MembershipUpgradeModal';
 import type { UserProfile } from '../types';
@@ -18,6 +18,19 @@ export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpda
   const [isVip, setIsVip] = useState<boolean>(() => {
     return Boolean(localStorage.getItem(`serene_vip_${currentUser.id}`) || currentUser.isVip);
   });
+
+  useEffect(() => {
+    setIsVip(Boolean(localStorage.getItem(`serene_vip_${currentUser.id}`) || currentUser.isVip));
+    
+    const handleVipUpdate = (e: any) => {
+      const targetUserId = e.detail?.userId;
+      if (!targetUserId || targetUserId === currentUser.id) {
+        setIsVip(true);
+      }
+    };
+    window.addEventListener('serene_vip_updated', handleVipUpdate);
+    return () => window.removeEventListener('serene_vip_updated', handleVipUpdate);
+  }, [currentUser.id, currentUser.isVip]);
 
   const handleToggleBlur = () => {
     const nextVal = !blurPhotos;

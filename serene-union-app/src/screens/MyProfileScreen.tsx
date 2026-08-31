@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { UserProfile } from '../types';
 import { CompatibilityQuizModal } from '../components/CompatibilityQuizModal';
 import { MembershipUpgradeModal } from '../components/MembershipUpgradeModal';
@@ -18,6 +18,19 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
   const [isVip, setIsVip] = useState<boolean>(() => {
     return Boolean(localStorage.getItem(`serene_vip_${user.id}`) || user.isVip);
   });
+
+  useEffect(() => {
+    setIsVip(Boolean(localStorage.getItem(`serene_vip_${user.id}`) || user.isVip));
+    
+    const handleVipUpdate = (e: any) => {
+      const targetUserId = e.detail?.userId;
+      if (!targetUserId || targetUserId === user.id) {
+        setIsVip(true);
+      }
+    };
+    window.addEventListener('serene_vip_updated', handleVipUpdate);
+    return () => window.removeEventListener('serene_vip_updated', handleVipUpdate);
+  }, [user.id, user.isVip]);
 
   const [hasCompletedQuiz, setHasCompletedQuiz] = useState<boolean>(() => {
     return Boolean(localStorage.getItem(`serene_quiz_${user.id}`));

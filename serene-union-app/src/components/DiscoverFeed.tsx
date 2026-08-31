@@ -64,7 +64,16 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
     }).finally(() => {
       setIsLoading(false);
     });
-  }, []);
+
+    const handleVipUpdate = (e: any) => {
+      const targetUserId = e.detail?.userId;
+      if (!targetUserId || targetUserId === currentUser.id) {
+        setIsVip(true);
+      }
+    };
+    window.addEventListener('serene_vip_updated', handleVipUpdate);
+    return () => window.removeEventListener('serene_vip_updated', handleVipUpdate);
+  }, [currentUser.id]);
 
   const handleApplyFilters = (newFilters: FilterState) => {
     setFilters(newFilters);

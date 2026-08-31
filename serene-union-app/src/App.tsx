@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { UserProfile } from './types';
 import { WelcomeScreen } from './screens/WelcomeScreen';
 import { AuthScreen } from './screens/AuthScreen';
@@ -48,6 +48,17 @@ export const App: React.FC = () => {
 
   // Active User Profile State
   const [currentUser, setCurrentUser] = useState<UserProfile>(() => dbService.getCurrentUser());
+
+  useEffect(() => {
+    const handleVipUpdate = (e: any) => {
+      const targetUserId = e.detail?.userId;
+      if (!targetUserId || targetUserId === currentUser.id) {
+        setCurrentUser(prev => ({ ...prev, isVip: true }));
+      }
+    };
+    window.addEventListener('serene_vip_updated', handleVipUpdate);
+    return () => window.removeEventListener('serene_vip_updated', handleVipUpdate);
+  }, [currentUser.id]);
 
   // Onboarding In-Progress Data
   const [onboardingData, setOnboardingData] = useState<Record<string, any>>({});

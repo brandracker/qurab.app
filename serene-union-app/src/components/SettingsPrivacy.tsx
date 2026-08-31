@@ -124,61 +124,117 @@ export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpda
 
         {/* Membership & Subscription Status Section */}
         <section className="space-y-3">
-          <h2 className="font-serif text-base font-bold text-on-surface">Membership & Daily Limits</h2>
+          <h2 className="font-serif text-base font-bold text-on-surface">Membership & Plan Privileges</h2>
 
-          <div className="bg-gradient-to-br from-primary/15 via-surface-container-low to-tertiary-container/20 rounded-2xl p-4 border border-primary/30 shadow-xs flex flex-col gap-3">
+          <div className="bg-gradient-to-br from-primary/15 via-surface-container-low to-tertiary-container/20 rounded-2xl p-5 border border-primary/30 shadow-xs flex flex-col gap-3.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-2xl bg-primary text-white flex items-center justify-center shadow-xs">
+                <div className="w-12 h-12 rounded-2xl bg-primary text-white flex items-center justify-center shadow-xs">
                   <span className="material-symbols-outlined text-2xl">workspace_premium</span>
                 </div>
                 <div>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-2">
                     <h3 className="font-serif font-bold text-sm text-on-surface">
                       {isVip ? 'Barakah VIP Active' : 'Free Tier Member'}
                     </h3>
-                    <span className={`px-2 py-0.2 rounded-full text-[9px] font-bold ${
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                       isVip ? 'bg-primary text-white' : 'bg-surface text-secondary border border-surface-variant/50'
                     }`}>
-                      {isVip ? 'VIP' : 'Standard'}
+                      {isVip ? 'VIP Member' : 'Standard'}
                     </span>
                   </div>
                   <p className="text-[11px] text-secondary mt-0.5">
                     {isVip 
-                      ? 'Unlimited Discover Likes · 100% Ad-Free' 
-                      : '50 Free Discover Likes / day · Unlimited Free Chat'}
+                      ? 'All Premium Features Unlocked (Google Play Billing)' 
+                      : '50 Free Discover Likes / day · 100% Free Chat'}
                   </p>
                 </div>
               </div>
 
-              {!isVip && (
+              {!isVip ? (
                 <button
                   type="button"
                   onClick={() => setShowUpgradeModal(true)}
-                  className="px-3.5 py-1.5 rounded-full bg-primary text-white text-xs font-bold shadow-xs hover:brightness-110 active:scale-95 transition-all flex items-center gap-1"
+                  className="px-4 py-2 rounded-full bg-primary text-white text-xs font-bold shadow-md hover:brightness-110 active:scale-95 transition-all flex items-center gap-1.5"
                 >
-                  <span className="material-symbols-outlined text-[15px]">upgrade</span>
+                  <span className="material-symbols-outlined text-[16px]">upgrade</span>
                   <span>Upgrade</span>
                 </button>
+              ) : (
+                <span className="px-3 py-1 rounded-full bg-primary/20 text-primary text-[11px] font-bold flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                  <span>Active</span>
+                </span>
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-surface-variant/20 text-xs">
-              <div className="p-2.5 rounded-xl bg-surface border border-surface-variant/30 flex items-center gap-2">
+            {/* Grid of Key Quotas */}
+            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-surface-variant/30 text-xs">
+              <div className="p-2.5 rounded-xl bg-surface border border-surface-variant/30 flex items-center gap-2.5">
                 <span className="material-symbols-outlined text-primary text-[18px]">favorite</span>
                 <div>
                   <span className="text-[10px] text-secondary block">Likes Quota</span>
                   <strong className="text-[11px] text-on-surface">
-                    {isVip ? 'Unlimited' : '50 Likes / Day'}
+                    {isVip ? 'Unlimited (No Cap)' : '50 Likes / Day'}
                   </strong>
                 </div>
               </div>
 
-              <div className="p-2.5 rounded-xl bg-surface border border-surface-variant/30 flex items-center gap-2">
+              <div className="p-2.5 rounded-xl bg-surface border border-surface-variant/30 flex items-center gap-2.5">
                 <span className="material-symbols-outlined text-primary text-[18px]">chat</span>
                 <div>
                   <span className="text-[10px] text-secondary block">Mutual Messaging</span>
                   <strong className="text-[11px] text-primary">100% Free</strong>
+                </div>
+              </div>
+            </div>
+
+            {/* Unlocked VIP Privileges List */}
+            <div className="pt-2 border-t border-surface-variant/20 space-y-2">
+              <h4 className="font-serif font-bold text-[11px] text-primary uppercase tracking-wide flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[15px]">verified</span>
+                <span>{isVip ? 'Your Active VIP Privileges:' : 'VIP Privileges Preview:'}</span>
+              </h4>
+
+              <div className="space-y-1.5 text-[11px]">
+                <div className="flex items-center justify-between p-2 rounded-xl bg-surface/90 border border-surface-variant/30">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary text-[16px]">visibility</span>
+                    <span className="text-on-surface font-medium">See Who Liked You (Unblurred)</span>
+                  </div>
+                  <span className={`text-[10px] font-bold ${isVip ? 'text-primary' : 'text-secondary'}`}>
+                    {isVip ? '✓ Unlocked' : 'VIP Only'}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between p-2 rounded-xl bg-surface/90 border border-surface-variant/30">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary text-[16px]">block</span>
+                    <span className="text-on-surface font-medium">100% Ad-Free (Zero Video Ads)</span>
+                  </div>
+                  <span className={`text-[10px] font-bold ${isVip ? 'text-primary' : 'text-secondary'}`}>
+                    {isVip ? '✓ Active' : 'VIP Only'}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between p-2 rounded-xl bg-surface/90 border border-surface-variant/30">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary text-[16px]">bolt</span>
+                    <span className="text-on-surface font-medium">Priority Stream Ranking (3x Views)</span>
+                  </div>
+                  <span className={`text-[10px] font-bold ${isVip ? 'text-primary' : 'text-secondary'}`}>
+                    {isVip ? '✓ Active' : 'VIP Only'}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between p-2 rounded-xl bg-surface/90 border border-surface-variant/30">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary text-[16px]">all_inclusive</span>
+                    <span className="text-on-surface font-medium">Unlimited Daily Likes (No 50 Cap)</span>
+                  </div>
+                  <span className={`text-[10px] font-bold ${isVip ? 'text-primary' : 'text-secondary'}`}>
+                    {isVip ? '✓ Unlimited' : '50 / day'}
+                  </span>
                 </div>
               </div>
             </div>

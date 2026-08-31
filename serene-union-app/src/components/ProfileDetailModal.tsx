@@ -148,9 +148,17 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
           {/* Profile Core Header */}
           <div className="p-5 space-y-5">
             <div>
-              <h1 className="font-serif text-3xl font-bold text-on-surface">
-                {profile.fullName}, {profile.age}
-              </h1>
+              <div className="flex items-center gap-2.5">
+                <h1 className="font-serif text-3xl font-bold text-on-surface">
+                  {profile.fullName}, {profile.age}
+                </h1>
+                {profile.isVip && (
+                  <span className="bg-primary text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+                    <span className="material-symbols-outlined text-[14px]">workspace_premium</span>
+                    <span>VIP</span>
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-primary font-bold mt-1">
                 {rel?.sect || 'Sunni'} ({rel?.madhhab || 'Hanafi'}) · {profile.profession || 'Professional'}
               </p>

@@ -72,6 +72,10 @@ walletRouter.post('/purchase-google-play', async (c) => {
       `).bind(userId).run();
     } else if (productId === 'serene_barakah_monthly') {
       await c.env.DB.prepare(`
+        UPDATE users SET is_vip = 1 WHERE id = ?
+      `).bind(userId).run();
+
+      await c.env.DB.prepare(`
         INSERT INTO user_wallets (user_id, subscription_tier, direct_salams_balance, daily_messages_quota)
         VALUES (?, 'barakah_vip', 10, 9999)
         ON CONFLICT(user_id) DO UPDATE SET subscription_tier = 'barakah_vip', daily_messages_quota = 9999, direct_salams_balance = direct_salams_balance + 5

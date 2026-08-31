@@ -77,8 +77,11 @@ class DBService {
         const parsed = JSON.parse(saved);
         if (parsed?.fullName && (parsed.fullName.toLowerCase().includes('maryam') || parsed.fullName.toLowerCase().includes('sarah') || parsed.fullName.toLowerCase().includes('aisha')) && parsed.gender !== 'female') {
           parsed.gender = 'female';
-          localStorage.setItem(this.userKey, JSON.stringify(parsed));
         }
+        if (localStorage.getItem(`serene_vip_${parsed.id}`) === 'true') {
+          parsed.isVip = true;
+        }
+        localStorage.setItem(this.userKey, JSON.stringify(parsed));
         return parsed;
       } catch {}
     }

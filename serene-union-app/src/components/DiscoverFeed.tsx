@@ -190,6 +190,13 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
           </span>
         )}
 
+        {isVip && (
+          <span className="text-[11px] font-bold bg-primary text-white px-2.5 py-1.5 rounded-full flex items-center gap-1 shadow-xs shrink-0">
+            <span className="material-symbols-outlined text-[14px]">workspace_premium</span>
+            <span>VIP</span>
+          </span>
+        )}
+
         <button
           onClick={() => setShowFilterModal(true)}
           aria-label="Filters"
@@ -343,8 +350,14 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
                 {/* Candidate Name & Timeline Overlay on Photo */}
                 <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-4 flex items-end justify-between">
                   <div>
-                    <h2 className="font-serif text-2xl font-bold text-white leading-tight">
-                      {currentProfile.fullName.split(' ')[0]}, {currentProfile.age}
+                    <h2 className="font-serif text-2xl font-bold text-white leading-tight flex items-center gap-2">
+                      <span>{currentProfile.fullName.split(' ')[0]}, {currentProfile.age}</span>
+                      {currentProfile.isVip && (
+                        <span className="bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+                          <span className="material-symbols-outlined text-[12px]">workspace_premium</span>
+                          <span>VIP</span>
+                        </span>
+                      )}
                     </h2>
                     <p className="text-xs text-white/90 font-medium flex items-center gap-1.5 mt-0.5">
                       <span>{currentProfile.profession}</span>

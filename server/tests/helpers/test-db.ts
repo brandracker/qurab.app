@@ -51,6 +51,7 @@ export class MockD1Database {
         profile_visibility TEXT DEFAULT 'approved_only',
         is_phone_verified BOOLEAN DEFAULT 0,
         is_id_verified BOOLEAN DEFAULT 0,
+        is_vip BOOLEAN DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );

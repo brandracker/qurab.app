@@ -15,7 +15,9 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
   const [showUpgradeModal, setShowUpgradeModal] = useState<boolean>(false);
   const [showAdModal, setShowAdModal] = useState<boolean>(false);
   const [adRewardType, setAdRewardType] = useState<'likes' | 'salam' | 'messages' | 'photo_unblur'>('likes');
-  const [isVip, setIsVip] = useState<boolean>(false);
+  const [isVip, setIsVip] = useState<boolean>(() => {
+    return Boolean(localStorage.getItem(`serene_vip_${user.id}`) || user.isVip);
+  });
 
   const [hasCompletedQuiz, setHasCompletedQuiz] = useState<boolean>(() => {
     return Boolean(localStorage.getItem(`serene_quiz_${user.id}`));
@@ -289,7 +291,10 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
           isOpen={showUpgradeModal}
           onClose={() => setShowUpgradeModal(false)}
           onPurchaseSuccess={(productId) => {
-            if (productId === 'serene_barakah_monthly') setIsVip(true);
+            if (productId === 'serene_barakah_monthly') {
+              setIsVip(true);
+              localStorage.setItem(`serene_vip_${user.id}`, 'true');
+            }
           }}
           onWatchAdClicked={() => {
             setAdRewardType('likes');

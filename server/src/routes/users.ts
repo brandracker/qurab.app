@@ -252,6 +252,7 @@ profilesRouter.get('/discover', async (c) => {
         u.smoking_status as smokingStatus, u.languages_spoken as languagesSpoken,
         u.mahr_philosophy as mahrPhilosophy, u.children_desire as childrenDesire,
         u.blur_photos_by_default as blurPhotosByDefault, u.profile_visibility as profileVisibility,
+        u.is_vip as isVip,
         rp.practice_level as practiceLevel, rp.sect, rp.madhhab, rp.prayer_frequency as prayerFrequency, 
         rp.halal_diet as halalDiet, rp.quran_recitation as quranRecitation,
         rp.modesty_practice as modestyPractice, rp.hajj_umrah_status as hajjUmrahStatus,
@@ -262,7 +263,7 @@ profilesRouter.get('/discover', async (c) => {
       LEFT JOIN wali_details w ON u.id = w.user_id
       WHERE u.id != ? AND u.email IS NOT NULL AND u.email != '' AND u.full_name != 'New Member'
       ${genderFilter}
-      ORDER BY u.created_at DESC
+      ORDER BY u.is_vip DESC, u.created_at DESC
     `;
 
     const stmt = targetGender
@@ -328,6 +329,7 @@ profilesRouter.get('/discover', async (c) => {
         bio: row.bio || row.deenRelationshipBio || 'Seeking half my deen.',
         blurPhotosByDefault: Boolean(row.blurPhotosByDefault),
         profileVisibility: row.profileVisibility || 'all_users',
+        isVip: Boolean(row.isVip),
         photos: userPhotos.length > 0 ? userPhotos : ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80'],
         religiousProfile: {
           practiceLevel: row.practiceLevel || 'practicing',

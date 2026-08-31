@@ -3,6 +3,8 @@ import type { UserProfile, FilterState } from '../types';
 import { FilterModal } from './FilterModal';
 import { MutualMatchModal } from './MutualMatchModal';
 import { ProfileDetailModal } from './ProfileDetailModal';
+import { RewardedAdModal } from './RewardedAdModal';
+import { MembershipUpgradeModal } from './MembershipUpgradeModal';
 import { dbService } from '../services/dbService';
 
 interface Props {
@@ -15,6 +17,22 @@ interface Props {
 type CardTab = 'deen' | 'career' | 'family' | 'bio';
 
 export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
+  const currentUser = dbService.getCurrentUser();
+  const [isVip, setIsVip] = useState<boolean>(() => {
+    return Boolean(localStorage.getItem(`serene_vip_${currentUser.id}`) || currentUser.isVip);
+  });
+
+  const getTodayLikeKey = () => `serene_likes_left_${currentUser.id}_${new Date().toISOString().slice(0, 10)}`;
+
+  const [likesRemaining, setLikesRemaining] = useState<number>(() => {
+    const saved = localStorage.getItem(getTodayLikeKey());
+    return saved !== null ? parseInt(saved, 10) : 30;
+  });
+
+  const [showLikesLimitModal, setShowLikesLimitModal] = useState<boolean>(false);
+  const [showRewardedAdModal, setShowRewardedAdModal] = useState<boolean>(false);
+  const [showVipModal, setShowVipModal] = useState<boolean>(false);
+
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [currentPhotoIdx, setCurrentPhotoIdx] = useState<number>(0);
   const [activeTab, setActiveTab] = useState<CardTab>('deen');
@@ -58,6 +76,19 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
 
   const handleLike = async (profile: UserProfile, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
+
+    // Check daily like limit for non-VIP users
+    if (!isVip && likesRemaining <= 0) {
+      setShowLikesLimitModal(true);
+      return;
+    }
+
+    if (!isVip) {
+      const nextLikes = Math.max(0, likesRemaining - 1);
+      setLikesRemaining(nextLikes);
+      localStorage.setItem(getTodayLikeKey(), nextLikes.toString());
+    }
+
     setProfiles(prev => prev.filter(p => p.id !== profile.id));
 
     const result = await dbService.sendMatchAction(profile.id, 'liked');
@@ -67,6 +98,14 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
       setToastMessage(`Interest expressed to ${profile.fullName.split(' ')[0]}. You will be notified when they connect!`);
       setTimeout(() => setToastMessage(null), 3500);
     }
+  };
+
+  const handleClaimAdLikes = () => {
+    const nextLikes = likesRemaining + 10;
+    setLikesRemaining(nextLikes);
+    localStorage.setItem(getTodayLikeKey(), nextLikes.toString());
+    setToastMessage('+10 Extra Discover Likes added! 🎉');
+    setTimeout(() => setToastMessage(null), 3500);
   };
 
   const handlePass = (profileId: string, e?: React.MouseEvent) => {
@@ -551,6 +590,84 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
             const newConv = dbService.createMatchConversation(matchedProfile);
             setMatchedProfile(null);
             onOpenChat(newConv.id);
+          }}
+        />
+      )}
+
+      {/* Daily Free Likes Reached Modal */}
+      {showLikesLimitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 font-sans animate-fade-in">
+          <div className="w-full max-w-sm bg-surface rounded-3xl p-6 shadow-2xl border border-surface-variant text-center flex flex-col items-center gap-4 animate-slide-up">
+            <div className="w-14 h-14 rounded-full bg-primary/10 text-primary flex items-center justify-center border border-primary/20">
+              <span className="material-symbols-outlined text-3xl">favorite_border</span>
+            </div>
+            <div>
+              <h3 className="font-serif text-lg font-bold text-on-surface">Daily Free Likes Limit (30/30)</h3>
+              <p className="text-xs text-secondary mt-1 leading-relaxed">
+                You’ve used your 30 daily free likes. Watch a quick 15s sponsored ad to unlock <strong>+10 More Likes</strong> right now, or get unlimited likes with VIP!
+              </p>
+            </div>
+
+            <div className="w-full space-y-2.5 pt-2">
+              <button
+                onClick={() => {
+                  setShowLikesLimitModal(false);
+                  setShowRewardedAdModal(true);
+                }}
+                className="w-full py-3 rounded-full bg-primary text-white text-xs font-bold shadow-md hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2"
+              >
+                <span className="material-symbols-outlined text-[18px]">play_circle</span>
+                <span>Watch Quick Ad (+10 Likes)</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowLikesLimitModal(false);
+                  setShowVipModal(true);
+                }}
+                className="w-full py-2.5 rounded-full bg-surface-container-high text-primary hover:bg-surface-variant text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+              >
+                <span className="material-symbols-outlined text-[16px]">workspace_premium</span>
+                <span>Get Unlimited Likes with VIP (PKR 799/mo)</span>
+              </button>
+
+              <button
+                onClick={() => setShowLikesLimitModal(false)}
+                className="text-[11px] text-secondary hover:text-on-surface pt-1"
+              >
+                Maybe Later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rewarded Ad Modal */}
+      {showRewardedAdModal && (
+        <RewardedAdModal
+          userId={currentUser.id}
+          rewardType="likes"
+          isOpen={showRewardedAdModal}
+          onClose={() => setShowRewardedAdModal(false)}
+          onRewardClaimed={handleClaimAdLikes}
+        />
+      )}
+
+      {/* VIP Upgrade Modal */}
+      {showVipModal && (
+        <MembershipUpgradeModal
+          userId={currentUser.id}
+          isOpen={showVipModal}
+          onClose={() => setShowVipModal(false)}
+          onPurchaseSuccess={(productId) => {
+            if (productId === 'serene_barakah_monthly') {
+              setIsVip(true);
+              localStorage.setItem(`serene_vip_${currentUser.id}`, 'true');
+            }
+          }}
+          onWatchAdClicked={() => {
+            setShowVipModal(false);
+            setShowRewardedAdModal(true);
           }}
         />
       )}

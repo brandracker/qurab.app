@@ -101,10 +101,10 @@ walletRouter.post('/reward-ad', async (c) => {
       return c.json({ success: false, error: 'userId is required' }, 400);
     }
 
-    if (rewardType === 'messages') {
+    if (rewardType === 'likes' || rewardType === 'messages') {
       await c.env.DB.prepare(`
         INSERT INTO user_wallets (user_id, daily_messages_quota)
-        VALUES (?, 25)
+        VALUES (?, 40)
         ON CONFLICT(user_id) DO UPDATE SET daily_messages_quota = daily_messages_quota + 10
       `).bind(userId).run();
     } else if (rewardType === 'salam') {
@@ -117,7 +117,8 @@ walletRouter.post('/reward-ad', async (c) => {
 
     return c.json({
       success: true,
-      message: 'Rewarded ad verified! Bonus credited to your account.'
+      rewardType: rewardType || 'likes',
+      message: 'Rewarded ad verified! +10 Discover likes credited to your account.'
     });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);

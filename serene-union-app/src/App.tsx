@@ -8,7 +8,6 @@ import { FamilyLifestyleScreen } from './screens/FamilyLifestyleScreen';
 import { YourIntentScreen } from './screens/YourIntentScreen';
 import { CreateProfileScreen } from './screens/CreateProfileScreen';
 import { MyProfileScreen } from './screens/MyProfileScreen';
-import { WaliObserverPortal } from './screens/WaliObserverPortal';
 import { DiscoverFeed } from './components/DiscoverFeed';
 import { MatchesLikedYouScreen } from './components/MatchesLikedYouScreen';
 import { ChatScreen } from './components/ChatScreen';
@@ -315,25 +314,14 @@ export const App: React.FC = () => {
           />
         )}
 
-        {/* WALI PORTAL VIEW */}
-        {currentStep === 'wali_portal' && (
-          <WaliObserverPortal onBackToApp={() => setCurrentStep('main_app')} />
-        )}
-
         {/* MAIN APPLICATION (5-TAB BOTTOM NAVIGATION) */}
         {currentStep === 'main_app' && (
           <div className="w-full h-full flex flex-col justify-between overflow-hidden relative">
             
             {/* Top Micro-Bar */}
             <div className="w-full px-4 py-2 bg-surface flex items-center justify-between border-b border-surface-variant/20 z-10 text-[11px] text-secondary">
-              <span className="font-serif font-bold text-primary">Serene Union Live</span>
+              <span className="font-serif font-bold text-primary">Serene Union</span>
               <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setCurrentStep('wali_portal')}
-                  className="bg-primary/10 text-primary px-2.5 py-0.5 rounded-full font-semibold hover:bg-primary/20 transition-colors"
-                >
-                  Wali Portal
-                </button>
                 <button onClick={handleLogout} className="hover:text-error transition-colors">
                   Sign Out / Reset
                 </button>

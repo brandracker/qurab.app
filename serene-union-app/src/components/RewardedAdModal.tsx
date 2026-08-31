@@ -3,13 +3,13 @@ import { API_BASE } from '../services/dbService';
 
 interface Props {
   userId: string;
-  rewardType: 'messages' | 'salam' | 'photo_unblur';
+  rewardType?: 'likes' | 'salam' | 'messages' | 'photo_unblur';
   isOpen: boolean;
   onClose: () => void;
   onRewardClaimed: () => void;
 }
 
-export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType, isOpen, onClose, onRewardClaimed }) => {
+export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes', isOpen, onClose, onRewardClaimed }) => {
   const [timeLeft, setTimeLeft] = useState<number>(15);
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
@@ -51,9 +51,8 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType, isOpen, o
   };
 
   const getRewardTitle = () => {
-    if (rewardType === 'messages') return '+10 Free Messages';
     if (rewardType === 'salam') return '+1 Direct Salam Pass';
-    return 'Instant Photo Reveal';
+    return '+10 Extra Discover Likes';
   };
 
   return (

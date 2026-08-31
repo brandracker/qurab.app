@@ -348,13 +348,18 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
                   )}
                 </div>
 
-                {/* Top Right Wali / Chaperone Badge */}
-                {currentProfile.wali && (
+                {/* Top Right VIP or Wali Badge */}
+                {currentProfile.isVip ? (
+                  <div className="absolute top-6 right-3 bg-gradient-to-r from-amber-500 via-primary to-emerald-600 text-white text-[10px] font-bold px-3 py-1 rounded-full flex items-center gap-1.5 shadow-lg border border-amber-300/40 backdrop-blur-sm z-10 animate-pulse">
+                    <span className="material-symbols-outlined text-[14px] text-amber-200">workspace_premium</span>
+                    <span>VIP Member</span>
+                  </div>
+                ) : currentProfile.wali ? (
                   <div className="absolute top-6 right-3 bg-primary/95 text-white text-[10px] font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-xs backdrop-blur-sm z-10">
                     <span className="material-symbols-outlined text-[13px]">verified_user</span>
                     <span>Wali Observed</span>
                   </div>
-                )}
+                ) : null}
 
                 {/* Candidate Name & Timeline Overlay on Photo */}
                 <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-4 flex items-end justify-between">
@@ -362,8 +367,8 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
                     <h2 className="font-serif text-2xl font-bold text-white leading-tight flex items-center gap-2">
                       <span>{currentProfile.fullName.split(' ')[0]}, {currentProfile.age}</span>
                       {currentProfile.isVip && (
-                        <span className="bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
-                          <span className="material-symbols-outlined text-[12px]">workspace_premium</span>
+                        <span className="bg-gradient-to-r from-amber-500 to-primary text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-md border border-amber-300/40">
+                          <span className="material-symbols-outlined text-[12px] text-amber-200">workspace_premium</span>
                           <span>VIP</span>
                         </span>
                       )}

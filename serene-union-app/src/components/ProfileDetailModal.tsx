@@ -120,12 +120,18 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
                 </div>
               )}
             </div>
-            {profile.wali && (
+            {/* Top Right VIP or Wali Badge */}
+            {profile.isVip ? (
+              <div className="absolute top-5 right-4 bg-gradient-to-r from-amber-500 via-primary to-emerald-600 text-white px-3.5 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-bold shadow-lg border border-amber-300/40 backdrop-blur-sm z-10 animate-pulse">
+                <span className="material-symbols-outlined text-[16px] text-amber-200">workspace_premium</span>
+                <span>VIP Member</span>
+              </div>
+            ) : profile.wali ? (
               <div className="absolute top-5 right-4 bg-primary/90 backdrop-blur-sm text-white px-3 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-semibold shadow z-10">
                 <span className="material-symbols-outlined text-[16px]">verified_user</span>
                 <span>Wali Verified</span>
               </div>
-            )}
+            ) : null}
           </div>
 
           {/* Photo Thumbnails */}
@@ -153,9 +159,9 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
                   {profile.fullName}, {profile.age}
                 </h1>
                 {profile.isVip && (
-                  <span className="bg-primary text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
-                    <span className="material-symbols-outlined text-[14px]">workspace_premium</span>
-                    <span>VIP</span>
+                  <span className="bg-gradient-to-r from-amber-500 to-primary text-white text-[11px] font-bold px-3 py-0.5 rounded-full flex items-center gap-1.5 shadow-md border border-amber-300/40">
+                    <span className="material-symbols-outlined text-[14px] text-amber-200">workspace_premium</span>
+                    <span>VIP Member</span>
                   </span>
                 )}
               </div>

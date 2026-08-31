@@ -59,30 +59,55 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
       {/* Main Profile Body */}
       <main className="p-6 space-y-6">
         {/* WALLET & GOOGLE PLAY MEMBERSHIP PASS CARD */}
-        <div className="bg-gradient-to-br from-primary/15 via-surface to-tertiary-container/20 rounded-3xl p-5 border border-primary/30 shadow-sm flex flex-col gap-3">
+        <div className={`rounded-3xl p-5 border transition-all ${
+          isVip 
+            ? 'bg-gradient-to-br from-amber-500/25 via-primary/20 to-emerald-600/25 border-amber-400/50 shadow-lg ring-1 ring-amber-400/30' 
+            : 'bg-gradient-to-br from-primary/15 via-surface to-tertiary-container/20 border-primary/30 shadow-sm'
+        } flex flex-col gap-3.5`}>
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-2xl bg-primary text-white flex items-center justify-center shadow-sm">
-                <span className="material-symbols-outlined text-[22px]">workspace_premium</span>
+            <div className="flex items-center gap-3">
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-md ${
+                isVip 
+                  ? 'bg-gradient-to-tr from-amber-500 to-amber-600 text-white shadow-amber-500/30 border border-amber-300/40' 
+                  : 'bg-primary text-white'
+              }`}>
+                <span className="material-symbols-outlined text-[26px]">workspace_premium</span>
               </div>
               <div>
-                <h3 className="font-serif text-sm font-bold text-on-surface flex items-center gap-1.5">
-                  <span>{isVip ? 'Barakah VIP Active' : 'Free Member'}</span>
-                  {isVip && <span className="bg-primary text-white text-[9px] px-1.5 py-0.2 rounded font-bold">VIP</span>}
-                </h3>
-                <p className="text-[11px] text-secondary">
-                  {isVip ? 'Unlimited Discover Likes · 100% Ad-Free' : '50 Free Discover Likes / day · Free Chat'}
+                <div className="flex items-center gap-2">
+                  <h3 className="font-serif text-sm font-bold text-on-surface">
+                    {isVip ? 'Barakah VIP Active' : 'Free Member'}
+                  </h3>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                    isVip 
+                      ? 'bg-gradient-to-r from-amber-500 to-primary text-white shadow-xs border border-amber-300/40' 
+                      : 'bg-surface text-secondary border border-surface-variant/50'
+                  }`}>
+                    {isVip ? '👑 VIP Member' : 'Standard'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-secondary mt-0.5">
+                  {isVip 
+                    ? '✨ All Premium Privileges Active · Unlimited Likes & No Ads' 
+                    : '50 Free Discover Likes / day · Free Chat'}
                 </p>
               </div>
             </div>
 
-            <button
-              onClick={() => setShowUpgradeModal(true)}
-              className="bg-primary text-white text-xs font-bold px-3.5 py-2 rounded-full shadow hover:brightness-110 active:scale-95 transition-all flex items-center gap-1"
-            >
-              <span className="material-symbols-outlined text-[16px]">add_circle</span>
-              <span>Upgrade</span>
-            </button>
+            {!isVip ? (
+              <button
+                onClick={() => setShowUpgradeModal(true)}
+                className="bg-primary text-white text-xs font-bold px-4 py-2 rounded-full shadow-md hover:brightness-110 active:scale-95 transition-all flex items-center gap-1.5"
+              >
+                <span className="material-symbols-outlined text-[16px]">add_circle</span>
+                <span>Upgrade</span>
+              </button>
+            ) : (
+              <span className="px-3 py-1 rounded-full bg-amber-500/20 text-amber-800 text-[11px] font-bold border border-amber-400/40 flex items-center gap-1">
+                <span className="material-symbols-outlined text-[14px]">verified</span>
+                <span>Unlocked</span>
+              </span>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-2 pt-2 border-t border-surface-variant/30 text-xs">
@@ -91,7 +116,7 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
                 setAdRewardType('likes');
                 setShowAdModal(true);
               }}
-              className="p-2.5 rounded-xl bg-surface border border-surface-variant/40 hover:bg-surface-container-low text-left flex items-center gap-2 transition-colors active:scale-95"
+              className="p-2.5 rounded-xl bg-surface/90 border border-surface-variant/40 hover:bg-surface-container-low text-left flex items-center gap-2 transition-colors active:scale-95"
             >
               <span className="material-symbols-outlined text-primary text-[20px]">smart_display</span>
               <div>
@@ -102,18 +127,24 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
 
             <button
               onClick={() => setShowUpgradeModal(true)}
-              className="p-2.5 rounded-xl bg-surface border border-primary/30 hover:bg-primary/5 text-left flex items-center gap-2 transition-colors active:scale-95"
+              className={`p-2.5 rounded-xl text-left flex items-center gap-2 transition-colors active:scale-95 ${
+                isVip 
+                  ? 'bg-amber-500/10 border border-amber-400/40 text-amber-900' 
+                  : 'bg-surface/90 border border-primary/30 hover:bg-primary/5'
+              }`}
             >
               <span className="material-symbols-outlined text-primary text-[20px]">workspace_premium</span>
               <div>
-                <strong className="block text-[11px] text-primary">Barakah VIP</strong>
-                <span className="text-[9px] text-secondary">PKR 830 / mo</span>
+                <strong className="block text-[11px] text-primary">{isVip ? 'VIP Active' : 'Barakah VIP'}</strong>
+                <span className="text-[9px] text-secondary">{isVip ? 'Unlimited Quota' : 'PKR 830 / mo'}</span>
               </div>
             </button>
           </div>
         </div>
 
-        <div className="bg-surface rounded-3xl overflow-hidden shadow-sm border border-surface-container-highest flex flex-col">
+        <div className={`bg-surface rounded-3xl overflow-hidden shadow-sm border transition-all ${
+          isVip ? 'border-amber-400/40 ring-1 ring-amber-400/20' : 'border-surface-container-highest'
+        } flex flex-col`}>
           {/* Main Photo Banner */}
           <div className="relative w-full h-80 bg-surface-container-high overflow-hidden">
             {user.photos && user.photos.length > 0 && user.photos[0] ? (
@@ -143,7 +174,15 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
               <span>{user.location || 'Global'}</span>
             </div>
             
-            {user.wali && (
+            {/* VIP Luxury Floating Crown Badge on Profile Photo */}
+            {isVip && (
+              <div className="absolute top-4 right-4 bg-gradient-to-r from-amber-500 via-primary to-emerald-600 text-white px-3.5 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-bold shadow-lg shadow-amber-500/25 border border-amber-300/40 backdrop-blur-sm z-10 animate-pulse">
+                <span className="material-symbols-outlined text-[16px] text-amber-200">workspace_premium</span>
+                <span className="tracking-wide">Barakah VIP</span>
+              </div>
+            )}
+
+            {!isVip && user.wali && (
               <div className="absolute top-4 right-4 bg-primary/90 backdrop-blur-sm text-white px-3 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-semibold">
                 <span className="material-symbols-outlined text-[16px]">verified_user</span>
                 <span>Wali Protected</span>
@@ -154,9 +193,17 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
           {/* User Details */}
           <div className="p-6 space-y-5">
             <div>
-              <h2 className="font-serif text-2xl font-bold text-on-surface">
-                {user.fullName}, {user.age || 28}
-              </h2>
+              <div className="flex items-center gap-2.5">
+                <h2 className="font-serif text-2xl font-bold text-on-surface">
+                  {user.fullName}, {user.age || 28}
+                </h2>
+                {isVip && (
+                  <span className="bg-gradient-to-r from-amber-500 to-primary text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm border border-amber-300/30">
+                    <span className="material-symbols-outlined text-[13px] text-amber-200">workspace_premium</span>
+                    <span>VIP Member</span>
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-primary font-semibold mt-0.5">
                 {rel?.sect || 'Sunni'} ({rel?.madhhab || 'Hanafi'}) · {user.profession || 'Professional'}
               </p>

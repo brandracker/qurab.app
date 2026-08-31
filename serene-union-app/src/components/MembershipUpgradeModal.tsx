@@ -28,7 +28,7 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
       title: 'Serene Barakah VIP Club',
       tag: 'Most Popular',
       price: '$2.99 / mo',
-      localPrice: 'PKR 799 / month',
+      localPrice: 'PKR 830 / month',
       description: 'Unlimited likes, See Who Liked You, 100% Ad-Free & Priority discovery ranking.',
       icon: 'workspace_premium',
       isSubscription: true
@@ -38,7 +38,7 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
       title: '24-Hour City Spotlight Boost',
       tag: '10x Views',
       price: '$0.99',
-      localPrice: 'PKR 249 (24 Hours)',
+      localPrice: 'PKR 275 (24 Hours)',
       description: 'Feature your profile at the #1 top spot in your city’s Discover stream.',
       icon: 'bolt',
       isSubscription: false
@@ -48,7 +48,7 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
       title: 'Blue Checkmark ID Verification',
       tag: '100% Trust',
       price: '$0.99',
-      localPrice: 'PKR 199 (One-Time)',
+      localPrice: 'PKR 275 (One-Time)',
       description: 'Get the verified trust badge by submitting CNIC/Passport ID verification.',
       icon: 'verified',
       isSubscription: false

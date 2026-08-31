@@ -14,8 +14,7 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
   const [showQuizModal, setShowQuizModal] = useState<boolean>(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState<boolean>(false);
   const [showAdModal, setShowAdModal] = useState<boolean>(false);
-  const [adRewardType, setAdRewardType] = useState<'messages' | 'salam' | 'photo_unblur'>('messages');
-  const [directSalams, setDirectSalams] = useState<number>(2);
+  const [adRewardType, setAdRewardType] = useState<'likes' | 'salam' | 'messages' | 'photo_unblur'>('likes');
   const [isVip, setIsVip] = useState<boolean>(false);
 
   const [hasCompletedQuiz, setHasCompletedQuiz] = useState<boolean>(() => {
@@ -57,7 +56,7 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
                   {isVip && <span className="bg-primary text-white text-[9px] px-1.5 py-0.2 rounded font-bold">VIP</span>}
                 </h3>
                 <p className="text-[11px] text-secondary">
-                  {directSalams} Direct Salams · 15 msgs/day quota
+                  {isVip ? 'Unlimited Discover Likes · 100% Ad-Free' : '30 Free Discover Likes / day · Free Chat'}
                 </p>
               </div>
             </div>
@@ -74,29 +73,26 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
           <div className="grid grid-cols-2 gap-2 pt-2 border-t border-surface-variant/30 text-xs">
             <button
               onClick={() => {
-                setAdRewardType('messages');
+                setAdRewardType('likes');
                 setShowAdModal(true);
               }}
-              className="p-2 rounded-xl bg-surface border border-surface-variant/40 hover:bg-surface-container-low text-left flex items-center gap-2"
+              className="p-2.5 rounded-xl bg-surface border border-surface-variant/40 hover:bg-surface-container-low text-left flex items-center gap-2 transition-colors active:scale-95"
             >
-              <span className="material-symbols-outlined text-primary text-[18px]">smart_display</span>
+              <span className="material-symbols-outlined text-primary text-[20px]">smart_display</span>
               <div>
-                <strong className="block text-[11px] text-on-surface">+10 Messages</strong>
-                <span className="text-[9px] text-secondary">Watch short ad</span>
+                <strong className="block text-[11px] text-on-surface">+10 Extra Likes</strong>
+                <span className="text-[9px] text-secondary">Watch 15s ad</span>
               </div>
             </button>
 
             <button
-              onClick={() => {
-                setAdRewardType('salam');
-                setShowAdModal(true);
-              }}
-              className="p-2 rounded-xl bg-surface border border-surface-variant/40 hover:bg-surface-container-low text-left flex items-center gap-2"
+              onClick={() => setShowUpgradeModal(true)}
+              className="p-2.5 rounded-xl bg-surface border border-primary/30 hover:bg-primary/5 text-left flex items-center gap-2 transition-colors active:scale-95"
             >
-              <span className="material-symbols-outlined text-primary text-[18px]">send_time_extension</span>
+              <span className="material-symbols-outlined text-primary text-[20px]">workspace_premium</span>
               <div>
-                <strong className="block text-[11px] text-on-surface">+1 Direct Salam</strong>
-                <span className="text-[9px] text-secondary">Watch short ad</span>
+                <strong className="block text-[11px] text-primary">Barakah VIP</strong>
+                <span className="text-[9px] text-secondary">PKR 830 / mo</span>
               </div>
             </button>
           </div>
@@ -294,10 +290,9 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
           onClose={() => setShowUpgradeModal(false)}
           onPurchaseSuccess={(productId) => {
             if (productId === 'serene_barakah_monthly') setIsVip(true);
-            if (productId === 'serene_direct_salam_5') setDirectSalams(prev => prev + 5);
           }}
           onWatchAdClicked={() => {
-            setAdRewardType('messages');
+            setAdRewardType('likes');
             setShowAdModal(true);
           }}
         />
@@ -310,9 +305,7 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
           rewardType={adRewardType}
           isOpen={showAdModal}
           onClose={() => setShowAdModal(false)}
-          onRewardClaimed={() => {
-            if (adRewardType === 'salam') setDirectSalams(prev => prev + 1);
-          }}
+          onRewardClaimed={() => {}}
         />
       )}
 

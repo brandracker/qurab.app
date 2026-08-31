@@ -26,7 +26,7 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
 
   const [likesRemaining, setLikesRemaining] = useState<number>(() => {
     const saved = localStorage.getItem(getTodayLikeKey());
-    return saved !== null ? parseInt(saved, 10) : 30;
+    return saved !== null ? parseInt(saved, 10) : 50;
   });
 
   const [showLikesLimitModal, setShowLikesLimitModal] = useState<boolean>(false);
@@ -602,9 +602,9 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
               <span className="material-symbols-outlined text-3xl">favorite_border</span>
             </div>
             <div>
-              <h3 className="font-serif text-lg font-bold text-on-surface">Daily Free Likes Limit (30/30)</h3>
+              <h3 className="font-serif text-lg font-bold text-on-surface">Daily Free Likes Limit (50/50)</h3>
               <p className="text-xs text-secondary mt-1 leading-relaxed">
-                You’ve used your 30 daily free likes. Watch a quick 15s sponsored ad to unlock <strong>+10 More Likes</strong> right now, or get unlimited likes with VIP!
+                You’ve used your 50 daily free likes. Watch a quick 15s sponsored ad to unlock <strong>+10 More Likes</strong> right now, or get unlimited likes with VIP!
               </p>
             </div>
 

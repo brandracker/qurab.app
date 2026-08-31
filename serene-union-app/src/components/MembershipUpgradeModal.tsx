@@ -157,7 +157,7 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
                   <span className="material-symbols-outlined text-primary text-[22px]">smart_display</span>
                   <div>
                     <h5 className="text-xs font-bold text-on-surface">Watch Video Ad (Free)</h5>
-                    <p className="text-[10px] text-secondary">Earn +10 free messages or +1 Direct Salam instantly</p>
+                    <p className="text-[10px] text-secondary">Earn +10 Extra Discover Likes instantly</p>
                   </div>
                 </div>
                 <span className="text-xs font-bold text-primary">Free</span>

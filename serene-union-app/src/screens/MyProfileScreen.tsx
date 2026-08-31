@@ -56,7 +56,7 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
                   {isVip && <span className="bg-primary text-white text-[9px] px-1.5 py-0.2 rounded font-bold">VIP</span>}
                 </h3>
                 <p className="text-[11px] text-secondary">
-                  {isVip ? 'Unlimited Discover Likes · 100% Ad-Free' : '30 Free Discover Likes / day · Free Chat'}
+                  {isVip ? 'Unlimited Discover Likes · 100% Ad-Free' : '50 Free Discover Likes / day · Free Chat'}
                 </p>
               </div>
             </div>

@@ -69,22 +69,6 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
     setProfiles(prev => prev.filter(p => p.id !== profileId));
   };
 
-  const handleToggleReveal = (userId: string, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    dbService.requestPhotoReveal(userId);
-    setProfiles(prev => prev.map(p => {
-      if (p.id === userId) {
-        return {
-          ...p,
-          blurPhotosByDefault: false,
-          photoRevealApproved: true,
-          photoRevealRequested: true
-        };
-      }
-      return p;
-    }));
-  };
-
   const filteredFeed = profiles.filter(p =>
     p.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     p.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -156,17 +140,13 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
                   src={profile.photos[0] || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80'}
                 />
 
-                {/* Unblur Overlay Button */}
+                {/* Modesty Shield Protected Badge */}
                 {profile.blurPhotosByDefault && !profile.photoRevealApproved && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                    <button
-                      type="button"
-                      onClick={(e) => handleToggleReveal(profile.id, e)}
-                      className="bg-background/90 backdrop-blur-md px-6 py-3 rounded-full text-on-background font-sans text-xs font-semibold shadow-sm flex items-center gap-2 hover:bg-background transition-colors active:scale-95"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">visibility</span>
-                      <span>Tap to reveal photo</span>
-                    </button>
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/15 pointer-events-none">
+                    <div className="bg-background/85 backdrop-blur-md px-4 py-2 rounded-full text-on-surface font-sans text-[11px] font-semibold shadow-sm flex items-center gap-1.5 border border-surface-variant/40">
+                      <span className="material-symbols-outlined text-[16px] text-primary">shield</span>
+                      <span>Modesty Shield Active</span>
+                    </div>
                   </div>
                 )}
 

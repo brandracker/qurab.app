@@ -61,13 +61,10 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
               }`}
             />
             {!isUnblurred && (
-              <div 
-                onClick={() => setIsUnblurred(true)}
-                className="absolute inset-0 flex items-center justify-center bg-black/25 cursor-pointer"
-              >
-                <div className="bg-background/90 backdrop-blur-md px-5 py-2.5 rounded-full text-xs font-semibold text-on-surface flex items-center gap-2 shadow-md">
-                  <span className="material-symbols-outlined text-[18px] text-primary">visibility</span>
-                  <span>Tap to reveal photo</span>
+              <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
+                <div className="bg-background/90 backdrop-blur-md px-5 py-2.5 rounded-full text-xs font-semibold text-on-surface flex items-center gap-2 shadow-md border border-surface-variant/40">
+                  <span className="material-symbols-outlined text-[18px] text-primary">shield</span>
+                  <span>Modesty Shield Active</span>
                 </div>
               </div>
             )}

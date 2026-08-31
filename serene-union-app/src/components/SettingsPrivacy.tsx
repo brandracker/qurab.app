@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { dbService } from '../services/dbService';
-import { AddWaliModal } from './AddWaliModal';
 import { MembershipUpgradeModal } from './MembershipUpgradeModal';
 import type { UserProfile } from '../types';
 
@@ -13,7 +12,6 @@ export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpda
   const [currentUser, setCurrentUser] = useState<UserProfile>(() => propUser || dbService.getCurrentUser());
   const [blurPhotos, setBlurPhotos] = useState<boolean>(currentUser.blurPhotosByDefault ?? true);
   const [profileVisibility, setProfileVisibility] = useState<string>(currentUser.profileVisibility || 'all_users');
-  const [showWaliModal, setShowWaliModal] = useState<boolean>(false);
   const [savedNotice, setSavedNotice] = useState<boolean>(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState<boolean>(false);
 
@@ -27,14 +25,6 @@ export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpda
     const updated = { ...currentUser, blurPhotosByDefault: nextVal };
     setCurrentUser(updated);
     dbService.updatePrivacy(nextVal, profileVisibility);
-    if (onUpdateUser) onUpdateUser(updated);
-    showNotice();
-  };
-
-  const handleSaveWali = (waliData: { name: string; phone: string; relationship: string }) => {
-    dbService.addWali(waliData);
-    const updated = { ...currentUser, wali: { ...waliData, isVerified: true } };
-    setCurrentUser(updated);
     if (onUpdateUser) onUpdateUser(updated);
     showNotice();
   };
@@ -132,58 +122,6 @@ export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpda
           </div>
         </section>
 
-        {/* Wali / Guardian Section */}
-        <section className="space-y-3">
-          <h2 className="font-serif text-base font-bold text-on-surface">Family & Wali Involvement</h2>
-
-          <div className="bg-surface-container-low rounded-2xl p-4 border border-outline-variant/30">
-            {currentUser.wali ? (
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary/15 text-primary flex items-center justify-center">
-                    <span className="material-symbols-outlined text-[20px]">verified_user</span>
-                  </div>
-                  <div>
-                    <h4 className="font-serif font-semibold text-sm text-on-surface">{currentUser.wali.name}</h4>
-                    <p className="text-xs text-secondary">{currentUser.wali.relationship} · {currentUser.wali.phone}</p>
-                    <span className="inline-block mt-1 text-[10px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded">
-                      Chaperone Portal Active
-                    </span>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowWaliModal(true)}
-                  className="text-xs font-semibold text-primary hover:underline"
-                >
-                  Edit
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-surface-variant text-on-surface-variant flex items-center justify-center">
-                    <span className="material-symbols-outlined text-[20px]">group_add</span>
-                  </div>
-                  <div>
-                    <h4 className="font-serif font-semibold text-sm text-on-surface">Add a Guardian / Wali</h4>
-                    <p className="text-xs text-secondary max-w-[200px]">
-                      Invite a father, brother, or guardian to view matches and participate with full transparency.
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowWaliModal(true)}
-                  className="px-3.5 py-1.5 rounded-full bg-primary text-on-primary text-xs font-semibold hover:brightness-110 active:scale-95 transition-all shrink-0"
-                >
-                  Add Wali
-                </button>
-              </div>
-            )}
-          </div>
-        </section>
-
         {/* Membership & Subscription Status Section */}
         <section className="space-y-3">
           <h2 className="font-serif text-base font-bold text-on-surface">Membership & Daily Limits</h2>
@@ -258,14 +196,6 @@ export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpda
           </p>
         </section>
       </main>
-
-      {/* Add Wali Modal */}
-      {showWaliModal && (
-        <AddWaliModal
-          onClose={() => setShowWaliModal(false)}
-          onSave={handleSaveWali}
-        />
-      )}
 
       {/* Membership Upgrade Modal */}
       {showUpgradeModal && (

@@ -12,11 +12,12 @@ interface Props {
   onOpenProfile?: () => void;
 }
 
-type ViewMode = 'grid' | 'detailed';
+type CardTab = 'deen' | 'career' | 'family' | 'bio';
 
 export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [activeCategory, setActiveCategory] = useState<string>('all');
+  const [currentIndex, setCurrentIndex] = useState<number>(0);
+  const [activeTab, setActiveTab] = useState<CardTab>('deen');
   
   const [filters, setFilters] = useState<FilterState>({
     minAge: 18,
@@ -51,6 +52,7 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
     setFilters(newFilters);
     const updated = dbService.getDiscoverFeed(newFilters);
     setProfiles(updated);
+    setCurrentIndex(0);
   };
 
   const handleLike = async (profile: UserProfile, e?: React.MouseEvent) => {
@@ -93,9 +95,25 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
     return true;
   });
 
+  const currentProfile = filteredFeed[currentIndex] || null;
+
+  const handleNext = () => {
+    if (currentIndex < filteredFeed.length - 1) {
+      setCurrentIndex(prev => prev + 1);
+      setActiveTab('deen');
+    }
+  };
+
+  const handlePrev = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex(prev => prev - 1);
+      setActiveTab('deen');
+    }
+  };
+
   return (
     <div className="w-full h-full flex flex-col relative bg-background overflow-hidden font-sans">
-      {/* Top Header: Search + Filters */}
+      {/* Top Navigation & Search Bar */}
       <header className="w-full sticky top-0 z-40 bg-background/95 backdrop-blur-md px-4 pt-3 pb-2 border-b border-surface-variant/30 space-y-2.5">
         <div className="flex items-center gap-3">
           <div className="relative flex-1">
@@ -104,9 +122,12 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
             </span>
             <input
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentIndex(0);
+              }}
               className="w-full bg-surface-container-high border-none rounded-full py-2.5 pl-10 pr-4 text-xs text-on-surface focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-secondary"
-              placeholder="Search by name, city, career..."
+              placeholder="Search by name, city, profession..."
               type="text"
             />
           </div>
@@ -123,9 +144,8 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
           </button>
         </div>
 
-        {/* View Switcher & Quick Category Pills */}
+        {/* Quick Category Filter Pills + Candidate Counter */}
         <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar pb-1">
-          {/* Quick Category Filter Pills */}
           <div className="flex items-center gap-1.5 shrink-0">
             {[
               { id: 'all', label: 'All Matches' },
@@ -135,7 +155,10 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
             ].map(cat => (
               <button
                 key={cat.id}
-                onClick={() => setActiveCategory(cat.id)}
+                onClick={() => {
+                  setActiveCategory(cat.id);
+                  setCurrentIndex(0);
+                }}
                 className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-all whitespace-nowrap ${
                   activeCategory === cat.id
                     ? 'bg-primary text-white shadow-xs'
@@ -147,31 +170,11 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
             ))}
           </div>
 
-          {/* Dual-View Switcher Toggle (Grid vs Detailed) */}
-          <div className="flex items-center bg-surface-container-high p-0.5 rounded-full border border-surface-variant/40 shrink-0">
-            <button
-              onClick={() => setViewMode('grid')}
-              title="Grid View"
-              className={`p-1.5 rounded-full transition-all flex items-center justify-center ${
-                viewMode === 'grid'
-                  ? 'bg-surface text-primary shadow-xs'
-                  : 'text-secondary hover:text-on-surface'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[18px]">grid_view</span>
-            </button>
-            <button
-              onClick={() => setViewMode('detailed')}
-              title="Detailed Feed"
-              className={`p-1.5 rounded-full transition-all flex items-center justify-center ${
-                viewMode === 'detailed'
-                  ? 'bg-surface text-primary shadow-xs'
-                  : 'text-secondary hover:text-on-surface'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[18px]">view_agenda</span>
-            </button>
-          </div>
+          {filteredFeed.length > 0 && (
+            <span className="text-[10px] font-bold bg-primary/10 text-primary px-2.5 py-1 rounded-full shrink-0">
+              {currentIndex + 1} of {filteredFeed.length}
+            </span>
+          )}
         </div>
       </header>
 
@@ -188,19 +191,19 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
         </div>
       )}
 
-      {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto px-4 pb-28 pt-3">
+      {/* Main Coverflow Perspective Stage */}
+      <main className="flex-1 overflow-y-auto px-4 pt-3 pb-28 flex flex-col justify-between">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
+          <div className="flex flex-col items-center justify-center py-28 text-center">
             <span className="material-symbols-outlined text-4xl text-primary animate-spin">progress_activity</span>
             <p className="text-xs text-secondary mt-2">Loading prospective matches...</p>
           </div>
-        ) : filteredFeed.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-center px-4">
+        ) : !currentProfile ? (
+          <div className="flex flex-col items-center justify-center py-28 text-center px-4">
             <span className="material-symbols-outlined text-5xl text-outline mb-2">favorite_border</span>
-            <h3 className="font-serif text-base font-bold text-on-surface">No Prospective Profiles Right Now</h3>
+            <h3 className="font-serif text-base font-bold text-on-surface">No Profiles Found</h3>
             <p className="text-xs text-secondary max-w-xs mt-1">
-              Try adjusting your search criteria or filters to view more global matrimonial candidates.
+              You have viewed all candidates or your filters are very specific. Try resetting to explore more profiles.
             </p>
             <button
               onClick={() => {
@@ -221,241 +224,265 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
               Reset Filters
             </button>
           </div>
-        ) : viewMode === 'grid' ? (
-          /* ========================================================= */
-          /* 1. GRID GALLERY VIEW (2-Column Sleek Matrimonial Cards)  */
-          /* ========================================================= */
-          <div className="grid grid-cols-2 gap-3 pb-6">
-            {filteredFeed.map(profile => (
-              <article
-                key={profile.id}
-                onClick={() => setSelectedProfile(profile)}
-                className="bg-surface rounded-2xl overflow-hidden border border-surface-variant/40 shadow-xs hover:border-primary/50 transition-all flex flex-col justify-between cursor-pointer group"
-              >
-                {/* Photo Header */}
-                <div className="relative w-full h-44 bg-surface-container-high overflow-hidden">
-                  <img
-                    alt={profile.fullName}
-                    src={profile.photos[0] || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80'}
-                    className={`w-full h-full object-cover transition-transform duration-300 ${
-                      profile.blurPhotosByDefault && !profile.photoRevealApproved
-                        ? 'filter blur-xl scale-110 opacity-80'
-                        : 'scale-100 group-hover:scale-105'
-                    }`}
-                  />
-
-                  {/* Modesty Shield Badge */}
-                  {profile.blurPhotosByDefault && !profile.photoRevealApproved && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/15 pointer-events-none">
-                      <div className="bg-background/85 backdrop-blur-md px-2.5 py-1 rounded-full text-on-surface font-sans text-[9px] font-bold shadow-xs flex items-center gap-1 border border-surface-variant/40">
-                        <span className="material-symbols-outlined text-[13px] text-primary">shield</span>
-                        <span>Modesty Shield</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Wali Badge */}
-                  {profile.wali && (
-                    <div className="absolute top-2 right-2 bg-primary/90 text-white text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-0.5 shadow-xs">
-                      <span className="material-symbols-outlined text-[11px]">verified_user</span>
-                      <span>Wali</span>
-                    </div>
-                  )}
-
-                  {/* Location Pill */}
-                  <div className="absolute bottom-2 left-2 bg-black/55 backdrop-blur-sm px-2 py-0.5 rounded-full text-white text-[10px] font-medium flex items-center gap-1">
-                    <span className="material-symbols-outlined text-[12px]">location_on</span>
-                    <span className="truncate max-w-[100px]">{profile.location.split(',')[0]}</span>
-                  </div>
-                </div>
-
-                {/* Card Body */}
-                <div className="p-3 flex-1 flex flex-col justify-between gap-2">
-                  <div>
-                    <h3 className="font-serif font-bold text-sm text-on-surface truncate">
-                      {profile.fullName.split(' ')[0]}, {profile.age}
-                    </h3>
-                    <p className="text-[11px] text-primary font-semibold truncate mt-0.5">
-                      {profile.profession}
-                    </p>
-                    <p className="text-[10px] text-secondary truncate mt-0.5">
-                      {profile.religiousProfile?.practiceLevel?.replace('_', ' ')} · {profile.religiousProfile?.sect}
-                    </p>
-                  </div>
-
-                  {/* Quick Pills */}
-                  <div className="flex flex-wrap gap-1">
-                    {profile.ethnicity && (
-                      <span className="bg-surface-container-high text-on-surface text-[9px] font-medium px-1.5 py-0.5 rounded border border-surface-variant/30">
-                        {profile.ethnicity}
-                      </span>
-                    )}
-                    {profile.willingnessToRelocate && (
-                      <span className="bg-primary/10 text-primary text-[9px] font-medium px-1.5 py-0.5 rounded">
-                        ✈️ {profile.willingnessToRelocate === 'willing' ? 'Reloc Open' : 'Local'}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Action Buttons Row */}
-                  <div className="flex items-center gap-1.5 pt-2 border-t border-surface-variant/30 mt-1">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedProfile(profile)}
-                      className="flex-1 py-1.5 rounded-xl bg-surface-container-high text-on-surface hover:bg-surface-variant text-[10px] font-bold text-center transition-colors"
-                    >
-                      Biodata
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => handleLike(profile, e)}
-                      title="Express Interest"
-                      className="w-8 h-8 rounded-xl bg-primary text-white flex items-center justify-center hover:brightness-110 active:scale-95 transition-all shadow-xs shrink-0"
-                    >
-                      <span className="material-symbols-outlined text-[16px]">favorite</span>
-                    </button>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
         ) : (
-          /* ========================================================= */
-          /* 2. DETAILED EDITORIAL STREAM VIEW                        */
-          /* ========================================================= */
-          <div className="space-y-6 pb-6">
-            {filteredFeed.map(profile => (
-              <article
-                key={profile.id}
-                onClick={() => setSelectedProfile(profile)}
-                className="bg-surface rounded-3xl overflow-hidden shadow-xs border border-surface-variant/40 flex flex-col cursor-pointer hover:border-primary/40 transition-all group"
-              >
-                {/* Photo Banner */}
-                <div className="relative w-full h-80 bg-surface-container-high overflow-hidden">
-                  <img
-                    alt={profile.fullName}
-                    src={profile.photos[0] || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80'}
-                    className={`w-full h-full object-cover transition-all duration-300 ${
-                      profile.blurPhotosByDefault && !profile.photoRevealApproved
-                        ? 'filter blur-xl scale-110 opacity-80'
-                        : 'scale-100 group-hover:scale-105'
+          /* ========================================================================= */
+          /* 3D PERSPECTIVE COVERFLOW CARD WITH IN-CARD DEEP TABS                     */
+          /* ========================================================================= */
+          <div className="w-full flex flex-col flex-1 justify-between gap-3 animate-fade-in">
+            {/* Card Shell */}
+            <article className="w-full bg-surface rounded-3xl overflow-hidden border border-surface-variant/40 shadow-md flex flex-col">
+              {/* Top Photo & Identity Header */}
+              <div className="relative w-full h-64 bg-surface-container-high overflow-hidden">
+                <img
+                  alt={currentProfile.fullName}
+                  src={currentProfile.photos[0] || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80'}
+                  className={`w-full h-full object-cover transition-all duration-300 ${
+                    currentProfile.blurPhotosByDefault && !currentProfile.photoRevealApproved
+                      ? 'filter blur-xl scale-110 opacity-85'
+                      : 'scale-100'
+                  }`}
+                />
+
+                {/* Modesty Shield Badge */}
+                {currentProfile.blurPhotosByDefault && !currentProfile.photoRevealApproved && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/15 pointer-events-none">
+                    <div className="bg-background/90 backdrop-blur-md px-3.5 py-1.5 rounded-full text-on-surface font-sans text-[10px] font-bold shadow-xs flex items-center gap-1.5 border border-surface-variant/40">
+                      <span className="material-symbols-outlined text-[15px] text-primary">shield</span>
+                      <span>Modesty Shield Active</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Top Location Pill */}
+                <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm px-3 py-1 rounded-full text-white text-xs font-medium flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[14px] text-primary">location_on</span>
+                  <span>{currentProfile.location}</span>
+                </div>
+
+                {/* Top Right Wali / Chaperone Badge */}
+                {currentProfile.wali && (
+                  <div className="absolute top-3 right-3 bg-primary/95 text-white text-[10px] font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-xs backdrop-blur-sm">
+                    <span className="material-symbols-outlined text-[13px]">verified_user</span>
+                    <span>Wali Observed</span>
+                  </div>
+                )}
+
+                {/* Candidate Name & Timeline Overlay on Photo */}
+                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-4 flex items-end justify-between">
+                  <div>
+                    <h2 className="font-serif text-2xl font-bold text-white leading-tight">
+                      {currentProfile.fullName.split(' ')[0]}, {currentProfile.age}
+                    </h2>
+                    <p className="text-xs text-white/90 font-medium flex items-center gap-1.5 mt-0.5">
+                      <span>{currentProfile.profession}</span>
+                      {currentProfile.workArrangement && (
+                        <span className="bg-white/20 px-2 py-0.2 rounded-full text-[9px] uppercase font-mono">
+                          {currentProfile.workArrangement}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+
+                  <span className="bg-primary/90 text-white text-[10px] font-bold px-2.5 py-1 rounded-full backdrop-blur-sm shadow-xs">
+                    {currentProfile.marriageTimeline?.replace('_', ' ') || 'Within 1 Year'}
+                  </span>
+                </div>
+              </div>
+
+              {/* In-Card Deep Navigation Tabs */}
+              <div className="flex border-b border-surface-variant/40 bg-surface-container-high/60">
+                {[
+                  { id: 'deen', label: 'Deen & Taqwa', icon: 'mosque' },
+                  { id: 'career', label: 'Career & Pedigree', icon: 'school' },
+                  { id: 'family', label: 'Family & Home', icon: 'home' },
+                  { id: 'bio', label: 'Bio & Values', icon: 'person' }
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as CardTab)}
+                    className={`flex-1 py-2.5 flex flex-col items-center gap-0.5 border-b-2 text-[10px] font-bold transition-all ${
+                      activeTab === tab.id
+                        ? 'border-primary text-primary bg-surface'
+                        : 'border-transparent text-secondary hover:text-on-surface'
                     }`}
-                  />
+                  >
+                    <span className="material-symbols-outlined text-[17px]">{tab.icon}</span>
+                    <span>{tab.label}</span>
+                  </button>
+                ))}
+              </div>
 
-                  {/* Modesty Shield Badge */}
-                  {profile.blurPhotosByDefault && !profile.photoRevealApproved && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/15 pointer-events-none">
-                      <div className="bg-background/85 backdrop-blur-md px-4 py-2 rounded-full text-on-surface font-sans text-[11px] font-semibold shadow-sm flex items-center gap-1.5 border border-surface-variant/40">
-                        <span className="material-symbols-outlined text-[16px] text-primary">shield</span>
-                        <span>Modesty Shield Active</span>
+              {/* Dynamic In-Card Content Body based on Tab */}
+              <div className="p-4 bg-surface min-h-[145px] flex flex-col justify-center">
+                {/* 1. DEEN & TAQWA TAB */}
+                {activeTab === 'deen' && (
+                  <div className="space-y-2.5 animate-fade-in">
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="bg-surface-container-high/70 p-2 rounded-xl border border-surface-variant/30">
+                        <span className="text-[9px] text-secondary font-bold uppercase block">Daily Prayers</span>
+                        <strong className="text-on-surface text-[11px]">{currentProfile.religiousProfile?.prayerFrequency || '5 times daily'}</strong>
+                      </div>
+                      <div className="bg-surface-container-high/70 p-2 rounded-xl border border-surface-variant/30">
+                        <span className="text-[9px] text-secondary font-bold uppercase block">Sect & Madhhab</span>
+                        <strong className="text-on-surface text-[11px]">{currentProfile.religiousProfile?.sect} · {currentProfile.religiousProfile?.madhhab || 'Hanafi'}</strong>
+                      </div>
+                      <div className="bg-surface-container-high/70 p-2 rounded-xl border border-surface-variant/30">
+                        <span className="text-[9px] text-secondary font-bold uppercase block">Dietary Standard</span>
+                        <strong className="text-on-surface text-[11px]">{currentProfile.religiousProfile?.halalDiet || 'Strictly Halal'}</strong>
+                      </div>
+                      <div className="bg-surface-container-high/70 p-2 rounded-xl border border-surface-variant/30">
+                        <span className="text-[9px] text-secondary font-bold uppercase block">Modesty / Attire</span>
+                        <strong className="text-on-surface text-[11px] capitalize">{currentProfile.religiousProfile?.modestyPractice?.replace('_', ' ') || 'Modest'}</strong>
                       </div>
                     </div>
-                  )}
-
-                  {/* Top Left Location */}
-                  <div className="absolute top-4 left-4 bg-background/85 backdrop-blur-sm px-3 py-1 rounded-full flex items-center gap-1.5 text-on-surface shadow-xs text-xs font-semibold">
-                    <span className="material-symbols-outlined text-[15px] text-primary">location_on</span>
-                    <span>{profile.location}</span>
                   </div>
+                )}
 
-                  {/* Top Right Wali / VIP */}
-                  <div className="absolute top-4 right-4 flex flex-col items-end gap-1.5">
-                    {profile.wali && (
-                      <div className="bg-background/90 backdrop-blur-sm px-3 py-1 rounded-full flex items-center gap-1.5 text-primary text-xs font-semibold border border-primary/20 shadow-xs">
-                        <span className="material-symbols-outlined text-[15px]">verified_user</span>
-                        <span>Wali Verified</span>
+                {/* 2. CAREER & PEDIGREE TAB */}
+                {activeTab === 'career' && (
+                  <div className="space-y-2.5 animate-fade-in text-xs">
+                    <div className="flex items-center gap-2 bg-surface-container-high/70 p-2.5 rounded-xl border border-surface-variant/30">
+                      <span className="material-symbols-outlined text-[18px] text-primary">school</span>
+                      <div>
+                        <span className="text-[9px] text-secondary font-bold uppercase block">Education</span>
+                        <span className="font-semibold text-on-surface">{currentProfile.education} {currentProfile.university ? `· ${currentProfile.university}` : ''}</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-surface-container-high/70 p-2 rounded-xl border border-surface-variant/30">
+                        <span className="text-[9px] text-secondary font-bold uppercase block">Work Arrangement</span>
+                        <strong className="text-on-surface capitalize text-[11px]">💻 {currentProfile.workArrangement || 'Full-Time'}</strong>
+                      </div>
+                      <div className="bg-surface-container-high/70 p-2 rounded-xl border border-surface-variant/30">
+                        <span className="text-[9px] text-secondary font-bold uppercase block">Annual Income</span>
+                        <strong className="text-on-surface text-[11px]">💵 {currentProfile.incomeBracket ? currentProfile.incomeBracket.replace('_', ' ') : 'Professional'}</strong>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. FAMILY & HOME TAB */}
+                {activeTab === 'family' && (
+                  <div className="space-y-2.5 animate-fade-in">
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="bg-surface-container-high/70 p-2 rounded-xl border border-surface-variant/30">
+                        <span className="text-[9px] text-secondary font-bold uppercase block">Living Preference</span>
+                        <strong className="text-on-surface text-[11px] capitalize text-primary">{currentProfile.livingPreference?.replace('_', ' ') || 'Independent Home'}</strong>
+                      </div>
+                      <div className="bg-surface-container-high/70 p-2 rounded-xl border border-surface-variant/30">
+                        <span className="text-[9px] text-secondary font-bold uppercase block">Marital Status</span>
+                        <strong className="text-on-surface text-[11px] capitalize">💍 {currentProfile.maritalStatus ? currentProfile.maritalStatus.replace('_', ' ') : 'Never Married'}</strong>
+                      </div>
+                      <div className="bg-surface-container-high/70 p-2 rounded-xl border border-surface-variant/30">
+                        <span className="text-[9px] text-secondary font-bold uppercase block">Citizenship</span>
+                        <strong className="text-on-surface text-[11px]">🛂 {currentProfile.citizenship || 'Citizen'}</strong>
+                      </div>
+                      <div className="bg-surface-container-high/70 p-2 rounded-xl border border-surface-variant/30">
+                        <span className="text-[9px] text-secondary font-bold uppercase block">Relocation</span>
+                        <strong className="text-on-surface text-[11px]">✈️ {currentProfile.willingnessToRelocate === 'willing' ? 'Open to Move' : 'Local'}</strong>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 4. BIO & REFLECTIONS TAB */}
+                {activeTab === 'bio' && (
+                  <div className="space-y-2 animate-fade-in text-xs">
+                    <p className="text-xs text-on-surface-variant leading-relaxed line-clamp-3 bg-surface-container-high/50 p-2.5 rounded-xl border border-surface-variant/20 italic">
+                      "{currentProfile.bio || currentProfile.religiousProfile?.deenRelationshipBio || "Seeking a righteous partner on the Sunnah to complete half my deen."}"
+                    </p>
+
+                    {currentProfile.hobbies && currentProfile.hobbies.length > 0 && (
+                      <div className="flex flex-wrap gap-1 pt-1">
+                        {currentProfile.hobbies.slice(0, 3).map((h, i) => (
+                          <span key={i} className="bg-primary/10 text-primary text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                            {h}
+                          </span>
+                        ))}
                       </div>
                     )}
                   </div>
-                </div>
+                )}
+              </div>
+            </article>
 
-                {/* Info & Biodata Section */}
-                <div className="p-5 flex flex-col gap-3">
-                  <div className="flex items-end justify-between">
-                    <div>
-                      <h2 className="font-serif text-2xl font-bold text-on-surface">
-                        {profile.fullName.split(' ')[0]}, {profile.age}
-                      </h2>
-                      <p className="text-xs text-primary font-bold mt-0.5">
-                        {profile.profession} {profile.workArrangement ? `(${profile.workArrangement.toUpperCase()})` : ''}
-                      </p>
-                    </div>
-                    <span className="text-[11px] font-semibold text-primary bg-primary/10 px-2.5 py-1 rounded-full">
-                      {profile.marriageTimeline?.replace('_', ' ') || 'Within 1 Year'}
-                    </span>
-                  </div>
+            {/* Bottom Perspective Navigation & Actions Control Bar */}
+            <div className="space-y-3 pt-1">
+              {/* Stepper Carousel Controls (Prev / Next) */}
+              <div className="flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={handlePrev}
+                  disabled={currentIndex === 0}
+                  className="flex-1 py-2 rounded-2xl bg-surface-container-high border border-surface-variant/40 text-on-surface text-xs font-bold flex items-center justify-center gap-1 disabled:opacity-35 disabled:cursor-not-allowed hover:bg-surface-variant transition-all"
+                >
+                  <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+                  <span>Previous</span>
+                </button>
 
-                  {/* Deen & Education line */}
-                  <div className="flex items-center gap-2 text-on-surface-variant text-xs">
-                    <span className="material-symbols-outlined text-[18px] text-primary">mosque</span>
-                    <span>{profile.religiousProfile?.practiceLevel?.replace('_', ' ')} · {profile.religiousProfile?.sect} ({profile.religiousProfile?.madhhab || 'Hanafi'})</span>
-                  </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedProfile(currentProfile)}
+                  className="px-4 py-2 rounded-2xl bg-primary/10 text-primary border border-primary/20 text-xs font-bold flex items-center gap-1 hover:bg-primary/20 transition-all shadow-xs"
+                >
+                  <span className="material-symbols-outlined text-[16px]">article</span>
+                  <span>Full Biodata</span>
+                </button>
 
-                  {/* Visual Badges Strip */}
-                  <div className="flex flex-wrap gap-1.5">
-                    {profile.ethnicity && (
-                      <span className="bg-surface-container-high text-on-surface text-[10px] font-semibold px-2 py-0.5 rounded-full border border-surface-variant/40">
-                        🌍 {profile.ethnicity}
-                      </span>
-                    )}
-                    {profile.citizenship && (
-                      <span className="bg-surface-container-high text-on-surface text-[10px] font-semibold px-2 py-0.5 rounded-full border border-surface-variant/40">
-                        🛂 {profile.citizenship}
-                      </span>
-                    )}
-                    {profile.willingnessToRelocate && (
-                      <span className="bg-primary/10 text-primary text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                        ✈️ {profile.willingnessToRelocate === 'willing' ? 'Relocation: Open' : 'Local Preference'}
-                      </span>
-                    )}
-                    {profile.maritalStatus && (
-                      <span className="bg-surface-container-high text-on-surface text-[10px] font-semibold px-2 py-0.5 rounded-full border border-surface-variant/40">
-                        💍 {profile.maritalStatus.replace('_', ' ')}
-                      </span>
-                    )}
-                  </div>
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  disabled={currentIndex === filteredFeed.length - 1}
+                  className="flex-1 py-2 rounded-2xl bg-surface-container-high border border-surface-variant/40 text-on-surface text-xs font-bold flex items-center justify-center gap-1 disabled:opacity-35 disabled:cursor-not-allowed hover:bg-surface-variant transition-all"
+                >
+                  <span>Next</span>
+                  <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+                </button>
+              </div>
 
-                  <p className="text-xs text-on-surface-variant leading-relaxed line-clamp-2">
-                    {profile.bio || profile.religiousProfile?.deenRelationshipBio}
-                  </p>
+              {/* Main Matrimonial Decision Buttons */}
+              <div className="flex items-center justify-between gap-3 pt-1">
+                {/* Pass Button */}
+                <button
+                  type="button"
+                  onClick={(e) => handlePass(currentProfile.id, e)}
+                  aria-label="Pass"
+                  className="w-14 h-14 rounded-2xl bg-surface border border-surface-variant/60 text-secondary hover:bg-surface-container-low active:scale-95 flex items-center justify-center transition-all shadow-xs"
+                >
+                  <span className="material-symbols-outlined text-2xl">close</span>
+                </button>
 
-                  {/* Bottom Action Row */}
-                  <div className="flex items-center justify-between gap-3 pt-3 border-t border-surface-variant/40 mt-1">
-                    <button
-                      type="button"
-                      onClick={(e) => handlePass(profile.id, e)}
-                      className="px-4 py-2.5 rounded-full border border-surface-variant bg-surface text-secondary hover:bg-surface-container-low text-xs font-semibold flex items-center gap-1.5 transition-colors"
-                    >
-                      <span className="material-symbols-outlined text-[16px]">close</span>
-                      <span>Pass</span>
-                    </button>
+                {/* Direct Salam Instant Connect */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const conv = dbService.createMatchConversation(currentProfile);
+                    onOpenChat(conv.id);
+                  }}
+                  className="flex-1 h-14 rounded-2xl bg-surface-container-high text-primary border border-primary/30 text-xs font-bold flex items-center justify-center gap-2 hover:bg-primary/10 active:scale-95 transition-all shadow-xs"
+                >
+                  <span className="material-symbols-outlined text-[20px]">waving_hand</span>
+                  <span>Direct Salam</span>
+                </button>
 
-                    <button
-                      type="button"
-                      onClick={() => setSelectedProfile(profile)}
-                      className="px-4 py-2.5 rounded-full bg-surface-container-high text-on-surface hover:bg-surface-variant text-xs font-semibold flex items-center gap-1.5 transition-colors"
-                    >
-                      <span className="material-symbols-outlined text-[16px]">visibility</span>
-                      <span>View Biodata</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={(e) => handleLike(profile, e)}
-                      className="px-5 py-2.5 rounded-full bg-primary text-white text-xs font-bold shadow-md shadow-primary/20 hover:brightness-110 active:scale-95 flex items-center gap-1.5 transition-all"
-                    >
-                      <span className="material-symbols-outlined text-[16px]">favorite</span>
-                      <span>Connect</span>
-                    </button>
-                  </div>
-                </div>
-              </article>
-            ))}
+                {/* Like / Express Interest Button */}
+                <button
+                  type="button"
+                  onClick={(e) => handleLike(currentProfile, e)}
+                  aria-label="Connect"
+                  className="w-14 h-14 rounded-2xl bg-primary text-white hover:brightness-110 active:scale-95 flex items-center justify-center transition-all shadow-md shadow-primary/20"
+                >
+                  <span className="material-symbols-outlined text-2xl">favorite</span>
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </main>
 
-      {/* Profile Detail Modal */}
+      {/* Full Profile Detail Modal */}
       {selectedProfile && (
         <ProfileDetailModal
           profile={selectedProfile}

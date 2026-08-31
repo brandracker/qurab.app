@@ -138,4 +138,42 @@ describe('Profiles & Discovery API Integration Tests', () => {
     expect(foundSister.wali).toBeDefined();
     expect(foundSister.wali.name).toBe(sampleSisterWali.wali_name);
   });
+
+  it('POST /api/users/privacy updates blur_photos_by_default and profile_visibility in D1', async () => {
+    // 1. Pre-insert a base user record
+    await env.DB.prepare(`
+      INSERT INTO users (id, phone, email, full_name, dob, gender, location, blur_photos_by_default)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+    `).bind(
+      sampleBrotherUser.id,
+      sampleBrotherUser.phone,
+      sampleBrotherUser.email,
+      sampleBrotherUser.full_name,
+      sampleBrotherUser.dob,
+      sampleBrotherUser.gender,
+      sampleBrotherUser.location
+    ).run();
+
+    // 2. User turns OFF photo blur
+    const res = await app.request('/api/users/privacy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: sampleBrotherUser.id,
+        blurPhotosByDefault: false,
+        profileVisibility: 'verified_only'
+      })
+    }, env);
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.blurPhotosByDefault).toBe(false);
+
+    // 3. Verify in D1 database
+    const userRow = await env.DB.prepare('SELECT blur_photos_by_default, profile_visibility FROM users WHERE id = ?').bind(sampleBrotherUser.id).first();
+    expect(userRow.blur_photos_by_default).toBe(0);
+    expect(userRow.profile_visibility).toBe('verified_only');
+  });
 });
+

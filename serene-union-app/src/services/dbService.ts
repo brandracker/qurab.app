@@ -236,6 +236,16 @@ class DBService {
     user.blurPhotosByDefault = blurPhotos;
     user.profileVisibility = visibility;
     this.setCurrentUser(user);
+
+    fetch(`${API_BASE}/users/privacy`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: user.id,
+        blurPhotosByDefault: blurPhotos,
+        profileVisibility: visibility
+      })
+    }).catch(() => {});
   }
 
   async sendMatchAction(targetUserId: string, action: 'liked' | 'passed'): Promise<{ isMutual: boolean; conversationId?: string; message?: string }> {

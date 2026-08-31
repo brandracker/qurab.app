@@ -165,7 +165,68 @@ usersRouter.get('/:id', async (c) => {
   }
 });
 
+// 3. Update User Islamic Modesty & Privacy Preferences in D1
+usersRouter.post('/privacy', async (c) => {
+  try {
+    const { userId, blurPhotosByDefault, profileVisibility } = await c.req.json();
+    if (!userId) {
+      return c.json({ success: false, error: 'userId is required' }, 400);
+    }
+
+    await c.env.DB.prepare(`
+      UPDATE users 
+      SET blur_photos_by_default = ?, 
+          profile_visibility = ?,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).bind(
+      blurPhotosByDefault ? 1 : 0,
+      profileVisibility || 'all_users',
+      userId
+    ).run();
+
+    return c.json({
+      success: true,
+      message: 'Privacy settings updated in D1 database successfully.',
+      blurPhotosByDefault: Boolean(blurPhotosByDefault),
+      profileVisibility
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
 export const profilesRouter = new Hono<AppContext>();
+
+profilesRouter.post('/privacy', async (c) => {
+  try {
+    const { userId, blurPhotosByDefault, profileVisibility } = await c.req.json();
+    if (!userId) {
+      return c.json({ success: false, error: 'userId is required' }, 400);
+    }
+
+    await c.env.DB.prepare(`
+      UPDATE users 
+      SET blur_photos_by_default = ?, 
+          profile_visibility = ?,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).bind(
+      blurPhotosByDefault ? 1 : 0,
+      profileVisibility || 'all_users',
+      userId
+    ).run();
+
+    return c.json({
+      success: true,
+      message: 'Privacy settings updated in D1 database successfully.',
+      blurPhotosByDefault: Boolean(blurPhotosByDefault),
+      profileVisibility
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
 
 // 3. Discover Profiles with Islamic Opposite-Gender Matching
 profilesRouter.get('/discover', async (c) => {

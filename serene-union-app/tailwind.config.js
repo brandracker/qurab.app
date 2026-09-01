@@ -60,11 +60,13 @@ export default {
         "error-container": "#FFF0F3",
       },
       fontFamily: {
-        serif: ["'Playfair Display'", "Georgia", "serif"],
-        sans: ["'Plus Jakarta Sans'", "'Inter'", "sans-serif"],
+        serif: ["'Raleway'", "sans-serif"],
+        sans: ["'Raleway'", "'Plus Jakarta Sans'", "'Inter'", "sans-serif"],
         arabic: ["'Amiri'", "serif"],
-        display: ["'Outfit'", "'Plus Jakarta Sans'", "sans-serif"],
+        display: ["'Raleway'", "sans-serif"],
+        raleway: ["'Raleway'", "sans-serif"],
       },
+
       boxShadow: {
         "subtle": "0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03)",
         "card": "0 4px 16px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02)",

@@ -9,7 +9,8 @@ import {
   Shield, 
   Zap, 
   Infinity, 
-  ShieldCheck 
+  ShieldCheck,
+  LogOut
 } from 'lucide-react';
 import { dbService } from '../services/dbService';
 import { MembershipUpgradeModal } from './MembershipUpgradeModal';
@@ -18,9 +19,10 @@ import type { UserProfile } from '../types';
 interface Props {
   currentUser?: UserProfile;
   onUpdateUser?: (updated: UserProfile) => void;
+  onLogout?: () => void;
 }
 
-export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpdateUser }) => {
+export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpdateUser, onLogout }) => {
   const [currentUser, setCurrentUser] = useState<UserProfile>(() => propUser || dbService.getCurrentUser());
   const [blurPhotos, setBlurPhotos] = useState<boolean>(currentUser.blurPhotosByDefault ?? true);
   const [profileVisibility, setProfileVisibility] = useState<string>(currentUser.profileVisibility || 'all_users');
@@ -59,6 +61,16 @@ export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpda
     setTimeout(() => setSavedNotice(false), 2500);
   };
 
+  const handleLogout = () => {
+    if (onLogout) {
+      onLogout();
+    } else {
+      localStorage.removeItem('serene_current_user_v1');
+      localStorage.removeItem('serene_auth_token_v1');
+      window.location.reload();
+    }
+  };
+
   return (
     <div className="flex-1 flex flex-col h-full bg-surface overflow-y-auto font-sans select-none text-on-surface">
       {/* Top Header */}
@@ -70,12 +82,23 @@ export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpda
           <p className="text-xs text-secondary">Manage your halal preferences and security</p>
         </div>
 
-        {savedNotice && (
-          <span className="text-xs font-bold text-primary bg-pastel-rose border border-pastel-rose-border px-3 py-0.5 rounded-full animate-fade-in shadow-subtle">
-            Saved!
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {savedNotice && (
+            <span className="text-xs font-bold text-primary bg-pastel-rose border border-pastel-rose-border px-3 py-0.5 rounded-full animate-fade-in shadow-subtle">
+              Saved!
+            </span>
+          )}
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-1 text-xs text-error font-semibold hover:bg-pastel-rose px-3 py-1.5 rounded-full border border-error/20 transition-all shadow-subtle"
+            title="Log Out"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Log Out</span>
+          </button>
+        </div>
       </header>
+
 
       {/* Main Settings Body */}
       <main className="p-4 sm:p-6 space-y-4">
@@ -279,7 +302,26 @@ export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpda
             Qurab is designed for sincere, faith-first marriage intentions. Inappropriate behavior, disrespect, or harassment will result in permanent account removal to protect our community.
           </p>
         </section>
+
+        {/* Account & Session Management */}
+        <section className="bg-white rounded-2xl p-4 border border-outline space-y-3 shadow-subtle">
+          <div>
+            <h4 className="font-serif font-bold text-xs text-on-surface">Account & Session</h4>
+            <p className="text-xs text-secondary mt-0.5">
+              Logged in as <strong className="text-on-surface">{currentUser.email || currentUser.phone || currentUser.fullName}</strong>
+            </p>
+          </div>
+
+          <button
+            onClick={handleLogout}
+            className="w-full py-3 rounded-xl bg-pastel-rose text-error border border-pastel-rose-border hover:bg-error hover:text-white transition-all font-bold text-xs flex items-center justify-center gap-2 shadow-subtle active:scale-98"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Log Out of Qurab</span>
+          </button>
+        </section>
       </main>
+
 
       {/* Membership Upgrade Modal */}
       {showUpgradeModal && (

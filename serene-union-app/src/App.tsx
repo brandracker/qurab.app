@@ -331,8 +331,9 @@ export const App: React.FC = () => {
               )}
 
               {activeTab === 'settings' && (
-                <SettingsPrivacy currentUser={currentUser} />
+                <SettingsPrivacy currentUser={currentUser} onLogout={handleLogout} />
               )}
+
             </div>
 
             {/* CLEAN SOLID BOTTOM NAVIGATION BAR (No Gradients, Lucide Icons) */}

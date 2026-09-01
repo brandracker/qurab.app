@@ -1,4 +1,22 @@
 import React, { useState, useEffect } from 'react';
+import { 
+  LogOut, 
+  Crown, 
+  ShieldCheck, 
+  EyeOff, 
+  MapPin, 
+  Sparkles, 
+  PlayCircle, 
+  BookOpen, 
+  Home, 
+  GraduationCap, 
+  Briefcase, 
+  Languages, 
+  HelpCircle, 
+  Edit3,
+  CheckCircle2,
+  PlusCircle
+} from 'lucide-react';
 import type { UserProfile } from '../types';
 import { CompatibilityQuizModal } from '../components/CompatibilityQuizModal';
 import { MembershipUpgradeModal } from '../components/MembershipUpgradeModal';
@@ -38,60 +56,60 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
   const rel = user.religiousProfile;
 
   return (
-    <div className="w-full h-full flex flex-col bg-background font-sans overflow-y-auto pb-28 select-none">
+    <div className="w-full h-full flex flex-col bg-background font-sans overflow-y-auto pb-24 select-none text-on-surface">
       {/* Top Header */}
-      <header className="sticky top-0 bg-surface/90 backdrop-blur-xl px-5 py-3 border-b border-surface-variant/40 flex items-center justify-between z-20 shadow-2xs">
+      <header className="sticky top-0 bg-white px-4 py-3 border-b border-outline flex items-center justify-between z-20 shadow-subtle">
         <div>
-          <h1 className="font-serif text-2xl font-bold text-on-surface flex items-center gap-2">
+          <h1 className="font-serif text-xl font-bold text-on-surface flex items-center gap-1.5">
             <span>My Matrimonial Biodata</span>
-            <span className="font-arabic text-primary text-base font-bold">قُرب</span>
+            <span className="font-arabic text-primary text-sm font-bold">قُرب</span>
           </h1>
-          <p className="text-xs text-secondary mt-0.5">Manage your profile, modesty settings & VIP membership</p>
+          <p className="text-[11px] text-secondary mt-0.5">Manage profile, modesty settings & VIP membership</p>
         </div>
         {onLogout && (
           <button
             onClick={onLogout}
-            className="flex items-center gap-1 text-xs text-error font-semibold hover:bg-error/10 px-3 py-1.5 rounded-full border border-error/25 transition-colors shadow-2xs"
+            className="flex items-center gap-1 text-xs text-error font-semibold hover:bg-pastel-rose px-3 py-1 rounded-full border border-error/20 transition-colors"
           >
-            <span className="material-symbols-outlined text-[16px]">logout</span>
+            <LogOut className="w-3.5 h-3.5" />
             <span>Logout</span>
           </button>
         )}
       </header>
 
       {/* Main Profile Body */}
-      <main className="p-4 sm:p-6 space-y-5">
-        {/* WALLET & GOOGLE PLAY MEMBERSHIP PASS CARD */}
-        <div className={`rounded-3xl p-5 border transition-all ${
+      <main className="p-4 space-y-4">
+        {/* MEMBERSHIP PASS CARD (Pastel Amber or Rose) */}
+        <div className={`rounded-3xl p-4 border transition-all ${
           isVip 
-            ? 'bg-gradient-to-br from-amber-500/20 via-surface to-emerald-600/15 border-amber-400/50 shadow-card ring-1 ring-amber-400/30' 
-            : 'bg-gradient-to-br from-primary/10 via-surface to-accent-gold-light/25 border-primary/30 shadow-card'
-        } flex flex-col gap-3.5`}>
+            ? 'bg-pastel-amber border-pastel-amber-border' 
+            : 'bg-pastel-rose border-pastel-rose-border'
+        } flex flex-col gap-3 shadow-subtle`}>
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-md ${
+            <div className="flex items-center gap-2.5">
+              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-subtle ${
                 isVip 
-                  ? 'bg-gradient-to-tr from-amber-500 to-amber-600 text-white shadow-amber-500/30 border border-amber-300/40' 
-                  : 'bg-gradient-to-r from-primary to-primary-light text-white'
+                  ? 'bg-white text-pastel-amber-text border border-pastel-amber-border' 
+                  : 'bg-white text-primary border border-pastel-rose-border'
               }`}>
-                <span className="material-symbols-outlined text-[24px]">workspace_premium</span>
+                <Crown className={`w-5 h-5 ${isVip ? 'text-pastel-amber-text' : 'text-primary'}`} />
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-serif text-sm font-bold text-on-surface">
+                <div className="flex items-center gap-1.5">
+                  <h3 className="font-serif text-xs font-bold text-on-surface">
                     {isVip ? 'Barakah VIP Active' : 'Free Member'}
                   </h3>
-                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                  <span className={`px-2 py-0.2 rounded-full text-[9px] font-bold uppercase tracking-wide ${
                     isVip 
-                      ? 'bg-gradient-to-r from-amber-500 to-primary text-white shadow-xs border border-amber-300/40' 
-                      : 'bg-surface text-secondary border border-surface-variant'
+                      ? 'bg-white text-pastel-amber-text border border-pastel-amber-border' 
+                      : 'bg-white text-secondary border border-outline'
                   }`}>
                     {isVip ? '👑 VIP Member' : 'Standard'}
                   </span>
                 </div>
-                <p className="text-[11px] text-secondary mt-0.5">
+                <p className="text-[10px] text-secondary mt-0.5">
                   {isVip 
-                    ? '✨ All Premium Privileges Active · Unlimited Likes & No Ads' 
+                    ? 'All Premium Privileges Active · Unlimited Likes & Direct Salam' 
                     : '50 Free Discover Likes / day · Free Halal Chat'}
                 </p>
               </div>
@@ -100,56 +118,50 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
             {!isVip ? (
               <button
                 onClick={() => setShowUpgradeModal(true)}
-                className="bg-gradient-to-r from-primary to-primary-light text-white text-xs font-bold px-4 py-2 rounded-full shadow-emerald hover:brightness-110 active:scale-95 transition-all flex items-center gap-1.5"
+                className="bg-primary text-white text-xs font-bold px-3.5 py-1.5 rounded-full shadow-brand hover:bg-primary-dark active:scale-95 transition-all flex items-center gap-1 shrink-0"
               >
-                <span className="material-symbols-outlined text-[16px]">add_circle</span>
+                <PlusCircle className="w-3.5 h-3.5" />
                 <span>Upgrade</span>
               </button>
             ) : (
-              <span className="px-3 py-1 rounded-full bg-amber-500/20 text-amber-800 text-[11px] font-bold border border-amber-400/40 flex items-center gap-1">
-                <span className="material-symbols-outlined text-[14px]">verified</span>
+              <span className="px-2.5 py-0.5 rounded-full bg-white text-pastel-amber-text text-[10px] font-bold border border-pastel-amber-border flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3 text-pastel-amber-text" />
                 <span>Unlocked</span>
               </span>
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-surface-variant/40 text-xs">
+          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-outline/50 text-xs">
             <button
               onClick={() => {
                 setAdRewardType('likes');
                 setShowAdModal(true);
               }}
-              className="p-2.5 rounded-xl bg-surface border border-surface-variant/80 hover:bg-surface-variant text-left flex items-center gap-2 transition-colors active:scale-95 shadow-2xs"
+              className="p-2 rounded-xl bg-white border border-outline hover:bg-surface-variant text-left flex items-center gap-2 transition-colors active:scale-95 shadow-subtle"
             >
-              <span className="material-symbols-outlined text-primary text-[20px]">smart_display</span>
+              <PlayCircle className="text-primary w-4 h-4 shrink-0" />
               <div>
-                <strong className="block text-[11px] text-on-surface">+10 Extra Likes</strong>
+                <strong className="block text-[10px] text-on-surface">+10 Extra Likes</strong>
                 <span className="text-[9px] text-secondary">Watch 15s ad</span>
               </div>
             </button>
 
             <button
               onClick={() => setShowUpgradeModal(true)}
-              className={`p-2.5 rounded-xl text-left flex items-center gap-2 transition-colors active:scale-95 shadow-2xs ${
-                isVip 
-                  ? 'bg-amber-500/10 border border-amber-400/40 text-amber-900' 
-                  : 'bg-surface border border-primary/30 hover:bg-primary/5'
-              }`}
+              className="p-2 rounded-xl bg-white border border-outline hover:bg-surface-variant text-left flex items-center gap-2 transition-colors active:scale-95 shadow-subtle"
             >
-              <span className="material-symbols-outlined text-primary text-[20px]">workspace_premium</span>
+              <Crown className="text-pastel-amber-text w-4 h-4 shrink-0" />
               <div>
-                <strong className="block text-[11px] text-primary">{isVip ? 'VIP Active' : 'Barakah VIP'}</strong>
+                <strong className="block text-[10px] text-primary">{isVip ? 'VIP Active' : 'Barakah VIP'}</strong>
                 <span className="text-[9px] text-secondary">{isVip ? 'Unlimited Quota' : 'PKR 830 / mo'}</span>
               </div>
             </button>
           </div>
         </div>
 
-        <div className={`bg-surface rounded-3xl overflow-hidden shadow-card border transition-all ${
-          isVip ? 'border-amber-400/40 ring-1 ring-amber-400/20' : 'border-surface-variant/80'
-        } flex flex-col`}>
+        <div className="bg-white rounded-3xl overflow-hidden shadow-card border border-outline flex flex-col">
           {/* Main Photo Banner */}
-          <div className="relative w-full h-80 bg-surface-variant overflow-hidden">
+          <div className="relative w-full h-72 bg-surface-variant overflow-hidden">
             {user.photos && user.photos.length > 0 && user.photos[0] ? (
               <img
                 src={user.photos[0]}
@@ -158,53 +170,48 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
               />
             ) : (
               <div className="w-full h-full flex flex-col items-center justify-center text-secondary">
-                <span className="material-symbols-outlined text-5xl mb-2">account_circle</span>
                 <span className="text-xs font-semibold">No profile photo uploaded</span>
               </div>
             )}
             
             {user.blurPhotosByDefault && user.photos && user.photos.length > 0 && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/25 backdrop-blur-xs">
-                <span className="bg-surface/90 text-on-surface text-xs px-3.5 py-1.5 rounded-full flex items-center gap-1.5 backdrop-blur-md shadow-xs border border-surface-variant/60 font-semibold">
-                  <span className="material-symbols-outlined text-[16px] text-accent-gold-dark">visibility_off</span>
+                <span className="bg-white/95 text-on-surface text-xs px-3 py-1 rounded-full flex items-center gap-1.5 shadow-subtle border border-outline font-semibold">
+                  <EyeOff className="w-3.5 h-3.5 text-primary" />
                   <span>Modesty Protection Active</span>
                 </span>
               </div>
             )}
             
-            <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-full flex items-center gap-1.5 text-white text-xs font-semibold">
-              <span className="material-symbols-outlined text-[15px] text-primary-light">location_on</span>
+            <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-full flex items-center gap-1 text-white text-xs font-semibold">
+              <MapPin className="w-3.5 h-3.5 text-primary-light" />
               <span>{user.location || 'Global'}</span>
             </div>
             
-            {/* VIP Luxury Floating Crown Badge on Profile Photo */}
             {isVip && (
-              <div className="absolute top-4 right-4 bg-gradient-to-r from-amber-500 via-accent-gold to-amber-600 text-white px-3.5 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-bold shadow-lg border border-amber-300/50 backdrop-blur-sm z-10 animate-pulse">
-                <span className="material-symbols-outlined text-[15px] text-amber-200">workspace_premium</span>
-                <span className="tracking-wide">Barakah VIP</span>
+              <div className="absolute top-4 right-4 bg-pastel-amber text-pastel-amber-text border border-pastel-amber-border px-3 py-1 rounded-full flex items-center gap-1 text-xs font-bold shadow-subtle z-10">
+                <Crown className="w-3.5 h-3.5 text-pastel-amber-text" />
+                <span>Barakah VIP</span>
               </div>
             )}
 
             {!isVip && user.wali && (
-              <div className="absolute top-4 right-4 bg-primary/95 backdrop-blur-sm text-white px-3 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-semibold shadow-xs">
-                <span className="material-symbols-outlined text-[15px]">verified_user</span>
+              <div className="absolute top-4 right-4 bg-pastel-mint text-pastel-mint-text border border-pastel-mint-border px-3 py-1 rounded-full flex items-center gap-1 text-xs font-semibold shadow-subtle">
+                <ShieldCheck className="w-3.5 h-3.5 text-pastel-mint-text" />
                 <span>Wali Verified</span>
               </div>
             )}
           </div>
 
           {/* User Details */}
-          <div className="p-5 sm:p-6 space-y-5">
+          <div className="p-4 space-y-4">
             <div>
-              <div className="flex items-center gap-2.5">
-                <h2 className="font-serif text-2xl font-bold text-on-surface">
+              <div className="flex items-center gap-2">
+                <h2 className="font-serif text-xl font-bold text-on-surface">
                   {user.fullName}, {user.age || 28}
                 </h2>
                 {isVip && (
-                  <span className="bg-gradient-to-r from-amber-500 to-amber-600 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-0.5 shadow-sm border border-amber-300/40">
-                    <span className="material-symbols-outlined text-[12px]">workspace_premium</span>
-                    <span>VIP</span>
-                  </span>
+                  <Crown className="w-4 h-4 text-amber-500" />
                 )}
               </div>
               <p className="text-xs text-primary font-semibold mt-0.5">
@@ -220,10 +227,10 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
                 </h3>
                 <div className="grid grid-cols-3 gap-2">
                   {user.photos.map((p, idx) => (
-                    <div key={idx} className="aspect-square rounded-2xl overflow-hidden border border-surface-variant/80 relative shadow-2xs">
+                    <div key={idx} className="aspect-square rounded-2xl overflow-hidden border border-outline relative shadow-subtle">
                       <img src={p} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
                       {idx === 0 && (
-                        <span className="absolute bottom-1 left-1 bg-primary text-white text-[8px] font-bold px-1.5 py-0.5 rounded shadow-xs">
+                        <span className="absolute bottom-1 left-1 bg-primary text-white text-[8px] font-bold px-1.5 py-0.2 rounded">
                           Main
                         </span>
                       )}
@@ -233,82 +240,82 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
               </div>
             )}
 
-            {/* 1. Deen & Religious Routine */}
-            <div className="bg-primary/5 rounded-2xl p-4 border border-primary/20 space-y-3 shadow-2xs">
-              <h3 className="font-serif text-xs font-bold text-primary flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[16px]">mosque</span>
+            {/* 1. Deen & Religious Routine (Pastel Mint) */}
+            <div className="bg-pastel-mint rounded-2xl p-3.5 border border-pastel-mint-border space-y-2.5 shadow-subtle">
+              <h3 className="font-serif text-xs font-bold text-pastel-mint-text flex items-center gap-1.5">
+                <BookOpen className="w-3.5 h-3.5 text-pastel-mint-text" />
                 <span>Deen & Religious Routine</span>
               </h3>
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="bg-surface p-2.5 rounded-xl border border-surface-variant/80 shadow-2xs">
-                  <span className="text-[10px] text-secondary font-medium block">Daily Prayers</span>
-                  <strong className="text-on-surface">{rel?.prayerFrequency || '5 times daily'}</strong>
+                <div className="bg-white p-2 rounded-xl border border-pastel-mint-border shadow-subtle">
+                  <span className="text-[10px] text-pastel-mint-text font-medium block">Daily Prayers</span>
+                  <strong className="text-on-surface text-[11px]">{rel?.prayerFrequency || '5 times daily'}</strong>
                 </div>
-                <div className="bg-surface p-2.5 rounded-xl border border-surface-variant/80 shadow-2xs">
-                  <span className="text-[10px] text-secondary font-medium block">Quran Engagement</span>
-                  <strong className="text-on-surface capitalize">{rel?.quranRecitation || 'Daily'}</strong>
+                <div className="bg-white p-2 rounded-xl border border-pastel-mint-border shadow-subtle">
+                  <span className="text-[10px] text-pastel-mint-text font-medium block">Quran Engagement</span>
+                  <strong className="text-on-surface text-[11px] capitalize">{rel?.quranRecitation || 'Daily'}</strong>
                 </div>
-                <div className="bg-surface p-2.5 rounded-xl border border-surface-variant/80 shadow-2xs">
-                  <span className="text-[10px] text-secondary font-medium block">Modesty Style</span>
-                  <strong className="text-on-surface capitalize">{rel?.modestyPractice?.replace('_', ' ') || 'Modest'}</strong>
+                <div className="bg-white p-2 rounded-xl border border-pastel-mint-border shadow-subtle">
+                  <span className="text-[10px] text-pastel-mint-text font-medium block">Modesty Style</span>
+                  <strong className="text-on-surface text-[11px] capitalize">{rel?.modestyPractice?.replace('_', ' ') || 'Modest'}</strong>
                 </div>
-                <div className="bg-surface p-2.5 rounded-xl border border-surface-variant/80 shadow-2xs">
-                  <span className="text-[10px] text-secondary font-medium block">Hajj / Umrah</span>
-                  <strong className="text-on-surface capitalize">{rel?.hajjUmrahStatus || 'Planning'}</strong>
+                <div className="bg-white p-2 rounded-xl border border-pastel-mint-border shadow-subtle">
+                  <span className="text-[10px] text-pastel-mint-text font-medium block">Hajj / Umrah</span>
+                  <strong className="text-on-surface text-[11px] capitalize">{rel?.hajjUmrahStatus || 'Planning'}</strong>
                 </div>
               </div>
             </div>
 
-            {/* 2. Family & Post-Marriage Living */}
-            <div className="bg-surface rounded-2xl p-4 border border-surface-variant/80 space-y-3 shadow-2xs">
-              <h3 className="text-xs font-bold text-secondary uppercase tracking-wider flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[16px] text-primary">home</span>
+            {/* 2. Family & Post-Marriage Living (Pastel Sand) */}
+            <div className="bg-pastel-sand rounded-2xl p-3.5 border border-pastel-sand-border space-y-2.5 shadow-subtle">
+              <h3 className="text-xs font-bold text-pastel-sand-text uppercase tracking-wider flex items-center gap-1.5">
+                <Home className="w-3.5 h-3.5 text-pastel-sand-text" />
                 <span>Family & Living Arrangements</span>
               </h3>
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="bg-surface-variant/40 p-2.5 rounded-xl border border-surface-variant/60">
-                  <span className="text-[10px] text-secondary font-medium block">Post-Marriage Living</span>
-                  <strong className="text-primary capitalize">{user.livingPreference?.replace('_', ' ') || 'Independent'}</strong>
+                <div className="bg-white p-2 rounded-xl border border-pastel-sand-border shadow-subtle">
+                  <span className="text-[10px] text-pastel-sand-text font-medium block">Post-Marriage Living</span>
+                  <strong className="text-primary capitalize text-[11px]">{user.livingPreference?.replace('_', ' ') || 'Independent'}</strong>
                 </div>
-                <div className="bg-surface-variant/40 p-2.5 rounded-xl border border-surface-variant/60">
-                  <span className="text-[10px] text-secondary font-medium block">Family Structure</span>
-                  <strong className="text-on-surface capitalize">{user.familyStructure || 'Nuclear'} ({user.siblingsCount ?? 2} Siblings)</strong>
+                <div className="bg-white p-2 rounded-xl border border-pastel-sand-border shadow-subtle">
+                  <span className="text-[10px] text-pastel-sand-text font-medium block">Family Structure</span>
+                  <strong className="text-on-surface capitalize text-[11px]">{user.familyStructure || 'Nuclear'} ({user.siblingsCount ?? 2} Siblings)</strong>
                 </div>
-                <div className="bg-surface-variant/40 p-2.5 rounded-xl border border-surface-variant/60">
-                  <span className="text-[10px] text-secondary font-medium block">Relocation</span>
-                  <strong className="text-on-surface capitalize">{user.willingnessToRelocate?.replace('_', ' ') || 'Open'}</strong>
+                <div className="bg-white p-2 rounded-xl border border-pastel-sand-border shadow-subtle">
+                  <span className="text-[10px] text-pastel-sand-text font-medium block">Relocation</span>
+                  <strong className="text-on-surface capitalize text-[11px]">{user.willingnessToRelocate?.replace('_', ' ') || 'Open'}</strong>
                 </div>
-                <div className="bg-surface-variant/40 p-2.5 rounded-xl border border-surface-variant/60">
-                  <span className="text-[10px] text-secondary font-medium block">Smoking Status</span>
-                  <strong className="text-on-surface capitalize">{user.smokingStatus?.replace('_', ' ') || 'Non-Smoker'}</strong>
+                <div className="bg-white p-2 rounded-xl border border-pastel-sand-border shadow-subtle">
+                  <span className="text-[10px] text-pastel-sand-text font-medium block">Smoking Status</span>
+                  <strong className="text-on-surface capitalize text-[11px]">{user.smokingStatus?.replace('_', ' ') || 'Non-Smoker'}</strong>
                 </div>
               </div>
             </div>
 
-            {/* 3. Career & Education */}
-            <div className="bg-surface rounded-2xl p-4 border border-surface-variant/80 space-y-2 text-xs shadow-2xs">
-              <h3 className="text-xs font-bold text-secondary uppercase tracking-wider">Education & Career</h3>
+            {/* 3. Career & Education (Pastel Sky) */}
+            <div className="bg-pastel-sky rounded-2xl p-3.5 border border-pastel-sky-border space-y-2 text-xs shadow-subtle">
+              <h3 className="text-xs font-bold text-pastel-sky-text uppercase tracking-wider">Education & Career</h3>
               <p className="text-on-surface flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[15px] text-primary">school</span>
+                <GraduationCap className="w-4 h-4 text-pastel-sky-text" />
                 <span>{user.education || 'Graduate'} {user.university ? `· ${user.university}` : ''}</span>
               </p>
               <p className="text-on-surface flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[15px] text-primary">work</span>
+                <Briefcase className="w-4 h-4 text-pastel-sky-text" />
                 <span>{user.profession || 'Professional'}</span>
               </p>
               <p className="text-on-surface flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[15px] text-primary">translate</span>
+                <Languages className="w-4 h-4 text-pastel-sky-text" />
                 <span>Languages: {user.languagesSpoken || 'English, Urdu'}</span>
               </p>
             </div>
 
             {/* 4. About My Deen */}
-            <div className="bg-surface rounded-2xl p-4 border border-surface-variant/80 space-y-1 shadow-2xs">
-              <h3 className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[16px]">mosque</span>
+            <div className="bg-pastel-lavender rounded-2xl p-3.5 border border-pastel-lavender-border space-y-1 shadow-subtle">
+              <h3 className="text-xs font-bold text-pastel-lavender-text uppercase tracking-wider flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-pastel-lavender-text" />
                 <span>About My Deen</span>
               </h3>
-              <p className="text-xs text-on-surface-variant leading-relaxed italic">
+              <p className="text-xs text-on-surface leading-relaxed italic">
                 "{user.bio || rel?.deenRelationshipBio || "Seeking a righteous spouse to complete half our deen in harmony and mutual respect."}"
               </p>
             </div>
@@ -316,21 +323,21 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
         </div>
 
         {/* 20-Questions Values Alignment Card */}
-        <div className="bg-gradient-to-r from-primary/10 via-surface to-accent-gold-light/25 p-5 rounded-3xl border border-primary/25 flex flex-col gap-3 shadow-card">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-primary to-primary-light text-white flex items-center justify-center shadow-emerald">
-              <span className="material-symbols-outlined text-xl">psychology</span>
+        <div className="bg-white p-4 rounded-3xl border border-outline flex flex-col gap-3 shadow-card">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-2xl bg-pastel-rose text-primary flex items-center justify-center">
+              <HelpCircle className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h3 className="font-serif text-sm font-bold text-on-surface">Islamic Values Questionnaire</h3>
-              <p className="text-[11px] text-secondary">20 Guided Scenarios on Deen, Finance, Family & Lifestyle</p>
+              <h3 className="font-serif text-xs font-bold text-on-surface">Islamic Values Questionnaire</h3>
+              <p className="text-[10px] text-secondary">20 Guided Scenarios on Deen, Finance, Family & Lifestyle</p>
             </div>
           </div>
           <button
             onClick={() => setShowQuizModal(true)}
-            className="w-full py-2.5 rounded-full bg-gradient-to-r from-primary via-primary to-primary-light text-white text-xs font-bold shadow-emerald hover:brightness-110 active:scale-98 transition-all flex items-center justify-center gap-1.5"
+            className="w-full py-2.5 rounded-full bg-primary text-white text-xs font-bold shadow-brand hover:bg-primary-dark active:scale-98 transition-all flex items-center justify-center gap-1.5"
           >
-            <span className="material-symbols-outlined text-[16px]">edit_note</span>
+            <Edit3 className="w-3.5 h-3.5" />
             <span>{hasCompletedQuiz ? 'Update 20-Questions Answers' : 'Take Compatibility Quiz (20 Qs)'}</span>
           </button>
         </div>
@@ -339,9 +346,9 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
         {onEditProfile && (
           <button
             onClick={onEditProfile}
-            className="w-full py-3.5 rounded-full bg-surface border border-primary text-primary font-sans text-xs font-bold hover:bg-primary/5 active:scale-98 transition-all flex items-center justify-center gap-2 shadow-2xs"
+            className="w-full py-3 rounded-full bg-white border border-primary text-primary font-sans text-xs font-bold hover:bg-pastel-rose active:scale-98 transition-all flex items-center justify-center gap-1.5 shadow-subtle"
           >
-            <span className="material-symbols-outlined text-[16px]">edit</span>
+            <Edit3 className="w-3.5 h-3.5" />
             <span>Edit Profile Details</span>
           </button>
         )}
@@ -389,3 +396,4 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
     </div>
   );
 };
+export default MyProfileScreen;

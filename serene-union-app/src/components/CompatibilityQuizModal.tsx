@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ArrowLeft, Check } from 'lucide-react';
 import { API_BASE } from '../services/dbService';
 
 export interface QuizAnswer {
@@ -138,108 +139,108 @@ export const COMPATIBILITY_QUESTIONS = [
     options: [
       'Weekly or multiple times a week as a top priority.',
       'Bi-weekly or monthly, balancing our independent nuclear family routine.',
-      'Flexible based on work schedules and distance.'
+      'Flexible as schedules permit with unconditional respect for both sides.'
     ]
   },
   {
     id: 12,
     category: 'family' as const,
     pillar: 'Family & In-Laws',
-    question: 'How should in-laws’ advice and boundaries be navigated in marital decisions?',
+    question: 'What is your perspective on joint vs independent living after marriage?',
     options: [
-      'Marital affairs stay strictly private between husband and wife with utmost adab to parents.',
-      'Seek elders’ blessings and input on major life transitions.',
-      'Handle on a case-by-case basis depending on the sensitivity.'
+      'Independent living for privacy and strengthening our marriage.',
+      'Open to living with in-laws or nearby to support elderly parents.',
+      'Flexible start with a clear plan to transition to independent living.'
     ]
   },
   {
     id: 13,
     category: 'family' as const,
     pillar: 'Family & In-Laws',
-    question: 'What is your approach to caring for elderly parents in the future?',
+    question: 'How should extended family involvement in marriage decisions be handled?',
     options: [
-      'Welcome parents to live with us and care for them directly with love.',
-      'Ensure they have premium housing nearby with frequent daily visits.',
-      'Cooperate with siblings to share the blessing of their care.'
+      'Keep marital discussions private between spouses; seek advice only when necessary.',
+      'Value parental wisdom and regularly seek their counsel on major decisions.',
+      'Set clear and loving boundaries while honoring parents with utmost adab.'
     ]
   },
   {
     id: 14,
     category: 'family' as const,
     pillar: 'Family & In-Laws',
-    question: 'How do you handle family gatherings and Eid holidays?',
+    question: 'What is your vision for children’s Islamic schooling and upbringing?',
     options: [
-      'Alternate Eids and holidays equally between both families.',
-      'Celebrate with the larger extended joint family together.',
-      'Flexible planning based on travel and convenience.'
+      'Islamic school / Hifz program integrated into comprehensive education.',
+      'Strong home Islamic tarbiyah alongside excellent academic schooling.',
+      'Balanced approach with Quran classes and weekend Islamic programs.'
     ]
   },
   {
     id: 15,
     category: 'family' as const,
     pillar: 'Family & In-Laws',
-    question: 'What is your view on privacy within the home from visiting relatives?',
+    question: 'How do you navigate dividing holidays (Eid) between both families?',
     options: [
-      'Essential private sanctuary with scheduled advance notice for guests.',
-      'Warm open-door hospitality for close family at all times.',
-      'Balanced hospitality that respects private rest hours.'
+      'Alternate Eids fairly between both families each year.',
+      'Celebrate together as one big extended gathering when possible.',
+      'Split the days of Eid between both sides lovingly.'
     ]
   },
 
-  // 4. LIFESTYLE, LEISURE & PARENTING
+  // 4. LIFESTYLE & SOCIAL
   {
     id: 16,
     category: 'lifestyle' as const,
-    pillar: 'Lifestyle & Parenting',
-    question: 'What does your ideal weekend look like?',
+    pillar: 'Lifestyle & Social',
+    question: 'What is your view on social media usage and sharing family life online?',
     options: [
-      'Islamic classes, peaceful home time, and quality Quran reading.',
-      'Outdoor nature hikes, fitness, and family dinners.',
-      'Hosting friends and community volunteering.'
+      'High privacy: avoid posting pictures or private family life online.',
+      'Moderate: share milestones with close friends and family only.',
+      'Open: active presence while maintaining Islamic modesty.'
     ]
   },
   {
     id: 17,
     category: 'lifestyle' as const,
-    pillar: 'Lifestyle & Parenting',
-    question: 'What is your aspiration for raising children in modern society?',
+    pillar: 'Lifestyle & Social',
+    question: 'How do you spend your free time and weekends?',
     options: [
-      'Islamic schooling or homeschooling with strong Tarbiyah foundation.',
-      'Standard high-ranking schooling supplemented with intensive home deen classes.',
-      'Focus on strong character and critical thinking within an Islamic framework.'
+      'Home-centered, reading, cooking, and quality time with family.',
+      'Active outdoors, fitness, travel, and community events.',
+      'Mix of personal hobbies, learning, and quiet downtime.'
     ]
   },
   {
     id: 18,
     category: 'lifestyle' as const,
-    pillar: 'Lifestyle & Parenting',
-    question: 'How do you view social media usage and public sharing of personal life?',
+    pillar: 'Lifestyle & Social',
+    question: 'What is your approach to halal entertainment, music, and media?',
     options: [
-      'High privacy; zero or minimal public sharing of family pictures (protecting from Nazar).',
-      'Moderate and modest sharing with close friends and family only.',
-      'Normal everyday social media usage within halal boundaries.'
+      'Strict: avoid mainstream music and focus on beneficial audio/podcasts.',
+      'Moderate: enjoy wholesome media and mainstream entertainment within limits.',
+      'Pragmatic: general balance focusing on positive messages.'
     ]
   },
   {
     id: 19,
     category: 'lifestyle' as const,
-    pillar: 'Lifestyle & Parenting',
-    question: 'How do you balance career ambitions with home life and marital quality time?',
+    pillar: 'Lifestyle & Social',
+    question: 'What is your preference regarding work-life balance and career ambition?',
     options: [
-      'Strict boundaries on work hours so family time is never compromised.',
-      'Hard work during work hours, but evenings dedicated completely to spouse.',
-      'Support each other’s ambitious goals with flexible home routines.'
+      'High ambition balanced with strict family-first boundaries.',
+      'Stable work with primary focus on home, deen, and children.',
+      'Entrepreneurial / high-growth path with mutual understanding.'
     ]
   },
   {
     id: 20,
     category: 'lifestyle' as const,
-    pillar: 'Lifestyle & Parenting',
-    question: 'What is your dream vacation / travel goal with your spouse?',
+    pillar: 'Lifestyle & Social',
+    question: 'What is your ideal holiday destination and travel style?',
     options: [
-      'Umrah and visiting Islamic historical landmarks (Medina, Al-Quds, Istanbul).',
-      'Scenic nature retreats and quiet relaxation in peaceful landscapes.',
-      'Exciting cultural exploration and worldwide travel.'
+      'Spiritual journeys (Umrah, Islamic heritage sites) as top priority.',
+      'Nature, scenic adventures, and exploring diverse cultures.',
+      'Relaxing resort getaways and peaceful retreats.'
     ]
   }
 ];
@@ -262,7 +263,6 @@ export const CompatibilityQuizModal: React.FC<Props> = ({ userId, isOpen, onClos
     if (currentIdx < total - 1) {
       setCurrentIdx(currentIdx + 1);
     } else {
-      // Finished all 20 questions
       finishQuiz(updated);
     }
   };
@@ -275,18 +275,13 @@ export const CompatibilityQuizModal: React.FC<Props> = ({ userId, isOpen, onClos
       selectedOption: finalAnswers[q.id] ?? 0
     }));
 
-    // Save locally
     localStorage.setItem(`serene_quiz_${userId}`, JSON.stringify(answersList));
 
-    // Save to Cloudflare D1
     try {
       await fetch(`${API_BASE}/compatibility/answers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId,
-          answers: answersList
-        })
+        body: JSON.stringify({ userId, answers: answersList })
       });
     } catch {}
 
@@ -296,61 +291,61 @@ export const CompatibilityQuizModal: React.FC<Props> = ({ userId, isOpen, onClos
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md px-4 font-sans animate-fade-in select-none">
-      <div className="w-full max-w-[460px] bg-surface rounded-[36px] p-6 shadow-2xl border border-surface-variant/80 flex flex-col relative overflow-hidden animate-slide-up">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs px-4 font-sans animate-fade-in select-none text-on-surface">
+      <div className="w-full max-w-[460px] bg-white rounded-[36px] p-5 sm:p-6 shadow-2xl border border-outline flex flex-col relative overflow-hidden animate-slide-up">
         {/* Header */}
-        <div className="flex items-center justify-between mb-3 pb-2 border-b border-surface-variant/40">
+        <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-outline">
           <button
             onClick={() => {
               if (currentIdx > 0) setCurrentIdx(currentIdx - 1);
               else onClose();
             }}
-            className="w-9 h-9 rounded-full bg-surface border border-surface-variant/80 flex items-center justify-center text-on-surface hover:bg-surface-variant transition-colors shadow-2xs"
+            className="w-8 h-8 rounded-full bg-surface-variant border border-outline flex items-center justify-center text-on-surface hover:bg-outline transition-colors shadow-subtle"
           >
-            <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+            <ArrowLeft className="w-4 h-4" />
           </button>
           <div className="flex items-center gap-1.5 font-serif text-xs font-bold text-on-surface">
             <span className="text-primary">{currentQ.pillar}</span>
             <span className="text-secondary font-mono text-[11px]">({currentIdx + 1}/{total})</span>
           </div>
-          <button onClick={onClose} className="text-xs text-secondary hover:text-on-surface font-bold px-2.5 py-1 rounded-full bg-surface-variant/60">
+          <button onClick={onClose} className="text-xs text-secondary hover:text-on-surface font-bold px-2.5 py-1 rounded-full bg-surface-variant">
             Exit
           </button>
         </div>
 
         {/* Progress Bar */}
-        <div className="w-full bg-surface-variant h-2 rounded-full overflow-hidden mb-5">
-          <div className="bg-gradient-to-r from-primary to-primary-light h-full transition-all duration-300 shadow-emerald" style={{ width: `${progress}%` }} />
+        <div className="w-full bg-surface-variant h-2 rounded-full overflow-hidden mb-4">
+          <div className="bg-primary h-full transition-all duration-300" style={{ width: `${progress}%` }} />
         </div>
 
         {/* Question Title */}
-        <div className="mb-5 min-h-[64px]">
-          <span className="text-[10px] font-bold text-accent-gold-dark uppercase tracking-widest block mb-1">
+        <div className="mb-4 min-h-[58px]">
+          <span className="text-[10px] font-bold text-primary uppercase tracking-widest block mb-1">
             Question {currentIdx + 1} of {total}
           </span>
-          <h2 className="font-serif text-base sm:text-lg font-bold text-on-surface leading-snug">
+          <h2 className="font-serif text-base font-bold text-on-surface leading-snug">
             {currentQ.question}
           </h2>
         </div>
 
         {/* 3 Options */}
-        <div className="space-y-2.5 mb-5">
+        <div className="space-y-2 mb-4">
           {currentQ.options.map((opt, optIdx) => {
             const isSelected = answers[currentQ.id] === optIdx;
             return (
               <button
                 key={optIdx}
                 onClick={() => handleSelect(optIdx)}
-                className={`w-full p-3.5 sm:p-4 rounded-2xl text-left border transition-all flex items-start gap-3 shadow-2xs ${
+                className={`w-full p-3 sm:p-3.5 rounded-2xl text-left border transition-all flex items-start gap-2.5 shadow-subtle ${
                   isSelected
-                    ? 'border-primary bg-primary/10 text-on-surface shadow-emerald ring-1 ring-primary'
-                    : 'border-surface-variant/80 bg-surface hover:bg-surface-variant/40 text-on-surface-variant'
+                    ? 'border-primary bg-pastel-rose text-on-surface shadow-brand'
+                    : 'border-outline bg-white hover:bg-surface-variant text-on-surface'
                 }`}
               >
-                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
-                  isSelected ? 'border-primary bg-primary text-white' : 'border-surface-variant bg-surface'
+                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
+                  isSelected ? 'border-primary bg-primary text-white' : 'border-outline bg-white'
                 }`}>
-                  {isSelected && <span className="material-symbols-outlined text-[13px]">check</span>}
+                  {isSelected && <Check className="w-2.5 h-2.5" />}
                 </div>
                 <p className="text-xs leading-relaxed font-medium">{opt}</p>
               </button>
@@ -366,4 +361,4 @@ export const CompatibilityQuizModal: React.FC<Props> = ({ userId, isOpen, onClos
     </div>
   );
 };
-
+export default CompatibilityQuizModal;

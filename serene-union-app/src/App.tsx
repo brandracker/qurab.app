@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Compass, Heart, MessageCircle, User, Settings, Crown, LogOut } from 'lucide-react';
 import type { UserProfile } from './types';
 import { WelcomeScreen } from './screens/WelcomeScreen';
 import { AuthScreen } from './screens/AuthScreen';
@@ -179,55 +180,23 @@ export const App: React.FC = () => {
 
     // Save permanently to Cloudflare D1
     try {
-      await fetch(`${API_BASE}/users/complete-onboarding`, {
+      await fetch(`${API_BASE}/profiles`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: merged.id,
-          fullName: merged.fullName,
-          dob: merged.dob,
-          gender: merged.gender,
-          location: merged.location,
-          height: merged.height,
-          bio: merged.bio,
-          profession: merged.profession,
-          education: merged.education,
-          university: merged.university,
-          ethnicity: merged.ethnicity,
-          citizenship: merged.citizenship,
-          workArrangement: merged.workArrangement,
-          incomeBracket: merged.incomeBracket,
-          hobbies: merged.hobbies,
-          personalityTraits: merged.personalityTraits,
-          maritalStatus: merged.maritalStatus,
-          dualIncomePreference: merged.dualIncomePreference,
-          familyStructure: merged.familyStructure,
-          livingPreference: merged.livingPreference,
-          siblingsCount: merged.siblingsCount,
-          willingnessToRelocate: merged.willingnessToRelocate,
-          smokingStatus: merged.smokingStatus,
-          languagesSpoken: merged.languagesSpoken,
-          mahrPhilosophy: merged.mahrPhilosophy,
-          childrenDesire: merged.childrenDesire,
-          blurPhotosByDefault: merged.blurPhotosByDefault,
-          timeline: merged.marriageTimeline,
-          practiceLevel: merged.religiousProfile.practiceLevel,
-          sect: merged.religiousProfile.sect,
-          madhhab: merged.religiousProfile.madhhab,
-          prayerFrequency: merged.religiousProfile.prayerFrequency,
-          halalDiet: merged.religiousProfile.halalDiet,
-          quranRecitation: merged.religiousProfile.quranRecitation,
-          modestyPractice: merged.religiousProfile.modestyPractice,
-          hajjUmrahStatus: merged.religiousProfile.hajjUmrahStatus,
-          photos: merged.photos
-        })
+        body: JSON.stringify(merged)
       });
-    } catch (err) {
-      console.error('Error saving onboarding:', err);
-    }
+    } catch {}
 
     setCurrentStep('main_app');
-    setActiveTab('my_profile');
+    setActiveTab('discover');
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('serene_current_user_v1');
+    localStorage.removeItem('serene_auth_token');
+    setCurrentUser(dbService.getGuestUser());
+    setCurrentStep('welcome');
+    setActiveTab('discover');
   };
 
   const handleOpenChat = (convId: string) => {
@@ -235,58 +204,43 @@ export const App: React.FC = () => {
     setActiveTab('chat');
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('serene_current_user_v1');
-    localStorage.removeItem('serene_conversations_v1');
-    setOnboardingData({});
-    setCurrentUser(dbService.getGuestUser());
-    setActiveConvId(null);
-    setActiveTab('discover');
-    setCurrentStep('welcome');
-  };
-
   return (
-    <div className="w-full h-screen bg-gradient-to-br from-[#08120B] via-[#0C1A10] to-[#050C07] flex justify-center items-center font-sans overflow-hidden relative">
-      {/* Ambient Lighting Orbs */}
-      <div className="absolute top-1/4 -left-32 w-96 h-96 bg-primary/20 rounded-full blur-3xl pointer-events-none animate-pulse" style={{ animationDuration: '8s' }} />
-      <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-accent-gold/15 rounded-full blur-3xl pointer-events-none animate-pulse" style={{ animationDuration: '10s' }} />
-
-      {/* Mobile Shell Container (Max 480px) */}
-      <div className="w-full max-w-[480px] h-full sm:h-[95vh] sm:rounded-[42px] bg-background shadow-[0_25px_60px_rgba(0,0,0,0.6)] overflow-hidden flex flex-col relative sm:border sm:border-white/10 ring-1 ring-black/40 z-10">
+    <div className="w-full min-h-screen bg-[#121212] flex items-center justify-center font-sans antialiased text-on-surface">
+      {/* Centered Mobile Screen Container */}
+      <div className="w-full max-w-[440px] h-[100dvh] sm:h-[90vh] sm:max-h-[900px] bg-white sm:rounded-[36px] overflow-hidden shadow-2xl flex flex-col relative border border-[#262626]">
         
-        {/* Top Simulated Mobile Status Bar (Desktop Preview) */}
-        <div className="hidden sm:flex w-full px-7 pt-3 pb-1 items-center justify-between text-[11px] font-semibold text-secondary select-none shrink-0 bg-transparent z-20">
+        {/* Top Simulated Status Bar on Mobile View */}
+        <div className="hidden sm:flex w-full bg-white px-6 pt-3 pb-1 items-center justify-between z-40 select-none text-[11px] text-[#737373] font-medium border-b border-[#F4F4F5]">
           <span>9:41</span>
+          <div className="w-20 h-4 bg-[#171717] rounded-full mx-auto" />
           <div className="flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-[14px]">signal_cellular_4_bar</span>
-            <span className="material-symbols-outlined text-[14px]">wifi</span>
-            <span className="material-symbols-outlined text-[16px]">battery_full</span>
+            <span className="text-[10px]">5G</span>
+            <div className="w-4 h-2.5 border border-[#737373] rounded-xs p-0.5 flex items-center">
+              <div className="w-full h-full bg-[#737373] rounded-2xs" />
+            </div>
           </div>
         </div>
 
-        {/* STEP 1: WELCOME SCREEN */}
+        {/* STEP 0: WELCOME & HALAL TRUST VALUE PROP */}
         {currentStep === 'welcome' && (
-          <WelcomeScreen 
-            onGetStarted={() => setCurrentStep('auth')}
-            onLogin={() => setCurrentStep('auth')}
-          />
+          <WelcomeScreen onGetStarted={() => setCurrentStep('auth')} />
         )}
 
-        {/* STEP 2: EMAIL + PASSWORD AUTH */}
+        {/* STEP 0.5: PHONE OTP & EMAIL AUTHENTICATION */}
         {currentStep === 'auth' && (
-          <AuthScreen
-            onAuthSuccess={handleAuthSuccess}
+          <AuthScreen 
             onBack={() => setCurrentStep('welcome')}
+            onAuthSuccess={handleAuthSuccess}
           />
         )}
 
-        {/* ONBOARDING STEP 1: PERSONAL & RELOCATION */}
+        {/* ONBOARDING STEP 1: BASIC BIODATA */}
         {currentStep === 'basic_info' && (
           <BasicInfoScreen
-            data={onboardingData}
+            data={onboardingData as any}
             onBack={() => setCurrentStep('auth')}
-            onContinue={(info) => {
-              setOnboardingData(prev => ({ ...prev, ...info }));
+            onContinue={(basicData: any) => {
+              setOnboardingData(prev => ({ ...prev, ...basicData }));
               setCurrentStep('practice');
             }}
           />
@@ -343,17 +297,15 @@ export const App: React.FC = () => {
         {currentStep === 'main_app' && (
           <div className="w-full h-full flex flex-col justify-between overflow-hidden relative bg-background">
             
-            {/* Top Micro-Bar with Luxury Branding */}
-            <div className="w-full px-5 py-2.5 bg-surface/90 backdrop-blur-xl flex items-center justify-between border-b border-surface-variant/40 z-20 text-[11px]">
-              <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-primary to-primary-light p-1 flex items-center justify-center shadow-emerald shadow-xs">
-                  <img src="/icon.svg" alt="Qurab" className="w-full h-full object-contain filter invert brightness-200" />
-                </div>
+            {/* Top Micro-Bar with Official Logo */}
+            <div className="w-full px-4 py-2 bg-white flex items-center justify-between border-b border-outline z-20 text-xs">
+              <div className="flex items-center gap-2">
+                <img src="/icon.svg" alt="Qurab" className="w-6 h-6 object-contain" />
                 <div className="flex items-baseline gap-1.5">
-                  <span className="font-serif font-bold text-base tracking-tight text-on-surface">
+                  <span className="font-serif font-bold text-sm tracking-tight text-on-surface">
                     Qurab
                   </span>
-                  <span className="font-arabic text-primary text-sm font-bold leading-none">
+                  <span className="font-arabic text-primary text-xs font-bold leading-none">
                     قُرب
                   </span>
                 </div>
@@ -361,16 +313,17 @@ export const App: React.FC = () => {
 
               <div className="flex items-center gap-2">
                 {currentUser.isVip && (
-                  <span className="bg-gradient-to-r from-amber-500 to-amber-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-xs border border-amber-300/40">
-                    <span className="material-symbols-outlined text-[11px]">workspace_premium</span>
+                  <span className="bg-pastel-amber text-pastel-amber-text border border-pastel-amber-border text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <Crown className="w-3 h-3 text-pastel-amber-text" />
                     <span>VIP</span>
                   </span>
                 )}
                 <button 
                   onClick={handleLogout} 
-                  className="text-secondary hover:text-error transition-colors text-[10px] font-medium px-2 py-1 rounded-lg hover:bg-error/10"
+                  className="text-secondary hover:text-error transition-colors text-[11px] font-semibold px-2 py-1 rounded-lg hover:bg-pastel-rose flex items-center gap-1"
                 >
-                  Sign Out
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Exit</span>
                 </button>
               </div>
             </div>
@@ -408,37 +361,32 @@ export const App: React.FC = () => {
               )}
             </div>
 
-            {/* FLOATING FROSTED GLASS BOTTOM NAVIGATION BAR */}
-            <nav className="w-full bg-surface/90 backdrop-blur-2xl border-t border-surface-variant/40 px-3 py-2 flex items-center justify-around z-30 shadow-[0_-8px_25px_rgba(0,0,0,0.03)]">
+            {/* CLEAN SOLID BOTTOM NAVIGATION BAR (No Gradients, Lucide Icons) */}
+            <nav className="w-full bg-white border-t border-outline px-2 py-2 flex items-center justify-around z-30 shadow-subtle">
               {[
-                { id: 'discover', label: 'Discover', icon: 'explore' },
-                { id: 'matches', label: 'Matches', icon: 'favorite' },
-                { id: 'chat', label: 'Chat', icon: 'chat' },
-                { id: 'my_profile', label: 'Profile', icon: 'account_circle' },
-                { id: 'settings', label: 'Settings', icon: 'tune' }
-              ].map(tab => {
-                const isActive = activeTab === tab.id;
+                { id: 'discover', label: 'Discover', Icon: Compass },
+                { id: 'matches', label: 'Matches', Icon: Heart },
+                { id: 'chat', label: 'Chat', Icon: MessageCircle },
+                { id: 'my_profile', label: 'Profile', Icon: User },
+                { id: 'settings', label: 'Settings', Icon: Settings }
+              ].map(({ id, label, Icon }) => {
+                const isActive = activeTab === id;
                 return (
                   <button
-                    key={tab.id}
+                    key={id}
                     onClick={() => {
-                      setActiveTab(tab.id as MainTab);
-                      if (tab.id !== 'chat') setActiveConvId(null);
+                      setActiveTab(id as MainTab);
+                      if (id !== 'chat') setActiveConvId(null);
                     }}
-                    className={`flex flex-col items-center gap-0.5 py-1 px-3.5 rounded-2xl transition-all duration-300 relative ${
+                    className={`flex flex-col items-center gap-1 py-1 px-3 rounded-2xl transition-all duration-150 ${
                       isActive 
                         ? 'text-primary' 
                         : 'text-secondary hover:text-on-surface'
                     }`}
                   >
-                    {isActive && (
-                      <span className="absolute -top-2 w-7 h-1 rounded-full bg-primary shadow-emerald" />
-                    )}
-                    <span className={`material-symbols-outlined text-[23px] transition-transform duration-200 ${isActive ? 'fill scale-110' : 'scale-100'}`}>
-                      {tab.icon}
-                    </span>
+                    <Icon className={`w-5 h-5 transition-transform ${isActive ? 'stroke-[2.5px] scale-105' : 'stroke-[1.75px]'}`} />
                     <span className={`text-[10px] tracking-tight ${isActive ? 'font-bold text-primary' : 'font-medium'}`}>
-                      {tab.label}
+                      {label}
                     </span>
                   </button>
                 );
@@ -451,4 +399,3 @@ export const App: React.FC = () => {
   );
 };
 export default App;
-

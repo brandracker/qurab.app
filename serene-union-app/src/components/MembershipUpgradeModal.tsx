@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Crown, Zap, ShieldCheck, PlayCircle, Wallet, CheckCircle2, ArrowRight, X, Check } from 'lucide-react';
 import { API_BASE, dbService } from '../services/dbService';
 
 interface Props {
@@ -30,7 +31,7 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
       price: '$2.99 / mo',
       localPrice: 'PKR 830 / month',
       description: 'Unlimited likes, See Who Liked You, 100% Ad-Free & Priority discovery ranking.',
-      icon: 'workspace_premium',
+      Icon: Crown,
       isSubscription: true
     },
     {
@@ -40,7 +41,7 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
       price: '$0.99',
       localPrice: 'PKR 275 (24 Hours)',
       description: 'Feature your profile at the #1 top spot in your city’s Discover stream.',
-      icon: 'bolt',
+      Icon: Zap,
       isSubscription: false
     },
     {
@@ -50,7 +51,7 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
       price: '$0.99',
       localPrice: 'PKR 275 (One-Time)',
       description: 'Get the verified trust badge by submitting CNIC/Passport ID verification.',
-      icon: 'verified',
+      Icon: ShieldCheck,
       isSubscription: false
     }
   ];
@@ -97,17 +98,17 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-md p-0 sm:p-4 font-sans animate-fade-in select-none">
-      <div className="w-full max-w-[480px] max-h-[92vh] bg-surface rounded-t-[36px] sm:rounded-[36px] p-6 shadow-2xl border border-surface-variant/80 flex flex-col overflow-hidden relative animate-slide-up">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-xs p-0 sm:p-4 font-sans animate-fade-in select-none text-on-surface">
+      <div className="w-full max-w-[480px] max-h-[92vh] bg-white rounded-t-[36px] sm:rounded-[36px] p-5 sm:p-6 shadow-2xl border border-outline flex flex-col overflow-hidden relative animate-slide-up">
         
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-surface-variant/40">
+        <div className="flex items-center justify-between pb-3.5 border-b border-outline">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-600 text-white flex items-center justify-center shadow-xs">
-              <span className="material-symbols-outlined text-2xl text-white">workspace_premium</span>
+            <div className="w-9 h-9 rounded-2xl bg-pastel-amber text-pastel-amber-text border border-pastel-amber-border flex items-center justify-center">
+              <Crown className="w-5 h-5 text-pastel-amber-text" />
             </div>
             <div>
-              <h2 className="font-serif text-base sm:text-lg font-bold text-on-surface flex items-center gap-1.5">
+              <h2 className="font-serif text-base font-bold text-on-surface flex items-center gap-1.5">
                 <span>Barakah VIP & Passes</span>
                 <span className="font-arabic text-primary text-xs font-bold">قُرب</span>
               </h2>
@@ -116,42 +117,43 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-surface border border-surface-variant/80 flex items-center justify-center text-on-surface hover:bg-surface-variant transition-colors shadow-2xs"
+            className="w-8 h-8 rounded-full bg-surface-variant border border-outline flex items-center justify-center text-on-surface hover:bg-outline transition-colors"
           >
-            <span className="material-symbols-outlined text-[18px]">close</span>
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* STEP 1: PRODUCT SELECTION */}
         {purchaseStep === 'selection' && (
-          <div className="flex-1 overflow-y-auto py-4 space-y-3">
+          <div className="flex-1 overflow-y-auto py-3 space-y-2.5">
             {products.map(p => {
               const isSelected = selectedProduct === p.id;
+              const IconComp = p.Icon;
               return (
                 <div
                   key={p.id}
                   onClick={() => setSelectedProduct(p.id)}
-                  className={`p-4 rounded-2xl border transition-all cursor-pointer relative flex flex-col gap-1.5 ${
+                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer relative flex flex-col gap-1 ${
                     isSelected
-                      ? 'border-primary bg-primary/10 ring-1 ring-primary shadow-emerald'
-                      : 'border-surface-variant/80 bg-surface hover:bg-surface-variant/40 shadow-2xs'
+                      ? 'border-primary bg-pastel-rose shadow-brand'
+                      : 'border-outline bg-white hover:bg-surface-variant shadow-subtle'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-primary text-[20px]">{p.icon}</span>
+                      <IconComp className="w-4 h-4 text-primary" />
                       <h4 className="font-serif text-xs font-bold text-on-surface">{p.title}</h4>
                     </div>
-                    <span className="bg-gradient-to-r from-amber-500 to-amber-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full font-mono uppercase shadow-xs">
+                    <span className="bg-pastel-amber text-pastel-amber-text border border-pastel-amber-border text-[9px] font-bold px-2 py-0.2 rounded-full font-mono uppercase">
                       {p.tag}
                     </span>
                   </div>
 
-                  <p className="text-[11px] text-secondary leading-relaxed pl-7">
+                  <p className="text-[10px] text-secondary leading-relaxed pl-6">
                     {p.description}
                   </p>
 
-                  <div className="flex items-baseline justify-between pt-2 pl-7 border-t border-surface-variant/40 mt-1">
+                  <div className="flex items-baseline justify-between pt-1.5 pl-6 border-t border-outline/40 mt-0.5">
                     <span className="text-[10px] text-secondary">{p.localPrice}</span>
                     <span className="text-xs font-bold text-primary font-mono">{p.price}</span>
                   </div>
@@ -160,23 +162,23 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
             })}
 
             {/* Free Ad Alternative */}
-            <div className="pt-2">
+            <div className="pt-1">
               <button
                 type="button"
                 onClick={() => {
                   onClose();
                   onWatchAdClicked();
                 }}
-                className="w-full p-3.5 rounded-2xl bg-surface border border-dashed border-primary/30 hover:border-primary/60 flex items-center justify-between text-left transition-all shadow-2xs"
+                className="w-full p-3 rounded-2xl bg-white border border-dashed border-primary hover:bg-pastel-rose flex items-center justify-between text-left transition-all shadow-subtle"
               >
-                <div className="flex items-center gap-3">
-                  <span className="material-symbols-outlined text-primary text-[22px]">smart_display</span>
+                <div className="flex items-center gap-2.5">
+                  <PlayCircle className="w-5 h-5 text-primary" />
                   <div>
                     <h5 className="text-xs font-bold text-on-surface">Watch Video Ad (Free)</h5>
                     <p className="text-[10px] text-secondary">Earn +10 Extra Discover Likes instantly</p>
                   </div>
                 </div>
-                <span className="text-xs font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-full border border-primary/20">Free</span>
+                <span className="text-xs font-bold text-primary bg-pastel-rose px-2.5 py-0.5 rounded-full border border-pastel-rose-border">Free</span>
               </button>
             </div>
           </div>
@@ -184,11 +186,11 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
 
         {/* STEP 2: SIMULATED GOOGLE PLAY 1-TAP IN-APP BILLING SHEET */}
         {purchaseStep === 'google_play_sheet' && (
-          <div className="flex-1 flex flex-col justify-between py-5 animate-fade-in">
-            <div className="bg-surface-variant/40 rounded-2xl p-5 border border-surface-variant space-y-4 shadow-card">
-              <div className="flex items-center justify-between pb-3 border-b border-surface-variant/40">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-xs p-1">
+          <div className="flex-1 flex flex-col justify-between py-4 animate-fade-in">
+            <div className="bg-surface-variant rounded-2xl p-4 border border-outline space-y-3.5 shadow-subtle">
+              <div className="flex items-center justify-between pb-2.5 border-b border-outline">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center shadow-subtle p-1 border border-outline">
                     <img
                       src="https://upload.wikimedia.org/wikipedia/commons/d/d0/Google_Play_Arrow_logo.svg"
                       alt="Google Play"
@@ -203,7 +205,7 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
                 <span className="text-xs font-bold text-primary font-mono">{currentItem.price}</span>
               </div>
 
-              <div className="space-y-1.5 text-xs">
+              <div className="space-y-1 text-xs">
                 <div className="flex justify-between text-on-surface">
                   <span className="font-medium">{currentItem.title}</span>
                   <span className="font-bold">{currentItem.localPrice}</span>
@@ -211,16 +213,16 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
                 <p className="text-[10px] text-secondary leading-tight">{currentItem.description}</p>
               </div>
 
-              <div className="bg-surface p-3 rounded-xl border border-surface-variant/40 flex items-center justify-between text-[11px] shadow-2xs">
+              <div className="bg-white p-2.5 rounded-xl border border-outline flex items-center justify-between text-[11px] shadow-subtle">
                 <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[16px] text-primary">account_balance_wallet</span>
+                  <Wallet className="w-4 h-4 text-primary" />
                   <span className="text-on-surface font-medium">Payment Method (EasyPaisa / Card linked)</span>
                 </div>
                 <span className="text-primary font-bold">Default</span>
               </div>
             </div>
 
-            <p className="text-[10px] text-secondary text-center px-4 leading-relaxed">
+            <p className="text-[10px] text-secondary text-center px-4 leading-relaxed mt-2">
               Tapping '1-Tap Buy' completes transaction securely through Google Play In-App Billing.
             </p>
           </div>
@@ -228,11 +230,11 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
 
         {/* STEP 3: SUCCESS STATE */}
         {purchaseStep === 'success' && (
-          <div className="flex-1 flex flex-col items-center justify-center text-center p-8 animate-fade-in">
-            <div className="w-16 h-16 rounded-full bg-primary/20 text-primary flex items-center justify-center mb-4 animate-bounce shadow-emerald">
-              <span className="material-symbols-outlined text-4xl">check_circle</span>
+          <div className="flex-1 flex flex-col items-center justify-center text-center p-6 animate-fade-in">
+            <div className="w-14 h-14 rounded-full bg-pastel-mint text-pastel-mint-text flex items-center justify-center mb-3 animate-bounce border border-pastel-mint-border">
+              <CheckCircle2 className="w-8 h-8" />
             </div>
-            <h3 className="font-serif text-xl font-bold text-on-surface mb-1">Purchase Successful!</h3>
+            <h3 className="font-serif text-lg font-bold text-on-surface mb-1">Purchase Successful!</h3>
             <p className="text-xs text-secondary max-w-xs leading-relaxed">
               Your benefits for <strong>{currentItem.title}</strong> have been credited to your account.
             </p>
@@ -240,32 +242,32 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
         )}
 
         {/* Bottom Actions */}
-        <div className="pt-3 border-t border-surface-variant/40">
+        <div className="pt-2.5 border-t border-outline">
           {purchaseStep === 'selection' && (
             <button
               onClick={handleStartGooglePlayPurchase}
-              className="w-full py-4 rounded-full bg-gradient-to-r from-primary via-primary to-primary-light text-white font-sans text-xs font-bold shadow-emerald hover:brightness-110 active:scale-98 transition-all flex items-center justify-center gap-2"
+              className="w-full py-3 rounded-full bg-primary text-white font-sans text-xs font-bold shadow-brand hover:bg-primary-dark active:scale-98 transition-all flex items-center justify-center gap-1.5"
             >
               <span>Continue to Google Play ({currentItem.price})</span>
-              <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+              <ArrowRight className="w-4 h-4" />
             </button>
           )}
 
           {purchaseStep === 'google_play_sheet' && (
-            <div className="flex gap-3">
+            <div className="flex gap-2.5">
               <button
                 onClick={() => setPurchaseStep('selection')}
                 disabled={isProcessing}
-                className="flex-1 py-3.5 rounded-full border border-surface-variant/80 text-secondary font-sans text-xs font-semibold hover:bg-surface-variant transition-colors"
+                className="flex-1 py-3 rounded-full border border-outline text-secondary font-sans text-xs font-semibold hover:bg-surface-variant transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmGooglePlayBilling}
                 disabled={isProcessing}
-                className="flex-[2] py-3.5 rounded-full bg-[#01875f] text-white font-sans text-xs font-bold shadow hover:brightness-110 active:scale-98 transition-all flex items-center justify-center gap-2"
+                className="flex-[2] py-3 rounded-full bg-[#01875f] text-white font-sans text-xs font-bold shadow hover:brightness-110 active:scale-98 transition-all flex items-center justify-center gap-1.5"
               >
-                <span className="material-symbols-outlined text-[18px]">touch_app</span>
+                <Check className="w-4 h-4" />
                 <span>{isProcessing ? 'Verifying with Google Play...' : '1-Tap Buy with Google Play'}</span>
               </button>
             </div>
@@ -275,4 +277,6 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
     </div>
   );
 };
+export default MembershipUpgradeModal;
+
 

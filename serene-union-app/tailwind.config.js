@@ -8,40 +8,56 @@ export default {
   theme: {
     extend: {
       colors: {
-        "primary": "#0D5C3A",
-        "primary-dark": "#073B24",
-        "primary-light": "#10B981",
+        // Logo Brand Colors (#FF2560 Qurab Rose)
+        "primary": "#FF2560",
+        "primary-dark": "#D8134B",
+        "primary-light": "#FF4D7D",
         "on-primary": "#ffffff",
-        "primary-container": "#E8F5EE",
-        "on-primary-container": "#064E2E",
-        "accent-gold": "#D4AF37",
-        "accent-gold-light": "#FDF0CD",
-        "accent-gold-dark": "#99730E",
-        "accent-rose": "#E11D48",
-        "accent-rose-light": "#FFE4E6",
-        "secondary": "#5C6B61",
+        "primary-container": "#FFF0F3",
+        "on-primary-container": "#BE123C",
+
+        // Secondary & Neutral Tones
+        "secondary": "#737373",
         "on-secondary": "#ffffff",
-        "secondary-container": "#F0F4F1",
-        "on-secondary-container": "#243329",
-        "tertiary": "#C89334",
-        "on-tertiary": "#ffffff",
-        "tertiary-container": "#FEF7E6",
-        "on-tertiary-container": "#784B06",
-        "background": "#FAF8F5",
-        "on-background": "#18221B",
+        "secondary-container": "#F5F5F5",
+        "on-secondary-container": "#262626",
+
+        // Curated Pastel Palette (Zero Gradients)
+        "pastel-rose": "#FFF0F3",
+        "pastel-rose-border": "#FECDD3",
+        "pastel-rose-text": "#E11D48",
+
+        "pastel-mint": "#EAF7F0",
+        "pastel-mint-border": "#C6F0D8",
+        "pastel-mint-text": "#1E7E4A",
+
+        "pastel-amber": "#FEF7EA",
+        "pastel-amber-border": "#FCE5B8",
+        "pastel-amber-text": "#B45309",
+
+        "pastel-sky": "#EEF6FF",
+        "pastel-sky-border": "#C9E4FF",
+        "pastel-sky-text": "#1D4ED8",
+
+        "pastel-lavender": "#F5F0FF",
+        "pastel-lavender-border": "#E5D7FF",
+        "pastel-lavender-text": "#7C3AED",
+
+        "pastel-sand": "#FBF9F6",
+        "pastel-sand-border": "#EBE5DC",
+        "pastel-sand-text": "#57534E",
+
+        // App Surfaces
+        "background": "#F9FAFB",
+        "on-background": "#171717",
         "surface": "#ffffff",
-        "on-surface": "#18221B",
-        "surface-variant": "#F0EBE1",
-        "on-surface-variant": "#4E5C52",
-        "surface-container-lowest": "#ffffff",
-        "surface-container-low": "#FAF8F5",
-        "surface-container": "#F3EFE7",
-        "surface-container-high": "#ECE6DC",
-        "surface-container-highest": "#DFD7CA",
-        "outline": "#9EAAA1",
-        "outline-variant": "#E0D8CB",
+        "on-surface": "#171717",
+        "surface-variant": "#F4F4F5",
+        "on-surface-variant": "#52525B",
+        "outline": "#E4E4E7",
+        "outline-variant": "#F4F4F5",
         "error": "#E11D48",
-        "error-container": "#FEE2E2",
+        "error-container": "#FFF0F3",
       },
       fontFamily: {
         serif: ["'Playfair Display'", "Georgia", "serif"],
@@ -49,21 +65,15 @@ export default {
         arabic: ["'Amiri'", "serif"],
         display: ["'Outfit'", "'Plus Jakarta Sans'", "sans-serif"],
       },
-      spacing: {
-        "max-width": "480px",
-        "container-padding": "24px",
-        "section-gap": "36px",
-        "stack-gap": "16px",
-      },
       boxShadow: {
-        "ambient": "0 12px 36px rgba(13, 92, 58, 0.12)",
-        "card": "0 10px 30px rgba(24, 34, 27, 0.06)",
-        "gold": "0 10px 25px rgba(212, 175, 55, 0.25)",
-        "emerald": "0 10px 25px rgba(13, 92, 58, 0.25)",
-        "glow": "0 0 25px rgba(13, 92, 58, 0.35)",
+        "subtle": "0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03)",
+        "card": "0 4px 16px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02)",
+        "elevated": "0 10px 25px -5px rgba(0, 0, 0, 0.06), 0 8px 10px -6px rgba(0, 0, 0, 0.04)",
+        "brand": "0 4px 14px rgba(255, 37, 96, 0.22)",
       }
     },
   },
   plugins: [],
 }
+
 

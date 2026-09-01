@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 
 interface Props {
   data?: {
@@ -61,48 +62,48 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
   };
 
   return (
-    <div className="w-full h-full flex flex-col justify-between p-6 bg-background font-sans overflow-y-auto pb-28 select-none">
+    <div className="w-full h-full flex flex-col justify-between p-6 bg-background font-sans overflow-y-auto pb-24 select-none text-on-surface">
       <div>
         {/* Header & Step Indicator */}
         <div className="flex items-center justify-between mb-3 pt-2">
           <button
             onClick={onBack}
-            className="w-10 h-10 rounded-full bg-surface border border-surface-variant/80 flex items-center justify-center text-on-surface hover:bg-surface-variant transition-colors shadow-2xs"
+            className="w-9 h-9 rounded-full bg-white border border-outline flex items-center justify-center text-on-surface hover:bg-surface-variant transition-colors shadow-subtle"
           >
-            <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+            <ArrowLeft className="w-4 h-4" />
           </button>
           <div className="flex items-center gap-1">
             <span className="text-[11px] font-bold text-primary tracking-wider uppercase">Step 4 of 5</span>
             <span className="text-[11px] text-secondary">· Intent</span>
           </div>
-          <div className="w-10" />
+          <div className="w-9" />
         </div>
 
-        {/* 5-Step Glowing Progress Bars */}
-        <div className="grid grid-cols-5 gap-1.5 mb-6">
-          <div className="h-1.5 rounded-full bg-gradient-to-r from-primary to-primary-light" />
-          <div className="h-1.5 rounded-full bg-gradient-to-r from-primary to-primary-light" />
-          <div className="h-1.5 rounded-full bg-gradient-to-r from-primary to-primary-light" />
-          <div className="h-1.5 rounded-full bg-gradient-to-r from-primary to-primary-light shadow-emerald" />
+        {/* 5-Step Progress Bars */}
+        <div className="grid grid-cols-5 gap-1.5 mb-5">
+          <div className="h-1.5 rounded-full bg-primary" />
+          <div className="h-1.5 rounded-full bg-primary" />
+          <div className="h-1.5 rounded-full bg-primary" />
+          <div className="h-1.5 rounded-full bg-primary" />
           <div className="h-1.5 rounded-full bg-surface-variant" />
         </div>
 
-        <h1 className="font-serif text-2xl sm:text-3xl font-bold text-on-surface mb-1">
+        <h1 className="font-serif text-2xl font-bold text-on-surface mb-1">
           Career, Mahr & Intent
         </h1>
-        <p className="text-xs text-secondary mb-5 leading-relaxed">
-          Define your educational pedigree, financial outlook, and matrimonial timeline.
+        <p className="text-xs text-secondary mb-4 leading-relaxed">
+          Define your educational background, financial outlook, and matrimonial timeline.
         </p>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3.5">
           {/* Education & University */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2.5">
             <div>
-              <label className="block text-xs font-bold text-on-surface mb-1.5">Education Level</label>
+              <label className="block text-xs font-bold text-on-surface mb-1">Education Level</label>
               <select
                 value={education}
                 onChange={(e) => setEducation(e.target.value)}
-                className="w-full bg-surface border border-surface-variant rounded-2xl px-3 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary shadow-2xs font-medium"
+                className="w-full bg-white border border-outline rounded-2xl px-3 py-2.5 text-xs text-on-surface outline-none focus:border-primary shadow-subtle font-medium"
               >
                 {['Bachelors Degree', 'Masters Degree', 'Doctorate / PhD', 'Medical Doctor / MBBS', 'Islamic Scholar / Alimiyyah', 'Diploma / Associate', 'High School'].map(deg => (
                   <option key={deg} value={deg}>{deg}</option>
@@ -110,38 +111,38 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-on-surface mb-1.5">University / College</label>
+              <label className="block text-xs font-bold text-on-surface mb-1">University / College</label>
               <input
                 type="text"
                 value={university}
                 onChange={(e) => setUniversity(e.target.value)}
                 placeholder="e.g. LUMS / Oxford"
-                className="w-full bg-surface border border-surface-variant rounded-2xl px-3 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary shadow-2xs"
+                className="w-full bg-white border border-outline rounded-2xl px-3 py-2.5 text-xs text-on-surface outline-none focus:border-primary shadow-subtle"
               />
             </div>
           </div>
 
           {/* Profession */}
           <div>
-            <label className="block text-xs font-bold text-on-surface mb-1.5">Current Profession / Job Title</label>
+            <label className="block text-xs font-bold text-on-surface mb-1">Current Profession / Job Title</label>
             <input
               type="text"
               required
               value={profession}
               onChange={(e) => setProfession(e.target.value)}
               placeholder="e.g. Senior Software Architect, Doctor, Entrepreneur"
-              className="w-full bg-surface border border-surface-variant rounded-2xl px-4 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary shadow-2xs"
+              className="w-full bg-white border border-outline rounded-2xl px-3.5 py-2.5 text-xs text-on-surface outline-none focus:border-primary shadow-subtle"
             />
           </div>
 
           {/* Work Setup & Income Bracket */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2.5">
             <div>
-              <label className="block text-xs font-bold text-on-surface mb-1.5">Work Setup</label>
+              <label className="block text-xs font-bold text-on-surface mb-1">Work Setup</label>
               <select
                 value={workArrangement}
                 onChange={(e) => setWorkArrangement(e.target.value as any)}
-                className="w-full bg-surface border border-surface-variant rounded-2xl px-3 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary shadow-2xs font-medium"
+                className="w-full bg-white border border-outline rounded-2xl px-3 py-2.5 text-xs text-on-surface outline-none focus:border-primary shadow-subtle font-medium"
               >
                 {[
                   { id: 'remote', label: '💻 Remote / WFH' },
@@ -154,11 +155,11 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-on-surface mb-1.5">Annual Income Bracket</label>
+              <label className="block text-xs font-bold text-on-surface mb-1">Annual Income Bracket</label>
               <select
                 value={incomeBracket}
                 onChange={(e) => setIncomeBracket(e.target.value as any)}
-                className="w-full bg-surface border border-surface-variant rounded-2xl px-3 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary shadow-2xs font-medium"
+                className="w-full bg-white border border-outline rounded-2xl px-3 py-2.5 text-xs text-on-surface outline-none focus:border-primary shadow-subtle font-medium"
               >
                 {[
                   { id: 'under_40k', label: 'Under $40k' },
@@ -175,7 +176,7 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
 
           {/* Hobbies & Passions */}
           <div>
-            <label className="block text-xs font-bold text-on-surface mb-2">Interests & Hobbies</label>
+            <label className="block text-xs font-bold text-on-surface mb-1.5">Interests & Hobbies</label>
             <div className="flex flex-wrap gap-1.5">
               {[
                 '📚 Books & Islamic History',
@@ -196,10 +197,10 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
                       if (isSelected) setHobbies(hobbies.filter(h => h !== tag));
                       else setHobbies([...hobbies, tag]);
                     }}
-                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                    className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
                       isSelected
-                        ? 'border-primary bg-primary text-white shadow-2xs'
-                        : 'border-surface-variant bg-surface text-secondary hover:bg-surface-variant/40'
+                        ? 'border-primary bg-primary text-white shadow-subtle'
+                        : 'border-outline bg-white text-secondary hover:bg-surface-variant'
                     }`}
                   >
                     {tag}
@@ -211,8 +212,8 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
 
           {/* Personality Traits */}
           <div>
-            <label className="block text-xs font-bold text-on-surface mb-2">Personality Traits</label>
-            <div className="flex flex-wrap gap-2">
+            <label className="block text-xs font-bold text-on-surface mb-1.5">Personality Traits</label>
+            <div className="flex flex-wrap gap-1.5">
               {[
                 '🤍 Family-Oriented',
                 '🌿 Calm & Patient',
@@ -230,10 +231,10 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
                       if (isSelected) setPersonalityTraits(personalityTraits.filter(t => t !== trait));
                       else setPersonalityTraits([...personalityTraits, trait]);
                     }}
-                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                    className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
                       isSelected
-                        ? 'border-accent-gold bg-accent-gold text-on-surface font-bold shadow-2xs'
-                        : 'border-surface-variant bg-surface text-secondary hover:bg-surface-variant/40'
+                        ? 'border-pastel-amber-border bg-pastel-amber text-pastel-amber-text font-bold shadow-subtle'
+                        : 'border-outline bg-white text-secondary hover:bg-surface-variant'
                     }`}
                   >
                     {trait}
@@ -245,7 +246,7 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
 
           {/* Target Nikah Timeline */}
           <div>
-            <label className="block text-xs font-bold text-on-surface mb-2">Target Nikah Timeline</label>
+            <label className="block text-xs font-bold text-on-surface mb-1.5">Target Nikah Timeline</label>
             <div className="grid grid-cols-3 gap-2">
               {[
                 { id: '1_to_3_months', label: '1–3 Months' },
@@ -256,10 +257,10 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
                   key={opt.id}
                   type="button"
                   onClick={() => setTimeline(opt.id)}
-                  className={`p-2.5 rounded-xl border text-[11px] font-semibold text-center transition-all ${
+                  className={`p-2 rounded-xl border text-[11px] font-semibold text-center transition-all ${
                     timeline === opt.id
-                      ? 'border-primary bg-primary/10 text-primary font-bold shadow-2xs'
-                      : 'border-surface-variant bg-surface text-secondary hover:bg-surface-variant/40'
+                      ? 'border-primary bg-pastel-rose text-primary font-bold shadow-subtle'
+                      : 'border-outline bg-white text-secondary hover:bg-surface-variant'
                   }`}
                 >
                   {opt.label}
@@ -270,8 +271,8 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
 
           {/* Mahr Philosophy */}
           <div>
-            <label className="block text-xs font-bold text-on-surface mb-2">Mahr Philosophy</label>
-            <div className="grid grid-cols-2 gap-2.5">
+            <label className="block text-xs font-bold text-on-surface mb-1.5">Mahr Philosophy</label>
+            <div className="grid grid-cols-2 gap-2">
               {[
                 { id: 'sunnah_modest', label: 'Sunnah Modest Mahr', desc: 'Simple, unburdensome Mahr upon Sunnah' },
                 { id: 'mutual_agreement', label: 'Mutual Agreement', desc: 'Discussed & agreed respectfully with Wali' }
@@ -280,10 +281,10 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
                   key={opt.id}
                   type="button"
                   onClick={() => setMahrPhilosophy(opt.id)}
-                  className={`p-3.5 rounded-2xl text-left border transition-all ${
+                  className={`p-3 rounded-2xl text-left border transition-all ${
                     mahrPhilosophy === opt.id
-                      ? 'border-primary bg-primary/10 text-on-surface shadow-xs ring-1 ring-primary'
-                      : 'border-surface-variant bg-surface text-secondary hover:bg-surface-variant/40'
+                      ? 'border-primary bg-pastel-mint text-on-surface shadow-subtle'
+                      : 'border-outline bg-white text-secondary hover:bg-surface-variant'
                   }`}
                 >
                   <strong className="text-xs block text-on-surface font-bold">{opt.label}</strong>
@@ -295,7 +296,7 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
 
           {/* Children Intent */}
           <div>
-            <label className="block text-xs font-bold text-on-surface mb-2">Children & Family Plans</label>
+            <label className="block text-xs font-bold text-on-surface mb-1.5">Children & Family Plans</label>
             <div className="grid grid-cols-3 gap-2">
               {[
                 { id: 'desires_children', label: '👶 Desires Kids' },
@@ -308,8 +309,8 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
                   onClick={() => setChildrenDesire(opt.id)}
                   className={`py-2 px-1 rounded-xl border text-[11px] font-semibold text-center transition-all ${
                     childrenDesire === opt.id
-                      ? 'border-primary bg-primary/10 text-primary font-bold shadow-2xs'
-                      : 'border-surface-variant bg-surface text-secondary hover:bg-surface-variant/40'
+                      ? 'border-primary bg-pastel-rose text-primary font-bold shadow-subtle'
+                      : 'border-outline bg-white text-secondary hover:bg-surface-variant'
                   }`}
                 >
                   {opt.label}
@@ -320,7 +321,7 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
 
           {/* About My Deen & Bio Essay */}
           <div>
-            <label className="block text-xs font-bold text-on-surface mb-1.5">
+            <label className="block text-xs font-bold text-on-surface mb-1">
               About My Deen & Personal Reflections
             </label>
             <textarea
@@ -328,23 +329,25 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               placeholder="Share what practicing Islam means in your daily life, your character values, and what kind of partner you hope to build a home with..."
-              className="w-full bg-surface border border-surface-variant rounded-2xl p-3.5 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary leading-relaxed shadow-2xs"
+              className="w-full bg-white border border-outline rounded-2xl p-3 text-xs text-on-surface outline-none focus:border-primary leading-relaxed shadow-subtle"
             />
           </div>
         </form>
       </div>
 
       {/* Bottom Action */}
-      <div className="pt-6">
+      <div className="pt-4">
         <button
           onClick={handleSubmit}
-          className="w-full py-4 rounded-full bg-gradient-to-r from-primary via-primary to-primary-light text-white font-sans text-xs font-bold shadow-emerald hover:brightness-110 active:scale-98 transition-all flex items-center justify-center gap-2"
+          className="w-full py-3 rounded-full bg-primary text-white font-sans text-xs font-bold shadow-brand hover:bg-primary-dark active:scale-98 transition-all flex items-center justify-center gap-1.5"
         >
           <span>Continue to Photos & Modesty</span>
-          <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+          <ArrowRight className="w-4 h-4" />
         </button>
       </div>
     </div>
   );
 };
+export default YourIntentScreen;
+
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { ArrowLeft, Smartphone, Mail, Eye, EyeOff, ArrowRight, AlertCircle } from 'lucide-react';
 import { setupRecaptcha, sendPhoneOtp, formatE164Phone } from '../services/firebase';
 import { API_BASE } from '../services/dbService';
 import type { ConfirmationResult, RecaptchaVerifier } from 'firebase/auth';
@@ -212,62 +213,60 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
   };
 
   return (
-    <div className="w-full h-full flex flex-col justify-between p-6 bg-background relative overflow-y-auto font-sans select-none">
+    <div className="w-full h-full flex flex-col justify-between p-6 bg-white relative overflow-y-auto font-sans select-none text-on-surface">
       {/* Invisible reCAPTCHA container */}
       <div id="recaptcha-verifier-div"></div>
 
       {/* Top Header */}
-      <header className="flex items-center justify-between w-full pt-2">
+      <header className="flex items-center justify-between w-full pt-1">
         <button
           onClick={onBack}
-          className="w-10 h-10 flex items-center justify-center rounded-full bg-surface border border-surface-variant/80 text-on-surface hover:bg-surface-variant transition-colors shadow-2xs"
+          className="w-9 h-9 flex items-center justify-center rounded-full bg-surface-variant border border-outline text-on-surface hover:bg-outline-variant transition-colors"
         >
-          <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+          <ArrowLeft className="w-4 h-4" />
         </button>
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center p-0.5">
-            <img src="/icon.svg" alt="Qurab" className="w-full h-full object-contain" />
-          </div>
-          <span className="font-serif text-base font-bold text-on-surface flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5">
+          <img src="/icon.svg" alt="Qurab" className="w-5 h-5 object-contain" />
+          <span className="font-serif text-sm font-bold text-on-surface flex items-center gap-1">
             <span>Qurab</span>
             <span className="font-arabic text-primary text-xs font-bold">قُرب</span>
           </span>
         </div>
-        <div className="w-10" />
+        <div className="w-9" />
       </header>
 
       {/* Main Auth Form */}
-      <main className="flex-1 flex flex-col justify-center my-4 max-w-sm mx-auto w-full">
+      <main className="flex-1 flex flex-col justify-center my-3 max-w-sm mx-auto w-full">
         <div className="flex flex-col items-center text-center animate-fade-in">
           {/* Logo Badge */}
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-surface to-surface-variant border border-surface-variant flex items-center justify-center mb-3.5 shadow-card p-3">
+          <div className="w-12 h-12 rounded-2xl bg-pastel-rose border border-pastel-rose-border flex items-center justify-center mb-3 shadow-subtle p-2">
             <img src="/icon.svg" alt="Qurab" className="w-full h-full object-contain" />
           </div>
 
-          <h1 className="font-serif text-2xl sm:text-3xl font-bold text-on-surface mb-1">
+          <h1 className="font-serif text-2xl font-bold text-on-surface mb-1">
             {authMethod === 'phone' ? 'Phone Verification' : tab === 'signup' ? 'Create Your Account' : 'Welcome Back'}
           </h1>
-          <p className="text-xs text-secondary mb-5 leading-relaxed max-w-[280px]">
+          <p className="text-xs text-secondary mb-4 leading-relaxed max-w-[280px]">
             {authMethod === 'phone' 
               ? 'Receive an instant SMS verification code on your mobile phone.'
               : 'Sign in to access your halal matrimonial connections.'}
           </p>
 
           {/* Auth Method Switcher (Phone SMS vs Email) */}
-          <div className="w-full bg-surface-variant/70 p-1 rounded-2xl flex mb-5 border border-surface-variant/80 shadow-2xs">
+          <div className="w-full bg-surface-variant p-1 rounded-2xl flex mb-4 border border-outline">
             <button
               type="button"
               onClick={() => {
                 setAuthMethod('phone');
                 setErrorMsg('');
               }}
-              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 ${
+              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all duration-150 flex items-center justify-center gap-1.5 ${
                 authMethod === 'phone' 
-                  ? 'bg-surface text-primary shadow-xs border border-surface-variant/40' 
+                  ? 'bg-white text-primary shadow-subtle' 
                   : 'text-secondary hover:text-on-surface'
               }`}
             >
-              <span className="material-symbols-outlined text-[16px]">smartphone</span>
+              <Smartphone className="w-3.5 h-3.5" />
               <span>Phone SMS</span>
             </button>
             <button
@@ -276,20 +275,20 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
                 setAuthMethod('email');
                 setErrorMsg('');
               }}
-              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 ${
+              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all duration-150 flex items-center justify-center gap-1.5 ${
                 authMethod === 'email' 
-                  ? 'bg-surface text-primary shadow-xs border border-surface-variant/40' 
+                  ? 'bg-white text-primary shadow-subtle' 
                   : 'text-secondary hover:text-on-surface'
               }`}
             >
-              <span className="material-symbols-outlined text-[16px]">mail</span>
+              <Mail className="w-3.5 h-3.5" />
               <span>Email & Password</span>
             </button>
           </div>
 
           {errorMsg && (
-            <div className="w-full mb-4 p-3 rounded-2xl bg-error/10 border border-error/25 text-error text-xs font-semibold text-left flex items-start gap-2 animate-fade-in">
-              <span className="material-symbols-outlined text-base shrink-0">error</span>
+            <div className="w-full mb-3 p-3 rounded-2xl bg-pastel-rose border border-pastel-rose-border text-primary text-xs font-semibold text-left flex items-start gap-2 animate-fade-in">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-primary" />
               <span>{errorMsg}</span>
             </div>
           )}
@@ -298,20 +297,20 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
           {authMethod === 'phone' && (
             <div className="w-full">
               {phoneStep === 'enter_phone' ? (
-                <form onSubmit={handleSendPhoneOtp} className="w-full space-y-4 text-left">
+                <form onSubmit={handleSendPhoneOtp} className="w-full space-y-3 text-left">
                   <div>
-                    <label className="block text-xs font-bold text-on-surface mb-1.5">Full Name</label>
+                    <label className="block text-xs font-bold text-on-surface mb-1">Full Name</label>
                     <input
                       type="text"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       placeholder="e.g. Bilal Ahmad"
-                      className="w-full bg-surface border border-surface-variant rounded-2xl px-4 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all shadow-2xs placeholder:text-secondary/70"
+                      className="w-full bg-surface-variant/40 border border-outline rounded-2xl px-4 py-2.5 text-xs text-on-surface outline-none focus:bg-white focus:border-primary transition-all placeholder:text-secondary/70"
                     />
                   </div>
 
                   <div>
-                    <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center justify-between mb-1">
                       <label className="block text-xs font-bold text-on-surface">Mobile Phone Number</label>
                       {phoneNumber && (
                         <span className="text-[10px] text-primary font-mono font-bold">
@@ -323,7 +322,7 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
                       <select
                         value={countryCode}
                         onChange={(e) => setCountryCode(e.target.value)}
-                        className="bg-surface border border-surface-variant rounded-2xl px-2.5 py-3 text-xs font-bold text-on-surface outline-none focus:ring-2 focus:ring-primary shrink-0 shadow-2xs"
+                        className="bg-surface-variant/40 border border-outline rounded-2xl px-2.5 py-2.5 text-xs font-bold text-on-surface outline-none focus:bg-white focus:border-primary shrink-0"
                       >
                         <option value="+92">🇵🇰 +92 (PK)</option>
                         <option value="+44">🇬🇧 +44 (UK)</option>
@@ -339,10 +338,10 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
                         value={phoneNumber}
                         onChange={(e) => setPhoneNumber(e.target.value)}
                         placeholder="300 1234567"
-                        className="flex-1 bg-surface border border-surface-variant rounded-2xl px-4 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary font-mono shadow-2xs placeholder:text-secondary/70"
+                        className="flex-1 bg-surface-variant/40 border border-outline rounded-2xl px-4 py-2.5 text-xs text-on-surface outline-none focus:bg-white focus:border-primary font-mono placeholder:text-secondary/70"
                       />
                     </div>
-                    <p className="text-[10px] text-secondary mt-1.5">
+                    <p className="text-[10px] text-secondary mt-1">
                       Enter without leading 0 (e.g. <strong>3001234567</strong> for Pakistan)
                     </p>
                   </div>
@@ -350,37 +349,37 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full py-4 rounded-full bg-gradient-to-r from-primary via-primary to-primary-light text-white font-sans text-xs font-bold shadow-emerald hover:brightness-110 active:scale-98 disabled:opacity-50 transition-all flex items-center justify-center gap-2 mt-4"
+                    className="w-full py-3.5 rounded-full bg-primary text-white font-sans text-xs font-bold shadow-brand hover:bg-primary-dark active:scale-98 disabled:opacity-50 transition-all flex items-center justify-center gap-2 mt-3"
                   >
                     <span>{isLoading ? 'Sending SMS Code...' : 'Send 6-Digit SMS OTP'}</span>
-                    <span className="material-symbols-outlined text-[18px]">sms</span>
+                    <ArrowRight className="w-4 h-4" />
                   </button>
                 </form>
               ) : (
-                <form onSubmit={handleVerifyPhoneOtp} className="w-full space-y-4 text-left animate-fade-in">
-                  <div className="bg-primary/10 p-3 rounded-2xl text-xs text-primary font-semibold flex items-center justify-between border border-primary/20">
+                <form onSubmit={handleVerifyPhoneOtp} className="w-full space-y-3 text-left animate-fade-in">
+                  <div className="bg-pastel-mint p-3 rounded-2xl text-xs text-pastel-mint-text font-semibold flex items-center justify-between border border-pastel-mint-border">
                     <span>Sent to: <strong>{formatE164Phone(countryCode, phoneNumber)}</strong></span>
                     <button
                       type="button"
                       onClick={() => setPhoneStep('enter_phone')}
-                      className="text-[11px] underline font-bold hover:text-primary-dark"
+                      className="text-[11px] underline font-bold"
                     >
                       Edit
                     </button>
                   </div>
 
                   {d1OtpPreview && (
-                    <div className="bg-gradient-to-r from-primary/15 via-surface to-accent-gold-light/40 border border-primary/30 p-3.5 rounded-2xl text-center space-y-1.5 shadow-2xs">
-                      <span className="text-[10px] text-secondary uppercase font-bold tracking-wider block">
-                        Verification Code
+                    <div className="bg-pastel-amber border border-pastel-amber-border p-3.5 rounded-2xl text-center space-y-1">
+                      <span className="text-[10px] text-pastel-amber-text uppercase font-bold tracking-wider block">
+                        Verification Code Preview
                       </span>
-                      <span className="font-mono text-2xl font-bold text-primary tracking-widest block">
+                      <span className="font-mono text-2xl font-bold text-pastel-amber-text tracking-widest block">
                         {d1OtpPreview}
                       </span>
                       <button
                         type="button"
                         onClick={() => setOtpCode(d1OtpPreview)}
-                        className="text-[11px] text-primary font-bold underline hover:text-primary-dark"
+                        className="text-[11px] text-primary font-bold underline"
                       >
                         Auto-Fill Code ({d1OtpPreview})
                       </button>
@@ -388,7 +387,7 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
                   )}
 
                   <div>
-                    <label className="block text-xs font-bold text-on-surface mb-1.5 text-center">
+                    <label className="block text-xs font-bold text-on-surface mb-1 text-center">
                       Enter 6-Digit Code
                     </label>
                     <input
@@ -398,17 +397,17 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
                       value={otpCode}
                       onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
                       placeholder="123456"
-                      className="w-full bg-surface border border-surface-variant rounded-2xl px-4 py-3.5 text-center text-xl font-mono tracking-widest text-on-surface outline-none focus:ring-2 focus:ring-primary shadow-2xs"
+                      className="w-full bg-surface-variant/40 border border-outline rounded-2xl px-4 py-3 text-center text-xl font-mono tracking-widest text-on-surface outline-none focus:bg-white focus:border-primary"
                     />
                   </div>
 
                   <button
                     type="submit"
                     disabled={isLoading || otpCode.length < 6}
-                    className="w-full py-4 rounded-full bg-gradient-to-r from-primary via-primary to-primary-light text-white font-sans text-xs font-bold shadow-emerald hover:brightness-110 active:scale-98 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                    className="w-full py-3.5 rounded-full bg-primary text-white font-sans text-xs font-bold shadow-brand hover:bg-primary-dark active:scale-98 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                   >
                     <span>{isLoading ? 'Verifying...' : 'Verify OTP & Continue'}</span>
-                    <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                    <ArrowRight className="w-4 h-4" />
                   </button>
                 </form>
               )}
@@ -419,7 +418,7 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
           {authMethod === 'email' && (
             <div className="w-full">
               {/* Tab Switcher (Signup vs Login) */}
-              <div className="w-full bg-surface-variant/70 p-1 rounded-2xl flex mb-5 border border-surface-variant/80">
+              <div className="w-full bg-surface-variant p-1 rounded-2xl flex mb-4 border border-outline">
                 <button
                   type="button"
                   onClick={() => {
@@ -427,7 +426,7 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
                     setErrorMsg('');
                   }}
                   className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
-                    tab === 'signup' ? 'bg-surface text-primary shadow-2xs' : 'text-secondary hover:text-on-surface'
+                    tab === 'signup' ? 'bg-white text-primary shadow-subtle' : 'text-secondary hover:text-on-surface'
                   }`}
                 >
                   Create Account
@@ -439,42 +438,42 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
                     setErrorMsg('');
                   }}
                   className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
-                    tab === 'login' ? 'bg-surface text-primary shadow-2xs' : 'text-secondary hover:text-on-surface'
+                    tab === 'login' ? 'bg-white text-primary shadow-subtle' : 'text-secondary hover:text-on-surface'
                   }`}
                 >
                   Sign In
                 </button>
               </div>
 
-              <form onSubmit={handleEmailSubmit} className="w-full space-y-3.5 text-left">
+              <form onSubmit={handleEmailSubmit} className="w-full space-y-3 text-left">
                 {tab === 'signup' && (
                   <div>
-                    <label className="block text-xs font-bold text-on-surface mb-1.5">Full Name</label>
+                    <label className="block text-xs font-bold text-on-surface mb-1">Full Name</label>
                     <input
                       type="text"
                       required
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       placeholder="e.g. Tariq Hussain"
-                      className="w-full bg-surface border border-surface-variant rounded-2xl px-4 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary shadow-2xs"
+                      className="w-full bg-surface-variant/40 border border-outline rounded-2xl px-4 py-2.5 text-xs text-on-surface outline-none focus:bg-white focus:border-primary"
                     />
                   </div>
                 )}
 
                 <div>
-                  <label className="block text-xs font-bold text-on-surface mb-1.5">Email Address</label>
+                  <label className="block text-xs font-bold text-on-surface mb-1">Email Address</label>
                   <input
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@example.com"
-                    className="w-full bg-surface border border-surface-variant rounded-2xl px-4 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary shadow-2xs"
+                    className="w-full bg-surface-variant/40 border border-outline rounded-2xl px-4 py-2.5 text-xs text-on-surface outline-none focus:bg-white focus:border-primary"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-on-surface mb-1.5">Password</label>
+                  <label className="block text-xs font-bold text-on-surface mb-1">Password</label>
                   <div className="relative">
                     <input
                       type={showPassword ? 'text' : 'password'}
@@ -482,30 +481,28 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full bg-surface border border-surface-variant rounded-2xl px-4 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary pr-10 shadow-2xs"
+                      className="w-full bg-surface-variant/40 border border-outline rounded-2xl px-4 py-2.5 text-xs text-on-surface outline-none focus:bg-white focus:border-primary pr-10"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-3 text-secondary hover:text-on-surface"
+                      className="absolute right-3 top-2.5 text-secondary hover:text-on-surface"
                     >
-                      <span className="material-symbols-outlined text-[18px]">
-                        {showPassword ? 'visibility_off' : 'visibility'}
-                      </span>
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
 
                 {tab === 'signup' && (
                   <div>
-                    <label className="block text-xs font-bold text-on-surface mb-1.5">Confirm Password</label>
+                    <label className="block text-xs font-bold text-on-surface mb-1">Confirm Password</label>
                     <input
                       type="password"
                       required
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full bg-surface border border-surface-variant rounded-2xl px-4 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary shadow-2xs"
+                      className="w-full bg-surface-variant/40 border border-outline rounded-2xl px-4 py-2.5 text-xs text-on-surface outline-none focus:bg-white focus:border-primary"
                     />
                   </div>
                 )}
@@ -513,7 +510,7 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full py-4 rounded-full bg-gradient-to-r from-primary via-primary to-primary-light text-white font-sans text-xs font-bold shadow-emerald hover:brightness-110 active:scale-98 disabled:opacity-50 transition-all flex items-center justify-center gap-2 mt-4"
+                  className="w-full py-3.5 rounded-full bg-primary text-white font-sans text-xs font-bold shadow-brand hover:bg-primary-dark active:scale-98 disabled:opacity-50 transition-all flex items-center justify-center gap-2 mt-3"
                 >
                   <span>
                     {isLoading 
@@ -522,7 +519,7 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
                         ? 'Sign Up with Email' 
                         : 'Sign In'}
                   </span>
-                  <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                  <ArrowRight className="w-4 h-4" />
                 </button>
               </form>
             </div>
@@ -531,10 +528,12 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
       </main>
 
       {/* Footer */}
-      <footer className="w-full text-center py-2 text-[10px] text-secondary">
-        By continuing, you agree to Qurab's <span className="underline font-medium">Halal Conduct & Privacy Policy</span>.
+      <footer className="w-full text-center py-1 text-[10px] text-secondary">
+        By continuing, you agree to Qurab's <span className="underline font-medium">Halal Code & Privacy Policy</span>.
       </footer>
     </div>
   );
 };
+export default AuthScreen;
+
 

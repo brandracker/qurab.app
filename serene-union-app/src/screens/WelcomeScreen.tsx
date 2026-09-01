@@ -1,61 +1,55 @@
 import React from 'react';
+import { Sparkles, ShieldCheck, EyeOff, ArrowRight } from 'lucide-react';
 
 interface Props {
   onGetStarted: () => void;
-  onLogin: () => void;
+  onLogin?: () => void;
 }
 
 export const WelcomeScreen: React.FC<Props> = ({ onGetStarted, onLogin }) => {
   return (
-    <main className="w-full h-full flex flex-col justify-between relative px-6 py-6 bg-background text-on-background overflow-y-auto font-sans select-none">
+    <main className="w-full h-full flex flex-col justify-between px-6 py-6 bg-white text-on-surface overflow-y-auto font-sans select-none">
       
-      {/* Top Gold Foil Platform Badge */}
-      <header className="w-full pt-3 flex flex-col items-center">
-        <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-accent-gold-light/80 border border-accent-gold/40 text-accent-gold-dark text-[11px] font-bold tracking-wider uppercase shadow-2xs">
-          <span className="material-symbols-outlined text-[13px] text-accent-gold-dark fill">auto_awesome</span>
+      {/* Top Header Badge */}
+      <header className="w-full pt-2 flex flex-col items-center">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-pastel-rose border border-pastel-rose-border text-primary text-[11px] font-bold tracking-wide uppercase">
+          <Sparkles className="w-3 h-3 text-primary" />
           <span>Pure Halal Matrimony</span>
         </div>
       </header>
 
-      {/* Center Hero: Glowing Logo Halo & Typography */}
-      <div className="flex-1 flex flex-col items-center justify-center text-center my-4 space-y-5 animate-fade-in">
+      {/* Center Hero: Official Logo & Clean Typography */}
+      <div className="flex-1 flex flex-col items-center justify-center text-center my-3 space-y-5 animate-fade-in">
         
-        {/* Glowing Logo Container */}
-        <div className="relative group flex items-center justify-center">
-          {/* Animated Ambient Light Rings */}
-          <div className="absolute inset-0 bg-primary/25 rounded-full blur-2xl scale-125 animate-pulse" style={{ animationDuration: '4s' }} />
-          <div className="absolute inset-0 bg-accent-gold/20 rounded-full blur-xl scale-110" />
-          
-          {/* Emblem Disk */}
-          <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-[32px] bg-gradient-to-br from-surface to-surface-variant p-6 shadow-[0_15px_35px_rgba(13,92,58,0.18)] border border-white/80 z-10 flex items-center justify-center transition-transform duration-500 hover:scale-105">
-            <img
-              alt="Qurab Logo"
-              className="w-full h-full object-contain filter drop-shadow-md"
-              src="/icon.svg"
-            />
-          </div>
+        {/* Logo Container */}
+        <div className="flex items-center justify-center p-3">
+          <img
+            alt="Qurab Logo"
+            className="w-24 h-24 sm:w-28 sm:h-28 object-contain"
+            src="/icon.svg"
+          />
         </div>
 
         {/* Title & Arabic Calligraphy */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-center gap-2">
-            <h1 className="font-serif text-4xl sm:text-5xl font-bold text-on-surface tracking-tight">
+            <h1 className="font-serif text-3xl sm:text-4xl font-bold text-on-surface tracking-tight">
               Qurab
             </h1>
-            <span className="font-arabic text-primary text-3xl font-bold">
+            <span className="font-arabic text-primary text-2xl font-bold">
               قُرب
             </span>
           </div>
-          <p className="font-serif text-sm sm:text-base text-secondary italic max-w-xs mx-auto leading-relaxed">
-            Finding your spouse, the pure halal way — with Barakah and dignity.
+          <p className="font-sans text-xs sm:text-sm text-secondary max-w-xs mx-auto leading-relaxed">
+            Finding your righteous spouse the pure halal way — with Barakah, respect & family involvement.
           </p>
         </div>
 
-        {/* 3 Halal Trust Highlights */}
+        {/* 2 Halal Trust Highlights (Pastel Colors, Lucide Icons) */}
         <div className="w-full max-w-xs space-y-2 pt-2 text-left">
-          <div className="flex items-center gap-3 p-2.5 rounded-2xl bg-surface border border-surface-variant/60 shadow-card">
-            <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-[18px]">verified_user</span>
+          <div className="flex items-center gap-3 p-3 rounded-2xl bg-pastel-mint border border-pastel-mint-border shadow-subtle">
+            <div className="w-8 h-8 rounded-xl bg-white text-pastel-mint-text flex items-center justify-center shrink-0 shadow-subtle">
+              <ShieldCheck className="w-4 h-4 text-pastel-mint-text" />
             </div>
             <div>
               <h4 className="text-xs font-bold text-on-surface">100% Wali & Chaperone Friendly</h4>
@@ -63,9 +57,9 @@ export const WelcomeScreen: React.FC<Props> = ({ onGetStarted, onLogin }) => {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 p-2.5 rounded-2xl bg-surface border border-surface-variant/60 shadow-card">
-            <div className="w-8 h-8 rounded-xl bg-accent-gold/15 text-accent-gold-dark flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-[18px]">shield</span>
+          <div className="flex items-center gap-3 p-3 rounded-2xl bg-pastel-rose border border-pastel-rose-border shadow-subtle">
+            <div className="w-8 h-8 rounded-xl bg-white text-primary flex items-center justify-center shrink-0 shadow-subtle">
+              <EyeOff className="w-4 h-4 text-primary" />
             </div>
             <div>
               <h4 className="text-xs font-bold text-on-surface">Modesty Shield Protection</h4>
@@ -75,20 +69,19 @@ export const WelcomeScreen: React.FC<Props> = ({ onGetStarted, onLogin }) => {
         </div>
       </div>
 
-      {/* Call to Action Buttons */}
+      {/* Call to Action Buttons (Clean Solid #FF2560, Zero Gradients) */}
       <div className="w-full pb-2 space-y-3">
         <button
           onClick={onGetStarted}
-          className="w-full bg-gradient-to-r from-primary via-primary to-primary-light text-white font-sans font-bold text-sm py-4 rounded-full flex items-center justify-center gap-2 shadow-emerald hover:brightness-110 active:scale-98 transition-all duration-300 relative overflow-hidden group"
+          className="w-full bg-primary text-white font-sans font-bold text-xs sm:text-sm py-4 rounded-full flex items-center justify-center gap-2 shadow-brand hover:bg-primary-dark active:scale-98 transition-all duration-150"
         >
-          <span className="gold-shimmer absolute inset-0 opacity-40 pointer-events-none" />
           <span>Begin Halal Journey</span>
-          <span className="material-symbols-outlined text-[18px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
+          <ArrowRight className="w-4 h-4" />
         </button>
 
         <div className="text-center">
           <button
-            onClick={onLogin}
+            onClick={onLogin || onGetStarted}
             className="font-sans text-xs text-secondary hover:text-primary font-semibold transition-colors py-1"
           >
             Already a member? <span className="text-primary font-bold underline">Sign In</span>
@@ -99,4 +92,5 @@ export const WelcomeScreen: React.FC<Props> = ({ onGetStarted, onLogin }) => {
   );
 };
 export default WelcomeScreen;
+
 

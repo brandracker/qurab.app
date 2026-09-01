@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { ArrowLeft, Users, CheckCheck, Send, Archive, Heart, Sparkles, MessageCircle } from 'lucide-react';
 import type { Conversation, ChatMessage } from '../types';
 import { dbService, API_BASE } from '../services/dbService';
 
@@ -150,26 +151,26 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
   // If no active conversation, show conversation list
   if (!activeConv) {
     return (
-      <div className="flex-1 flex flex-col h-full bg-background font-sans select-none pb-24">
-        <header className="sticky top-0 bg-surface/90 backdrop-blur-xl px-5 py-3 border-b border-surface-variant/40 flex items-center justify-between z-20 shadow-2xs">
+      <div className="flex-1 flex flex-col h-full bg-background font-sans select-none pb-24 text-on-surface">
+        <header className="sticky top-0 bg-white px-4 py-3 border-b border-outline flex items-center justify-between z-20 shadow-subtle">
           <div>
-            <h1 className="font-serif text-2xl font-bold text-on-surface flex items-center gap-2">
+            <h1 className="font-serif text-xl font-bold text-on-surface flex items-center gap-1.5">
               <span>Messages & Chaperone</span>
-              <span className="font-arabic text-primary text-base font-bold">قُرب</span>
+              <span className="font-arabic text-primary text-sm font-bold">قُرب</span>
             </h1>
-            <p className="text-xs text-secondary mt-0.5">Respectful & Intentional Matrimonial Discussions</p>
+            <p className="text-[11px] text-secondary mt-0.5">Respectful & Intentional Matrimonial Discussions</p>
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto divide-y divide-surface-variant/40 p-3 space-y-1.5">
+        <div className="flex-1 overflow-y-auto divide-y divide-outline p-3 space-y-1">
           {conversations.length > 0 ? (
             conversations.map(conv => (
               <div
                 key={conv.id}
                 onClick={() => setActiveConvId(conv.id)}
-                className="p-3.5 bg-surface rounded-2xl border border-surface-variant/80 hover:border-primary/40 hover:shadow-card flex items-center gap-3.5 cursor-pointer transition-all shadow-2xs group"
+                className="p-3 bg-white rounded-2xl border border-outline hover:border-primary flex items-center gap-3 cursor-pointer transition-all shadow-subtle group"
               >
-                <div className="relative w-12 h-12 rounded-full overflow-hidden shrink-0 border-2 border-primary/40 bg-surface-variant flex items-center justify-center group-hover:scale-105 transition-transform">
+                <div className="relative w-11 h-11 rounded-full overflow-hidden shrink-0 border border-primary bg-surface-variant flex items-center justify-center group-hover:scale-105 transition-transform">
                   {conv.otherUser.photos && conv.otherUser.photos.length > 0 ? (
                     <img
                       src={conv.otherUser.photos[0]}
@@ -177,23 +178,23 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <span className="font-serif text-base font-bold text-primary">
+                    <span className="font-serif text-sm font-bold text-primary">
                       {conv.otherUser.fullName.charAt(0)}
                     </span>
                   )}
-                  <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-surface" />
+                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border border-white" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-0.5">
-                    <h3 className="font-serif font-bold text-sm text-on-surface truncate group-hover:text-primary transition-colors">
+                    <h3 className="font-serif font-bold text-xs text-on-surface truncate group-hover:text-primary transition-colors">
                       {conv.otherUser.fullName}
                     </h3>
-                    <span className="text-[10px] text-secondary font-medium">{conv.lastMessageTime}</span>
+                    <span className="text-[10px] text-secondary">{conv.lastMessageTime}</span>
                   </div>
-                  <p className="text-xs text-on-surface-variant truncate">{conv.lastMessageText || 'Tap to start conversation...'}</p>
+                  <p className="text-xs text-secondary truncate">{conv.lastMessageText || 'Tap to start conversation...'}</p>
                   {conv.waliName && (
-                    <span className="inline-flex items-center gap-1 text-[9px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full mt-1.5 border border-primary/20">
-                      <span className="material-symbols-outlined text-[11px]">supervisor_account</span>
+                    <span className="inline-flex items-center gap-1 text-[9px] font-bold text-pastel-mint-text bg-pastel-mint px-2 py-0.2 rounded-full mt-1 border border-pastel-mint-border">
+                      <Users className="w-3 h-3 text-pastel-mint-text" />
                       Wali Observed
                     </span>
                   )}
@@ -201,9 +202,9 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
               </div>
             ))
           ) : (
-            <div className="flex flex-col items-center justify-center py-24 text-center px-4 bg-surface rounded-3xl border border-surface-variant/80 my-8 shadow-card">
-              <div className="w-14 h-14 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-3">
-                <span className="material-symbols-outlined text-3xl">chat</span>
+            <div className="flex flex-col items-center justify-center py-20 text-center px-4 bg-white rounded-3xl border border-outline my-6 shadow-card">
+              <div className="w-12 h-12 rounded-full bg-pastel-rose text-primary flex items-center justify-center mb-3">
+                <MessageCircle className="w-6 h-6 text-primary" />
               </div>
               <h3 className="font-serif text-base font-bold text-on-surface">No Conversations Yet</h3>
               <p className="text-xs text-secondary max-w-xs mt-1 leading-relaxed">
@@ -211,7 +212,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
               </p>
               <button
                 onClick={onBackToDiscover}
-                className="mt-4 px-6 py-2.5 rounded-full bg-gradient-to-r from-primary via-primary to-primary-light text-white text-xs font-bold shadow-emerald hover:brightness-110 active:scale-98 transition-all"
+                className="mt-4 px-5 py-2.5 rounded-full bg-primary text-white text-xs font-bold shadow-brand hover:bg-primary-dark active:scale-98 transition-all"
               >
                 Go to Discover
               </button>
@@ -223,17 +224,17 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden font-sans select-none pb-20">
+    <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden font-sans select-none pb-20 text-on-surface">
       {/* Chat Top Header */}
-      <header className="sticky top-0 bg-surface/90 backdrop-blur-xl px-4 py-2.5 border-b border-surface-variant/40 flex items-center justify-between z-20 shadow-2xs">
-        <div className="flex items-center gap-2.5">
+      <header className="sticky top-0 bg-white px-3.5 py-2 border-b border-outline flex items-center justify-between z-20 shadow-subtle">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setActiveConvId(null)}
-            className="w-9 h-9 rounded-full bg-surface border border-surface-variant/80 flex items-center justify-center text-on-surface hover:bg-surface-variant transition-colors shadow-2xs"
+            className="w-8 h-8 rounded-full bg-surface-variant border border-outline flex items-center justify-center text-on-surface hover:bg-outline transition-colors"
           >
-            <span className="material-symbols-outlined text-lg">arrow_back</span>
+            <ArrowLeft className="w-4 h-4" />
           </button>
-          <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-primary/30 bg-surface-variant flex items-center justify-center">
+          <div className="relative w-9 h-9 rounded-full overflow-hidden border border-primary bg-surface-variant flex items-center justify-center">
             {activeConv.otherUser.photos && activeConv.otherUser.photos.length > 0 ? (
               <img
                 src={activeConv.otherUser.photos[0]}
@@ -241,15 +242,15 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                 className="w-full h-full object-cover"
               />
             ) : (
-              <span className="font-serif text-sm font-bold text-primary">
+              <span className="font-serif text-xs font-bold text-primary">
                 {activeConv.otherUser.fullName.charAt(0)}
               </span>
             )}
           </div>
           <div>
-            <h2 className="font-serif font-bold text-sm text-on-surface flex items-center gap-1.5">
+            <h2 className="font-serif font-bold text-xs text-on-surface flex items-center gap-1">
               <span>{activeConv.otherUser.fullName.split(' ')[0]}</span>
-              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block ring-2 ring-emerald-200" />
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
             </h2>
             <p className="text-[10px] text-secondary">{activeConv.otherUser.location || 'Global'}</p>
           </div>
@@ -257,33 +258,34 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
 
         <button
           onClick={() => setShowRespectfulCloseModal(true)}
-          className="text-[11px] text-secondary hover:text-error px-3 py-1 rounded-full border border-surface-variant hover:border-error/40 transition-colors flex items-center gap-1 font-semibold"
+          className="text-[10px] text-secondary hover:text-error px-2.5 py-1 rounded-full border border-outline hover:border-error transition-colors flex items-center gap-1 font-semibold"
           title="End Conversation Respectfully"
         >
-          <span className="material-symbols-outlined text-[15px]">archive</span>
+          <Archive className="w-3 h-3" />
           <span>Close Chat</span>
         </button>
       </header>
 
-      {/* Advisory & Wali Chaperone Banner */}
-      <div className="bg-gradient-to-r from-primary/10 via-surface to-accent-gold-light/20 px-4 py-2 border-b border-surface-variant/40 flex items-center justify-between text-xs text-on-surface z-10 shadow-2xs">
-        <div className="flex items-center gap-2">
-          <span className="material-symbols-outlined text-primary text-base">supervisor_account</span>
-          <span className="text-[11px] font-semibold text-primary-dark">
+      {/* Advisory & Wali Chaperone Banner (Clean Pastel) */}
+      <div className="bg-pastel-mint px-3.5 py-1.5 border-b border-pastel-mint-border flex items-center justify-between text-xs text-pastel-mint-text z-10">
+        <div className="flex items-center gap-1.5">
+          <Users className="w-3.5 h-3.5 text-pastel-mint-text" />
+          <span className="text-[10px] font-semibold">
             {activeConv.waliName ? `Wali: ${activeConv.waliName}` : 'Wali Mode: Active & Chaperoned'}
           </span>
         </div>
-        <span className="text-[9px] bg-primary text-white px-2 py-0.5 rounded-md font-bold uppercase tracking-wider shadow-xs">
+        <span className="text-[9px] bg-white text-pastel-mint-text border border-pastel-mint-border px-2 py-0.2 rounded-md font-bold uppercase tracking-wide">
           Halal Monitored
         </span>
       </div>
 
       {/* Messages Scroll Area */}
-      <main className="flex-1 overflow-y-auto p-4 space-y-3.5">
+      <main className="flex-1 overflow-y-auto p-3.5 space-y-3">
         {/* Date Marker */}
         <div className="flex justify-center">
-          <span className="text-[10px] text-secondary bg-surface px-3 py-1 rounded-full border border-surface-variant/80 font-medium shadow-2xs">
-            ✨ Conversation Began with Bismillah
+          <span className="text-[10px] text-secondary bg-white px-3 py-0.5 rounded-full border border-outline font-medium shadow-subtle flex items-center gap-1">
+            <Sparkles className="w-3 h-3 text-primary" />
+            <span>Conversation Began with Bismillah</span>
           </span>
         </div>
 
@@ -293,27 +295,27 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
             return (
               <div
                 key={msg.id || idx}
-                className={`flex flex-col gap-1 max-w-[82%] ${isMe ? 'items-end ml-auto' : 'items-start mr-auto'}`}
+                className={`flex flex-col gap-0.5 max-w-[82%] ${isMe ? 'items-end ml-auto' : 'items-start mr-auto'}`}
               >
                 <div
-                  className={`p-3.5 rounded-2xl text-xs leading-relaxed ${
+                  className={`p-3 rounded-2xl text-xs leading-relaxed ${
                     isMe
-                      ? 'bg-gradient-to-br from-primary to-primary-light text-white rounded-br-xs shadow-emerald'
-                      : 'bg-surface text-on-surface rounded-bl-xs border border-surface-variant/80 shadow-card'
+                      ? 'bg-primary text-white rounded-br-2xs shadow-brand'
+                      : 'bg-white text-on-surface rounded-bl-2xs border border-outline shadow-subtle'
                   }`}
                 >
                   <p>{msg.text}</p>
                 </div>
                 <div className="flex items-center gap-1 text-[9px] text-secondary px-1 font-medium">
                   <span>{msg.timestamp || 'Just now'}</span>
-                  {isMe && <span className="material-symbols-outlined text-[12px] text-primary">done_all</span>}
+                  {isMe && <CheckCheck className="w-3 h-3 text-primary" />}
                 </div>
               </div>
             );
           })
         ) : (
-          <div className="text-center py-12 text-secondary text-xs">
-            <span className="material-symbols-outlined text-3xl mb-1 text-primary">chat_bubble_outline</span>
+          <div className="text-center py-10 text-secondary text-xs">
+            <MessageCircle className="w-6 h-6 mx-auto mb-1 text-primary" />
             <p>No messages yet. Send a respectful salam to begin.</p>
           </div>
         )}
@@ -322,7 +324,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
       </main>
 
       {/* Clean Message Input Footer */}
-      <footer className="p-3 bg-surface/90 backdrop-blur-xl border-t border-surface-variant/40 flex items-center gap-2 z-20">
+      <footer className="p-2.5 bg-white border-t border-outline flex items-center gap-2 z-20">
         <input
           type="text"
           value={inputText}
@@ -331,32 +333,32 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
             if (e.key === 'Enter') handleSendMessage();
           }}
           placeholder="Write a respectful message..."
-          className="flex-1 bg-background border border-surface-variant/80 rounded-full px-4 py-2.5 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary shadow-2xs placeholder:text-secondary/70"
+          className="flex-1 bg-surface-variant border border-outline rounded-full px-3.5 py-2 text-xs text-on-surface outline-none focus:bg-white focus:border-primary placeholder:text-secondary/70"
         />
         <button
           onClick={handleSendMessage}
           disabled={!inputText.trim()}
-          className="w-10 h-10 rounded-full bg-gradient-to-r from-primary to-primary-light text-white flex items-center justify-center shadow-emerald hover:brightness-110 active:scale-95 disabled:opacity-40 transition-all shrink-0"
+          className="w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center shadow-brand hover:bg-primary-dark active:scale-95 disabled:opacity-40 transition-all shrink-0"
         >
-          <span className="material-symbols-outlined text-[18px]">send</span>
+          <Send className="w-4 h-4" />
         </button>
       </footer>
 
       {/* Respectful Close Modal */}
       {showRespectfulCloseModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-          <div className="w-full max-w-sm bg-surface rounded-3xl p-6 shadow-2xl border border-surface-variant text-center space-y-4 animate-fade-in">
-            <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto">
-              <span className="material-symbols-outlined text-2xl">favorite</span>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs px-4">
+          <div className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl border border-outline text-center space-y-3 animate-fade-in">
+            <div className="w-10 h-10 rounded-full bg-pastel-rose text-primary flex items-center justify-center mx-auto">
+              <Heart className="w-5 h-5 text-primary" />
             </div>
-            <h3 className="font-serif text-lg font-bold text-on-surface">End Conversation with Grace</h3>
+            <h3 className="font-serif text-base font-bold text-on-surface">End Conversation with Grace</h3>
             <p className="text-xs text-secondary leading-relaxed">
               In accordance with Islamic adab, closing a conversation sends a respectful closing du'a to {activeConv.otherUser.fullName.split(' ')[0]}.
             </p>
-            <div className="flex gap-2 pt-2">
+            <div className="flex gap-2 pt-1">
               <button
                 onClick={() => setShowRespectfulCloseModal(false)}
-                className="flex-1 py-2.5 rounded-full border border-surface-variant text-xs font-semibold hover:bg-surface-variant transition-colors"
+                className="flex-1 py-2 rounded-full border border-outline text-xs font-semibold hover:bg-surface-variant transition-colors"
               >
                 Cancel
               </button>
@@ -365,7 +367,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                   setShowRespectfulCloseModal(false);
                   setActiveConvId(null);
                 }}
-                className="flex-1 py-2.5 rounded-full bg-gradient-to-r from-primary to-primary-light text-white text-xs font-semibold shadow-emerald hover:brightness-110 transition-all"
+                className="flex-1 py-2 rounded-full bg-primary text-white text-xs font-semibold shadow-brand hover:bg-primary-dark transition-all"
               >
                 Close with Du'a
               </button>
@@ -377,4 +379,5 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
   );
 };
 export default ChatScreen;
+
 

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { X, CheckSquare, Square, SlidersHorizontal } from 'lucide-react';
 import type { FilterState, Sect, PracticeLevel, MarriageTimeline } from '../types';
 
 interface Props {
@@ -51,15 +52,15 @@ export const FilterModal: React.FC<Props> = ({ filters: initialFilters, onClose,
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-md px-0 sm:px-4 font-sans animate-fade-in select-none">
-      <div className="w-full max-w-[480px] bg-surface rounded-t-[36px] sm:rounded-[36px] max-h-[90vh] flex flex-col shadow-2xl border border-surface-variant/80 overflow-hidden animate-slide-up">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-xs px-0 sm:px-4 font-sans animate-fade-in select-none text-on-surface">
+      <div className="w-full max-w-[480px] bg-white rounded-t-[36px] sm:rounded-[36px] max-h-[90vh] flex flex-col shadow-2xl border border-outline overflow-hidden animate-slide-up">
         {/* Header */}
-        <header className="sticky top-0 bg-surface/90 backdrop-blur-xl px-6 py-4 border-b border-surface-variant/40 flex items-center justify-between z-10 shadow-2xs">
+        <header className="sticky top-0 bg-white px-5 py-3.5 border-b border-outline flex items-center justify-between z-10 shadow-subtle">
           <button
             onClick={onClose}
-            className="w-9 h-9 flex items-center justify-center text-on-surface hover:bg-surface-variant rounded-full border border-surface-variant/80 transition-colors shadow-2xs"
+            className="w-8 h-8 flex items-center justify-center text-on-surface hover:bg-surface-variant rounded-full border border-outline transition-colors shadow-subtle"
           >
-            <span className="material-symbols-outlined text-[18px]">close</span>
+            <X className="w-4 h-4" />
           </button>
           <div className="flex items-center gap-1.5 font-serif text-base font-bold text-on-surface">
             <span>Preferences & Filters</span>
@@ -67,19 +68,19 @@ export const FilterModal: React.FC<Props> = ({ filters: initialFilters, onClose,
           </div>
           <button
             onClick={handleReset}
-            className="text-xs font-bold text-primary hover:text-primary-dark transition-colors px-2.5 py-1 rounded-full bg-primary/10"
+            className="text-xs font-bold text-primary hover:text-primary-dark transition-colors px-2.5 py-1 rounded-full bg-pastel-rose"
           >
             Reset
           </button>
         </header>
 
         {/* Scrollable Filters Content */}
-        <main className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+        <main className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
           {/* Age Range Slider */}
-          <section className="border-b border-surface-variant/40 pb-5">
-            <div className="flex justify-between items-center mb-2.5">
-              <h3 className="font-serif text-sm font-bold text-on-surface">Age Range</h3>
-              <span className="text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
+          <section className="border-b border-outline pb-4">
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="font-serif text-xs font-bold text-on-surface">Age Range</h3>
+              <span className="text-xs font-bold text-primary bg-pastel-rose px-2.5 py-0.5 rounded-full border border-pastel-rose-border">
                 {filters.minAge} – {filters.maxAge} years
               </span>
             </div>
@@ -94,10 +95,10 @@ export const FilterModal: React.FC<Props> = ({ filters: initialFilters, onClose,
           </section>
 
           {/* Distance */}
-          <section className="border-b border-surface-variant/40 pb-5">
-            <div className="flex justify-between items-center mb-2.5">
-              <h3 className="font-serif text-sm font-bold text-on-surface">Maximum Distance</h3>
-              <span className="text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
+          <section className="border-b border-outline pb-4">
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="font-serif text-xs font-bold text-on-surface">Maximum Distance</h3>
+              <span className="text-xs font-bold text-primary bg-pastel-rose px-2.5 py-0.5 rounded-full border border-pastel-rose-border">
                 {filters.maxDistance} miles
               </span>
             </div>
@@ -112,8 +113,8 @@ export const FilterModal: React.FC<Props> = ({ filters: initialFilters, onClose,
           </section>
 
           {/* Sect */}
-          <section className="border-b border-surface-variant/40 pb-5">
-            <h3 className="font-serif text-sm font-bold text-on-surface mb-3">Sect / Tradition</h3>
+          <section className="border-b border-outline pb-4">
+            <h3 className="font-serif text-xs font-bold text-on-surface mb-2.5">Sect / Tradition</h3>
             <div className="grid grid-cols-2 gap-2">
               {(['Sunni', 'Shia', 'Just Muslim', 'Other'] as Sect[]).map((sect) => {
                 const isSelected = filters.sects.includes(sect);
@@ -122,16 +123,14 @@ export const FilterModal: React.FC<Props> = ({ filters: initialFilters, onClose,
                     key={sect}
                     type="button"
                     onClick={() => toggleSect(sect)}
-                    className={`py-2.5 px-3 rounded-xl border text-xs font-semibold flex items-center justify-between transition-all ${
+                    className={`py-2 px-2.5 rounded-xl border text-xs font-semibold flex items-center justify-between transition-all ${
                       isSelected
-                        ? 'border-primary bg-primary/10 text-primary font-bold shadow-2xs ring-1 ring-primary'
-                        : 'border-surface-variant bg-surface text-secondary hover:bg-surface-variant/40'
+                        ? 'border-primary bg-pastel-rose text-primary font-bold shadow-subtle'
+                        : 'border-outline bg-white text-secondary hover:bg-surface-variant'
                     }`}
                   >
                     <span>{sect}</span>
-                    <span className="material-symbols-outlined text-[16px]">
-                      {isSelected ? 'check_box' : 'check_box_outline_blank'}
-                    </span>
+                    {isSelected ? <CheckSquare className="w-3.5 h-3.5 text-primary" /> : <Square className="w-3.5 h-3.5 text-secondary" />}
                   </button>
                 );
               })}
@@ -139,9 +138,9 @@ export const FilterModal: React.FC<Props> = ({ filters: initialFilters, onClose,
           </section>
 
           {/* Practice Level */}
-          <section className="border-b border-surface-variant/40 pb-5">
-            <h3 className="font-serif text-sm font-bold text-on-surface mb-3">Religious Practice Level</h3>
-            <div className="space-y-2">
+          <section className="border-b border-outline pb-4">
+            <h3 className="font-serif text-xs font-bold text-on-surface mb-2.5">Religious Practice Level</h3>
+            <div className="space-y-1.5">
               {[
                 { label: 'Practicing (5 Daily Prayers)', val: 'practicing' },
                 { label: 'Moderately Practicing (Striving)', val: 'moderately_practicing' },
@@ -154,16 +153,14 @@ export const FilterModal: React.FC<Props> = ({ filters: initialFilters, onClose,
                     key={item.val}
                     type="button"
                     onClick={() => togglePractice(item.val as PracticeLevel)}
-                    className={`w-full py-2.5 px-3 rounded-xl border text-xs font-semibold flex items-center justify-between transition-all ${
+                    className={`w-full py-2 px-2.5 rounded-xl border text-xs font-semibold flex items-center justify-between transition-all ${
                       isSelected
-                        ? 'border-primary bg-primary/10 text-primary font-bold shadow-2xs ring-1 ring-primary'
-                        : 'border-surface-variant bg-surface text-secondary hover:bg-surface-variant/40'
+                        ? 'border-primary bg-pastel-rose text-primary font-bold shadow-subtle'
+                        : 'border-outline bg-white text-secondary hover:bg-surface-variant'
                     }`}
                   >
                     <span>{item.label}</span>
-                    <span className="material-symbols-outlined text-[16px]">
-                      {isSelected ? 'check_box' : 'check_box_outline_blank'}
-                    </span>
+                    {isSelected ? <CheckSquare className="w-3.5 h-3.5 text-primary" /> : <Square className="w-3.5 h-3.5 text-secondary" />}
                   </button>
                 );
               })}
@@ -171,9 +168,9 @@ export const FilterModal: React.FC<Props> = ({ filters: initialFilters, onClose,
           </section>
 
           {/* Marriage Timeline */}
-          <section className="pb-4">
-            <h3 className="font-serif text-sm font-bold text-on-surface mb-3">Marriage Intent Timeline</h3>
-            <div className="space-y-2">
+          <section className="pb-3">
+            <h3 className="font-serif text-xs font-bold text-on-surface mb-2.5">Marriage Intent Timeline</h3>
+            <div className="space-y-1.5">
               {[
                 { label: 'Marriage within 1 year', val: 'within_1_year' },
                 { label: 'When I find the right person', val: 'right_person' },
@@ -185,16 +182,14 @@ export const FilterModal: React.FC<Props> = ({ filters: initialFilters, onClose,
                     key={item.val}
                     type="button"
                     onClick={() => toggleTimeline(item.val as MarriageTimeline)}
-                    className={`w-full py-2.5 px-3 rounded-xl border text-xs font-semibold flex items-center justify-between transition-all ${
+                    className={`w-full py-2 px-2.5 rounded-xl border text-xs font-semibold flex items-center justify-between transition-all ${
                       isSelected
-                        ? 'border-primary bg-primary/10 text-primary font-bold shadow-2xs ring-1 ring-primary'
-                        : 'border-surface-variant bg-surface text-secondary hover:bg-surface-variant/40'
+                        ? 'border-primary bg-pastel-rose text-primary font-bold shadow-subtle'
+                        : 'border-outline bg-white text-secondary hover:bg-surface-variant'
                     }`}
                   >
                     <span>{item.label}</span>
-                    <span className="material-symbols-outlined text-[16px]">
-                      {isSelected ? 'check_box' : 'check_box_outline_blank'}
-                    </span>
+                    {isSelected ? <CheckSquare className="w-3.5 h-3.5 text-primary" /> : <Square className="w-3.5 h-3.5 text-secondary" />}
                   </button>
                 );
               })}
@@ -203,16 +198,16 @@ export const FilterModal: React.FC<Props> = ({ filters: initialFilters, onClose,
         </main>
 
         {/* Footer */}
-        <footer className="p-4 bg-surface border-t border-surface-variant/40 flex gap-3 shadow-card">
+        <footer className="p-3.5 bg-white border-t border-outline flex gap-2.5 shadow-card">
           <button
             onClick={() => {
               onApply(filters);
               onClose();
             }}
-            className="w-full py-3.5 bg-gradient-to-r from-primary via-primary to-primary-light text-white rounded-full font-bold text-xs shadow-emerald hover:brightness-110 active:scale-98 transition-all flex items-center justify-center gap-2"
+            className="w-full py-3 bg-primary text-white rounded-full font-bold text-xs shadow-brand hover:bg-primary-dark active:scale-98 transition-all flex items-center justify-center gap-1.5"
           >
             <span>Apply Selected Filters</span>
-            <span className="material-symbols-outlined text-[18px]">tune</span>
+            <SlidersHorizontal className="w-4 h-4" />
           </button>
         </footer>
       </div>

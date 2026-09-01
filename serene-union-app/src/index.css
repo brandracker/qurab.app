@@ -5,8 +5,8 @@
   body {
     font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
     -webkit-tap-highlight-color: transparent;
-    color: #18221B;
-    background-color: #0f1511;
+    color: #171717;
+    background-color: #121212;
   }
 
   h1, h2, h3, .font-serif {
@@ -18,84 +18,15 @@
   }
 }
 
-/* Glassmorphism Utilities */
-.glass-panel {
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+/* Crisp Clean Solid Bar & Dock */
+.clean-dock {
+  background: #ffffff;
+  border-top: 1px solid #E5E7EB;
 }
 
-.glass-dock {
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border-top: 1px solid rgba(235, 230, 220, 0.8);
-}
-
-.glass-card-dark {
-  background: rgba(15, 22, 17, 0.82);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.gold-gradient {
-  background: linear-gradient(135deg, #D4AF37 0%, #F59E0B 50%, #B45309 100%);
-}
-
-.emerald-gradient {
-  background: linear-gradient(135deg, #0D5C3A 0%, #064E2E 50%, #04331E 100%);
-}
-
-.rose-gradient {
-  background: linear-gradient(135deg, #E11D48 0%, #BE123C 100%);
-}
-
-.gold-shimmer {
-  background: linear-gradient(
-    90deg,
-    rgba(212, 175, 55, 0) 0%,
-    rgba(212, 175, 55, 0.3) 50%,
-    rgba(212, 175, 55, 0) 100%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 3s infinite;
-}
-
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-6px); }
-}
-
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 20px rgba(13, 92, 58, 0.25); }
-  50% { box-shadow: 0 0 35px rgba(212, 175, 55, 0.4); }
-}
-
-.animate-float {
-  animation: float 4s ease-in-out infinite;
-}
-
-.animate-pulse-glow {
-  animation: pulse-glow 3s ease-in-out infinite;
-}
-
-.material-symbols-outlined {
-  font-variation-settings:
-    'FILL' 0,
-    'wght' 400,
-    'GRAD' 0,
-    'opsz' 24;
-}
-
-.material-symbols-outlined.fill {
-  font-variation-settings: 'FILL' 1;
+.clean-panel {
+  background: #ffffff;
+  border: 1px solid #E5E7EB;
 }
 
 /* Hide scrollbars cleanly */
@@ -107,13 +38,4 @@
   scrollbar-width: none;
 }
 
-/* Islamic Subtle Arabesque Wallpaper */
-.islamic-ambient-bg {
-  background-color: #FAF8F5;
-  background-image: 
-    radial-gradient(#0D5C3A 0.6px, transparent 0.6px), 
-    radial-gradient(#D4AF37 0.6px, #FAF8F5 0.6px);
-  background-size: 32px 32px;
-  background-position: 0 0, 16px 16px;
-}
 

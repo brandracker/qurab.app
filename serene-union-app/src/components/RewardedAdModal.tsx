@@ -93,10 +93,10 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes',
             <PlayCircle className="w-8 h-8" />
           </div>
 
-          <h3 className="font-serif text-base font-bold text-white mb-1 flex items-center gap-1.5">
-            <span>Qurab Islamic Matrimony</span>
-            <span className="font-arabic text-primary-light text-xs font-bold">قُرب</span>
+          <h3 className="font-serif text-base font-bold text-white mb-1">
+            Qurab Islamic Matrimony
           </h3>
+
           <p className="text-xs text-white/80 max-w-xs leading-relaxed">
             Discover thousands of verified practicing Muslim singles seeking sincere, blessed Nikah.
           </p>

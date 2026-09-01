@@ -102,12 +102,12 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
       {/* Top Header */}
       <header className="mb-3.5 flex items-center justify-between pt-1">
         <div>
-          <h1 className="font-serif text-xl font-bold text-on-surface flex items-center gap-1.5">
-            <span>Matches & Activity</span>
-            <span className="font-arabic text-primary text-sm font-bold">قُرب</span>
+          <h1 className="font-serif text-xl font-bold text-on-surface">
+            Matches & Activity
           </h1>
           <p className="text-[11px] text-secondary mt-0.5">Manage connections, sent interests & privacy history</p>
         </div>
+
         {isVip && (
           <span className="bg-pastel-amber text-pastel-amber-text border border-pastel-amber-border text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
             <Crown className="w-3 h-3 text-pastel-amber-text" />

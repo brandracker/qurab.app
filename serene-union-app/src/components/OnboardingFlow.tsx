@@ -48,7 +48,6 @@ export const OnboardingFlow: React.FC<Props> = ({ onComplete }) => {
           <div className="flex items-center gap-1.5 font-serif font-bold text-sm text-on-surface">
             <img src="/icon.svg" alt="Qurab" className="w-4 h-4 object-contain" />
             <span>Qurab</span>
-            <span className="text-primary text-xs font-semibold">قُرب</span>
           </div>
           <div className="text-xs font-semibold text-secondary">Step {step} of 5</div>
         </header>
@@ -80,7 +79,6 @@ export const OnboardingFlow: React.FC<Props> = ({ onComplete }) => {
               <h1 className="font-serif text-3xl sm:text-4xl font-bold text-on-surface">
                 Qurab
               </h1>
-              <span className="text-primary text-2xl font-bold">قُرب</span>
             </div>
             <p className="text-secondary text-xs max-w-[280px] leading-relaxed">
               A dignified, faith-centered platform designed for pure halal Muslim matrimony.

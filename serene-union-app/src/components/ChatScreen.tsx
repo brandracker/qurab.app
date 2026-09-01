@@ -154,13 +154,13 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
       <div className="flex-1 flex flex-col h-full bg-background font-sans select-none pb-24 text-on-surface">
         <header className="sticky top-0 bg-white px-4 py-3 border-b border-outline flex items-center justify-between z-20 shadow-subtle">
           <div>
-            <h1 className="font-serif text-xl font-bold text-on-surface flex items-center gap-1.5">
-              <span>Messages & Chaperone</span>
-              <span className="font-arabic text-primary text-sm font-bold">قُرب</span>
+            <h1 className="font-serif text-xl font-bold text-on-surface">
+              Messages & Chaperone
             </h1>
             <p className="text-[11px] text-secondary mt-0.5">Respectful & Intentional Matrimonial Discussions</p>
           </div>
         </header>
+
 
         <div className="flex-1 overflow-y-auto divide-y divide-outline p-3 space-y-1">
           {conversations.length > 0 ? (

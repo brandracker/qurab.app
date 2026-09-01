@@ -64,12 +64,12 @@ export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpda
       {/* Top Header */}
       <header className="sticky top-0 bg-white px-5 py-3 border-b border-outline z-10 flex items-center justify-between shadow-subtle">
         <div>
-          <h1 className="font-serif text-xl font-bold text-on-surface flex items-center gap-2">
-            <span>Settings & Privacy</span>
-            <span className="font-arabic text-primary text-sm font-bold">قُرب</span>
+          <h1 className="font-serif text-xl font-bold text-on-surface">
+            Settings & Privacy
           </h1>
           <p className="text-xs text-secondary">Manage your halal preferences and security</p>
         </div>
+
         {savedNotice && (
           <span className="text-xs font-bold text-primary bg-pastel-rose border border-pastel-rose-border px-3 py-0.5 rounded-full animate-fade-in shadow-subtle">
             Saved!

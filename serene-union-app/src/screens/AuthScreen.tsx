@@ -227,11 +227,11 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
         </button>
         <div className="flex items-center gap-1.5">
           <img src="/icon.svg" alt="Qurab" className="w-5 h-5 object-contain" />
-          <span className="font-serif text-sm font-bold text-on-surface flex items-center gap-1">
-            <span>Qurab</span>
-            <span className="font-arabic text-primary text-xs font-bold">قُرب</span>
+          <span className="font-serif text-sm font-bold text-on-surface">
+            Qurab
           </span>
         </div>
+
         <div className="w-9" />
       </header>
 

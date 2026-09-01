@@ -31,12 +31,12 @@ export const CompatibilityComparisonModal: React.FC<Props> = ({ currentUser, pro
               <Sparkles className="w-4 h-4 text-primary" />
             </div>
             <div>
-              <h2 className="font-serif text-base font-bold text-on-surface flex items-center gap-1.5">
-                <span>Islamic Values Compatibility</span>
-                <span className="font-arabic text-primary text-xs font-bold">قُرب</span>
+              <h2 className="font-serif text-base font-bold text-on-surface">
+                Islamic Values Compatibility
               </h2>
               <p className="text-[10px] text-secondary">4-Pillars Islamic Alignment Analysis</p>
             </div>
+
           </div>
           <button
             onClick={onClose}

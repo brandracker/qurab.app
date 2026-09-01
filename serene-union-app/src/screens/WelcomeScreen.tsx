@@ -30,20 +30,16 @@ export const WelcomeScreen: React.FC<Props> = ({ onGetStarted, onLogin }) => {
           />
         </div>
 
-        {/* Title & Arabic Calligraphy */}
+        {/* Title */}
         <div className="space-y-1.5">
-          <div className="flex items-center justify-center gap-2">
-            <h1 className="font-serif text-3xl sm:text-4xl font-bold text-on-surface tracking-tight">
-              Qurab
-            </h1>
-            <span className="font-arabic text-primary text-2xl font-bold">
-              قُرب
-            </span>
-          </div>
+          <h1 className="font-serif text-3xl sm:text-4xl font-bold text-on-surface tracking-tight">
+            Qurab
+          </h1>
           <p className="font-sans text-xs sm:text-sm text-secondary max-w-xs mx-auto leading-relaxed">
             Finding your righteous spouse the pure halal way — with Barakah, respect & family involvement.
           </p>
         </div>
+
 
         {/* 2 Halal Trust Highlights (Pastel Colors, Lucide Icons) */}
         <div className="w-full max-w-xs space-y-2 pt-2 text-left">

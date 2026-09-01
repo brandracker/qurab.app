@@ -108,12 +108,12 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
               <Crown className="w-5 h-5 text-pastel-amber-text" />
             </div>
             <div>
-              <h2 className="font-serif text-base font-bold text-on-surface flex items-center gap-1.5">
-                <span>Barakah VIP & Passes</span>
-                <span className="font-arabic text-primary text-xs font-bold">قُرب</span>
+              <h2 className="font-serif text-base font-bold text-on-surface">
+                Barakah VIP & Passes
               </h2>
               <p className="text-[11px] text-secondary">Google Play 1-Tap In-App Billing</p>
             </div>
+
           </div>
           <button
             onClick={onClose}

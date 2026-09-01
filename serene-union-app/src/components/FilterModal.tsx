@@ -62,10 +62,10 @@ export const FilterModal: React.FC<Props> = ({ filters: initialFilters, onClose,
           >
             <X className="w-4 h-4" />
           </button>
-          <div className="flex items-center gap-1.5 font-serif text-base font-bold text-on-surface">
-            <span>Preferences & Filters</span>
-            <span className="font-arabic text-primary text-xs font-bold">قُرب</span>
+          <div className="font-serif text-base font-bold text-on-surface">
+            Preferences & Filters
           </div>
+
           <button
             onClick={handleReset}
             className="text-xs font-bold text-primary hover:text-primary-dark transition-colors px-2.5 py-1 rounded-full bg-pastel-rose"

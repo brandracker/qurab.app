@@ -58,10 +58,10 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
-          <div className="flex items-center gap-1.5 font-serif text-sm font-bold text-on-surface">
-            <span>Matrimonial Profile</span>
-            <span className="font-arabic text-primary text-xs font-bold">قُرب</span>
+          <div className="font-serif text-sm font-bold text-on-surface">
+            Matrimonial Profile
           </div>
+
           <button
             onClick={() => setIsUnblurred(!isUnblurred)}
             className="text-xs text-primary font-bold flex items-center gap-1 bg-pastel-rose border border-pastel-rose-border px-3 py-1 rounded-full hover:bg-pastel-rose/80 transition-colors"

@@ -60,12 +60,12 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
       {/* Top Header */}
       <header className="sticky top-0 bg-white px-4 py-3 border-b border-outline flex items-center justify-between z-20 shadow-subtle">
         <div>
-          <h1 className="font-serif text-xl font-bold text-on-surface flex items-center gap-1.5">
-            <span>My Matrimonial Biodata</span>
-            <span className="font-arabic text-primary text-sm font-bold">قُرب</span>
+          <h1 className="font-serif text-xl font-bold text-on-surface">
+            My Matrimonial Biodata
           </h1>
           <p className="text-[11px] text-secondary mt-0.5">Manage profile, modesty settings & VIP membership</p>
         </div>
+
         {onLogout && (
           <button
             onClick={onLogout}

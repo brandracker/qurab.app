@@ -19,12 +19,12 @@ export const WaliObserverPortal: React.FC<Props> = ({ onBackToApp }) => {
             <img src="/icon.svg" alt="Qurab" className="w-5 h-5 object-contain" />
           </div>
           <div>
-            <div className="flex items-center gap-1.5 font-serif text-base font-bold text-on-surface">
-              <span>Qurab</span>
-              <span className="text-primary text-xs font-semibold">قُرب</span>
+            <div className="font-serif text-base font-bold text-on-surface">
+              Qurab
             </div>
             <p className="text-[10px] text-secondary font-medium uppercase tracking-wider">Official Wali Chaperone Portal</p>
           </div>
+
         </div>
         {onBackToApp && (
           <button onClick={onBackToApp} className="text-xs text-primary font-semibold hover:underline">

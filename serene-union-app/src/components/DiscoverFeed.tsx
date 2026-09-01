@@ -193,49 +193,97 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
     }
   };
 
+  const [showSearch, setShowSearch] = useState<boolean>(false);
+
   return (
-    <div className="w-full h-full flex flex-col relative bg-background overflow-hidden font-sans select-none">
-      {/* Top Header: Clean Search Bar + Filter Button + Counter */}
-      <header className="w-full sticky top-0 z-40 bg-white px-4 py-2.5 border-b border-outline flex items-center gap-2 shadow-subtle">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary w-4 h-4" />
-          <input
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setCurrentIndex(0);
-              setCurrentPhotoIdx(0);
-            }}
-            className="w-full bg-surface-variant border border-outline rounded-full py-1.5 pl-9 pr-3 text-xs text-on-surface focus:bg-white focus:border-primary outline-none transition-all placeholder:text-secondary/70"
-            placeholder="Search candidates by city, profession..."
-            type="text"
-          />
+    <div className="w-full h-full flex flex-col relative bg-background overflow-hidden font-sans select-none text-on-surface">
+      {/* Top Header: Ultra-Minimal & Spacious with Brand Logo + Filter Option */}
+      <header className="w-full sticky top-0 z-40 bg-white px-5 py-3 border-b border-outline flex items-center justify-between shadow-subtle">
+        {/* Left: Brand Logo & Title */}
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-pastel-rose border border-pastel-rose-border flex items-center justify-center p-1 shadow-subtle">
+            <img src="/icon.svg" alt="Qurab" className="w-5 h-5 object-contain" />
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <span className="font-serif font-bold text-base tracking-tight text-on-surface">
+              Qurab
+            </span>
+            <span className="font-arabic text-primary text-xs font-bold leading-none">
+              قُرب
+            </span>
+          </div>
         </div>
 
-        {filteredFeed.length > 0 && (
-          <span className="text-[11px] font-bold bg-pastel-rose text-primary px-2.5 py-1 rounded-full shrink-0 border border-pastel-rose-border">
-            {currentIndex + 1} / {filteredFeed.length}
-          </span>
-        )}
-
-        {isVip && (
-          <span className="text-[11px] font-bold bg-pastel-amber text-pastel-amber-text px-2 py-1 rounded-full flex items-center gap-1 border border-pastel-amber-border shrink-0">
-            <Crown className="w-3 h-3 text-pastel-amber-text" />
-            <span>VIP</span>
-          </span>
-        )}
-
-        <button
-          onClick={() => setShowFilterModal(true)}
-          aria-label="Filters"
-          className="w-8 h-8 flex items-center justify-center rounded-full bg-surface-variant border border-outline text-on-surface hover:bg-outline transition-colors shrink-0 relative"
-        >
-          <SlidersHorizontal className="w-3.5 h-3.5" />
-          {(filters.sects.length > 0 || filters.practiceLevels.length > 0) && (
-            <span className="w-2 h-2 bg-primary rounded-full absolute top-0.5 right-0.5" />
+        {/* Right: Actions (Counter + Search toggle + Filter Button) */}
+        <div className="flex items-center gap-2">
+          {filteredFeed.length > 0 && (
+            <span className="text-[10px] font-bold bg-pastel-rose text-primary px-2.5 py-0.5 rounded-full border border-pastel-rose-border">
+              {currentIndex + 1} / {filteredFeed.length}
+            </span>
           )}
-        </button>
+
+          {isVip && (
+            <span className="text-[10px] font-bold bg-pastel-amber text-pastel-amber-text px-2 py-0.5 rounded-full flex items-center gap-1 border border-pastel-amber-border">
+              <Crown className="w-3 h-3 text-pastel-amber-text" />
+              <span>VIP</span>
+            </span>
+          )}
+
+          {/* Search Toggle Icon */}
+          <button
+            onClick={() => setShowSearch(!showSearch)}
+            aria-label="Search"
+            className={`w-8 h-8 flex items-center justify-center rounded-full border transition-all ${
+              showSearch 
+                ? 'bg-primary text-white border-primary shadow-brand' 
+                : 'bg-white border-outline text-secondary hover:text-on-surface hover:bg-surface-variant shadow-subtle'
+            }`}
+          >
+            <Search className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Filter Option Button */}
+          <button
+            onClick={() => setShowFilterModal(true)}
+            aria-label="Filters"
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-white border border-outline text-on-surface hover:bg-surface-variant transition-all shadow-subtle relative"
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5 text-primary" />
+            {(filters.sects.length > 0 || filters.practiceLevels.length > 0) && (
+              <span className="w-2 h-2 bg-primary rounded-full absolute -top-0.5 -right-0.5 ring-2 ring-white" />
+            )}
+          </button>
+        </div>
       </header>
+
+      {/* Expandable Minimal Search Bar when user taps search */}
+      {showSearch && (
+        <div className="px-5 py-2.5 bg-surface-variant border-b border-outline animate-fade-in flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary w-3.5 h-3.5" />
+            <input
+              autoFocus
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentIndex(0);
+                setCurrentPhotoIdx(0);
+              }}
+              className="w-full bg-white border border-outline rounded-full py-1.5 pl-8 pr-3 text-xs text-on-surface focus:border-primary outline-none transition-all placeholder:text-secondary/70 shadow-subtle"
+              placeholder="Search by city, name, profession..."
+              type="text"
+            />
+          </div>
+          {searchQuery && (
+            <button 
+              onClick={() => setSearchQuery('')}
+              className="text-[11px] text-secondary hover:text-on-surface font-semibold px-2 py-1"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Action Toast Feedback */}
       {toastMessage && (
@@ -250,8 +298,10 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
         </div>
       )}
 
+
       {/* Main Coverflow Stage */}
-      <main className="flex-1 overflow-y-auto px-3.5 pt-2.5 pb-20 flex flex-col justify-between">
+      <main className="flex-1 overflow-y-auto px-4 pt-3.5 pb-24 flex flex-col justify-between">
+
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <Loader2 className="w-8 h-8 text-primary animate-spin" />

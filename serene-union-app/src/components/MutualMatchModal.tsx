@@ -31,29 +31,32 @@ export const MutualMatchModal: React.FC<Props> = ({ profile, currentUser: propUs
     : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&q=80';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md px-4 animate-fade-in">
-      <div className="w-full max-w-[420px] bg-surface rounded-3xl p-6 shadow-2xl border border-surface-variant flex flex-col items-center text-center relative overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md px-4 animate-fade-in select-none">
+      <div className="w-full max-w-[420px] bg-surface rounded-[36px] p-7 shadow-2xl border border-surface-variant/80 flex flex-col items-center text-center relative overflow-hidden animate-slide-up">
         {/* Background Islamic glow */}
-        <div className="absolute -top-16 -left-16 w-40 h-40 bg-primary/15 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-16 -right-16 w-40 h-40 bg-tertiary-container/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -top-16 -left-16 w-44 h-44 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-16 -right-16 w-44 h-44 bg-accent-gold/20 rounded-full blur-3xl pointer-events-none" />
 
         {/* Header Badge */}
-        <div className="bg-primary/10 text-primary px-4 py-1.5 rounded-full font-sans text-xs font-semibold tracking-wider uppercase mb-4 flex items-center gap-1.5">
-          <span className="material-symbols-outlined text-sm">favorite</span>
-          Alhamdulillah! It's a Match
+        <div className="bg-gradient-to-r from-primary/15 via-surface to-accent-gold-light/30 border border-primary/30 text-primary px-4 py-1.5 rounded-full font-sans text-xs font-bold tracking-wider uppercase mb-3 flex items-center gap-1.5 shadow-2xs">
+          <span className="material-symbols-outlined text-sm text-accent-gold-dark">verified</span>
+          <span>Alhamdulillah · It's a Match</span>
         </div>
 
-        <h2 className="font-serif text-3xl font-bold text-on-surface mb-2">
-          Mutual Interest
+        <h2 className="font-serif text-3xl font-bold text-on-surface mb-1">
+          Blessed Connection
         </h2>
-        <p className="text-secondary text-sm mb-6 max-w-[280px]">
-          You and <span className="font-semibold text-primary">{profile.fullName.split(' ')[0]}</span> have expressed mutual interest.
+        <div className="font-arabic text-primary text-base font-bold mb-2">
+          بَارَكَ اللَّهُ لَكُمَا
+        </div>
+        <p className="text-secondary text-xs mb-6 max-w-[280px] leading-relaxed">
+          You and <span className="font-bold text-primary">{profile.fullName.split(' ')[0]}</span> have mutually expressed interest to connect for marriage.
         </p>
 
         {/* Overlapping Photos (Your Real Photo + Matched Person Photo) */}
-        <div className="flex items-center justify-center -space-x-4 mb-6 relative">
+        <div className="flex items-center justify-center -space-x-5 mb-6 relative">
           {/* Your Photo */}
-          <div className="w-24 h-24 rounded-full border-4 border-surface overflow-hidden shadow-lg bg-surface-container-high flex items-center justify-center">
+          <div className="w-24 h-24 rounded-full border-4 border-surface overflow-hidden shadow-emerald ring-2 ring-primary/40 bg-surface-variant flex items-center justify-center z-10">
             {myPhoto ? (
               <img
                 src={myPhoto}
@@ -68,14 +71,14 @@ export const MutualMatchModal: React.FC<Props> = ({ profile, currentUser: propUs
           </div>
 
           {/* Matched Profile Photo */}
-          <div className="w-24 h-24 rounded-full border-4 border-surface overflow-hidden shadow-lg relative bg-surface-container-high flex items-center justify-center">
+          <div className="w-24 h-24 rounded-full border-4 border-surface overflow-hidden shadow-emerald ring-2 ring-accent-gold/50 relative bg-surface-variant flex items-center justify-center z-10">
             <img
               src={otherPhoto}
               alt={profile.fullName}
               className={`w-full h-full object-cover ${profile.blurPhotosByDefault && !profile.photoRevealApproved ? 'filter blur-md' : ''}`}
             />
             {profile.blurPhotosByDefault && !profile.photoRevealApproved && (
-              <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+              <div className="absolute inset-0 bg-black/25 flex items-center justify-center backdrop-blur-xs">
                 <span className="material-symbols-outlined text-white text-lg">visibility_off</span>
               </div>
             )}
@@ -85,19 +88,22 @@ export const MutualMatchModal: React.FC<Props> = ({ profile, currentUser: propUs
         {/* Action Button */}
         <button
           onClick={onStartChat}
-          className="w-full py-4 rounded-full bg-primary text-on-primary font-sans text-sm font-semibold shadow-md shadow-primary/20 hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 mb-3"
+          className="w-full py-4 rounded-full bg-gradient-to-r from-primary via-primary to-primary-light text-white font-sans text-xs font-bold shadow-emerald hover:brightness-110 active:scale-98 transition-all flex items-center justify-center gap-2 mb-3 relative overflow-hidden group"
         >
+          <span className="gold-shimmer absolute inset-0 opacity-30 pointer-events-none" />
           <span className="material-symbols-outlined text-[18px]">chat</span>
-          <span>Begin Halal Conversation</span>
+          <span>Begin Chaperoned Halal Conversation</span>
         </button>
 
         <button
           onClick={onClose}
-          className="text-xs font-semibold text-secondary hover:text-on-surface transition-colors py-2"
+          className="text-xs font-bold text-secondary hover:text-on-surface transition-colors py-2"
         >
-          Keep Exploring
+          Keep Exploring Discover
         </button>
       </div>
     </div>
   );
 };
+export default MutualMatchModal;
+

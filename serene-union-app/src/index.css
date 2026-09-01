@@ -3,26 +3,87 @@
 
 @layer base {
   body {
-    font-family: 'Inter', sans-serif;
+    font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
     -webkit-tap-highlight-color: transparent;
+    color: #18221B;
+    background-color: #0f1511;
   }
 
-  h1, h2, h3, .font-display {
-    font-family: 'Playfair Display', serif;
+  h1, h2, h3, .font-serif {
+    font-family: 'Playfair Display', Georgia, serif;
+  }
+
+  .font-arabic {
+    font-family: 'Amiri', serif;
   }
 }
 
-/* Custom Smooth Transitions & Blur Effects */
+/* Glassmorphism Utilities */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-}
-
-.glass-nav {
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+.glass-dock {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-top: 1px solid rgba(235, 230, 220, 0.8);
+}
+
+.glass-card-dark {
+  background: rgba(15, 22, 17, 0.82);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.gold-gradient {
+  background: linear-gradient(135deg, #D4AF37 0%, #F59E0B 50%, #B45309 100%);
+}
+
+.emerald-gradient {
+  background: linear-gradient(135deg, #0D5C3A 0%, #064E2E 50%, #04331E 100%);
+}
+
+.rose-gradient {
+  background: linear-gradient(135deg, #E11D48 0%, #BE123C 100%);
+}
+
+.gold-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(212, 175, 55, 0) 0%,
+    rgba(212, 175, 55, 0.3) 50%,
+    rgba(212, 175, 55, 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(13, 92, 58, 0.25); }
+  50% { box-shadow: 0 0 35px rgba(212, 175, 55, 0.4); }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
 }
 
 .material-symbols-outlined {
@@ -37,7 +98,7 @@
   font-variation-settings: 'FILL' 1;
 }
 
-/* Hide scrollbar for clean mobile experience */
+/* Hide scrollbars cleanly */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -46,20 +107,13 @@
   scrollbar-width: none;
 }
 
-/* Islamic Pattern Background Subtle Utility */
-.islamic-pattern {
-  background-color: #f8fafc;
-  background-image: radial-gradient(#ff2560 0.55px, transparent 0.55px), radial-gradient(#ff2560 0.55px, #f8fafc 0.55px);
-  background-size: 24px 24px;
-  background-position: 0 0, 12px 12px;
-  opacity: 0.98;
+/* Islamic Subtle Arabesque Wallpaper */
+.islamic-ambient-bg {
+  background-color: #FAF8F5;
+  background-image: 
+    radial-gradient(#0D5C3A 0.6px, transparent 0.6px), 
+    radial-gradient(#D4AF37 0.6px, #FAF8F5 0.6px);
+  background-size: 32px 32px;
+  background-position: 0 0, 16px 16px;
 }
 
-@keyframes pulse-subtle {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.88; transform: scale(0.98); }
-}
-
-.animate-pulse-subtle {
-  animation: pulse-subtle 3s ease-in-out infinite;
-}

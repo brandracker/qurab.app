@@ -212,60 +212,63 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
   };
 
   return (
-    <div className="w-full h-full flex flex-col justify-between p-6 bg-background relative overflow-y-auto font-sans">
+    <div className="w-full h-full flex flex-col justify-between p-6 bg-background relative overflow-y-auto font-sans select-none">
       {/* Invisible reCAPTCHA container */}
       <div id="recaptcha-verifier-div"></div>
 
       {/* Top Header */}
-      <header className="flex items-center justify-between w-full pt-4">
+      <header className="flex items-center justify-between w-full pt-2">
         <button
           onClick={onBack}
-          className="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container-high text-on-surface hover:bg-surface-variant transition-colors"
+          className="w-10 h-10 flex items-center justify-center rounded-full bg-surface border border-surface-variant/80 text-on-surface hover:bg-surface-variant transition-colors shadow-2xs"
         >
           <span className="material-symbols-outlined text-[20px]">arrow_back</span>
         </button>
         <div className="flex items-center gap-2">
-          <img src="/icon.svg" alt="Qurab" className="w-5 h-5 object-contain" />
-          <span className="font-serif text-lg font-bold text-on-surface flex items-center gap-1">
+          <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center p-0.5">
+            <img src="/icon.svg" alt="Qurab" className="w-full h-full object-contain" />
+          </div>
+          <span className="font-serif text-base font-bold text-on-surface flex items-center gap-1.5">
             <span>Qurab</span>
-            <span className="text-primary text-xs font-semibold">قُرب</span>
+            <span className="font-arabic text-primary text-xs font-bold">قُرب</span>
           </span>
         </div>
         <div className="w-10" />
       </header>
 
       {/* Main Auth Form */}
-      <main className="flex-1 flex flex-col justify-center my-6 max-w-sm mx-auto w-full">
+      <main className="flex-1 flex flex-col justify-center my-4 max-w-sm mx-auto w-full">
         <div className="flex flex-col items-center text-center animate-fade-in">
-          <div className="w-16 h-16 rounded-2xl bg-surface-container-low border border-surface-variant/50 flex items-center justify-center mb-4 shadow-sm p-3">
-            <img src="/icon.svg" alt="Qurab" className="w-10 h-10 object-contain" />
+          {/* Logo Badge */}
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-surface to-surface-variant border border-surface-variant flex items-center justify-center mb-3.5 shadow-card p-3">
+            <img src="/icon.svg" alt="Qurab" className="w-full h-full object-contain" />
           </div>
 
-          <h1 className="font-serif text-3xl font-bold text-on-surface mb-1">
-            {authMethod === 'phone' ? 'Phone SMS Verification' : tab === 'signup' ? 'Create Your Account' : 'Welcome Back'}
+          <h1 className="font-serif text-2xl sm:text-3xl font-bold text-on-surface mb-1">
+            {authMethod === 'phone' ? 'Phone Verification' : tab === 'signup' ? 'Create Your Account' : 'Welcome Back'}
           </h1>
-          <p className="text-xs text-secondary mb-6 leading-relaxed">
+          <p className="text-xs text-secondary mb-5 leading-relaxed max-w-[280px]">
             {authMethod === 'phone' 
-              ? 'Receive a 6-digit verification code directly on your mobile phone.'
-              : 'Sign in with your email and password.'}
+              ? 'Receive an instant SMS verification code on your mobile phone.'
+              : 'Sign in to access your halal matrimonial connections.'}
           </p>
 
           {/* Auth Method Switcher (Phone SMS vs Email) */}
-          <div className="w-full bg-surface-container-high p-1 rounded-2xl flex mb-6 border border-surface-variant">
+          <div className="w-full bg-surface-variant/70 p-1 rounded-2xl flex mb-5 border border-surface-variant/80 shadow-2xs">
             <button
               type="button"
               onClick={() => {
                 setAuthMethod('phone');
                 setErrorMsg('');
               }}
-              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 ${
                 authMethod === 'phone' 
-                  ? 'bg-surface text-primary shadow-sm' 
+                  ? 'bg-surface text-primary shadow-xs border border-surface-variant/40' 
                   : 'text-secondary hover:text-on-surface'
               }`}
             >
               <span className="material-symbols-outlined text-[16px]">smartphone</span>
-              <span>Phone SMS OTP</span>
+              <span>Phone SMS</span>
             </button>
             <button
               type="button"
@@ -273,9 +276,9 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
                 setAuthMethod('email');
                 setErrorMsg('');
               }}
-              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 ${
                 authMethod === 'email' 
-                  ? 'bg-surface text-primary shadow-sm' 
+                  ? 'bg-surface text-primary shadow-xs border border-surface-variant/40' 
                   : 'text-secondary hover:text-on-surface'
               }`}
             >
@@ -285,7 +288,7 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
           </div>
 
           {errorMsg && (
-            <div className="w-full mb-4 p-3 rounded-2xl bg-error/10 border border-error/20 text-error text-xs font-medium text-left flex items-start gap-2">
+            <div className="w-full mb-4 p-3 rounded-2xl bg-error/10 border border-error/25 text-error text-xs font-semibold text-left flex items-start gap-2 animate-fade-in">
               <span className="material-symbols-outlined text-base shrink-0">error</span>
               <span>{errorMsg}</span>
             </div>
@@ -303,7 +306,7 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       placeholder="e.g. Bilal Ahmad"
-                      className="w-full bg-surface-container-high border border-surface-variant rounded-2xl px-4 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary"
+                      className="w-full bg-surface border border-surface-variant rounded-2xl px-4 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all shadow-2xs placeholder:text-secondary/70"
                     />
                   </div>
 
@@ -320,7 +323,7 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
                       <select
                         value={countryCode}
                         onChange={(e) => setCountryCode(e.target.value)}
-                        className="bg-surface-container-high border border-surface-variant rounded-2xl px-2.5 py-3 text-xs font-bold text-on-surface outline-none focus:ring-2 focus:ring-primary shrink-0"
+                        className="bg-surface border border-surface-variant rounded-2xl px-2.5 py-3 text-xs font-bold text-on-surface outline-none focus:ring-2 focus:ring-primary shrink-0 shadow-2xs"
                       >
                         <option value="+92">🇵🇰 +92 (PK)</option>
                         <option value="+44">🇬🇧 +44 (UK)</option>
@@ -336,18 +339,18 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
                         value={phoneNumber}
                         onChange={(e) => setPhoneNumber(e.target.value)}
                         placeholder="300 1234567"
-                        className="flex-1 bg-surface-container-high border border-surface-variant rounded-2xl px-4 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary font-mono"
+                        className="flex-1 bg-surface border border-surface-variant rounded-2xl px-4 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary font-mono shadow-2xs placeholder:text-secondary/70"
                       />
                     </div>
-                    <p className="text-[10px] text-secondary mt-1">
-                      Enter without leading zero (e.g. <strong>3001234567</strong> for Pakistan)
+                    <p className="text-[10px] text-secondary mt-1.5">
+                      Enter without leading 0 (e.g. <strong>3001234567</strong> for Pakistan)
                     </p>
                   </div>
 
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full py-4 rounded-full bg-primary text-on-primary font-sans text-xs font-bold shadow-md shadow-primary/20 hover:brightness-110 active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2 mt-4"
+                    className="w-full py-4 rounded-full bg-gradient-to-r from-primary via-primary to-primary-light text-white font-sans text-xs font-bold shadow-emerald hover:brightness-110 active:scale-98 disabled:opacity-50 transition-all flex items-center justify-center gap-2 mt-4"
                   >
                     <span>{isLoading ? 'Sending SMS Code...' : 'Send 6-Digit SMS OTP'}</span>
                     <span className="material-symbols-outlined text-[18px]">sms</span>
@@ -355,19 +358,19 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
                 </form>
               ) : (
                 <form onSubmit={handleVerifyPhoneOtp} className="w-full space-y-4 text-left animate-fade-in">
-                  <div className="bg-primary/10 p-3 rounded-2xl text-xs text-primary font-medium flex items-center justify-between">
+                  <div className="bg-primary/10 p-3 rounded-2xl text-xs text-primary font-semibold flex items-center justify-between border border-primary/20">
                     <span>Sent to: <strong>{formatE164Phone(countryCode, phoneNumber)}</strong></span>
                     <button
                       type="button"
                       onClick={() => setPhoneStep('enter_phone')}
-                      className="text-[11px] underline font-bold"
+                      className="text-[11px] underline font-bold hover:text-primary-dark"
                     >
                       Edit
                     </button>
                   </div>
 
                   {d1OtpPreview && (
-                    <div className="bg-gradient-to-r from-primary/15 to-tertiary-container/20 border border-primary/30 p-3.5 rounded-2xl text-center space-y-1">
+                    <div className="bg-gradient-to-r from-primary/15 via-surface to-accent-gold-light/40 border border-primary/30 p-3.5 rounded-2xl text-center space-y-1.5 shadow-2xs">
                       <span className="text-[10px] text-secondary uppercase font-bold tracking-wider block">
                         Verification Code
                       </span>
@@ -377,7 +380,7 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
                       <button
                         type="button"
                         onClick={() => setOtpCode(d1OtpPreview)}
-                        className="text-[11px] text-primary font-semibold underline hover:brightness-125"
+                        className="text-[11px] text-primary font-bold underline hover:text-primary-dark"
                       >
                         Auto-Fill Code ({d1OtpPreview})
                       </button>
@@ -395,14 +398,14 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
                       value={otpCode}
                       onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
                       placeholder="123456"
-                      className="w-full bg-surface-container-high border border-surface-variant rounded-2xl px-4 py-3.5 text-center text-lg font-mono tracking-widest text-on-surface outline-none focus:ring-2 focus:ring-primary"
+                      className="w-full bg-surface border border-surface-variant rounded-2xl px-4 py-3.5 text-center text-xl font-mono tracking-widest text-on-surface outline-none focus:ring-2 focus:ring-primary shadow-2xs"
                     />
                   </div>
 
                   <button
                     type="submit"
                     disabled={isLoading || otpCode.length < 6}
-                    className="w-full py-4 rounded-full bg-primary text-on-primary font-sans text-xs font-bold shadow-md shadow-primary/20 hover:brightness-110 active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                    className="w-full py-4 rounded-full bg-gradient-to-r from-primary via-primary to-primary-light text-white font-sans text-xs font-bold shadow-emerald hover:brightness-110 active:scale-98 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                   >
                     <span>{isLoading ? 'Verifying...' : 'Verify OTP & Continue'}</span>
                     <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
@@ -416,7 +419,7 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
           {authMethod === 'email' && (
             <div className="w-full">
               {/* Tab Switcher (Signup vs Login) */}
-              <div className="w-full bg-surface-container-high p-1 rounded-2xl flex mb-6 border border-surface-variant">
+              <div className="w-full bg-surface-variant/70 p-1 rounded-2xl flex mb-5 border border-surface-variant/80">
                 <button
                   type="button"
                   onClick={() => {
@@ -424,7 +427,7 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
                     setErrorMsg('');
                   }}
                   className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
-                    tab === 'signup' ? 'bg-surface text-primary shadow-sm' : 'text-secondary hover:text-on-surface'
+                    tab === 'signup' ? 'bg-surface text-primary shadow-2xs' : 'text-secondary hover:text-on-surface'
                   }`}
                 >
                   Create Account
@@ -436,14 +439,14 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
                     setErrorMsg('');
                   }}
                   className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
-                    tab === 'login' ? 'bg-surface text-primary shadow-sm' : 'text-secondary hover:text-on-surface'
+                    tab === 'login' ? 'bg-surface text-primary shadow-2xs' : 'text-secondary hover:text-on-surface'
                   }`}
                 >
                   Sign In
                 </button>
               </div>
 
-              <form onSubmit={handleEmailSubmit} className="w-full space-y-4 text-left">
+              <form onSubmit={handleEmailSubmit} className="w-full space-y-3.5 text-left">
                 {tab === 'signup' && (
                   <div>
                     <label className="block text-xs font-bold text-on-surface mb-1.5">Full Name</label>
@@ -453,7 +456,7 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       placeholder="e.g. Tariq Hussain"
-                      className="w-full bg-surface-container-high border border-surface-variant rounded-2xl px-4 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary"
+                      className="w-full bg-surface border border-surface-variant rounded-2xl px-4 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary shadow-2xs"
                     />
                   </div>
                 )}
@@ -466,7 +469,7 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@example.com"
-                    className="w-full bg-surface-container-high border border-surface-variant rounded-2xl px-4 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full bg-surface border border-surface-variant rounded-2xl px-4 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary shadow-2xs"
                   />
                 </div>
 
@@ -479,7 +482,7 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full bg-surface-container-high border border-surface-variant rounded-2xl px-4 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary pr-10"
+                      className="w-full bg-surface border border-surface-variant rounded-2xl px-4 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary pr-10 shadow-2xs"
                     />
                     <button
                       type="button"
@@ -502,7 +505,7 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full bg-surface-container-high border border-surface-variant rounded-2xl px-4 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary"
+                      className="w-full bg-surface border border-surface-variant rounded-2xl px-4 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary shadow-2xs"
                     />
                   </div>
                 )}
@@ -510,7 +513,7 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full py-4 rounded-full bg-primary text-on-primary font-sans text-xs font-bold shadow-md shadow-primary/20 hover:brightness-110 active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2 mt-4"
+                  className="w-full py-4 rounded-full bg-gradient-to-r from-primary via-primary to-primary-light text-white font-sans text-xs font-bold shadow-emerald hover:brightness-110 active:scale-98 disabled:opacity-50 transition-all flex items-center justify-center gap-2 mt-4"
                 >
                   <span>
                     {isLoading 
@@ -529,8 +532,9 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
 
       {/* Footer */}
       <footer className="w-full text-center py-2 text-[10px] text-secondary">
-        By signing up, you agree to Qurab's <span className="underline">Halal Conduct & Privacy Policy</span>.
+        By continuing, you agree to Qurab's <span className="underline font-medium">Halal Conduct & Privacy Policy</span>.
       </footer>
     </div>
   );
 };
+

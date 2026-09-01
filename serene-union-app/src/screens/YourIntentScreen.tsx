@@ -61,32 +61,40 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
   };
 
   return (
-    <div className="w-full h-full flex flex-col justify-between p-6 bg-background font-sans overflow-y-auto pb-32">
+    <div className="w-full h-full flex flex-col justify-between p-6 bg-background font-sans overflow-y-auto pb-28 select-none">
       <div>
-        {/* Header & Progress */}
-        <div className="flex items-center justify-between mb-4">
+        {/* Header & Step Indicator */}
+        <div className="flex items-center justify-between mb-3 pt-2">
           <button
             onClick={onBack}
-            className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface hover:bg-surface-variant transition-colors"
+            className="w-10 h-10 rounded-full bg-surface border border-surface-variant/80 flex items-center justify-center text-on-surface hover:bg-surface-variant transition-colors shadow-2xs"
           >
             <span className="material-symbols-outlined text-[20px]">arrow_back</span>
           </button>
-          <span className="text-xs font-bold text-primary tracking-widest uppercase">Step 4 of 5</span>
+          <div className="flex items-center gap-1">
+            <span className="text-[11px] font-bold text-primary tracking-wider uppercase">Step 4 of 5</span>
+            <span className="text-[11px] text-secondary">· Intent</span>
+          </div>
           <div className="w-10" />
         </div>
 
-        <div className="w-full bg-surface-variant h-1.5 rounded-full overflow-hidden mb-6">
-          <div className="bg-primary h-full w-[80%] transition-all duration-300" />
+        {/* 5-Step Glowing Progress Bars */}
+        <div className="grid grid-cols-5 gap-1.5 mb-6">
+          <div className="h-1.5 rounded-full bg-gradient-to-r from-primary to-primary-light" />
+          <div className="h-1.5 rounded-full bg-gradient-to-r from-primary to-primary-light" />
+          <div className="h-1.5 rounded-full bg-gradient-to-r from-primary to-primary-light" />
+          <div className="h-1.5 rounded-full bg-gradient-to-r from-primary to-primary-light shadow-emerald" />
+          <div className="h-1.5 rounded-full bg-surface-variant" />
         </div>
 
-        <h1 className="font-serif text-2xl font-bold text-on-surface mb-1">
+        <h1 className="font-serif text-2xl sm:text-3xl font-bold text-on-surface mb-1">
           Career, Mahr & Intent
         </h1>
-        <p className="text-xs text-secondary mb-6 leading-relaxed">
+        <p className="text-xs text-secondary mb-5 leading-relaxed">
           Define your educational pedigree, financial outlook, and matrimonial timeline.
         </p>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* Education & University */}
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -94,7 +102,7 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
               <select
                 value={education}
                 onChange={(e) => setEducation(e.target.value)}
-                className="w-full bg-surface-container-high border border-surface-variant rounded-2xl px-3 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary"
+                className="w-full bg-surface border border-surface-variant rounded-2xl px-3 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary shadow-2xs font-medium"
               >
                 {['Bachelors Degree', 'Masters Degree', 'Doctorate / PhD', 'Medical Doctor / MBBS', 'Islamic Scholar / Alimiyyah', 'Diploma / Associate', 'High School'].map(deg => (
                   <option key={deg} value={deg}>{deg}</option>
@@ -108,7 +116,7 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
                 value={university}
                 onChange={(e) => setUniversity(e.target.value)}
                 placeholder="e.g. LUMS / Oxford"
-                className="w-full bg-surface-container-high border border-surface-variant rounded-2xl px-3 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary"
+                className="w-full bg-surface border border-surface-variant rounded-2xl px-3 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary shadow-2xs"
               />
             </div>
           </div>
@@ -122,7 +130,7 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
               value={profession}
               onChange={(e) => setProfession(e.target.value)}
               placeholder="e.g. Senior Software Architect, Doctor, Entrepreneur"
-              className="w-full bg-surface-container-high border border-surface-variant rounded-2xl px-4 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary"
+              className="w-full bg-surface border border-surface-variant rounded-2xl px-4 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary shadow-2xs"
             />
           </div>
 
@@ -133,24 +141,24 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
               <select
                 value={workArrangement}
                 onChange={(e) => setWorkArrangement(e.target.value as any)}
-                className="w-full bg-surface-container-high border border-surface-variant rounded-2xl px-3 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary"
+                className="w-full bg-surface border border-surface-variant rounded-2xl px-3 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary shadow-2xs font-medium"
               >
                 {[
                   { id: 'remote', label: '💻 Remote / WFH' },
                   { id: 'hybrid', label: '🌐 Hybrid' },
                   { id: 'onsite', label: '🏢 On-Site' },
-                  { id: 'entrepreneur', label: '🚀 Entrepreneur / Business' }
+                  { id: 'entrepreneur', label: '🚀 Entrepreneur' }
                 ].map(w => (
                   <option key={w.id} value={w.id}>{w.label}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-on-surface mb-1.5">Annual Income (USD / equiv.)</label>
+              <label className="block text-xs font-bold text-on-surface mb-1.5">Annual Income Bracket</label>
               <select
                 value={incomeBracket}
                 onChange={(e) => setIncomeBracket(e.target.value as any)}
-                className="w-full bg-surface-container-high border border-surface-variant rounded-2xl px-3 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary"
+                className="w-full bg-surface border border-surface-variant rounded-2xl px-3 py-3 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary shadow-2xs font-medium"
               >
                 {[
                   { id: 'under_40k', label: 'Under $40k' },
@@ -167,8 +175,8 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
 
           {/* Hobbies & Passions */}
           <div>
-            <label className="block text-xs font-bold text-on-surface mb-2">Interests & Hobbies (Tap to select)</label>
-            <div className="flex flex-wrap gap-2">
+            <label className="block text-xs font-bold text-on-surface mb-2">Interests & Hobbies</label>
+            <div className="flex flex-wrap gap-1.5">
               {[
                 '📚 Books & Islamic History',
                 '✈️ Travel & Umrah',
@@ -188,10 +196,10 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
                       if (isSelected) setHobbies(hobbies.filter(h => h !== tag));
                       else setHobbies([...hobbies, tag]);
                     }}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
                       isSelected
-                        ? 'border-primary bg-primary text-white shadow-sm'
-                        : 'border-surface-variant bg-surface text-secondary hover:bg-surface-container-low'
+                        ? 'border-primary bg-primary text-white shadow-2xs'
+                        : 'border-surface-variant bg-surface text-secondary hover:bg-surface-variant/40'
                     }`}
                   >
                     {tag}
@@ -208,10 +216,10 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
               {[
                 '🤍 Family-Oriented',
                 '🌿 Calm & Patient',
-                '🎯 Ambitious',
-                '😄 Humorous & Cheerful',
-                '🧠 Intellectual',
-                '🤲 Kind-Hearted'
+                '💡 Ambitious & Driven',
+                '✨ Optimistic & Warm',
+                '🕌 God-Fearing (Taqwa)',
+                '🤝 Humble & Honest'
               ].map(trait => {
                 const isSelected = personalityTraits.includes(trait);
                 return (
@@ -222,10 +230,10 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
                       if (isSelected) setPersonalityTraits(personalityTraits.filter(t => t !== trait));
                       else setPersonalityTraits([...personalityTraits, trait]);
                     }}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
                       isSelected
-                        ? 'border-primary bg-primary text-white shadow-sm'
-                        : 'border-surface-variant bg-surface text-secondary hover:bg-surface-container-low'
+                        ? 'border-accent-gold bg-accent-gold text-on-surface font-bold shadow-2xs'
+                        : 'border-surface-variant bg-surface text-secondary hover:bg-surface-variant/40'
                     }`}
                   >
                     {trait}
@@ -240,9 +248,9 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
             <label className="block text-xs font-bold text-on-surface mb-2">Target Nikah Timeline</label>
             <div className="grid grid-cols-3 gap-2">
               {[
-                { id: '1_to_3_months', label: '1–3 Months (Immediate)' },
+                { id: '1_to_3_months', label: '1–3 Months' },
                 { id: 'within_1_year', label: 'Within 1 Year' },
-                { id: 'right_person', label: 'When Right Person Found' }
+                { id: 'right_person', label: 'Right Person' }
               ].map(opt => (
                 <button
                   key={opt.id}
@@ -250,8 +258,8 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
                   onClick={() => setTimeline(opt.id)}
                   className={`p-2.5 rounded-xl border text-[11px] font-semibold text-center transition-all ${
                     timeline === opt.id
-                      ? 'border-primary bg-primary/10 text-primary font-bold'
-                      : 'border-surface-variant bg-surface text-secondary hover:bg-surface-container-low'
+                      ? 'border-primary bg-primary/10 text-primary font-bold shadow-2xs'
+                      : 'border-surface-variant bg-surface text-secondary hover:bg-surface-variant/40'
                   }`}
                 >
                   {opt.label}
@@ -263,7 +271,7 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
           {/* Mahr Philosophy */}
           <div>
             <label className="block text-xs font-bold text-on-surface mb-2">Mahr Philosophy</label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2.5">
               {[
                 { id: 'sunnah_modest', label: 'Sunnah Modest Mahr', desc: 'Simple, unburdensome Mahr upon Sunnah' },
                 { id: 'mutual_agreement', label: 'Mutual Agreement', desc: 'Discussed & agreed respectfully with Wali' }
@@ -272,13 +280,13 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
                   key={opt.id}
                   type="button"
                   onClick={() => setMahrPhilosophy(opt.id)}
-                  className={`p-3 rounded-2xl text-left border transition-all ${
+                  className={`p-3.5 rounded-2xl text-left border transition-all ${
                     mahrPhilosophy === opt.id
-                      ? 'border-primary bg-primary/10 text-on-surface shadow-sm'
-                      : 'border-surface-variant bg-surface text-secondary hover:bg-surface-container-low'
+                      ? 'border-primary bg-primary/10 text-on-surface shadow-xs ring-1 ring-primary'
+                      : 'border-surface-variant bg-surface text-secondary hover:bg-surface-variant/40'
                   }`}
                 >
-                  <strong className="text-xs block text-on-surface">{opt.label}</strong>
+                  <strong className="text-xs block text-on-surface font-bold">{opt.label}</strong>
                   <span className="text-[10px] text-secondary leading-tight block mt-0.5">{opt.desc}</span>
                 </button>
               ))}
@@ -290,9 +298,9 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
             <label className="block text-xs font-bold text-on-surface mb-2">Children & Family Plans</label>
             <div className="grid grid-cols-3 gap-2">
               {[
-                { id: 'desires_children', label: 'Desires Children' },
-                { id: 'open', label: 'Open / InshaAllah' },
-                { id: 'later', label: 'Discuss Later' }
+                { id: 'desires_children', label: '👶 Desires Kids' },
+                { id: 'open', label: '🤲 InshaAllah' },
+                { id: 'later', label: '🤝 Discuss Later' }
               ].map(opt => (
                 <button
                   key={opt.id}
@@ -300,8 +308,8 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
                   onClick={() => setChildrenDesire(opt.id)}
                   className={`py-2 px-1 rounded-xl border text-[11px] font-semibold text-center transition-all ${
                     childrenDesire === opt.id
-                      ? 'border-primary bg-primary/10 text-primary font-bold'
-                      : 'border-surface-variant bg-surface text-secondary hover:bg-surface-container-low'
+                      ? 'border-primary bg-primary/10 text-primary font-bold shadow-2xs'
+                      : 'border-surface-variant bg-surface text-secondary hover:bg-surface-variant/40'
                   }`}
                 >
                   {opt.label}
@@ -320,7 +328,7 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               placeholder="Share what practicing Islam means in your daily life, your character values, and what kind of partner you hope to build a home with..."
-              className="w-full bg-surface-container-high border border-surface-variant rounded-2xl p-3.5 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary leading-relaxed"
+              className="w-full bg-surface border border-surface-variant rounded-2xl p-3.5 text-xs text-on-surface outline-none focus:ring-2 focus:ring-primary leading-relaxed shadow-2xs"
             />
           </div>
         </form>
@@ -330,7 +338,7 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
       <div className="pt-6">
         <button
           onClick={handleSubmit}
-          className="w-full py-4 rounded-full bg-primary text-on-primary font-sans text-xs font-bold shadow-md shadow-primary/20 hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2"
+          className="w-full py-4 rounded-full bg-gradient-to-r from-primary via-primary to-primary-light text-white font-sans text-xs font-bold shadow-emerald hover:brightness-110 active:scale-98 transition-all flex items-center justify-center gap-2"
         >
           <span>Continue to Photos & Modesty</span>
           <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
@@ -339,3 +347,4 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
     </div>
   );
 };
+

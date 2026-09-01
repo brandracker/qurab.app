@@ -296,60 +296,61 @@ export const CompatibilityQuizModal: React.FC<Props> = ({ userId, isOpen, onClos
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md px-4 font-sans animate-fade-in">
-      <div className="w-full max-w-[460px] bg-surface rounded-[32px] p-6 shadow-2xl border border-surface-variant flex flex-col relative overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md px-4 font-sans animate-fade-in select-none">
+      <div className="w-full max-w-[460px] bg-surface rounded-[36px] p-6 shadow-2xl border border-surface-variant/80 flex flex-col relative overflow-hidden animate-slide-up">
         {/* Header */}
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-3 pb-2 border-b border-surface-variant/40">
           <button
             onClick={() => {
               if (currentIdx > 0) setCurrentIdx(currentIdx - 1);
               else onClose();
             }}
-            className="w-9 h-9 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface hover:bg-surface-variant"
+            className="w-9 h-9 rounded-full bg-surface border border-surface-variant/80 flex items-center justify-center text-on-surface hover:bg-surface-variant transition-colors shadow-2xs"
           >
             <span className="material-symbols-outlined text-[18px]">arrow_back</span>
           </button>
-          <span className="text-[11px] font-bold text-primary uppercase tracking-wider">
-            {currentQ.pillar} ({currentIdx + 1}/{total})
-          </span>
-          <button onClick={onClose} className="text-xs text-secondary hover:text-on-surface font-semibold">
+          <div className="flex items-center gap-1.5 font-serif text-xs font-bold text-on-surface">
+            <span className="text-primary">{currentQ.pillar}</span>
+            <span className="text-secondary font-mono text-[11px]">({currentIdx + 1}/{total})</span>
+          </div>
+          <button onClick={onClose} className="text-xs text-secondary hover:text-on-surface font-bold px-2.5 py-1 rounded-full bg-surface-variant/60">
             Exit
           </button>
         </div>
 
         {/* Progress Bar */}
-        <div className="w-full bg-surface-variant h-1.5 rounded-full overflow-hidden mb-6">
-          <div className="bg-primary h-full transition-all duration-300" style={{ width: `${progress}%` }} />
+        <div className="w-full bg-surface-variant h-2 rounded-full overflow-hidden mb-5">
+          <div className="bg-gradient-to-r from-primary to-primary-light h-full transition-all duration-300 shadow-emerald" style={{ width: `${progress}%` }} />
         </div>
 
         {/* Question Title */}
-        <div className="mb-6 min-h-[70px]">
-          <span className="text-[10px] font-bold text-secondary uppercase tracking-widest block mb-1">
-            Question {currentIdx + 1}
+        <div className="mb-5 min-h-[64px]">
+          <span className="text-[10px] font-bold text-accent-gold-dark uppercase tracking-widest block mb-1">
+            Question {currentIdx + 1} of {total}
           </span>
-          <h2 className="font-serif text-lg font-bold text-on-surface leading-snug">
+          <h2 className="font-serif text-base sm:text-lg font-bold text-on-surface leading-snug">
             {currentQ.question}
           </h2>
         </div>
 
         {/* 3 Options */}
-        <div className="space-y-3 mb-6">
+        <div className="space-y-2.5 mb-5">
           {currentQ.options.map((opt, optIdx) => {
             const isSelected = answers[currentQ.id] === optIdx;
             return (
               <button
                 key={optIdx}
                 onClick={() => handleSelect(optIdx)}
-                className={`w-full p-4 rounded-2xl text-left border transition-all flex items-start gap-3 ${
+                className={`w-full p-3.5 sm:p-4 rounded-2xl text-left border transition-all flex items-start gap-3 shadow-2xs ${
                   isSelected
-                    ? 'border-primary bg-primary/10 text-on-surface shadow-sm'
-                    : 'border-surface-variant bg-surface hover:bg-surface-container-low text-on-surface-variant'
+                    ? 'border-primary bg-primary/10 text-on-surface shadow-emerald ring-1 ring-primary'
+                    : 'border-surface-variant/80 bg-surface hover:bg-surface-variant/40 text-on-surface-variant'
                 }`}
               >
-                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 ${
-                  isSelected ? 'border-primary bg-primary' : 'border-outline-variant'
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
+                  isSelected ? 'border-primary bg-primary text-white' : 'border-surface-variant bg-surface'
                 }`}>
-                  {isSelected && <span className="material-symbols-outlined text-white text-[14px]">check</span>}
+                  {isSelected && <span className="material-symbols-outlined text-[13px]">check</span>}
                 </div>
                 <p className="text-xs leading-relaxed font-medium">{opt}</p>
               </button>
@@ -365,3 +366,4 @@ export const CompatibilityQuizModal: React.FC<Props> = ({ userId, isOpen, onClos
     </div>
   );
 };
+

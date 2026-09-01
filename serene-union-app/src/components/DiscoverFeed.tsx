@@ -173,11 +173,11 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
   };
 
   return (
-    <div className="w-full h-full flex flex-col relative bg-background overflow-hidden font-sans">
+    <div className="w-full h-full flex flex-col relative bg-background overflow-hidden font-sans select-none">
       {/* Top Header: Clean Search Bar + Filter Button + Counter */}
-      <header className="w-full sticky top-0 z-40 bg-background/95 backdrop-blur-md px-4 py-3 border-b border-surface-variant/30 flex items-center gap-3">
+      <header className="w-full sticky top-0 z-40 bg-surface/90 backdrop-blur-xl px-4 py-2.5 border-b border-surface-variant/40 flex items-center gap-2.5 shadow-2xs">
         <div className="relative flex-1">
-          <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">
+          <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-secondary text-[18px]">
             search
           </span>
           <input
@@ -187,21 +187,21 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
               setCurrentIndex(0);
               setCurrentPhotoIdx(0);
             }}
-            className="w-full bg-surface-container-high border-none rounded-full py-2.5 pl-10 pr-4 text-xs text-on-surface focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-secondary"
-            placeholder="Search by name, city, profession..."
+            className="w-full bg-surface border border-surface-variant/80 rounded-full py-2 pl-9 pr-4 text-xs text-on-surface focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all placeholder:text-secondary/70 shadow-2xs"
+            placeholder="Search candidates by city, profession..."
             type="text"
           />
         </div>
 
         {filteredFeed.length > 0 && (
-          <span className="text-[11px] font-bold bg-primary/10 text-primary px-3 py-2 rounded-full shrink-0 border border-primary/20">
-            {currentIndex + 1} of {filteredFeed.length}
+          <span className="text-[11px] font-bold bg-primary/10 text-primary px-2.5 py-1.5 rounded-full shrink-0 border border-primary/20">
+            {currentIndex + 1} / {filteredFeed.length}
           </span>
         )}
 
         {isVip && (
-          <span className="text-[11px] font-bold bg-primary text-white px-2.5 py-1.5 rounded-full flex items-center gap-1 shadow-xs shrink-0">
-            <span className="material-symbols-outlined text-[14px]">workspace_premium</span>
+          <span className="text-[11px] font-bold bg-gradient-to-r from-amber-500 to-amber-600 text-white px-2.5 py-1.5 rounded-full flex items-center gap-1 shadow-xs border border-amber-300/40 shrink-0">
+            <span className="material-symbols-outlined text-[13px]">workspace_premium</span>
             <span>VIP</span>
           </span>
         )}
@@ -209,20 +209,20 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
         <button
           onClick={() => setShowFilterModal(true)}
           aria-label="Filters"
-          className="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container-high text-on-surface hover:bg-surface-variant transition-colors shrink-0 relative"
+          className="w-9 h-9 flex items-center justify-center rounded-full bg-surface border border-surface-variant/80 text-on-surface hover:bg-surface-variant transition-colors shrink-0 relative shadow-2xs"
         >
-          <span className="material-symbols-outlined text-[20px]">tune</span>
+          <span className="material-symbols-outlined text-[18px]">tune</span>
           {(filters.sects.length > 0 || filters.practiceLevels.length > 0) && (
-            <span className="w-2.5 h-2.5 bg-primary rounded-full absolute top-1 right-1 border-2 border-surface" />
+            <span className="w-2.5 h-2.5 bg-primary rounded-full absolute top-0.5 right-0.5 border-2 border-surface" />
           )}
         </button>
       </header>
 
       {/* Action Toast Feedback */}
       {toastMessage && (
-        <div className="bg-primary/95 text-on-primary px-4 py-2.5 text-xs font-semibold flex items-center justify-between shadow-md animate-fade-in z-30">
+        <div className="bg-primary text-white px-4 py-2.5 text-xs font-bold flex items-center justify-between shadow-emerald animate-fade-in z-30">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-sm">check_circle</span>
+            <span className="material-symbols-outlined text-base">check_circle</span>
             <span>{toastMessage}</span>
           </div>
           <button onClick={() => setToastMessage(null)} className="text-white/80 hover:text-white">
@@ -232,17 +232,19 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
       )}
 
       {/* Main Coverflow Perspective Stage */}
-      <main className="flex-1 overflow-y-auto px-4 pt-3 pb-28 flex flex-col justify-between">
+      <main className="flex-1 overflow-y-auto px-4 pt-3 pb-24 flex flex-col justify-between">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-28 text-center">
             <span className="material-symbols-outlined text-4xl text-primary animate-spin">progress_activity</span>
             <p className="text-xs text-secondary mt-2">Loading prospective matches...</p>
           </div>
         ) : !currentProfile ? (
-          <div className="flex flex-col items-center justify-center py-28 text-center px-4">
-            <span className="material-symbols-outlined text-5xl text-outline mb-2">favorite_border</span>
+          <div className="flex flex-col items-center justify-center py-24 text-center px-4 bg-surface rounded-3xl border border-surface-variant/80 my-auto shadow-card">
+            <div className="w-14 h-14 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-3">
+              <span className="material-symbols-outlined text-3xl">favorite_border</span>
+            </div>
             <h3 className="font-serif text-base font-bold text-on-surface">No Profiles Found</h3>
-            <p className="text-xs text-secondary max-w-xs mt-1">
+            <p className="text-xs text-secondary max-w-xs mt-1 leading-relaxed">
               You have viewed all candidates or your filters are very specific. Try resetting to explore more profiles.
             </p>
             <button
@@ -258,7 +260,7 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
                   languages: []
                 });
               }}
-              className="mt-4 px-5 py-2 rounded-full bg-primary text-white text-xs font-semibold shadow hover:brightness-110"
+              className="mt-4 px-5 py-2.5 rounded-full bg-gradient-to-r from-primary via-primary to-primary-light text-white text-xs font-bold shadow-emerald hover:brightness-110 active:scale-98 transition-all"
             >
               Reset Filters
             </button>
@@ -269,7 +271,7 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
           /* ========================================================================= */
           <div className="w-full flex flex-col flex-1 justify-between gap-3 animate-fade-in">
             {/* Card Shell */}
-            <article className="w-full bg-surface rounded-3xl overflow-hidden border border-surface-variant/40 shadow-md flex flex-col">
+            <article className="w-full bg-surface rounded-[28px] overflow-hidden border border-surface-variant/80 shadow-card flex flex-col">
               {/* Top Photo & Multi-Image Header */}
               <div className="relative w-full h-72 bg-surface-container-high overflow-hidden group">
                 <img
@@ -295,7 +297,7 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
                         className={`h-1 flex-1 rounded-full cursor-pointer transition-all ${
                           pIdx === currentPhotoIdx
                             ? 'bg-white shadow'
-                            : 'bg-white/40 hover:bg-white/60'
+                            : 'bg-white/40 hover:bg-white/70'
                         }`}
                       />
                     ))}
@@ -309,7 +311,7 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
                       type="button"
                       onClick={handlePrevPhoto}
                       aria-label="Previous Photo"
-                      className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center backdrop-blur-sm opacity-80 hover:opacity-100 hover:scale-105 active:scale-95 transition-all z-20"
+                      className="absolute left-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center backdrop-blur-sm opacity-80 hover:opacity-100 hover:scale-105 active:scale-95 transition-all z-20"
                     >
                       <span className="material-symbols-outlined text-[18px]">chevron_left</span>
                     </button>
@@ -317,7 +319,7 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
                       type="button"
                       onClick={handleNextPhoto}
                       aria-label="Next Photo"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center backdrop-blur-sm opacity-80 hover:opacity-100 hover:scale-105 active:scale-95 transition-all z-20"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center backdrop-blur-sm opacity-80 hover:opacity-100 hover:scale-105 active:scale-95 transition-all z-20"
                     >
                       <span className="material-symbols-outlined text-[18px]">chevron_right</span>
                     </button>
@@ -327,8 +329,8 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
                 {/* Modesty Shield Badge */}
                 {currentProfile.blurPhotosByDefault && !currentProfile.photoRevealApproved && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black/15 pointer-events-none">
-                    <div className="bg-background/90 backdrop-blur-md px-3.5 py-1.5 rounded-full text-on-surface font-sans text-[10px] font-bold shadow-xs flex items-center gap-1.5 border border-surface-variant/40">
-                      <span className="material-symbols-outlined text-[15px] text-primary">shield</span>
+                    <div className="bg-surface/90 backdrop-blur-md px-3.5 py-1.5 rounded-full text-on-surface font-sans text-[10px] font-bold shadow-xs flex items-center gap-1.5 border border-surface-variant/60">
+                      <span className="material-symbols-outlined text-[15px] text-accent-gold-dark">shield</span>
                       <span>Modesty Shield Active</span>
                     </div>
                   </div>
@@ -337,7 +339,7 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
                 {/* Top Location & Photo Counter Pill */}
                 <div className="absolute top-6 left-3 flex items-center gap-1.5 z-10">
                   <div className="bg-black/60 backdrop-blur-sm px-3 py-1 rounded-full text-white text-xs font-medium flex items-center gap-1">
-                    <span className="material-symbols-outlined text-[14px] text-primary">location_on</span>
+                    <span className="material-symbols-outlined text-[13px] text-primary-light">location_on</span>
                     <span>{currentProfile.location}</span>
                   </div>
                   {photos.length > 1 && (
@@ -350,14 +352,14 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
 
                 {/* Top Right VIP or Wali Badge */}
                 {currentProfile.isVip ? (
-                  <div className="absolute top-6 right-3 bg-gradient-to-r from-amber-500 via-primary to-emerald-600 text-white text-[10px] font-bold px-3 py-1 rounded-full flex items-center gap-1.5 shadow-lg border border-amber-300/40 backdrop-blur-sm z-10 animate-pulse">
-                    <span className="material-symbols-outlined text-[14px] text-amber-200">workspace_premium</span>
+                  <div className="absolute top-6 right-3 bg-gradient-to-r from-amber-500 via-accent-gold to-amber-600 text-white text-[10px] font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-lg border border-amber-300/50 backdrop-blur-sm z-10 animate-pulse">
+                    <span className="material-symbols-outlined text-[13px] text-amber-200">workspace_premium</span>
                     <span>VIP Member</span>
                   </div>
                 ) : currentProfile.wali ? (
                   <div className="absolute top-6 right-3 bg-primary/95 text-white text-[10px] font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-xs backdrop-blur-sm z-10">
                     <span className="material-symbols-outlined text-[13px]">verified_user</span>
-                    <span>Wali Observed</span>
+                    <span>Wali Verified</span>
                   </div>
                 ) : null}
 
@@ -367,8 +369,8 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
                     <h2 className="font-serif text-2xl font-bold text-white leading-tight flex items-center gap-2">
                       <span>{currentProfile.fullName.split(' ')[0]}, {currentProfile.age}</span>
                       {currentProfile.isVip && (
-                        <span className="bg-gradient-to-r from-amber-500 to-primary text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-md border border-amber-300/40">
-                          <span className="material-symbols-outlined text-[12px] text-amber-200">workspace_premium</span>
+                        <span className="bg-gradient-to-r from-amber-500 to-amber-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-0.5 shadow-sm border border-amber-300/40">
+                          <span className="material-symbols-outlined text-[11px]">workspace_premium</span>
                           <span>VIP</span>
                         </span>
                       )}
@@ -390,11 +392,11 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
               </div>
 
               {/* In-Card Deep Navigation Tabs */}
-              <div className="flex border-b border-surface-variant/40 bg-surface-container-high/60">
+              <div className="flex border-b border-surface-variant/60 bg-surface-variant/40">
                 {[
                   { id: 'deen', label: 'Deen & Taqwa', icon: 'mosque' },
-                  { id: 'career', label: 'Career & Pedigree', icon: 'school' },
-                  { id: 'family', label: 'Family & Home', icon: 'home' },
+                  { id: 'career', label: 'Career', icon: 'school' },
+                  { id: 'family', label: 'Family', icon: 'home' },
                   { id: 'bio', label: 'Bio & Values', icon: 'person' }
                 ].map(tab => (
                   <button
@@ -402,11 +404,11 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
                     onClick={() => setActiveTab(tab.id as CardTab)}
                     className={`flex-1 py-2.5 flex flex-col items-center gap-0.5 border-b-2 text-[10px] font-bold transition-all ${
                       activeTab === tab.id
-                        ? 'border-primary text-primary bg-surface'
+                        ? 'border-primary text-primary bg-surface shadow-2xs'
                         : 'border-transparent text-secondary hover:text-on-surface'
                     }`}
                   >
-                    <span className="material-symbols-outlined text-[17px]">{tab.icon}</span>
+                    <span className="material-symbols-outlined text-[16px]">{tab.icon}</span>
                     <span>{tab.label}</span>
                   </button>
                 ))}
@@ -418,19 +420,19 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
                 {activeTab === 'deen' && (
                   <div className="space-y-2.5 animate-fade-in">
                     <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="bg-surface-container-high/70 p-2 rounded-xl border border-surface-variant/30">
+                      <div className="bg-surface-variant/50 p-2.5 rounded-xl border border-surface-variant/60">
                         <span className="text-[9px] text-secondary font-bold uppercase block">Daily Prayers</span>
                         <strong className="text-on-surface text-[11px]">{currentProfile.religiousProfile?.prayerFrequency || '5 times daily'}</strong>
                       </div>
-                      <div className="bg-surface-container-high/70 p-2 rounded-xl border border-surface-variant/30">
+                      <div className="bg-surface-variant/50 p-2.5 rounded-xl border border-surface-variant/60">
                         <span className="text-[9px] text-secondary font-bold uppercase block">Sect & Madhhab</span>
                         <strong className="text-on-surface text-[11px]">{currentProfile.religiousProfile?.sect} · {currentProfile.religiousProfile?.madhhab || 'Hanafi'}</strong>
                       </div>
-                      <div className="bg-surface-container-high/70 p-2 rounded-xl border border-surface-variant/30">
+                      <div className="bg-surface-variant/50 p-2.5 rounded-xl border border-surface-variant/60">
                         <span className="text-[9px] text-secondary font-bold uppercase block">Dietary Standard</span>
                         <strong className="text-on-surface text-[11px]">{currentProfile.religiousProfile?.halalDiet || 'Strictly Halal'}</strong>
                       </div>
-                      <div className="bg-surface-container-high/70 p-2 rounded-xl border border-surface-variant/30">
+                      <div className="bg-surface-variant/50 p-2.5 rounded-xl border border-surface-variant/60">
                         <span className="text-[9px] text-secondary font-bold uppercase block">Modesty / Attire</span>
                         <strong className="text-on-surface text-[11px] capitalize">{currentProfile.religiousProfile?.modestyPractice?.replace('_', ' ') || 'Modest'}</strong>
                       </div>
@@ -441,7 +443,7 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
                 {/* 2. CAREER & PEDIGREE TAB */}
                 {activeTab === 'career' && (
                   <div className="space-y-2.5 animate-fade-in text-xs">
-                    <div className="flex items-center gap-2 bg-surface-container-high/70 p-2.5 rounded-xl border border-surface-variant/30">
+                    <div className="flex items-center gap-2 bg-surface-variant/50 p-2.5 rounded-xl border border-surface-variant/60">
                       <span className="material-symbols-outlined text-[18px] text-primary">school</span>
                       <div>
                         <span className="text-[9px] text-secondary font-bold uppercase block">Education</span>
@@ -450,11 +452,11 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-surface-container-high/70 p-2.5 rounded-xl border border-surface-variant/30">
+                      <div className="bg-surface-variant/50 p-2.5 rounded-xl border border-surface-variant/60">
                         <span className="text-[9px] text-secondary font-bold uppercase block">Work Arrangement</span>
                         <strong className="text-on-surface capitalize text-[11px]">{currentProfile.workArrangement?.replace('_', ' ') || 'Full-Time'}</strong>
                       </div>
-                      <div className="bg-surface-container-high/70 p-2.5 rounded-xl border border-surface-variant/30">
+                      <div className="bg-surface-variant/50 p-2.5 rounded-xl border border-surface-variant/60">
                         <span className="text-[9px] text-secondary font-bold uppercase block">Annual Income</span>
                         <strong className="text-on-surface text-[11px] capitalize">{currentProfile.incomeBracket ? currentProfile.incomeBracket.replace('_', ' ') : 'Professional'}</strong>
                       </div>
@@ -466,19 +468,19 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
                 {activeTab === 'family' && (
                   <div className="space-y-2.5 animate-fade-in">
                     <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="bg-surface-container-high/70 p-2.5 rounded-xl border border-surface-variant/30">
+                      <div className="bg-surface-variant/50 p-2.5 rounded-xl border border-surface-variant/60">
                         <span className="text-[9px] text-secondary font-bold uppercase block">Living Preference</span>
-                        <strong className="text-on-surface text-[11px] capitalize text-primary">{currentProfile.livingPreference?.replace('_', ' ') || 'Independent Home'}</strong>
+                        <strong className="text-primary capitalize text-[11px]">{currentProfile.livingPreference?.replace('_', ' ') || 'Independent Home'}</strong>
                       </div>
-                      <div className="bg-surface-container-high/70 p-2.5 rounded-xl border border-surface-variant/30">
+                      <div className="bg-surface-variant/50 p-2.5 rounded-xl border border-surface-variant/60">
                         <span className="text-[9px] text-secondary font-bold uppercase block">Marital Status</span>
                         <strong className="text-on-surface text-[11px] capitalize">{currentProfile.maritalStatus ? currentProfile.maritalStatus.replace('_', ' ') : 'Never Married'}</strong>
                       </div>
-                      <div className="bg-surface-container-high/70 p-2.5 rounded-xl border border-surface-variant/30">
+                      <div className="bg-surface-variant/50 p-2.5 rounded-xl border border-surface-variant/60">
                         <span className="text-[9px] text-secondary font-bold uppercase block">Citizenship</span>
                         <strong className="text-on-surface text-[11px]">{currentProfile.citizenship || 'Citizen'}</strong>
                       </div>
-                      <div className="bg-surface-container-high/70 p-2.5 rounded-xl border border-surface-variant/30">
+                      <div className="bg-surface-variant/50 p-2.5 rounded-xl border border-surface-variant/60">
                         <span className="text-[9px] text-secondary font-bold uppercase block">Relocation</span>
                         <strong className="text-on-surface text-[11px]">{currentProfile.willingnessToRelocate === 'willing' ? 'Open to Relocate' : 'Local Only'}</strong>
                       </div>
@@ -489,14 +491,14 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
                 {/* 4. BIO & REFLECTIONS TAB */}
                 {activeTab === 'bio' && (
                   <div className="space-y-2 animate-fade-in text-xs">
-                    <p className="text-xs text-on-surface-variant leading-relaxed line-clamp-3 bg-surface-container-high/50 p-2.5 rounded-xl border border-surface-variant/20 italic">
+                    <p className="text-xs text-on-surface-variant leading-relaxed line-clamp-3 bg-surface-variant/40 p-2.5 rounded-xl border border-surface-variant/40 italic">
                       "{currentProfile.bio || currentProfile.religiousProfile?.deenRelationshipBio || "Seeking a righteous partner on the Sunnah to complete half my deen."}"
                     </p>
 
                     {currentProfile.hobbies && currentProfile.hobbies.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 pt-1">
                         {currentProfile.hobbies.slice(0, 4).map((h, i) => (
-                          <span key={i} className="bg-primary/10 text-primary text-[10px] font-semibold px-2.5 py-1 rounded-full border border-primary/20">
+                          <span key={i} className="bg-primary/10 text-primary text-[10px] font-semibold px-2.5 py-0.5 rounded-full border border-primary/20">
                             {h.replace(/[^\w\s\(\)\-]/gi, '').trim()}
                           </span>
                         ))}
@@ -508,14 +510,14 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
             </article>
 
             {/* Bottom Perspective Navigation & Actions Control Bar */}
-            <div className="space-y-3 pt-1">
-              {/* Stepper Carousel Controls (Prev / Next) */}
-              <div className="flex items-center justify-between gap-3">
+            <div className="space-y-2.5 pt-1">
+              {/* Stepper Carousel Controls (Prev / Next / Biodata) */}
+              <div className="flex items-center justify-between gap-2.5">
                 <button
                   type="button"
                   onClick={handlePrev}
                   disabled={currentIndex === 0}
-                  className="flex-1 py-2 rounded-2xl bg-surface-container-high border border-surface-variant/40 text-on-surface text-xs font-bold flex items-center justify-center gap-1 disabled:opacity-35 disabled:cursor-not-allowed hover:bg-surface-variant transition-all"
+                  className="flex-1 py-2 rounded-2xl bg-surface border border-surface-variant/80 text-on-surface text-xs font-bold flex items-center justify-center gap-1 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-surface-variant transition-all shadow-2xs"
                 >
                   <span className="material-symbols-outlined text-[18px]">chevron_left</span>
                   <span>Previous</span>
@@ -524,7 +526,7 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
                 <button
                   type="button"
                   onClick={() => setSelectedProfile(currentProfile)}
-                  className="px-4 py-2 rounded-2xl bg-primary/10 text-primary border border-primary/20 text-xs font-bold flex items-center gap-1 hover:bg-primary/20 transition-all shadow-xs"
+                  className="px-4 py-2 rounded-2xl bg-primary/10 text-primary border border-primary/25 text-xs font-bold flex items-center gap-1 hover:bg-primary/20 transition-all shadow-2xs"
                 >
                   <span className="material-symbols-outlined text-[16px]">article</span>
                   <span>Full Biodata</span>
@@ -534,7 +536,7 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
                   type="button"
                   onClick={handleNext}
                   disabled={currentIndex === filteredFeed.length - 1}
-                  className="flex-1 py-2 rounded-2xl bg-surface-container-high border border-surface-variant/40 text-on-surface text-xs font-bold flex items-center justify-center gap-1 disabled:opacity-35 disabled:cursor-not-allowed hover:bg-surface-variant transition-all"
+                  className="flex-1 py-2 rounded-2xl bg-surface border border-surface-variant/80 text-on-surface text-xs font-bold flex items-center justify-center gap-1 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-surface-variant transition-all shadow-2xs"
                 >
                   <span>Next</span>
                   <span className="material-symbols-outlined text-[18px]">chevron_right</span>
@@ -548,7 +550,7 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
                   type="button"
                   onClick={(e) => handlePass(currentProfile.id, e)}
                   aria-label="Pass"
-                  className="w-14 h-14 rounded-2xl bg-surface border border-surface-variant/60 text-secondary hover:bg-surface-container-low active:scale-95 flex items-center justify-center transition-all shadow-xs"
+                  className="w-14 h-14 rounded-2xl bg-surface border border-surface-variant text-secondary hover:text-error hover:border-error/40 hover:bg-error/5 active:scale-90 flex items-center justify-center transition-all shadow-card"
                 >
                   <span className="material-symbols-outlined text-2xl">close</span>
                 </button>
@@ -561,9 +563,9 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
                     const conv = dbService.createMatchConversation(currentProfile);
                     onOpenChat(conv.id);
                   }}
-                  className="flex-1 h-14 rounded-2xl bg-surface-container-high text-primary border border-primary/30 text-xs font-bold flex items-center justify-center gap-2 hover:bg-primary/10 active:scale-95 transition-all shadow-xs"
+                  className="flex-1 h-14 rounded-2xl bg-surface text-primary border border-primary/30 text-xs font-bold flex items-center justify-center gap-2 hover:bg-primary/5 active:scale-95 transition-all shadow-card"
                 >
-                  <span className="material-symbols-outlined text-[20px]">waving_hand</span>
+                  <span className="material-symbols-outlined text-[20px] text-primary">waving_hand</span>
                   <span>Direct Salam</span>
                 </button>
 
@@ -572,9 +574,9 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
                   type="button"
                   onClick={(e) => handleLike(currentProfile, e)}
                   aria-label="Connect"
-                  className="w-14 h-14 rounded-2xl bg-primary text-white hover:brightness-110 active:scale-95 flex items-center justify-center transition-all shadow-md shadow-primary/20"
+                  className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-primary to-primary-light text-white hover:brightness-110 active:scale-90 flex items-center justify-center transition-all shadow-emerald"
                 >
-                  <span className="material-symbols-outlined text-2xl">favorite</span>
+                  <span className="material-symbols-outlined text-2xl fill">favorite</span>
                 </button>
               </div>
             </div>
@@ -583,6 +585,7 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat }) => {
       </main>
 
       {/* Full Profile Detail Modal */}
+
       {selectedProfile && (
         <ProfileDetailModal
           profile={selectedProfile}

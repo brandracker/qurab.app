@@ -48,25 +48,28 @@ export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpda
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-surface overflow-y-auto">
+    <div className="flex-1 flex flex-col h-full bg-surface overflow-y-auto font-sans select-none">
       {/* Top Header */}
-      <header className="sticky top-0 bg-surface/95 backdrop-blur-md px-6 py-4 border-b border-surface-variant/30 z-10 flex items-center justify-between">
+      <header className="sticky top-0 bg-surface/90 backdrop-blur-xl px-5 py-3.5 border-b border-surface-variant/40 z-10 flex items-center justify-between shadow-2xs">
         <div>
-          <h1 className="font-serif text-2xl font-bold text-primary">Settings & Privacy</h1>
+          <h1 className="font-serif text-xl font-bold text-on-surface flex items-center gap-2">
+            <span>Settings & Privacy</span>
+            <span className="font-arabic text-primary text-sm font-bold">قُرب</span>
+          </h1>
           <p className="text-xs text-secondary">Manage your halal preferences and security</p>
         </div>
         {savedNotice && (
-          <span className="text-xs font-semibold text-primary bg-primary/10 px-3 py-1 rounded-full animate-fade-in">
+          <span className="text-xs font-bold text-primary bg-primary/10 border border-primary/20 px-3 py-1 rounded-full animate-fade-in shadow-2xs">
             Saved!
           </span>
         )}
       </header>
 
       {/* Main Settings Body */}
-      <main className="p-6 space-y-6">
+      <main className="p-4 sm:p-6 space-y-5">
         {/* Account Summary Card */}
-        <section className="bg-surface-container-low rounded-2xl p-4 border border-outline-variant/30 flex items-center gap-4">
-          <div className="w-14 h-14 rounded-full overflow-hidden bg-primary/15 text-primary flex items-center justify-center font-serif text-xl font-bold border border-primary/20 shrink-0">
+        <section className="bg-surface rounded-2xl p-4 border border-surface-variant/80 shadow-2xs flex items-center gap-3.5">
+          <div className="w-14 h-14 rounded-2xl overflow-hidden bg-gradient-to-tr from-primary to-primary-light text-white flex items-center justify-center font-serif text-xl font-bold border border-primary/20 shrink-0 shadow-emerald">
             {currentUser.photos && currentUser.photos.length > 0 && currentUser.photos[0] ? (
               <img src={currentUser.photos[0]} alt={currentUser.fullName} className="w-full h-full object-cover" />
             ) : (
@@ -76,34 +79,34 @@ export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpda
           <div className="flex-1 min-w-0">
             <h3 className="font-serif font-bold text-base text-on-surface truncate">{currentUser.fullName || 'Member'}</h3>
             <p className="text-xs text-secondary truncate">{currentUser.email || currentUser.phone || 'Account Active'}</p>
-            <span className="inline-block mt-1 text-[11px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded">
+            <span className="inline-block mt-1 text-[10px] font-bold text-primary bg-primary/10 px-2.5 py-0.5 rounded-full border border-primary/20">
               Account ID: {currentUser.id}
             </span>
           </div>
         </section>
 
         {/* Privacy & Modesty Section */}
-        <section className="space-y-3">
-          <h2 className="font-serif text-base font-bold text-on-surface">Islamic Modesty & Privacy</h2>
+        <section className="space-y-2.5">
+          <h2 className="font-serif text-sm font-bold text-on-surface">Islamic Modesty & Privacy</h2>
 
-          <div className="bg-surface-container-low rounded-2xl p-4 border border-outline-variant/30 space-y-4 divide-y divide-outline-variant/20">
+          <div className="bg-surface rounded-2xl p-4 border border-surface-variant/80 shadow-2xs space-y-4 divide-y divide-surface-variant/40">
             {/* Photo Blur */}
             <div className="flex items-center justify-between pt-1">
               <div className="space-y-0.5 pr-4">
-                <span className="font-serif font-semibold text-sm text-on-surface block">Blur My Photos</span>
-                <span className="text-xs text-on-surface-variant">
-                  Protect facial modesty in Discover until a mutual match or request approval.
+                <span className="font-serif font-bold text-xs text-on-surface block">Blur My Photos</span>
+                <span className="text-[11px] text-secondary leading-relaxed">
+                  Protect facial modesty in Discover until a mutual match or approved request.
                 </span>
               </div>
               <button
                 type="button"
                 onClick={handleToggleBlur}
-                className={`w-12 h-7 rounded-full transition-colors relative shrink-0 ${
+                className={`w-12 h-7 rounded-full transition-colors relative shrink-0 shadow-xs ${
                   blurPhotos ? 'bg-primary' : 'bg-surface-variant'
                 }`}
               >
                 <div
-                  className={`w-5 h-5 rounded-full bg-white transition-transform transform ${
+                  className={`w-5 h-5 rounded-full bg-white transition-transform transform shadow-sm ${
                     blurPhotos ? 'translate-x-6' : 'translate-x-1'
                   } top-1 absolute`}
                 />
@@ -113,8 +116,8 @@ export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpda
             {/* Profile Visibility */}
             <div className="flex items-center justify-between pt-4">
               <div className="space-y-0.5 pr-4">
-                <span className="font-serif font-semibold text-sm text-on-surface block">Profile Visibility</span>
-                <span className="text-xs text-on-surface-variant">
+                <span className="font-serif font-bold text-xs text-on-surface block">Profile Visibility</span>
+                <span className="text-[11px] text-secondary leading-relaxed">
                   Control who can discover your matrimonial profile.
                 </span>
               </div>
@@ -125,7 +128,7 @@ export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpda
                   dbService.updatePrivacy(blurPhotos, e.target.value);
                   showNotice();
                 }}
-                className="bg-surface border border-outline-variant rounded-xl py-1.5 px-3 text-xs font-sans text-on-surface outline-none focus:border-primary"
+                className="bg-surface border border-surface-variant/80 rounded-xl py-1.5 px-3 text-xs font-sans text-on-surface outline-none focus:border-primary shadow-2xs"
               >
                 <option value="all_users">All Verified Users</option>
                 <option value="approved_only">Approved Matches Only</option>
@@ -136,13 +139,13 @@ export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpda
         </section>
 
         {/* Membership & Subscription Status Section */}
-        <section className="space-y-3">
-          <h2 className="font-serif text-base font-bold text-on-surface">Membership & Plan Privileges</h2>
+        <section className="space-y-2.5">
+          <h2 className="font-serif text-sm font-bold text-on-surface">Membership & Plan Privileges</h2>
 
-          <div className="bg-gradient-to-br from-primary/15 via-surface-container-low to-tertiary-container/20 rounded-2xl p-5 border border-primary/30 shadow-xs flex flex-col gap-3.5">
+          <div className="bg-gradient-to-br from-primary/10 via-surface to-accent-gold-light/25 rounded-3xl p-5 border border-primary/30 shadow-card flex flex-col gap-3.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-primary text-white flex items-center justify-center shadow-xs">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary to-primary-light text-white flex items-center justify-center shadow-emerald">
                   <span className="material-symbols-outlined text-2xl">workspace_premium</span>
                 </div>
                 <div>
@@ -151,9 +154,9 @@ export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpda
                       {isVip ? 'Barakah VIP Active' : 'Free Tier Member'}
                     </h3>
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                      isVip ? 'bg-primary text-white' : 'bg-surface text-secondary border border-surface-variant/50'
+                      isVip ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-xs' : 'bg-surface text-secondary border border-surface-variant'
                     }`}>
-                      {isVip ? 'VIP Member' : 'Standard'}
+                      {isVip ? '👑 VIP Member' : 'Standard'}
                     </span>
                   </div>
                   <p className="text-[11px] text-secondary mt-0.5">
@@ -168,13 +171,13 @@ export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpda
                 <button
                   type="button"
                   onClick={() => setShowUpgradeModal(true)}
-                  className="px-4 py-2 rounded-full bg-primary text-white text-xs font-bold shadow-md hover:brightness-110 active:scale-95 transition-all flex items-center gap-1.5"
+                  className="px-4 py-2 rounded-full bg-gradient-to-r from-primary to-primary-light text-white text-xs font-bold shadow-emerald hover:brightness-110 active:scale-95 transition-all flex items-center gap-1.5"
                 >
                   <span className="material-symbols-outlined text-[16px]">upgrade</span>
                   <span>Upgrade</span>
                 </button>
               ) : (
-                <span className="px-3 py-1 rounded-full bg-primary/20 text-primary text-[11px] font-bold flex items-center gap-1">
+                <span className="px-3 py-1 rounded-full bg-amber-500/20 text-amber-800 border border-amber-400/40 text-[11px] font-bold flex items-center gap-1">
                   <span className="material-symbols-outlined text-[14px]">check_circle</span>
                   <span>Active</span>
                 </span>
@@ -182,8 +185,8 @@ export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpda
             </div>
 
             {/* Grid of Key Quotas */}
-            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-surface-variant/30 text-xs">
-              <div className="p-2.5 rounded-xl bg-surface border border-surface-variant/30 flex items-center gap-2.5">
+            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-surface-variant/40 text-xs">
+              <div className="p-2.5 rounded-xl bg-surface border border-surface-variant/80 flex items-center gap-2.5 shadow-2xs">
                 <span className="material-symbols-outlined text-primary text-[18px]">favorite</span>
                 <div>
                   <span className="text-[10px] text-secondary block">Likes Quota</span>
@@ -193,7 +196,7 @@ export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpda
                 </div>
               </div>
 
-              <div className="p-2.5 rounded-xl bg-surface border border-surface-variant/30 flex items-center gap-2.5">
+              <div className="p-2.5 rounded-xl bg-surface border border-surface-variant/80 flex items-center gap-2.5 shadow-2xs">
                 <span className="material-symbols-outlined text-primary text-[18px]">chat</span>
                 <div>
                   <span className="text-[10px] text-secondary block">Mutual Messaging</span>
@@ -203,14 +206,14 @@ export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpda
             </div>
 
             {/* Unlocked VIP Privileges List */}
-            <div className="pt-2 border-t border-surface-variant/20 space-y-2">
+            <div className="pt-2 border-t border-surface-variant/40 space-y-2">
               <h4 className="font-serif font-bold text-[11px] text-primary uppercase tracking-wide flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-[15px]">verified</span>
                 <span>{isVip ? 'Your Active VIP Privileges:' : 'VIP Privileges Preview:'}</span>
               </h4>
 
               <div className="space-y-1.5 text-[11px]">
-                <div className="flex items-center justify-between p-2 rounded-xl bg-surface/90 border border-surface-variant/30">
+                <div className="flex items-center justify-between p-2 rounded-xl bg-surface border border-surface-variant/80 shadow-2xs">
                   <div className="flex items-center gap-2">
                     <span className="material-symbols-outlined text-primary text-[16px]">visibility</span>
                     <span className="text-on-surface font-medium">See Who Liked You (Unblurred)</span>
@@ -220,7 +223,7 @@ export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpda
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between p-2 rounded-xl bg-surface/90 border border-surface-variant/30">
+                <div className="flex items-center justify-between p-2 rounded-xl bg-surface border border-surface-variant/80 shadow-2xs">
                   <div className="flex items-center gap-2">
                     <span className="material-symbols-outlined text-primary text-[16px]">block</span>
                     <span className="text-on-surface font-medium">100% Ad-Free (Zero Video Ads)</span>
@@ -230,7 +233,7 @@ export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpda
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between p-2 rounded-xl bg-surface/90 border border-surface-variant/30">
+                <div className="flex items-center justify-between p-2 rounded-xl bg-surface border border-surface-variant/80 shadow-2xs">
                   <div className="flex items-center gap-2">
                     <span className="material-symbols-outlined text-primary text-[16px]">bolt</span>
                     <span className="text-on-surface font-medium">Priority Stream Ranking (3x Views)</span>
@@ -240,7 +243,7 @@ export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpda
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between p-2 rounded-xl bg-surface/90 border border-surface-variant/30">
+                <div className="flex items-center justify-between p-2 rounded-xl bg-surface border border-surface-variant/80 shadow-2xs">
                   <div className="flex items-center gap-2">
                     <span className="material-symbols-outlined text-primary text-[16px]">all_inclusive</span>
                     <span className="text-on-surface font-medium">Unlimited Daily Likes (No 50 Cap)</span>
@@ -255,7 +258,7 @@ export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpda
         </section>
 
         {/* Halal Guidelines Notice */}
-        <section className="bg-primary/5 rounded-2xl p-4 border border-primary/20 space-y-2">
+        <section className="bg-primary/5 rounded-2xl p-4 border border-primary/20 space-y-2 shadow-2xs">
           <div className="flex items-center gap-2 text-primary">
             <span className="material-symbols-outlined text-[18px]">verified</span>
             <h4 className="font-serif font-bold text-xs">Halal Matrimony Code of Conduct</h4>
@@ -284,3 +287,5 @@ export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpda
     </div>
   );
 };
+export default SettingsPrivacy;
+

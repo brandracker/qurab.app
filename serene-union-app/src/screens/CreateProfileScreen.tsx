@@ -91,7 +91,7 @@ export const CreateProfileScreen: React.FC<Props> = ({
   };
 
   return (
-    <div className="w-full h-full flex flex-col justify-between p-6 bg-background font-sans overflow-y-auto pb-32">
+    <div className="w-full h-full flex flex-col justify-between p-6 bg-background font-sans overflow-y-auto pb-28 select-none">
       {/* Hidden File Input */}
       <input
         ref={fileInputRef}
@@ -102,39 +102,47 @@ export const CreateProfileScreen: React.FC<Props> = ({
       />
 
       <div>
-        {/* Header & Progress */}
-        <div className="flex items-center justify-between mb-4">
+        {/* Header & Step Indicator */}
+        <div className="flex items-center justify-between mb-3 pt-2">
           <button
             onClick={onBack}
-            className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface hover:bg-surface-variant transition-colors"
+            className="w-10 h-10 rounded-full bg-surface border border-surface-variant/80 flex items-center justify-center text-on-surface hover:bg-surface-variant transition-colors shadow-2xs"
           >
             <span className="material-symbols-outlined text-[20px]">arrow_back</span>
           </button>
-          <span className="text-xs font-bold text-primary tracking-widest uppercase">Step 5 of 5</span>
+          <div className="flex items-center gap-1">
+            <span className="text-[11px] font-bold text-primary tracking-wider uppercase">Step 5 of 5</span>
+            <span className="text-[11px] text-secondary">· Modesty & Photos</span>
+          </div>
           <div className="w-10" />
         </div>
 
-        <div className="w-full bg-surface-variant h-1.5 rounded-full overflow-hidden mb-6">
-          <div className="bg-primary h-full w-[100%] transition-all duration-300" />
+        {/* 5-Step Glowing Progress Bars */}
+        <div className="grid grid-cols-5 gap-1.5 mb-6">
+          <div className="h-1.5 rounded-full bg-gradient-to-r from-primary to-primary-light" />
+          <div className="h-1.5 rounded-full bg-gradient-to-r from-primary to-primary-light" />
+          <div className="h-1.5 rounded-full bg-gradient-to-r from-primary to-primary-light" />
+          <div className="h-1.5 rounded-full bg-gradient-to-r from-primary to-primary-light" />
+          <div className="h-1.5 rounded-full bg-gradient-to-r from-primary to-primary-light shadow-emerald" />
         </div>
 
-        <h1 className="font-serif text-2xl font-bold text-on-surface mb-1">
+        <h1 className="font-serif text-2xl sm:text-3xl font-bold text-on-surface mb-1">
           Photos & Modesty Protection
         </h1>
-        <p className="text-xs text-secondary mb-6 leading-relaxed">
+        <p className="text-xs text-secondary mb-5 leading-relaxed">
           Upload up to 6 clear, modest photos. Enable modesty blur to protect your pictures until you mutually approve reveal.
         </p>
 
         {/* 6 Photo Grid */}
-        <div className="grid grid-cols-3 gap-3 mb-6">
+        <div className="grid grid-cols-3 gap-2.5 mb-5">
           {photos.map((p, idx) => (
             <div
               key={idx}
               onClick={() => handleSlotClick(idx)}
-              className={`aspect-[3/4] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all relative overflow-hidden group ${
+              className={`aspect-[3/4] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all relative overflow-hidden group shadow-2xs ${
                 p
-                  ? 'border-primary/40 bg-surface shadow-sm'
-                  : 'border-surface-variant bg-surface-container-low hover:bg-surface-variant/40'
+                  ? 'border-primary/50 bg-surface'
+                  : 'border-surface-variant bg-surface hover:border-primary/40'
               }`}
             >
               {p ? (
@@ -152,20 +160,22 @@ export const CreateProfileScreen: React.FC<Props> = ({
                     onClick={(e) => handleRemovePhoto(idx, e)}
                     className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-error transition-colors z-10"
                   >
-                    <span className="material-symbols-outlined text-[14px]">close</span>
+                    <span className="material-symbols-outlined text-[13px]">close</span>
                   </button>
                   {idx === 0 && (
-                    <span className="absolute bottom-1.5 left-1.5 bg-primary text-white text-[9px] font-bold px-2 py-0.5 rounded-md shadow">
+                    <span className="absolute bottom-1.5 left-1.5 bg-primary text-white text-[9px] font-bold px-2 py-0.5 rounded-md shadow-xs">
                       Main
                     </span>
                   )}
                 </>
               ) : (
-                <div className="flex flex-col items-center gap-1 text-outline group-hover:text-primary transition-colors">
-                  <span className="material-symbols-outlined text-[24px]">
-                    {idx === 0 ? 'add_a_photo' : 'add'}
-                  </span>
-                  <span className="text-[10px] font-medium">{idx === 0 ? 'Main Photo' : `Slot ${idx + 1}`}</span>
+                <div className="flex flex-col items-center gap-1 text-secondary group-hover:text-primary transition-colors">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                    <span className="material-symbols-outlined text-[18px]">
+                      {idx === 0 ? 'add_a_photo' : 'add'}
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-semibold">{idx === 0 ? 'Main Photo' : `Slot ${idx + 1}`}</span>
                 </div>
               )}
             </div>
@@ -173,16 +183,16 @@ export const CreateProfileScreen: React.FC<Props> = ({
         </div>
 
         {/* Modesty Blur Shield Toggle */}
-        <div className="bg-surface-container-high rounded-2xl p-4 border border-surface-variant flex items-center justify-between gap-3">
+        <div className="bg-surface rounded-2xl p-4 border border-surface-variant/80 flex items-center justify-between gap-3 shadow-card">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-[20px]">
+            <div className="w-10 h-10 rounded-xl bg-accent-gold/15 text-accent-gold-dark flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-[22px]">
                 {blurPhotos ? 'visibility_off' : 'visibility'}
               </span>
             </div>
             <div>
               <h4 className="text-xs font-bold text-on-surface">Modesty Shield (Blur Photos)</h4>
-              <p className="text-[11px] text-secondary mt-0.5">
+              <p className="text-[10px] text-secondary mt-0.5 leading-tight">
                 {blurPhotos
                   ? 'Photos remain blurred until you approve reveal to a match.'
                   : 'Photos are visible to verified members on Discover.'}
@@ -197,7 +207,7 @@ export const CreateProfileScreen: React.FC<Props> = ({
             }`}
           >
             <div
-              className={`w-5 h-5 rounded-full bg-white transition-transform ${
+              className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${
                 blurPhotos ? 'translate-x-6' : 'translate-x-0'
               }`}
             />
@@ -210,12 +220,15 @@ export const CreateProfileScreen: React.FC<Props> = ({
         <button
           onClick={handleSubmit}
           disabled={isUploading || activePhotos.length === 0}
-          className="w-full py-4 rounded-full bg-primary text-on-primary font-sans text-xs font-bold shadow-md shadow-primary/20 hover:brightness-110 active:scale-95 disabled:opacity-40 transition-all flex items-center justify-center gap-2"
+          className="w-full py-4 rounded-full bg-gradient-to-r from-primary via-primary to-primary-light text-white font-sans text-xs font-bold shadow-emerald hover:brightness-110 active:scale-98 disabled:opacity-40 transition-all flex items-center justify-center gap-2 relative overflow-hidden group"
         >
-          <span>{isUploading ? 'Uploading to Cloudflare...' : 'Complete Matrimonial Profile 🎉'}</span>
+          <span className="gold-shimmer absolute inset-0 opacity-40 pointer-events-none" />
+          <span>{isUploading ? 'Saving Profile...' : 'Complete Matrimonial Profile 🎉'}</span>
           <span className="material-symbols-outlined text-[18px]">check</span>
         </button>
       </div>
     </div>
   );
 };
+export default CreateProfileScreen;
+

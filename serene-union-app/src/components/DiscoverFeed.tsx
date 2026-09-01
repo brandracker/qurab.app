@@ -27,7 +27,7 @@ import { MutualMatchModal } from './MutualMatchModal';
 import { ProfileDetailModal } from './ProfileDetailModal';
 import { RewardedAdModal } from './RewardedAdModal';
 import { MembershipUpgradeModal } from './MembershipUpgradeModal';
-import { NotificationsModal } from './NotificationsModal';
+import { NotificationsScreen } from '../screens/NotificationsScreen';
 import { dbService } from '../services/dbService';
 
 interface Props {
@@ -731,11 +731,11 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
           />
         )}
 
-        {/* Notifications Center Modal */}
+        {/* Notifications Center Native Full-Screen View */}
         {showNotificationsModal && (
-          <NotificationsModal
+          <NotificationsScreen
             isOpen={showNotificationsModal}
-            onClose={() => setShowNotificationsModal(false)}
+            onBack={() => setShowNotificationsModal(false)}
             onNavigateToMatches={onOpenMatches}
             onNavigateToChat={(convId) => onOpenChat(convId || '')}
           />
@@ -744,5 +744,6 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
     );
   };
 export default DiscoverFeed;
+
 
 

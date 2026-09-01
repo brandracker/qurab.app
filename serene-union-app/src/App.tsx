@@ -301,8 +301,12 @@ export const App: React.FC = () => {
             {/* TAB CONTENT AREA */}
             <div className="flex-1 overflow-hidden relative">
               {activeTab === 'discover' && (
-                <DiscoverFeed onOpenChat={handleOpenChat} />
+                <DiscoverFeed 
+                  onOpenChat={handleOpenChat} 
+                  onOpenMatches={() => setActiveTab('matches')}
+                />
               )}
+
 
               {activeTab === 'matches' && (
                 <MatchesLikedYouScreen

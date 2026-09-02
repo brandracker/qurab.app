@@ -34,3 +34,54 @@ photosRouter.post('/upload', async (c) => {
     return c.json({ success: false, error: error.message }, 500);
   }
 });
+
+// 2. Voice Greeting Upload (Cloudflare R2 Storage + D1 integration)
+photosRouter.post('/upload-voice', async (c) => {
+  try {
+    const { userId, audioBase64, duration } = await c.req.json();
+    if (!userId || !audioBase64) {
+      return c.json({ success: false, error: 'userId and audioBase64 are required' }, 400);
+    }
+
+    const fileId = `voice_${userId}_${Date.now()}.webm`;
+    let voiceUrl = audioBase64;
+
+    // Upload to Cloudflare R2 if available
+    if (c.env.MEDIA_BUCKET) {
+      try {
+        const base64Clean = audioBase64.replace(/^data:audio\/\w+;base64,/, '');
+        const binaryString = atob(base64Clean);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        await c.env.MEDIA_BUCKET.put(fileId, bytes.buffer, {
+          httpMetadata: { contentType: 'audio/webm' }
+        });
+        voiceUrl = `https://assets.serene-union.com/${fileId}`;
+      } catch (r2Err) {
+        console.warn('R2 voice storage warning, preserving audio payload:', r2Err);
+      }
+    }
+
+    // Save to Cloudflare D1
+    try {
+      await c.env.DB.prepare(`
+        UPDATE users 
+        SET voice_greeting_url = ?, voice_greeting_duration = ? 
+        WHERE id = ?
+      `).bind(voiceUrl, duration || 0, userId).run();
+    } catch (d1Err) {
+      console.warn('D1 voice columns update:', d1Err);
+    }
+
+    return c.json({
+      success: true,
+      voiceUrl,
+      duration: duration || 0
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+

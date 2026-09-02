@@ -68,7 +68,10 @@ export interface UserProfile {
   isSpotlightActive?: boolean;
   isOnline?: boolean;
   lastActive?: string;
+  voiceGreetingUrl?: string;
+  voiceGreetingDuration?: number;
 }
+
 
 export interface ChatMessage {
   id: string;

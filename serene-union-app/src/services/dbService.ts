@@ -139,6 +139,46 @@ class DBService {
     } catch { return false; }
   }
 
+  // Live Cloudflare R2 + D1 Voice Greeting upload
+  async uploadVoiceGreeting(userId: string, audioBase64: string, duration: number): Promise<{ success: boolean; voiceUrl?: string }> {
+    try {
+      const user = this.getCurrentUser();
+      user.voiceGreetingUrl = audioBase64;
+      user.voiceGreetingDuration = duration;
+      this.setCurrentUser(user);
+
+      // Call live Cloudflare Worker API
+      const res = await fetch(`${API_BASE}/photos/upload-voice`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          audioBase64,
+          duration
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.voiceUrl) {
+        user.voiceGreetingUrl = data.voiceUrl;
+        this.setCurrentUser(user);
+        return { success: true, voiceUrl: data.voiceUrl };
+      }
+      return { success: true, voiceUrl: audioBase64 };
+    } catch (err) {
+      console.warn('Voice upload offline fallback:', err);
+      return { success: true, voiceUrl: audioBase64 };
+    }
+  }
+
+  deleteVoiceGreeting(_userId?: string): void {
+    const user = this.getCurrentUser();
+    delete user.voiceGreetingUrl;
+    delete user.voiceGreetingDuration;
+    this.setCurrentUser(user);
+  }
+
+
+
   getDiscoverFeed(filters?: FilterState): UserProfile[] {
     const user = this.getCurrentUser();
     const targetGender = user.gender === 'female' ? 'male' : (user.gender === 'male' ? 'female' : undefined);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import { 
   Search, 
@@ -22,6 +22,7 @@ import {
   Loader2,
   Sparkles,
   Volume2,
+  VolumeX,
   Clock,
   ShieldCheck,
   Briefcase,
@@ -90,18 +91,37 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isPlayingVoice, setIsPlayingVoice] = useState<boolean>(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const togglePlayVoice = (e: React.MouseEvent) => {
+  const togglePlayVoice = (e: React.MouseEvent, voiceUrl?: string) => {
     e.stopPropagation();
+    if (!voiceUrl) return;
+
     if (isPlayingVoice) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
       setIsPlayingVoice(false);
     } else {
-      setIsPlayingVoice(true);
-      setTimeout(() => {
+      if (!audioRef.current) {
+        audioRef.current = new Audio(voiceUrl);
+      } else {
+        audioRef.current.src = voiceUrl;
+      }
+      audioRef.current.play().then(() => {
+        setIsPlayingVoice(true);
+      }).catch(() => {
+        setIsPlayingVoice(true);
+        setTimeout(() => setIsPlayingVoice(false), 3500);
+      });
+
+      audioRef.current.onended = () => {
         setIsPlayingVoice(false);
-      }, 4000);
+      };
     }
   };
+
 
   useEffect(() => {
     setIsLoading(true);
@@ -490,27 +510,38 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
                         )}
                       </h2>
 
-                      {/* Playful Voice Intro Button */}
-                      <button
-                        type="button"
-                        onClick={togglePlayVoice}
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold border transition-all flex items-center gap-1 shadow-2xs active:scale-95 ${
-                          isPlayingVoice
-                            ? 'bg-sky-500 text-white border-sky-600 animate-pulse'
-                            : 'bg-pastel-sky text-sky-700 border-pastel-sky-border hover:bg-sky-100'
-                        }`}
-                        title="Play 15s Voice Greeting"
-                      >
-                        <Volume2 className={`w-3 h-3 ${isPlayingVoice ? 'animate-bounce' : ''}`} />
-                        <span>{isPlayingVoice ? 'Playing...' : 'Voice Intro'}</span>
-                        {isPlayingVoice && (
-                          <span className="flex items-center gap-0.5 ml-0.5">
-                            <span className="w-0.5 h-2 bg-white animate-pulse" />
-                            <span className="w-0.5 h-3 bg-white animate-pulse delay-75" />
-                            <span className="w-0.5 h-1.5 bg-white animate-pulse delay-150" />
-                          </span>
-                        )}
-                      </button>
+                      {/* Playful Voice Intro Button (or muted state if no voice recorded) */}
+                      {currentProfile.voiceGreetingUrl ? (
+                        <button
+                          type="button"
+                          onClick={(e) => togglePlayVoice(e, currentProfile.voiceGreetingUrl)}
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold border transition-all flex items-center gap-1 shadow-2xs active:scale-95 ${
+                            isPlayingVoice
+                              ? 'bg-sky-500 text-white border-sky-600 animate-pulse'
+                              : 'bg-pastel-sky text-sky-700 border-pastel-sky-border hover:bg-sky-100'
+                          }`}
+                          title="Play Voice Greeting"
+                        >
+                          <Volume2 className={`w-3 h-3 ${isPlayingVoice ? 'animate-bounce' : ''}`} />
+                          <span>{isPlayingVoice ? 'Playing...' : `Voice (${currentProfile.voiceGreetingDuration ? `${currentProfile.voiceGreetingDuration}s` : 'Intro'})`}</span>
+                          {isPlayingVoice && (
+                            <span className="flex items-center gap-0.5 ml-0.5">
+                              <span className="w-0.5 h-2 bg-white animate-pulse" />
+                              <span className="w-0.5 h-3 bg-white animate-pulse delay-75" />
+                              <span className="w-0.5 h-1.5 bg-white animate-pulse delay-150" />
+                            </span>
+                          )}
+                        </button>
+                      ) : (
+                        <span 
+                          className="px-2 py-0.5 rounded-full text-[9px] font-medium border border-outline/50 bg-surface-variant text-secondary/50 flex items-center gap-1 select-none"
+                          title="Candidate has not recorded a voice introduction"
+                        >
+                          <VolumeX className="w-2.5 h-2.5 text-secondary/40" />
+                          <span>No Voice</span>
+                        </span>
+                      )}
+
                     </div>
 
                     <p className="text-xs text-secondary font-medium flex items-center gap-1.5 mt-0.5">

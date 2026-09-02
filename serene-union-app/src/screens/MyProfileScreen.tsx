@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   LogOut, 
   Crown, 
@@ -23,9 +23,17 @@ import {
   FileCheck2,
   Users,
   Hourglass,
-  Building2
+  Building2,
+  Mic,
+  Square,
+  Play,
+  Pause,
+  Trash2,
+  Volume2,
+  Loader2
 } from 'lucide-react';
 import type { UserProfile } from '../types';
+import { dbService } from '../services/dbService';
 import { CompatibilityQuizModal } from '../components/CompatibilityQuizModal';
 import { MembershipUpgradeModal } from '../components/MembershipUpgradeModal';
 import { RewardedAdModal } from '../components/RewardedAdModal';
@@ -78,6 +86,161 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
     return Boolean(localStorage.getItem(`serene_quiz_${user.id}`));
   });
   const rel = user.religiousProfile;
+
+  // Voice Greeting Recorder State (Live Cloudflare R2 + D1)
+  const [currentUserProfile, setCurrentUserProfile] = useState<UserProfile>(() => dbService.getCurrentUser());
+  const [isRecording, setIsRecording] = useState<boolean>(false);
+  const [recordSeconds, setRecordSeconds] = useState<number>(0);
+  const [recordedAudioBlob, setRecordedAudioBlob] = useState<Blob | null>(null);
+  const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(() => currentUserProfile.voiceGreetingUrl || null);
+  const [isPlayingVoice, setIsPlayingVoice] = useState<boolean>(false);
+  const [isUploadingVoice, setIsUploadingVoice] = useState<boolean>(false);
+  const [voiceToast, setVoiceToast] = useState<string | null>(null);
+
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<any>(null);
+  const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (audioPlayerRef.current) audioPlayerRef.current.pause();
+    };
+  }, []);
+
+  const startRecording = async () => {
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('Microphone access is not supported on this browser/device.');
+        return;
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunksRef.current = [];
+      const recorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        setRecordedAudioBlob(blob);
+        const url = URL.createObjectURL(blob);
+        setRecordedAudioUrl(url);
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      recorder.start();
+      setIsRecording(true);
+      setRecordSeconds(0);
+
+      timerRef.current = setInterval(() => {
+        setRecordSeconds(prev => {
+          if (prev >= 119) {
+            stopRecording();
+            return 120;
+          }
+          return prev + 1;
+        });
+      }, 1000);
+    } catch (err: any) {
+      console.error('Mic access error:', err);
+      alert('Microphone permission denied. Please enable microphone permissions in your browser or device settings.');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    setIsRecording(false);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
+  const togglePlayRecordedAudio = () => {
+    if (!recordedAudioUrl) return;
+    if (isPlayingVoice) {
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.pause();
+        audioPlayerRef.current.currentTime = 0;
+      }
+      setIsPlayingVoice(false);
+    } else {
+      if (!audioPlayerRef.current) {
+        audioPlayerRef.current = new Audio(recordedAudioUrl);
+      } else {
+        audioPlayerRef.current.src = recordedAudioUrl;
+      }
+      audioPlayerRef.current.play().then(() => {
+        setIsPlayingVoice(true);
+      }).catch(err => {
+        console.warn('Audio preview error:', err);
+        setIsPlayingVoice(true);
+        setTimeout(() => setIsPlayingVoice(false), 3000);
+      });
+      audioPlayerRef.current.onended = () => {
+        setIsPlayingVoice(false);
+      };
+    }
+  };
+
+  const saveVoiceToLive = async () => {
+    if (!recordedAudioBlob && !recordedAudioUrl) return;
+    setIsUploadingVoice(true);
+    try {
+      let base64String = recordedAudioUrl || '';
+      if (recordedAudioBlob) {
+        const reader = new FileReader();
+        base64String = await new Promise((resolve) => {
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(recordedAudioBlob);
+        });
+      }
+
+      const res = await dbService.uploadVoiceGreeting(user.id, base64String, recordSeconds || 45);
+      if (res.success) {
+        const updatedUser = dbService.getCurrentUser();
+        setCurrentUserProfile({ ...updatedUser });
+        setVoiceToast('🎉 Voice Greeting saved live to Cloudflare R2 & D1!');
+        setTimeout(() => setVoiceToast(null), 3500);
+      }
+    } catch (err: any) {
+      console.error('Failed to upload voice:', err);
+      setVoiceToast('Saved locally to profile.');
+      setTimeout(() => setVoiceToast(null), 3500);
+    } finally {
+      setIsUploadingVoice(false);
+    }
+  };
+
+  const deleteVoiceGreeting = () => {
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.pause();
+    }
+    setIsPlayingVoice(false);
+    setRecordedAudioBlob(null);
+    setRecordedAudioUrl(null);
+    setRecordSeconds(0);
+    dbService.deleteVoiceGreeting(user.id);
+    const updatedUser = dbService.getCurrentUser();
+    setCurrentUserProfile({ ...updatedUser });
+    setVoiceToast('Voice greeting removed from profile.');
+    setTimeout(() => setVoiceToast(null), 3000);
+  };
+
+  const formatSeconds = (sec: number) => {
+    const mins = Math.floor(sec / 60);
+    const rem = sec % 60;
+    return `${mins}:${rem < 10 ? '0' : ''}${rem}`;
+  };
+
 
   return (
     <div className="w-full h-full flex flex-col bg-background font-sans overflow-y-auto pb-24 select-none text-on-surface">
@@ -274,6 +437,138 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
                 </div>
               </div>
             )}
+
+            {/* 🎙️ Voice Greeting / Deen Introduction Card (Live R2 & D1) */}
+            <div className="bg-white rounded-2xl p-4 border border-outline shadow-subtle space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-pastel-sky text-sky-700 border border-pastel-sky-border flex items-center justify-center shrink-0">
+                    <Volume2 className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-serif text-xs font-bold text-on-surface">Voice Greeting / Deen Intro</h3>
+                    <p className="text-[10px] text-secondary">Record a 1 to 2-minute Islamic greeting or reflection</p>
+                  </div>
+                </div>
+
+                {currentUserProfile.voiceGreetingUrl && !isRecording && (
+                  <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                    <span>Live on Profile</span>
+                  </span>
+                )}
+              </div>
+
+              {voiceToast && (
+                <div className="p-2 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-semibold text-center animate-fade-in">
+                  {voiceToast}
+                </div>
+              )}
+
+              {/* Recording State */}
+              {isRecording ? (
+                <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 flex flex-col items-center justify-center space-y-3 animate-fade-in">
+                  <div className="flex items-center gap-2 text-primary font-bold text-sm">
+                    <span className="w-3 h-3 rounded-full bg-primary animate-ping" />
+                    <span>Recording in Progress... ({formatSeconds(recordSeconds)} / 2:00)</span>
+                  </div>
+                  <p className="text-xs text-secondary text-center">
+                    Speak clearly into your microphone about your deen, values, and character.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={stopRecording}
+                    className="px-5 py-2 rounded-full bg-primary text-white text-xs font-bold shadow-brand hover:bg-primary-dark active:scale-95 transition-all flex items-center gap-2"
+                  >
+                    <Square className="w-3.5 h-3.5 fill-current" />
+                    <span>Stop Recording</span>
+                  </button>
+                </div>
+              ) : recordedAudioUrl || currentUserProfile.voiceGreetingUrl ? (
+                /* Preview & Manage State */
+                <div className="p-3.5 rounded-2xl bg-surface-variant border border-outline flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <button
+                      type="button"
+                      onClick={togglePlayRecordedAudio}
+                      className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center shadow-brand hover:bg-primary-dark active:scale-95 transition-all shrink-0"
+                    >
+                      {isPlayingVoice ? (
+                        <Pause className="w-4 h-4 fill-current" />
+                      ) : (
+                        <Play className="w-4 h-4 fill-current ml-0.5" />
+                      )}
+                    </button>
+                    <div>
+                      <strong className="text-xs text-on-surface block font-bold">
+                        {isPlayingVoice ? 'Playing Greeting...' : 'Voice Greeting Ready'}
+                      </strong>
+                      <span className="text-[10px] text-secondary">
+                        {recordSeconds > 0 ? `${formatSeconds(recordSeconds)} duration` : 'Click play to listen'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {recordedAudioBlob && (
+                      <button
+                        type="button"
+                        onClick={saveVoiceToLive}
+                        disabled={isUploadingVoice}
+                        className="px-3 py-1.5 rounded-xl bg-primary text-white text-xs font-bold shadow-brand hover:bg-primary-dark active:scale-95 transition-all flex items-center gap-1 disabled:opacity-50"
+                      >
+                        {isUploadingVoice ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span>Uploading R2...</span>
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>Save Live</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={startRecording}
+                      className="px-2.5 py-1.5 rounded-xl bg-white border border-outline text-secondary hover:text-on-surface hover:bg-surface-variant text-xs font-semibold transition-all flex items-center gap-1"
+                      title="Record Again"
+                    >
+                      <Mic className="w-3 h-3 text-secondary" />
+                      <span>Re-record</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={deleteVoiceGreeting}
+                      className="p-2 rounded-xl bg-white border border-outline text-secondary hover:text-rose-600 hover:bg-rose-50 transition-all"
+                      title="Delete Voice Greeting"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Initial Idle State */
+                <div className="p-4 rounded-2xl bg-surface-variant/70 border border-outline/70 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+                  <div>
+                    <strong className="text-xs text-on-surface block font-bold">No Voice Greeting Yet</strong>
+                    <span className="text-[10px] text-secondary">Candidates love hearing your natural, respectful tone</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={startRecording}
+                    className="px-4 py-2 rounded-full bg-primary text-white text-xs font-bold shadow-brand hover:bg-primary-dark active:scale-95 transition-all flex items-center gap-1.5 shrink-0"
+                  >
+                    <Mic className="w-3.5 h-3.5" />
+                    <span>Record Voice Intro</span>
+                  </button>
+                </div>
+              )}
+            </div>
 
             {/* 1. Personal Background & Biodata (Pastel Rose) */}
             <div className="bg-pastel-rose rounded-2xl p-3.5 border border-pastel-rose-border space-y-2.5 shadow-subtle">

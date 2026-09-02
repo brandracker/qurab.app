@@ -7,7 +7,7 @@ export const authRouter = new Hono<AppContext>();
 // 1. Email + Password Sign Up
 authRouter.post('/signup', async (c) => {
   try {
-    const { email, password, fullName } = await c.req.json();
+    const { email, password, fullName, gender } = await c.req.json();
     if (!email || !password) {
       return c.json({ success: false, error: 'Email and password are required' }, 400);
     }
@@ -21,11 +21,12 @@ authRouter.post('/signup', async (c) => {
     const userId = `usr_${Date.now()}`;
     const passwordHash = await hashPassword(password);
     const name = fullName?.trim() || cleanEmail.split('@')[0];
+    const userGender = gender === 'female' ? 'female' : (gender === 'male' ? 'male' : (name.toLowerCase().includes('zainab') || name.toLowerCase().includes('fatima') || name.toLowerCase().includes('maryam') || name.toLowerCase().includes('aisha') ? 'female' : 'male'));
 
     await c.env.DB.prepare(`
       INSERT INTO users (id, phone, email, password_hash, full_name, dob, gender, location, marriage_timeline, blur_photos_by_default)
-      VALUES (?, ?, ?, ?, ?, '1998-01-01', 'male', 'Global', 'within_1_year', 1)
-    `).bind(userId, cleanEmail, cleanEmail, passwordHash, name).run();
+      VALUES (?, ?, ?, ?, ?, '1998-01-01', ?, 'Global', 'within_1_year', 1)
+    `).bind(userId, cleanEmail, cleanEmail, passwordHash, name, userGender).run();
 
     const sessionToken = generateSessionToken(userId);
 
@@ -37,9 +38,11 @@ authRouter.post('/signup', async (c) => {
         id: userId,
         email: cleanEmail,
         fullName: name,
+        gender: userGender,
         isNewUser: true
       }
     });
+
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   }

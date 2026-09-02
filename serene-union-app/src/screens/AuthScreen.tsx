@@ -19,6 +19,7 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [gender, setGender] = useState<'male' | 'female'>('female');
   
   // Phone Auth State
   const [countryCode, setCountryCode] = useState('+92');
@@ -62,8 +63,9 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
     setIsLoading(true);
     const endpoint = tab === 'signup' ? 'signup' : 'login';
     const payload = tab === 'signup' 
-      ? { email: email.trim(), password, fullName: fullName.trim() } 
+      ? { email: email.trim(), password, fullName: fullName.trim(), gender } 
       : { email: email.trim(), password };
+
 
     try {
       const res = await fetch(`${API_BASE}/auth/${endpoint}`, {
@@ -447,18 +449,49 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
 
               <form onSubmit={handleEmailSubmit} className="w-full space-y-3 text-left">
                 {tab === 'signup' && (
-                  <div>
-                    <label className="block text-xs font-bold text-on-surface mb-1">Full Name</label>
-                    <input
-                      type="text"
-                      required
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      placeholder="e.g. Tariq Hussain"
-                      className="w-full bg-surface-variant/40 border border-outline rounded-2xl px-4 py-2.5 text-xs text-on-surface outline-none focus:bg-white focus:border-primary"
-                    />
-                  </div>
+                  <>
+                    <div>
+                      <label className="block text-xs font-bold text-on-surface mb-1">Full Name</label>
+                      <input
+                        type="text"
+                        required
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        placeholder="e.g. Tariq Hussain"
+                        className="w-full bg-surface-variant/40 border border-outline rounded-2xl px-4 py-2.5 text-xs text-on-surface outline-none focus:bg-white focus:border-primary"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-on-surface mb-1">I am a</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setGender('male')}
+                          className={`py-2 px-3 rounded-2xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${
+                            gender === 'male'
+                              ? 'bg-primary text-white border-primary shadow-subtle'
+                              : 'bg-surface-variant/40 text-secondary border-outline hover:bg-surface-variant'
+                          }`}
+                        >
+                          <span>Brother 🧔</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setGender('female')}
+                          className={`py-2 px-3 rounded-2xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${
+                            gender === 'female'
+                              ? 'bg-primary text-white border-primary shadow-subtle'
+                              : 'bg-surface-variant/40 text-secondary border-outline hover:bg-surface-variant'
+                          }`}
+                        >
+                          <span>Sister 🧕</span>
+                        </button>
+                      </div>
+                    </div>
+                  </>
                 )}
+
 
                 <div>
                   <label className="block text-xs font-bold text-on-surface mb-1">Email Address</label>

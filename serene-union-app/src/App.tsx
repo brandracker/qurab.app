@@ -87,7 +87,7 @@ export const App: React.FC = () => {
           fullName: user.fullName || 'Member',
           dob: user.dob || '1998-01-01',
           age: user.dob ? (new Date().getFullYear() - new Date(user.dob).getFullYear()) : 28,
-          gender: user.gender || 'male',
+          gender: user.gender || (user.fullName?.toLowerCase().includes('zainab') || user.email?.toLowerCase().includes('zainab') || user.fullName?.toLowerCase().includes('fatima') || user.fullName?.toLowerCase().includes('maryam') || user.fullName?.toLowerCase().includes('aisha') ? 'female' : 'male'),
           location: user.location || 'Lahore, Pakistan',
           profession: user.profession || 'Professional',
           education: user.education || 'Graduate Degree',
@@ -122,9 +122,11 @@ export const App: React.FC = () => {
         };
         setCurrentUser(fullProfile);
         dbService.setCurrentUser(fullProfile);
+        dbService.fetchLiveProfiles();
       }
       setCurrentStep('main_app');
       setActiveTab('discover');
+
     }
   };
 

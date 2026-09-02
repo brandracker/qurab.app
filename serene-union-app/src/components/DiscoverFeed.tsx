@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import confetti from 'canvas-confetti';
 import { 
   Search, 
   SlidersHorizontal, 
@@ -18,7 +19,15 @@ import {
   Hand,
   Heart, 
   PlayCircle,
-  Loader2 
+  Loader2,
+  Sparkles,
+  Volume2,
+  Clock,
+  ShieldCheck,
+  Briefcase,
+  Building2,
+  FileCheck2,
+  Plane
 } from 'lucide-react';
 import type { UserProfile, FilterState } from '../types';
 import { FilterModal } from './FilterModal';
@@ -80,6 +89,19 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isPlayingVoice, setIsPlayingVoice] = useState<boolean>(false);
+
+  const togglePlayVoice = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isPlayingVoice) {
+      setIsPlayingVoice(false);
+    } else {
+      setIsPlayingVoice(true);
+      setTimeout(() => {
+        setIsPlayingVoice(false);
+      }, 4000);
+    }
+  };
 
   useEffect(() => {
     setIsLoading(true);
@@ -139,6 +161,14 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
     }
 
     setProfiles(prev => prev.filter(p => p.id !== profile.id));
+
+    // Playful matrimonial confetti
+    confetti({
+      particleCount: 30,
+      spread: 60,
+      origin: { y: 0.8 },
+      colors: ['#FF2560', '#FCD34D', '#F472B6', '#10B981']
+    });
 
     const result = await dbService.sendMatchAction(profile.id, 'liked');
     if (result.isMutual) {
@@ -418,37 +448,71 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
                   </>
                 )}
 
-                {/* Top Location & Photo Counter Pill (Clean Frosted White) */}
-                <div className="absolute top-4 left-3 flex items-center gap-1.5 z-10">
-                  <div className="bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-on-surface text-xs font-semibold flex items-center gap-1.5 border border-outline/80 shadow-subtle">
-                    <MapPin className="w-3.5 h-3.5 text-primary" />
-                    <span>{currentProfile.location}</span>
-                  </div>
-                  {photos.length > 1 && (
-                    <div className="bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-full text-secondary text-[10px] font-bold flex items-center gap-1 border border-outline/80 shadow-subtle">
-                      <Camera className="w-3 h-3 text-secondary" />
-                      <span>{currentPhotoIdx + 1}/{photos.length}</span>
+                {/* Top Location Pill & 94% Values Match (Playful Frosted Glass) */}
+                <div className="absolute top-4 inset-x-3 flex items-center justify-between z-10">
+                  <div className="flex items-center gap-1.5">
+                    <div className="bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-on-surface text-xs font-semibold flex items-center gap-1.5 border border-outline/80 shadow-subtle">
+                      <MapPin className="w-3.5 h-3.5 text-primary" />
+                      <span>{currentProfile.location}</span>
                     </div>
-                  )}
+                    {photos.length > 1 && (
+                      <div className="bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-full text-secondary text-[10px] font-bold flex items-center gap-1 border border-outline/80 shadow-subtle">
+                        <Camera className="w-3 h-3 text-secondary" />
+                        <span>{currentPhotoIdx + 1}/{photos.length}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Top Right: VIP Badge or Playful 94% Values Match Pill */}
+                  <div className="flex items-center gap-1.5">
+                    {currentProfile.isVip ? (
+                      <div className="bg-pastel-amber text-pastel-amber-text border border-pastel-amber-border text-[10px] font-bold px-3 py-1 rounded-full flex items-center gap-1 backdrop-blur-md shadow-subtle">
+                        <Crown className="w-3.5 h-3.5 text-pastel-amber-text fill-pastel-amber-text/30" />
+                        <span>VIP</span>
+                      </div>
+                    ) : (
+                      <div className="bg-white/90 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 backdrop-blur-md shadow-subtle">
+                        <Sparkles className="w-3 h-3 text-emerald-500 fill-emerald-500/30" />
+                        <span>94% Match</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                {/* Top Right VIP Badge */}
-                {currentProfile.isVip && (
-                  <div className="absolute top-4 right-3 bg-pastel-amber text-pastel-amber-text border border-pastel-amber-border text-[10px] font-bold px-3 py-1 rounded-full flex items-center gap-1 backdrop-blur-md shadow-subtle z-10">
-                    <Crown className="w-3.5 h-3.5 text-pastel-amber-text fill-pastel-amber-text/30" />
-                    <span>VIP Member</span>
-                  </div>
-                )}
-
-                {/* Candidate Name & Timeline Bar (Crisp White Frosted Glassmorphism) */}
+                {/* Candidate Name & Timeline Bar (Playful Frosted Glassmorphism) */}
                 <div className="absolute bottom-0 inset-x-0 bg-white/95 backdrop-blur-md p-3.5 flex items-end justify-between text-on-surface border-t border-outline shadow-subtle">
                   <div>
-                    <h2 className="font-serif text-xl font-bold leading-tight flex items-center gap-1.5 text-on-surface">
-                      <span>{currentProfile.fullName.split(' ')[0]}, {currentProfile.age}</span>
-                      {currentProfile.isVip && (
-                        <Crown className="w-4 h-4 text-amber-500 fill-amber-400" />
-                      )}
-                    </h2>
+                    <div className="flex items-center gap-2">
+                      <h2 className="font-serif text-xl font-bold leading-tight flex items-center gap-1.5 text-on-surface">
+                        <span>{currentProfile.fullName.split(' ')[0]}, {currentProfile.age}</span>
+                        {currentProfile.isVip && (
+                          <Crown className="w-4 h-4 text-amber-500 fill-amber-400" />
+                        )}
+                      </h2>
+
+                      {/* Playful Voice Intro Button */}
+                      <button
+                        type="button"
+                        onClick={togglePlayVoice}
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold border transition-all flex items-center gap-1 shadow-2xs active:scale-95 ${
+                          isPlayingVoice
+                            ? 'bg-sky-500 text-white border-sky-600 animate-pulse'
+                            : 'bg-pastel-sky text-sky-700 border-pastel-sky-border hover:bg-sky-100'
+                        }`}
+                        title="Play 15s Voice Greeting"
+                      >
+                        <Volume2 className={`w-3 h-3 ${isPlayingVoice ? 'animate-bounce' : ''}`} />
+                        <span>{isPlayingVoice ? 'Playing...' : 'Voice Intro'}</span>
+                        {isPlayingVoice && (
+                          <span className="flex items-center gap-0.5 ml-0.5">
+                            <span className="w-0.5 h-2 bg-white animate-pulse" />
+                            <span className="w-0.5 h-3 bg-white animate-pulse delay-75" />
+                            <span className="w-0.5 h-1.5 bg-white animate-pulse delay-150" />
+                          </span>
+                        )}
+                      </button>
+                    </div>
+
                     <p className="text-xs text-secondary font-medium flex items-center gap-1.5 mt-0.5">
                       <span className="text-on-surface font-semibold">{currentProfile.profession}</span>
                       {currentProfile.workArrangement && (
@@ -467,51 +531,76 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
                 </div>
               </div>
 
-
-              {/* In-Card Deep Navigation Tabs (Clean Solid) */}
-              <div className="flex border-b border-outline bg-surface-variant">
+              {/* In-Card Deep Navigation Tabs (Playful Floating Rounded Pills) */}
+              <div className="p-1.5 bg-surface-variant/70 border-b border-outline flex gap-1.5">
                 {[
-                  { id: 'deen', label: 'Deen & Taqwa', Icon: BookOpen },
-                  { id: 'career', label: 'Career', Icon: GraduationCap },
-                  { id: 'family', label: 'Family', Icon: Home },
-                  { id: 'bio', label: 'Bio & Values', Icon: User }
-                ].map(({ id, label, Icon }) => (
-                  <button
-                    key={id}
-                    onClick={() => setActiveTab(id as CardTab)}
-                    className={`flex-1 py-2 flex flex-col items-center gap-0.5 border-b-2 text-[10px] font-bold transition-all ${
-                      activeTab === id
-                        ? 'border-primary text-primary bg-white shadow-subtle'
-                        : 'border-transparent text-secondary hover:text-on-surface'
-                    }`}
-                  >
-                    <Icon className="w-3.5 h-3.5" />
-                    <span>{label}</span>
-                  </button>
-                ))}
+                  { id: 'deen', label: 'Deen & Taqwa', Icon: BookOpen, activeColor: 'bg-white text-emerald-700 border-emerald-300 shadow-2xs' },
+                  { id: 'career', label: 'Career', Icon: GraduationCap, activeColor: 'bg-white text-sky-700 border-sky-300 shadow-2xs' },
+                  { id: 'family', label: 'Family', Icon: Home, activeColor: 'bg-white text-amber-700 border-amber-300 shadow-2xs' },
+                  { id: 'bio', label: 'Bio & Values', Icon: User, activeColor: 'bg-white text-purple-700 border-purple-300 shadow-2xs' }
+                ].map(({ id, label, Icon, activeColor }) => {
+                  const isActive = activeTab === id;
+                  return (
+                    <button
+                      key={id}
+                      onClick={() => setActiveTab(id as CardTab)}
+                      className={`flex-1 py-1.5 px-2 rounded-xl flex items-center justify-center gap-1 text-[10px] font-bold transition-all border active:scale-95 ${
+                        isActive
+                          ? activeColor
+                          : 'border-transparent text-secondary hover:text-on-surface hover:bg-white/40'
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">{label}</span>
+                    </button>
+                  );
+                })}
               </div>
 
-              {/* Dynamic In-Card Content Body based on Tab (Pastel Cards) */}
-              <div className="p-3.5 bg-white min-h-[135px] flex flex-col justify-center">
+              {/* Dynamic In-Card Content Body based on Tab (Pastel Bento Cards with Micro Icons) */}
+              <div className="p-3.5 bg-white min-h-[140px] flex flex-col justify-center">
                 {/* 1. DEEN & TAQWA TAB */}
                 {activeTab === 'deen' && (
                   <div className="space-y-2 animate-fade-in">
                     <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="bg-pastel-mint p-2 rounded-xl border border-pastel-mint-border">
-                        <span className="text-[9px] text-pastel-mint-text font-bold uppercase block">Daily Prayers</span>
-                        <strong className="text-on-surface text-[11px]">{currentProfile.religiousProfile?.prayerFrequency || '5 times daily'}</strong>
+                      <div className="bg-pastel-mint p-2.5 rounded-xl border border-pastel-mint-border flex items-center gap-2 hover:shadow-subtle transition-all">
+                        <div className="w-7 h-7 rounded-lg bg-emerald-100 border border-emerald-200 flex items-center justify-center shrink-0">
+                          <Clock className="w-3.5 h-3.5 text-emerald-700" />
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-[9px] text-pastel-mint-text font-bold uppercase block truncate">Daily Prayers</span>
+                          <strong className="text-on-surface text-[11px] truncate block">{currentProfile.religiousProfile?.prayerFrequency || '5 times daily'}</strong>
+                        </div>
                       </div>
-                      <div className="bg-pastel-mint p-2 rounded-xl border border-pastel-mint-border">
-                        <span className="text-[9px] text-pastel-mint-text font-bold uppercase block">Sect & Madhhab</span>
-                        <strong className="text-on-surface text-[11px]">{currentProfile.religiousProfile?.sect} · {currentProfile.religiousProfile?.madhhab || 'Hanafi'}</strong>
+
+                      <div className="bg-pastel-mint p-2.5 rounded-xl border border-pastel-mint-border flex items-center gap-2 hover:shadow-subtle transition-all">
+                        <div className="w-7 h-7 rounded-lg bg-emerald-100 border border-emerald-200 flex items-center justify-center shrink-0">
+                          <BookOpen className="w-3.5 h-3.5 text-emerald-700" />
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-[9px] text-pastel-mint-text font-bold uppercase block truncate">Sect & Madhhab</span>
+                          <strong className="text-on-surface text-[11px] truncate block">{currentProfile.religiousProfile?.sect} · {currentProfile.religiousProfile?.madhhab || 'Hanafi'}</strong>
+                        </div>
                       </div>
-                      <div className="bg-pastel-mint p-2 rounded-xl border border-pastel-mint-border">
-                        <span className="text-[9px] text-pastel-mint-text font-bold uppercase block">Dietary Standard</span>
-                        <strong className="text-on-surface text-[11px]">{currentProfile.religiousProfile?.halalDiet || 'Strictly Halal'}</strong>
+
+                      <div className="bg-pastel-mint p-2.5 rounded-xl border border-pastel-mint-border flex items-center gap-2 hover:shadow-subtle transition-all">
+                        <div className="w-7 h-7 rounded-lg bg-emerald-100 border border-emerald-200 flex items-center justify-center shrink-0">
+                          <Sparkles className="w-3.5 h-3.5 text-emerald-700" />
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-[9px] text-pastel-mint-text font-bold uppercase block truncate">Dietary Standard</span>
+                          <strong className="text-on-surface text-[11px] truncate block">{currentProfile.religiousProfile?.halalDiet || 'Strictly Halal'}</strong>
+                        </div>
                       </div>
-                      <div className="bg-pastel-mint p-2 rounded-xl border border-pastel-mint-border">
-                        <span className="text-[9px] text-pastel-mint-text font-bold uppercase block">Modesty / Attire</span>
-                        <strong className="text-on-surface text-[11px] capitalize">{currentProfile.religiousProfile?.modestyPractice?.replace('_', ' ') || 'Modest'}</strong>
+
+                      <div className="bg-pastel-mint p-2.5 rounded-xl border border-pastel-mint-border flex items-center gap-2 hover:shadow-subtle transition-all">
+                        <div className="w-7 h-7 rounded-lg bg-emerald-100 border border-emerald-200 flex items-center justify-center shrink-0">
+                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-[9px] text-pastel-mint-text font-bold uppercase block truncate">Modesty / Attire</span>
+                          <strong className="text-on-surface text-[11px] capitalize truncate block">{currentProfile.religiousProfile?.modestyPractice?.replace('_', ' ') || 'Modest'}</strong>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -520,22 +609,35 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
                 {/* 2. CAREER & PEDIGREE TAB */}
                 {activeTab === 'career' && (
                   <div className="space-y-2 animate-fade-in text-xs">
-                    <div className="flex items-center gap-2 bg-pastel-sky p-2 rounded-xl border border-pastel-sky-border">
-                      <GraduationCap className="w-4 h-4 text-pastel-sky-text" />
-                      <div>
+                    <div className="flex items-center gap-2.5 bg-pastel-sky p-2.5 rounded-xl border border-pastel-sky-border hover:shadow-subtle transition-all">
+                      <div className="w-7 h-7 rounded-lg bg-sky-100 border border-sky-200 flex items-center justify-center shrink-0">
+                        <GraduationCap className="w-4 h-4 text-sky-700" />
+                      </div>
+                      <div className="min-w-0">
                         <span className="text-[9px] text-pastel-sky-text font-bold uppercase block">Education</span>
-                        <span className="font-semibold text-on-surface">{currentProfile.education} {currentProfile.university ? `· ${currentProfile.university}` : ''}</span>
+                        <span className="font-semibold text-on-surface truncate block">{currentProfile.education} {currentProfile.university ? `· ${currentProfile.university}` : ''}</span>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-pastel-sky p-2 rounded-xl border border-pastel-sky-border">
-                        <span className="text-[9px] text-pastel-sky-text font-bold uppercase block">Work Arrangement</span>
-                        <strong className="text-on-surface capitalize text-[11px]">{currentProfile.workArrangement?.replace('_', ' ') || 'Full-Time'}</strong>
+                      <div className="bg-pastel-sky p-2.5 rounded-xl border border-pastel-sky-border flex items-center gap-2 hover:shadow-subtle transition-all">
+                        <div className="w-7 h-7 rounded-lg bg-sky-100 border border-sky-200 flex items-center justify-center shrink-0">
+                          <Building2 className="w-3.5 h-3.5 text-sky-700" />
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-[9px] text-pastel-sky-text font-bold uppercase block truncate">Work Setup</span>
+                          <strong className="text-on-surface capitalize text-[11px] truncate block">{currentProfile.workArrangement?.replace('_', ' ') || 'Full-Time'}</strong>
+                        </div>
                       </div>
-                      <div className="bg-pastel-sky p-2 rounded-xl border border-pastel-sky-border">
-                        <span className="text-[9px] text-pastel-sky-text font-bold uppercase block">Annual Income</span>
-                        <strong className="text-on-surface text-[11px] capitalize">{currentProfile.incomeBracket ? currentProfile.incomeBracket.replace('_', ' ') : 'Professional'}</strong>
+
+                      <div className="bg-pastel-sky p-2.5 rounded-xl border border-pastel-sky-border flex items-center gap-2 hover:shadow-subtle transition-all">
+                        <div className="w-7 h-7 rounded-lg bg-indigo-100 border border-indigo-200 flex items-center justify-center shrink-0">
+                          <Briefcase className="w-3.5 h-3.5 text-indigo-700" />
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-[9px] text-pastel-sky-text font-bold uppercase block truncate">Income</span>
+                          <strong className="text-on-surface text-[11px] capitalize truncate block">{currentProfile.incomeBracket ? currentProfile.incomeBracket.replace('_', ' ') : 'Professional'}</strong>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -545,21 +647,44 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
                 {activeTab === 'family' && (
                   <div className="space-y-2 animate-fade-in">
                     <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="bg-pastel-sand p-2 rounded-xl border border-pastel-sand-border">
-                        <span className="text-[9px] text-pastel-sand-text font-bold uppercase block">Living Preference</span>
-                        <strong className="text-primary capitalize text-[11px]">{currentProfile.livingPreference?.replace('_', ' ') || 'Independent Home'}</strong>
+                      <div className="bg-pastel-sand p-2.5 rounded-xl border border-pastel-sand-border flex items-center gap-2 hover:shadow-subtle transition-all">
+                        <div className="w-7 h-7 rounded-lg bg-amber-100 border border-amber-200 flex items-center justify-center shrink-0">
+                          <Home className="w-3.5 h-3.5 text-amber-700" />
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-[9px] text-pastel-sand-text font-bold uppercase block truncate">Living</span>
+                          <strong className="text-primary capitalize text-[11px] truncate block">{currentProfile.livingPreference?.replace('_', ' ') || 'Independent'}</strong>
+                        </div>
                       </div>
-                      <div className="bg-pastel-sand p-2 rounded-xl border border-pastel-sand-border">
-                        <span className="text-[9px] text-pastel-sand-text font-bold uppercase block">Marital Status</span>
-                        <strong className="text-on-surface text-[11px] capitalize">{currentProfile.maritalStatus ? currentProfile.maritalStatus.replace('_', ' ') : 'Never Married'}</strong>
+
+                      <div className="bg-pastel-sand p-2.5 rounded-xl border border-pastel-sand-border flex items-center gap-2 hover:shadow-subtle transition-all">
+                        <div className="w-7 h-7 rounded-lg bg-amber-100 border border-amber-200 flex items-center justify-center shrink-0">
+                          <FileCheck2 className="w-3.5 h-3.5 text-amber-700" />
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-[9px] text-pastel-sand-text font-bold uppercase block truncate">Marital Status</span>
+                          <strong className="text-on-surface text-[11px] capitalize truncate block">{currentProfile.maritalStatus ? currentProfile.maritalStatus.replace('_', ' ') : 'Never Married'}</strong>
+                        </div>
                       </div>
-                      <div className="bg-pastel-sand p-2 rounded-xl border border-pastel-sand-border">
-                        <span className="text-[9px] text-pastel-sand-text font-bold uppercase block">Citizenship</span>
-                        <strong className="text-on-surface text-[11px]">{currentProfile.citizenship || 'Citizen'}</strong>
+
+                      <div className="bg-pastel-sand p-2.5 rounded-xl border border-pastel-sand-border flex items-center gap-2 hover:shadow-subtle transition-all">
+                        <div className="w-7 h-7 rounded-lg bg-amber-100 border border-amber-200 flex items-center justify-center shrink-0">
+                          <ShieldCheck className="w-3.5 h-3.5 text-amber-700" />
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-[9px] text-pastel-sand-text font-bold uppercase block truncate">Citizenship</span>
+                          <strong className="text-on-surface text-[11px] truncate block">{currentProfile.citizenship || 'Citizen'}</strong>
+                        </div>
                       </div>
-                      <div className="bg-pastel-sand p-2 rounded-xl border border-pastel-sand-border">
-                        <span className="text-[9px] text-pastel-sand-text font-bold uppercase block">Relocation</span>
-                        <strong className="text-on-surface text-[11px]">{currentProfile.willingnessToRelocate === 'willing' ? 'Open to Relocate' : 'Local Only'}</strong>
+
+                      <div className="bg-pastel-sand p-2.5 rounded-xl border border-pastel-sand-border flex items-center gap-2 hover:shadow-subtle transition-all">
+                        <div className="w-7 h-7 rounded-lg bg-sky-100 border border-sky-200 flex items-center justify-center shrink-0">
+                          <Plane className="w-3.5 h-3.5 text-sky-700" />
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-[9px] text-pastel-sand-text font-bold uppercase block truncate">Relocation</span>
+                          <strong className="text-on-surface text-[11px] truncate block">{currentProfile.willingnessToRelocate === 'willing' ? 'Open to Relocate' : 'Local Only'}</strong>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -568,15 +693,19 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
                 {/* 4. BIO & REFLECTIONS TAB */}
                 {activeTab === 'bio' && (
                   <div className="space-y-2 animate-fade-in text-xs">
-                    <p className="text-xs text-on-surface-variant leading-relaxed line-clamp-3 bg-pastel-lavender p-2.5 rounded-xl border border-pastel-lavender-border italic">
-                      "{currentProfile.bio || currentProfile.religiousProfile?.deenRelationshipBio || "Seeking a righteous partner on the Sunnah to complete half my deen."}"
-                    </p>
+                    <div className="bg-pastel-lavender p-3 rounded-xl border border-pastel-lavender-border relative hover:shadow-subtle transition-all">
+                      <span className="absolute top-1.5 right-2.5 text-2xl font-serif text-purple-300 select-none">“</span>
+                      <p className="text-xs text-on-surface-variant leading-relaxed line-clamp-3 italic pr-3">
+                        {currentProfile.bio || currentProfile.religiousProfile?.deenRelationshipBio || "Seeking a righteous partner on the Sunnah to complete half my deen."}
+                      </p>
+                    </div>
 
                     {currentProfile.hobbies && currentProfile.hobbies.length > 0 && (
-                      <div className="flex flex-wrap gap-1 pt-0.5">
+                      <div className="flex flex-wrap gap-1.5 pt-0.5">
                         {currentProfile.hobbies.slice(0, 4).map((h, i) => (
-                          <span key={i} className="bg-pastel-rose text-primary text-[10px] font-semibold px-2 py-0.5 rounded-full border border-pastel-rose-border">
-                            {h.replace(/[^\w\s\(\)\-]/gi, '').trim()}
+                          <span key={i} className="bg-pastel-rose text-primary text-[10px] font-bold px-2.5 py-1 rounded-full border border-pastel-rose-border shadow-2xs flex items-center gap-1">
+                            <Sparkles className="w-2.5 h-2.5 text-primary" />
+                            <span>{h.replace(/[^\w\s\(\)\-]/gi, '').trim()}</span>
                           </span>
                         ))}
                       </div>
@@ -584,6 +713,7 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
                   </div>
                 )}
               </div>
+
             </article>
 
             {/* Bottom Controls Bar */}
@@ -637,6 +767,12 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
+                    confetti({
+                      particleCount: 30,
+                      spread: 60,
+                      origin: { y: 0.8 },
+                      colors: ['#38BDF8', '#818CF8', '#FF2560']
+                    });
                     const conv = dbService.createMatchConversation(currentProfile);
                     notificationService.addNotification({
                       type: 'salam',

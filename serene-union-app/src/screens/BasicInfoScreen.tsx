@@ -10,8 +10,10 @@ import {
   Plane, 
   Home, 
   Check, 
-  ChevronDown 
+  ChevronDown,
+  Sparkles
 } from 'lucide-react';
+import { Country, State, type ICountry, type IState } from 'country-state-city';
 
 interface Props {
   data?: {
@@ -37,103 +39,8 @@ interface Props {
   }) => void;
 }
 
-// Location Data Structure
-interface StateData {
-  name: string;
-  cities: string[];
-}
-
-interface CountryInfo {
-  country: string;
-  code: string;
-  states: StateData[];
-}
-
-const GLOBAL_LOCATIONS: CountryInfo[] = [
-  {
-    country: 'United Kingdom',
-    code: 'UK',
-    states: [
-      { name: 'Greater London', cities: ['London', 'Croydon', 'Ilford', 'Harrow', 'Brent'] },
-      { name: 'West Midlands', cities: ['Birmingham', 'Coventry', 'Wolverhampton', 'Solihull'] },
-      { name: 'Greater Manchester', cities: ['Manchester', 'Bolton', 'Oldham', 'Rochdale', 'Salford'] },
-      { name: 'West Yorkshire', cities: ['Leeds', 'Bradford', 'Huddersfield', 'Wakefield'] },
-      { name: 'Bedfordshire', cities: ['Luton', 'Bedford'] },
-      { name: 'Leicestershire', cities: ['Leicester', 'Loughborough'] },
-      { name: 'Scotland', cities: ['Glasgow', 'Edinburgh', 'Aberdeen', 'Dundee'] },
-      { name: 'Wales', cities: ['Cardiff', 'Swansea', 'Newport'] },
-      { name: 'Other Region', cities: ['Bristol', 'Sheffield', 'Newcastle', 'Nottingham', 'Southampton'] }
-    ]
-  },
-  {
-    country: 'Pakistan',
-    code: 'PK',
-    states: [
-      { name: 'Punjab', cities: ['Lahore', 'Faisalabad', 'Rawalpindi', 'Multan', 'Gujranwala', 'Sialkot', 'Bahawalpur', 'Sargodha', 'Gujrat'] },
-      { name: 'Sindh', cities: ['Karachi', 'Hyderabad', 'Sukkur', 'Larkana', 'Mirpur Khas'] },
-      { name: 'Islamabad Capital Territory', cities: ['Islamabad'] },
-      { name: 'Khyber Pakhtunkhwa', cities: ['Peshawar', 'Abbottabad', 'Mardan', 'Swat', 'Dera Ismail Khan'] },
-      { name: 'Balochistan', cities: ['Quetta', 'Gwadar', 'Turbat', 'Khuzdar'] },
-      { name: 'Azad Kashmir', cities: ['Muzaffarabad', 'Mirpur', 'Kotli', 'Rawalakot'] },
-      { name: 'Gilgit-Baltistan', cities: ['Gilgit', 'Skardu', 'Hunza'] }
-    ]
-  },
-  {
-    country: 'United States',
-    code: 'USA',
-    states: [
-      { name: 'Texas', cities: ['Dallas', 'Houston', 'Austin', 'Fort Worth', 'Plano', 'Irving'] },
-      { name: 'California', cities: ['Los Angeles', 'San Francisco', 'San Jose', 'San Diego', 'Irvine', 'Fremont'] },
-      { name: 'New York', cities: ['New York City', 'Brooklyn', 'Queens', 'Buffalo', 'Albany'] },
-      { name: 'Illinois', cities: ['Chicago', 'Naperville', 'Schaumburg', 'Oak Brook'] },
-      { name: 'New Jersey', cities: ['Jersey City', 'Edison', 'Paterson', 'Paramus', 'Princeton'] },
-      { name: 'Virginia', cities: ['Alexandria', 'Fairfax', 'Richmond', 'Arlington', 'McLean'] },
-      { name: 'Michigan', cities: ['Detroit', 'Dearborn', 'Canton', 'Troy', 'Ann Arbor'] },
-      { name: 'Florida', cities: ['Miami', 'Orlando', 'Tampa', 'Fort Lauderdale', 'Jacksonville'] },
-      { name: 'Georgia', cities: ['Atlanta', 'Alpharetta', 'Duluth', 'Marietta'] },
-      { name: 'Other State', cities: ['Seattle, WA', 'Boston, MA', 'Philadelphia, PA', 'Washington DC'] }
-    ]
-  },
-  {
-    country: 'Canada',
-    code: 'CA',
-    states: [
-      { name: 'Ontario', cities: ['Toronto', 'Mississauga', 'Brampton', 'Ottawa', 'Oakville', 'Milton', 'Scarborough'] },
-      { name: 'British Columbia', cities: ['Vancouver', 'Surrey', 'Burnaby', 'Richmond'] },
-      { name: 'Alberta', cities: ['Calgary', 'Edmonton', 'Fort McMurray'] },
-      { name: 'Quebec', cities: ['Montreal', 'Laval', 'Quebec City'] }
-    ]
-  },
-  {
-    country: 'United Arab Emirates',
-    code: 'UAE',
-    states: [
-      { name: 'Dubai', cities: ['Dubai'] },
-      { name: 'Abu Dhabi', cities: ['Abu Dhabi', 'Al Ain'] },
-      { name: 'Sharjah', cities: ['Sharjah'] },
-      { name: 'Ajman', cities: ['Ajman'] }
-    ]
-  },
-  {
-    country: 'Saudi Arabia',
-    code: 'KSA',
-    states: [
-      { name: 'Riyadh Province', cities: ['Riyadh', 'Al Kharj'] },
-      { name: 'Makkah Province', cities: ['Jeddah', 'Makkah', 'Taif'] },
-      { name: 'Eastern Province', cities: ['Dammam', 'Khobar', 'Dhahran', 'Jubail'] },
-      { name: 'Al Madinah', cities: ['Madinah', 'Yanbu'] }
-    ]
-  },
-  {
-    country: 'Other Global Country',
-    code: 'GLOBAL',
-    states: [
-      { name: 'Europe', cities: ['Paris, France', 'Berlin, Germany', 'Frankfurt, Germany', 'Amsterdam, Netherlands', 'Dublin, Ireland'] },
-      { name: 'Middle East', cities: ['Doha, Qatar', 'Kuwait City, Kuwait', 'Muscat, Oman', 'Manama, Bahrain'] },
-      { name: 'Asia & Pacific', cities: ['Sydney, Australia', 'Melbourne, Australia', 'Kuala Lumpur, Malaysia', 'Singapore', 'Istanbul, Turkey'] }
-    ]
-  }
-];
+// Top priority country codes for quick Islamic & diaspora selection
+const TOP_COUNTRY_CODES = ['GB', 'PK', 'US', 'CA', 'AE', 'SA', 'TR', 'AU', 'DE', 'MY', 'IN', 'BD', 'QA', 'KW', 'OM', 'EG', 'FR', 'NL', 'ID'];
 
 export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) => {
   const [fullName, setFullName] = useState(data?.fullName || '');
@@ -193,52 +100,152 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
 
   const formattedHeightFull = `${formatCmToFeet(heightCm)} (${heightCm} cm)`;
 
-  // --- Location System (Structured Country / State / City) ---
-  const [selectedCountry, setSelectedCountry] = useState<string>('United Kingdom');
-  const [selectedState, setSelectedState] = useState<string>('Greater London');
-  const [selectedCity, setSelectedCity] = useState<string>('London');
+  // --- Worldwide Global Location System (All 250 Countries, States, & Cities) ---
+  const allCountries = useMemo<ICountry[]>(() => {
+    const countries = Country.getAllCountries();
+    const priority = countries.filter(c => TOP_COUNTRY_CODES.includes(c.isoCode));
+    const others = countries.filter(c => !TOP_COUNTRY_CODES.includes(c.isoCode));
+    // Sort priority by TOP_COUNTRY_CODES order
+    priority.sort((a, b) => TOP_COUNTRY_CODES.indexOf(a.isoCode) - TOP_COUNTRY_CODES.indexOf(b.isoCode));
+    // Sort others alphabetically
+    others.sort((a, b) => a.name.localeCompare(b.name));
+    return [...priority, ...others];
+  }, []);
+
+  const [selectedCountryCode, setSelectedCountryCode] = useState<string>('GB');
+  const [selectedStateCode, setSelectedStateCode] = useState<string>('');
+  const [isCustomState, setIsCustomState] = useState<boolean>(false);
+  const [customStateText, setCustomStateText] = useState<string>('');
+
+  const [selectedCityName, setSelectedCityName] = useState<string>('');
   const [isCustomCity, setIsCustomCity] = useState<boolean>(false);
   const [customCityText, setCustomCityText] = useState<string>('');
 
-  const currentCountryData = useMemo(() => {
-    return GLOBAL_LOCATIONS.find(c => c.country === selectedCountry) || GLOBAL_LOCATIONS[0];
-  }, [selectedCountry]);
+  // Available states for chosen country
+  const availableStates = useMemo<IState[]>(() => {
+    if (!selectedCountryCode) return [];
+    return State.getStatesOfCountry(selectedCountryCode);
+  }, [selectedCountryCode]);
 
-  const currentStates = useMemo(() => {
-    return currentCountryData.states;
-  }, [currentCountryData]);
-
-  const currentCities = useMemo(() => {
-    const st = currentStates.find(s => s.name === selectedState);
-    return st ? st.cities : currentStates[0]?.cities || [];
-  }, [currentStates, selectedState]);
-
-  const handleCountryChange = (cName: string) => {
-    setSelectedCountry(cName);
-    const cData = GLOBAL_LOCATIONS.find(c => c.country === cName) || GLOBAL_LOCATIONS[0];
-    const firstState = cData.states[0]?.name || '';
-    setSelectedState(firstState);
-    const firstCity = cData.states[0]?.cities[0] || '';
-    setSelectedCity(firstCity);
-    setIsCustomCity(false);
+  // Curated major cities for popular regions
+  const POPULAR_STATE_CITIES: Record<string, string[]> = {
+    // UK
+    'GB-ENG': ['London', 'Birmingham', 'Manchester', 'Leeds', 'Bradford', 'Luton', 'Leicester', 'Sheffield', 'Bristol', 'Coventry'],
+    'GB-SCT': ['Glasgow', 'Edinburgh', 'Aberdeen', 'Dundee'],
+    'GB-WLS': ['Cardiff', 'Swansea', 'Newport'],
+    'GB-NIR': ['Belfast', 'Derry'],
+    // Pakistan
+    'PK-PB': ['Lahore', 'Faisalabad', 'Rawalpindi', 'Multan', 'Gujranwala', 'Sialkot', 'Bahawalpur', 'Sargodha', 'Gujrat'],
+    'PK-SD': ['Karachi', 'Hyderabad', 'Sukkur', 'Larkana', 'Nawabshah', 'Mirpur Khas'],
+    'PK-KP': ['Peshawar', 'Mardan', 'Abbottabad', 'Swat', 'Dera Ismail Khan', 'Nowshera'],
+    'PK-BA': ['Quetta', 'Gwadar', 'Turbat', 'Khuzdar'],
+    'PK-IS': ['Islamabad'],
+    'PK-JK': ['Muzaffarabad', 'Mirpur', 'Kotli', 'Rawalakot'],
+    'PK-GB': ['Gilgit', 'Skardu', 'Hunza'],
+    // USA
+    'US-TX': ['Dallas', 'Houston', 'Austin', 'Fort Worth', 'Plano', 'Irving', 'Frisco', 'Arlington'],
+    'US-CA': ['Los Angeles', 'San Francisco', 'San Jose', 'San Diego', 'Irvine', 'Fremont', 'Sacramento'],
+    'US-NY': ['New York City', 'Brooklyn', 'Queens', 'Buffalo', 'Albany', 'Rochester'],
+    'US-IL': ['Chicago', 'Naperville', 'Schaumburg', 'Oak Brook'],
+    'US-NJ': ['Jersey City', 'Edison', 'Paterson', 'Paramus', 'Princeton', 'Newark'],
+    'US-VA': ['Alexandria', 'Fairfax', 'Richmond', 'Arlington', 'McLean'],
+    'US-MI': ['Detroit', 'Dearborn', 'Canton', 'Troy', 'Ann Arbor'],
+    'US-FL': ['Miami', 'Orlando', 'Tampa', 'Fort Lauderdale', 'Jacksonville'],
+    'US-GA': ['Atlanta', 'Alpharetta', 'Duluth', 'Marietta', 'Norcross'],
+    // Canada
+    'CA-ON': ['Toronto', 'Mississauga', 'Brampton', 'Ottawa', 'Oakville', 'Milton', 'Markham', 'Scarborough'],
+    'CA-BC': ['Vancouver', 'Surrey', 'Burnaby', 'Richmond', 'Coquitlam'],
+    'CA-AB': ['Calgary', 'Edmonton', 'Fort McMurray'],
+    'CA-QC': ['Montreal', 'Laval', 'Quebec City'],
+    // UAE
+    'AE-DU': ['Dubai'],
+    'AE-AZ': ['Abu Dhabi', 'Al Ain'],
+    'AE-SH': ['Sharjah'],
+    'AE-AJ': ['Ajman'],
+    // Saudi Arabia
+    'SA-01': ['Riyadh', 'Al Kharj'],
+    'SA-02': ['Jeddah', 'Makkah', 'Taif'],
+    'SA-04': ['Dammam', 'Khobar', 'Dhahran', 'Jubail'],
+    'SA-03': ['Madinah', 'Yanbu'],
+    // Turkey
+    'TR-34': ['Istanbul'],
+    'TR-06': ['Ankara'],
+    // Australia
+    'AU-NSW': ['Sydney', 'Parramatta'],
+    'AU-VIC': ['Melbourne']
   };
 
-  const handleStateChange = (sName: string) => {
-    setSelectedState(sName);
-    const st = currentStates.find(s => s.name === sName);
-    const firstCity = st?.cities[0] || '';
-    setSelectedCity(firstCity);
+  const currentRegionKey = `${selectedCountryCode}-${selectedStateCode}`;
+  const availableCities = useMemo<string[]>(() => {
+    if (isCustomState || !selectedStateCode) return [];
+    return POPULAR_STATE_CITIES[currentRegionKey] || [];
+  }, [currentRegionKey, isCustomState, selectedStateCode]);
+
+  // Initialize first state & city when country changes
+  const handleCountryChange = (cCode: string) => {
+    setSelectedCountryCode(cCode);
+    setIsCustomState(false);
+    setCustomStateText('');
     setIsCustomCity(false);
+    setCustomCityText('');
+
+    const states = State.getStatesOfCountry(cCode);
+    if (states.length > 0) {
+      setSelectedStateCode(states[0].isoCode);
+      const cities = POPULAR_STATE_CITIES[`${cCode}-${states[0].isoCode}`];
+      if (cities && cities.length > 0) {
+        setSelectedCityName(cities[0]);
+      } else {
+        setSelectedCityName('');
+        setIsCustomCity(true);
+      }
+    } else {
+      setSelectedStateCode('');
+      setIsCustomState(true);
+      setSelectedCityName('');
+      setIsCustomCity(true);
+    }
   };
+
+  const handleStateChange = (sCode: string) => {
+    setSelectedStateCode(sCode);
+    setIsCustomState(false);
+    setCustomStateText('');
+    setIsCustomCity(false);
+    setCustomCityText('');
+
+    const cities = POPULAR_STATE_CITIES[`${selectedCountryCode}-${sCode}`];
+    if (cities && cities.length > 0) {
+      setSelectedCityName(cities[0]);
+    } else {
+      setSelectedCityName('');
+      setIsCustomCity(true);
+    }
+  };
+
+
+  // Selected Country Info
+  const selectedCountryObj = useMemo(() => {
+    return Country.getCountryByCode(selectedCountryCode);
+  }, [selectedCountryCode]);
+
+  // Selected State Info
+  const selectedStateObj = useMemo(() => {
+    if (!selectedCountryCode || !selectedStateCode) return null;
+    return State.getStateByCodeAndCountry(selectedStateCode, selectedCountryCode);
+  }, [selectedCountryCode, selectedStateCode]);
 
   // Build final location string
   const finalLocationString = useMemo(() => {
-    const city = isCustomCity ? customCityText.trim() || 'City' : selectedCity;
-    if (selectedCountry === 'Other Global Country') {
-      return city;
+    const cityName = isCustomCity ? (customCityText.trim() || 'City') : (selectedCityName || 'City');
+    const stateName = isCustomState ? (customStateText.trim() || '') : (selectedStateObj?.name || '');
+    const countryCodeOrName = selectedCountryObj?.isoCode || 'Global';
+
+    if (stateName) {
+      return `${cityName}, ${stateName}, ${countryCodeOrName}`;
     }
-    return `${city}, ${currentCountryData.code}`;
-  }, [isCustomCity, customCityText, selectedCity, selectedCountry, currentCountryData.code]);
+    return `${cityName}, ${countryCodeOrName}`;
+  }, [isCustomCity, customCityText, selectedCityName, isCustomState, customStateText, selectedStateObj, selectedCountryObj]);
 
   // --- Ethnicity & Citizenship ---
   const [ethnicity, setEthnicity] = useState(data?.ethnicity || 'South Asian');
@@ -358,15 +365,17 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
             </div>
           </div>
 
-          {/* Date of Birth (Polished 3-Dropdown Calendar with Live Age Badge) */}
+          {/* Date of Birth (Polished 3-Dropdown Calendar with Elegant Sparkle Age Badge) */}
           <div className="bg-white p-3.5 rounded-2xl border border-outline shadow-subtle space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-on-surface flex items-center gap-1.5">
                 <Calendar className="w-3.5 h-3.5 text-primary" />
                 <span>Date of Birth</span>
               </label>
-              <span className="px-2 py-0.5 rounded-full bg-pastel-mint text-pastel-mint-text border border-pastel-mint-border text-[10px] font-bold">
-                🎂 {calculatedAge} years old
+              {/* Elegant Modern Age Badge without cake emoji */}
+              <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold flex items-center gap-1.5 shadow-2xs">
+                <Sparkles className="w-3 h-3 text-emerald-600 fill-emerald-500/20" />
+                <span>{calculatedAge} years old</span>
               </span>
             </div>
 
@@ -422,7 +431,7 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
                 <Ruler className="w-3.5 h-3.5 text-primary" />
                 <span>Height</span>
               </label>
-              <span className="text-[10px] text-secondary font-medium">Enter in cm or adjust</span>
+              <span className="text-[10px] text-secondary font-medium">Enter in cm or pick preset</span>
             </div>
 
             <div className="flex items-center gap-2.5">
@@ -506,83 +515,111 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
             </div>
           </div>
 
-          {/* Current City & Country (Structured Country / State / City Dropdowns) */}
+          {/* Current City & Country (All 250 Worldwide Countries + Structured States & Cities + Custom Input) */}
           <div className="bg-white p-3.5 rounded-2xl border border-outline shadow-subtle space-y-2.5">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-on-surface flex items-center gap-1.5">
                 <MapPin className="w-3.5 h-3.5 text-primary" />
                 <span>Current Location</span>
               </label>
-              <span className="text-[11px] font-bold text-primary truncate max-w-[170px]">
+              <span className="text-[11px] font-bold text-primary truncate max-w-[190px]">
                 {finalLocationString}
               </span>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-              {/* Country Picker */}
+              {/* Worldwide Country Picker */}
               <div>
-                <span className="text-[10px] text-secondary font-bold uppercase block mb-1">Country</span>
+                <span className="text-[10px] text-secondary font-bold uppercase block mb-1">
+                  Country ({allCountries.length})
+                </span>
                 <div className="relative">
                   <select
-                    value={selectedCountry}
+                    value={selectedCountryCode}
                     onChange={(e) => handleCountryChange(e.target.value)}
                     className="w-full bg-surface-variant border border-outline rounded-xl px-2.5 py-2 text-xs font-semibold text-on-surface outline-none focus:border-primary appearance-none pr-7 truncate"
                   >
-                    {GLOBAL_LOCATIONS.map(c => (
-                      <option key={c.country} value={c.country}>{c.country}</option>
+                    {allCountries.map((c) => (
+                      <option key={c.isoCode} value={c.isoCode}>
+                        {c.flag ? `${c.flag} ` : ''}{c.name} ({c.isoCode})
+                      </option>
                     ))}
                   </select>
                   <ChevronDown className="w-3 h-3 text-secondary absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
               </div>
 
-              {/* State / Province Picker */}
+              {/* State / Province Picker with Custom Option */}
               <div>
-                <span className="text-[10px] text-secondary font-bold uppercase block mb-1">State / Province</span>
-                <div className="relative">
-                  <select
-                    value={selectedState}
-                    onChange={(e) => handleStateChange(e.target.value)}
-                    className="w-full bg-surface-variant border border-outline rounded-xl px-2.5 py-2 text-xs font-semibold text-on-surface outline-none focus:border-primary appearance-none pr-7 truncate"
-                  >
-                    {currentStates.map(st => (
-                      <option key={st.name} value={st.name}>{st.name}</option>
-                    ))}
-                  </select>
-                  <ChevronDown className="w-3 h-3 text-secondary absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] text-secondary font-bold uppercase">State / Province</span>
+                  {availableStates.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setIsCustomState(!isCustomState)}
+                      className="text-[9px] text-primary hover:underline font-bold"
+                    >
+                      {isCustomState ? 'List' : '+ Custom'}
+                    </button>
+                  )}
                 </div>
+
+                {isCustomState || availableStates.length === 0 ? (
+                  <input
+                    type="text"
+                    value={customStateText}
+                    onChange={(e) => setCustomStateText(e.target.value)}
+                    placeholder="Enter state/region"
+                    className="w-full bg-surface-variant border border-outline rounded-xl px-2.5 py-2 text-xs text-on-surface font-semibold outline-none focus:border-primary"
+                  />
+                ) : (
+                  <div className="relative">
+                    <select
+                      value={selectedStateCode}
+                      onChange={(e) => handleStateChange(e.target.value)}
+                      className="w-full bg-surface-variant border border-outline rounded-xl px-2.5 py-2 text-xs font-semibold text-on-surface outline-none focus:border-primary appearance-none pr-7 truncate"
+                    >
+                      {availableStates.map(st => (
+                        <option key={st.isoCode} value={st.isoCode}>{st.name}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-3 h-3 text-secondary absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* City Selection */}
+            {/* City Selection with Custom City Input */}
             <div>
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[10px] text-secondary font-bold uppercase">City</span>
-                <button
-                  type="button"
-                  onClick={() => setIsCustomCity(!isCustomCity)}
-                  className="text-[10px] text-primary hover:underline font-bold"
-                >
-                  {isCustomCity ? '← Choose from list' : '+ Enter custom city'}
-                </button>
+                {availableCities.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setIsCustomCity(!isCustomCity)}
+                    className="text-[10px] text-primary hover:underline font-bold"
+                  >
+                    {isCustomCity ? '← Choose from list' : '+ Enter custom city'}
+                  </button>
+                )}
               </div>
 
-              {isCustomCity ? (
+              {isCustomCity || availableCities.length === 0 ? (
                 <input
                   type="text"
                   value={customCityText}
                   onChange={(e) => setCustomCityText(e.target.value)}
-                  placeholder="e.g. Oxford or Rawalpindi"
+                  placeholder="e.g. London, Lahore, Dallas, or your town"
                   className="w-full bg-surface-variant border border-outline rounded-xl px-3 py-2 text-xs text-on-surface font-semibold outline-none focus:border-primary"
                 />
               ) : (
                 <div className="relative">
                   <select
-                    value={selectedCity}
-                    onChange={(e) => setSelectedCity(e.target.value)}
+                    value={selectedCityName}
+                    onChange={(e) => setSelectedCityName(e.target.value)}
                     className="w-full bg-surface-variant border border-outline rounded-xl px-2.5 py-2 text-xs font-semibold text-on-surface outline-none focus:border-primary appearance-none pr-7"
                   >
-                    {currentCities.map(ct => (
+                    {availableCities.map(ct => (
                       <option key={ct} value={ct}>{ct}</option>
                     ))}
                   </select>

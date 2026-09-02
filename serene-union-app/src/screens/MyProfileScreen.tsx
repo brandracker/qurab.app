@@ -50,6 +50,22 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
     return () => window.removeEventListener('serene_vip_updated', handleVipUpdate);
   }, [user.id, user.isVip]);
 
+  const getTodayLikeKey = () => `serene_likes_left_${user.id}_${new Date().toISOString().slice(0, 10)}`;
+  const [likesRemaining, setLikesRemaining] = useState<number>(() => {
+    const saved = localStorage.getItem(getTodayLikeKey());
+    return saved !== null ? parseInt(saved, 10) : 50;
+  });
+
+  useEffect(() => {
+    const handleActivity = () => {
+      const saved = localStorage.getItem(getTodayLikeKey());
+      setLikesRemaining(saved !== null ? parseInt(saved, 10) : 50);
+    };
+    window.addEventListener('serene_activity_updated', handleActivity);
+    return () => window.removeEventListener('serene_activity_updated', handleActivity);
+  }, [user.id]);
+
+
   const [hasCompletedQuiz, setHasCompletedQuiz] = useState<boolean>(() => {
     return Boolean(localStorage.getItem(`serene_quiz_${user.id}`));
   });
@@ -101,10 +117,11 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
                 <p className="text-[10px] text-secondary mt-0.5">
                   {isVip 
                     ? 'All Premium Privileges Active · Unlimited Likes & Direct Salam' 
-                    : '50 Free Discover Likes / day · Free Halal Chat'}
+                    : `${likesRemaining} / 50 Daily Likes Left Today · Free Halal Chat`}
                 </p>
               </div>
             </div>
+
 
             {!isVip ? (
               <button
@@ -383,14 +400,21 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
         />
       )}
 
-      {/* Rewarded Video Ad Modal */}
+      {/* Rewarded Ad Modal */}
       {showAdModal && (
         <RewardedAdModal
           userId={user.id}
           rewardType={adRewardType}
           isOpen={showAdModal}
           onClose={() => setShowAdModal(false)}
-          onRewardClaimed={() => {}}
+          onRewardClaimed={() => {
+            if (adRewardType === 'likes') {
+              const nextLikes = likesRemaining + 10;
+              setLikesRemaining(nextLikes);
+              localStorage.setItem(getTodayLikeKey(), nextLikes.toString());
+              window.dispatchEvent(new CustomEvent('serene_activity_updated'));
+            }
+          }}
         />
       )}
 

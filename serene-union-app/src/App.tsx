@@ -186,7 +186,9 @@ export const App: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(merged)
       });
+      await dbService.fetchLiveProfiles();
     } catch {}
+
 
     setCurrentStep('main_app');
     setActiveTab('discover');

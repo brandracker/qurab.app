@@ -253,6 +253,8 @@ profilesRouter.get('/discover', async (c) => {
         u.mahr_philosophy as mahrPhilosophy, u.children_desire as childrenDesire,
         u.blur_photos_by_default as blurPhotosByDefault, u.profile_visibility as profileVisibility,
         u.is_vip as isVip,
+        u.voice_greeting_url as voiceGreetingUrl,
+        u.voice_greeting_duration as voiceGreetingDuration,
         rp.practice_level as practiceLevel, rp.sect, rp.madhhab, rp.prayer_frequency as prayerFrequency, 
         rp.halal_diet as halalDiet, rp.quran_recitation as quranRecitation,
         rp.modesty_practice as modestyPractice, rp.hajj_umrah_status as hajjUmrahStatus,
@@ -261,10 +263,11 @@ profilesRouter.get('/discover', async (c) => {
       FROM users u
       LEFT JOIN religious_profiles rp ON u.id = rp.user_id
       LEFT JOIN wali_details w ON u.id = w.user_id
-      WHERE u.id != ? AND u.email IS NOT NULL AND u.email != '' AND u.full_name != 'New Member'
+      WHERE u.id != ? AND (u.full_name != 'New Member' OR u.full_name IS NULL)
       ${genderFilter}
       ORDER BY u.is_vip DESC, u.created_at DESC
     `;
+
 
     const stmt = targetGender
       ? c.env.DB.prepare(query).bind(currentUserId, targetGender)
@@ -330,6 +333,8 @@ profilesRouter.get('/discover', async (c) => {
         blurPhotosByDefault: Boolean(row.blurPhotosByDefault),
         profileVisibility: row.profileVisibility || 'all_users',
         isVip: Boolean(row.isVip),
+        voiceGreetingUrl: row.voiceGreetingUrl || undefined,
+        voiceGreetingDuration: row.voiceGreetingDuration || undefined,
         photos: userPhotos.length > 0 ? userPhotos : ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80'],
         religiousProfile: {
           practiceLevel: row.practiceLevel || 'practicing',
@@ -356,3 +361,120 @@ profilesRouter.get('/discover', async (c) => {
     return c.json({ success: false, error: error.message }, 500);
   }
 });
+
+// 4. Create / Save Profile Alias (POST /api/profiles)
+profilesRouter.post('/', async (c) => {
+  try {
+    const data = await c.req.json();
+    const { 
+      id, userId, fullName, dob, gender, location, height, bio, 
+      blurPhotosByDefault, marriageTimeline, timeline, profession, education, university,
+      familyStructure, livingPreference, siblingsCount, willingnessToRelocate,
+      smokingStatus, languagesSpoken, mahrPhilosophy, childrenDesire,
+      religiousProfile, practiceLevel, sect, madhhab, prayerFrequency, halalDiet,
+      quranRecitation, modestyPractice, hajjUmrahStatus, photos 
+    } = data;
+
+    const targetUserId = id || userId;
+    if (!targetUserId) {
+      return c.json({ success: false, error: 'User ID is required' }, 400);
+    }
+
+    // Insert or update users table
+    await c.env.DB.prepare(`
+      INSERT INTO users (
+        id, phone, email, full_name, dob, gender, location, height, bio,
+        profession, education, university, family_structure, living_preference,
+        siblings_count, willingness_to_relocate, smoking_status, languages_spoken,
+        mahr_philosophy, children_desire, blur_photos_by_default, marriage_timeline
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        full_name = excluded.full_name,
+        dob = excluded.dob,
+        gender = excluded.gender,
+        location = excluded.location,
+        height = excluded.height,
+        bio = excluded.bio,
+        profession = excluded.profession,
+        education = excluded.education,
+        university = excluded.university,
+        family_structure = excluded.family_structure,
+        living_preference = excluded.living_preference,
+        siblings_count = excluded.siblings_count,
+        willingness_to_relocate = excluded.willingness_to_relocate,
+        smoking_status = excluded.smoking_status,
+        languages_spoken = excluded.languages_spoken,
+        mahr_philosophy = excluded.mahr_philosophy,
+        children_desire = excluded.children_desire,
+        blur_photos_by_default = excluded.blur_photos_by_default,
+        marriage_timeline = excluded.marriage_timeline,
+        updated_at = CURRENT_TIMESTAMP
+    `).bind(
+      targetUserId,
+      data.phone || `+1${Date.now().toString().slice(-10)}`,
+      data.email || `${targetUserId}@sereneunion.app`,
+      fullName || 'Member',
+      dob || '1998-01-01',
+      gender || 'female',
+      location || 'Global',
+      height || "5'10\"",
+      bio || '',
+      profession || 'Professional',
+      education || 'Graduate',
+      university || '',
+      familyStructure || 'nuclear',
+      livingPreference || 'independent',
+      siblingsCount || 0,
+      willingnessToRelocate || 'open',
+      smokingStatus || 'non_smoker',
+      languagesSpoken || 'English, Urdu',
+      mahrPhilosophy || 'mutual_agreement',
+      childrenDesire || 'desires_children',
+      blurPhotosByDefault ? 1 : 0,
+      marriageTimeline || timeline || 'within_1_year'
+    ).run();
+
+    // Religious Profile
+    const relPractice = religiousProfile?.practiceLevel || practiceLevel || 'practicing';
+    const relSect = religiousProfile?.sect || sect || 'Sunni';
+    const relMadhhab = religiousProfile?.madhhab || madhhab || 'Hanafi';
+    const relPrayer = religiousProfile?.prayerFrequency || prayerFrequency || '5 times daily';
+    const relHalal = religiousProfile?.halalDiet || halalDiet || 'Strictly Halal';
+    const relQuran = religiousProfile?.quranRecitation || quranRecitation || 'regular';
+    const relModesty = religiousProfile?.modestyPractice || modestyPractice || 'modest';
+    const relHajj = religiousProfile?.hajjUmrahStatus || hajjUmrahStatus || 'planning';
+    const relBio = religiousProfile?.deenRelationshipBio || bio || 'Seeking half my deen.';
+
+    await c.env.DB.prepare(`
+      INSERT OR REPLACE INTO religious_profiles (
+        user_id, practice_level, sect, madhhab, prayer_frequency, halal_diet,
+        quran_recitation, modesty_practice, hajj_umrah_status, deen_relationship_bio
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      targetUserId, relPractice, relSect, relMadhhab, relPrayer, relHalal,
+      relQuran, relModesty, relHajj, relBio
+    ).run();
+
+    // User Photos
+    if (Array.isArray(photos) && photos.length > 0) {
+      await c.env.DB.prepare(`DELETE FROM user_photos WHERE user_id = ?`).bind(targetUserId).run();
+      for (let i = 0; i < photos.length; i++) {
+        if (!photos[i]) continue;
+        const photoId = `ph_${Date.now()}_${i}`;
+        await c.env.DB.prepare(`
+          INSERT INTO user_photos (id, user_id, photo_url, is_primary, sort_order)
+          VALUES (?, ?, ?, ?, ?)
+        `).bind(photoId, targetUserId, photos[i], i === 0 ? 1 : 0, i + 1).run();
+      }
+    }
+
+    return c.json({
+      success: true,
+      message: 'Profile saved successfully in Cloudflare D1',
+      userId: targetUserId
+    });
+  } catch (err: any) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+

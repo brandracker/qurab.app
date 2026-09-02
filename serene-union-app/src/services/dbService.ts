@@ -415,9 +415,9 @@ class DBService {
 
   async fetchLikedYouCandidates(): Promise<UserProfile[]> {
     const user = this.getCurrentUser();
-    const targetGender = user.gender === 'female' ? 'male' : (user.gender === 'male' ? 'female' : undefined);
 
     // 1. Try remote API first
+
     try {
       const res = await fetch(`${API_BASE}/matches/received?userId=${user.id}`);
       const data = await res.json();
@@ -436,27 +436,10 @@ class DBService {
       } catch {}
     }
 
-    // 3. Fallback: Provide genuine initial candidate interests from verified directory of opposite gender
-    const blockedIds = new Set(this.getUserBlocked(user.id).map((b: any) => b.id));
-    const matchedIds = new Set(this.getConversations().map(c => c.otherUser?.id));
-    const passedIds = new Set(this.getUserPassed(user.id).map(p => p.id));
-    const likedIds = new Set(this.getUserLikesSent(user.id).map(l => l.id));
-
-    const eligible = this.getAllProfiles().filter(p => {
-      if (!p.id || p.id === user.id) return false;
-      if (blockedIds.has(p.id) || matchedIds.has(p.id) || passedIds.has(p.id) || likedIds.has(p.id)) return false;
-      if (targetGender && p.gender && p.gender.toLowerCase() !== targetGender) return false;
-      return true;
-    });
-
-    const initialInterests = eligible.slice(0, 2);
-    if (initialInterests.length > 0) {
-      localStorage.setItem(localKey, JSON.stringify(initialInterests));
-      return initialInterests;
-    }
-
+    // 3. Genuine zero-state: Return empty array if no real incoming likes
     return [];
   }
+
 
   async fetchMutualMatches(): Promise<UserProfile[]> {
     const user = this.getCurrentUser();

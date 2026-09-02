@@ -52,9 +52,12 @@ export class MockD1Database {
         is_phone_verified BOOLEAN DEFAULT 0,
         is_id_verified BOOLEAN DEFAULT 0,
         is_vip BOOLEAN DEFAULT 0,
+        voice_greeting_url TEXT,
+        voice_greeting_duration INTEGER DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
+
 
       CREATE TABLE IF NOT EXISTS religious_profiles (
         user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,

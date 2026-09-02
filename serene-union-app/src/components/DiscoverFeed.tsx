@@ -134,6 +134,9 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
       const nextLikes = Math.max(0, likesRemaining - 1);
       setLikesRemaining(nextLikes);
       localStorage.setItem(getTodayLikeKey(), nextLikes.toString());
+      if (nextLikes === 0) {
+        setTimeout(() => setShowLikesLimitModal(true), 600);
+      }
     }
 
     setProfiles(prev => prev.filter(p => p.id !== profile.id));
@@ -252,6 +255,33 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
           )}
         </div>
 
+        {/* Live Daily Likes Counter / VIP Unlimited Badge */}
+        {isVip ? (
+          <span 
+            className="px-2.5 py-1.5 rounded-full bg-pastel-amber text-pastel-amber-text border border-pastel-amber-border text-[10px] font-bold flex items-center gap-1 shrink-0 shadow-2xs cursor-default"
+            title="Barakah VIP: Unlimited Likes Active"
+          >
+            <Crown className="w-3.5 h-3.5 text-pastel-amber-text" />
+            <span className="hidden xs:inline">VIP</span>
+            <span>Unlimited</span>
+          </span>
+        ) : (
+          <button
+            onClick={() => {
+              if (likesRemaining <= 10) setShowLikesLimitModal(true);
+            }}
+            className={`px-2.5 py-1.5 rounded-full text-[10px] font-bold flex items-center gap-1 shrink-0 transition-all border shadow-2xs active:scale-95 ${
+              likesRemaining <= 5
+                ? 'bg-rose-50 text-rose-600 border-rose-200 animate-pulse'
+                : 'bg-pastel-rose text-primary border-pastel-rose-border hover:bg-pastel-rose/80'
+            }`}
+            title={`${likesRemaining} daily free likes remaining. Tap to add more.`}
+          >
+            <Heart className="w-3.5 h-3.5 fill-current text-primary" />
+            <span>{likesRemaining} Left</span>
+          </button>
+        )}
+
         {/* Notification Bell Button */}
         <button
           onClick={() => {
@@ -266,6 +296,7 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
             <span className="w-2 h-2 bg-primary rounded-full absolute top-1 right-1 ring-2 ring-white" />
           )}
         </button>
+
 
         {/* Filter Option Button */}
         <button
@@ -692,12 +723,16 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 font-sans animate-fade-in">
           <div className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl border border-outline text-center flex flex-col items-center gap-3">
             <div className="w-12 h-12 rounded-full bg-pastel-rose text-primary flex items-center justify-center">
-              <Heart className="w-6 h-6 text-primary" />
+              <Heart className="w-6 h-6 text-primary fill-current" />
             </div>
             <div>
-              <h3 className="font-serif text-lg font-bold text-on-surface">Daily Free Likes Limit (50/50)</h3>
+              <h3 className="font-serif text-lg font-bold text-on-surface">
+                {likesRemaining <= 0 ? 'Daily Likes Limit Reached' : `${likesRemaining} Likes Remaining`}
+              </h3>
               <p className="text-xs text-secondary mt-1 leading-relaxed">
-                You’ve used your 50 daily free likes. Watch a quick 15s sponsored ad to unlock <strong>+10 More Likes</strong> right now, or get unlimited likes with VIP!
+                {likesRemaining <= 0 
+                  ? 'You have used your daily free likes. Watch a quick 15s sponsored ad to unlock +10 More Likes right now, or get unlimited likes with Barakah VIP!'
+                  : 'Want more likes today? Watch a quick 15s sponsored ad for +10 Extra Likes, or upgrade to VIP for unlimited daily likes.'}
               </p>
             </div>
 
@@ -721,7 +756,7 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
                 className="w-full py-2.5 rounded-full bg-pastel-amber text-pastel-amber-text border border-pastel-amber-border hover:bg-pastel-amber/80 text-xs font-bold transition-all flex items-center justify-center gap-1.5"
               >
                 <Crown className="w-4 h-4 text-pastel-amber-text" />
-                <span>Get Unlimited Likes with VIP (PKR 799/mo)</span>
+                <span>Upgrade to VIP (Unlimited Likes)</span>
               </button>
 
               <button
@@ -734,6 +769,7 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
           </div>
         </div>
       )}
+
 
       {/* Rewarded Ad Modal */}
       {showRewardedAdModal && (

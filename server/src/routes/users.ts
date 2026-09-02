@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import type { AppContext } from '../types';
+import { calculateDistanceKm, getBoundingBox } from '../utils/geo';
 
 export const usersRouter = new Hono<AppContext>();
 
@@ -8,7 +9,7 @@ usersRouter.post('/complete-onboarding', async (c) => {
   try {
     const data = await c.req.json();
     const { 
-      userId, fullName, dob, gender, location, height, bio, 
+      userId, fullName, dob, gender, location, city, country, latitude, longitude, height, bio, 
       blurPhotosByDefault, timeline, profession, education, university,
       familyStructure, livingPreference, siblingsCount, willingnessToRelocate,
       smokingStatus, languagesSpoken, mahrPhilosophy, childrenDesire,
@@ -20,10 +21,14 @@ usersRouter.post('/complete-onboarding', async (c) => {
       return c.json({ success: false, error: 'userId is required' }, 400);
     }
 
-    // 1. Update users table with extended biodata
+    const latNum = typeof latitude === 'number' ? latitude : (latitude ? parseFloat(latitude) : null);
+    const lonNum = typeof longitude === 'number' ? longitude : (longitude ? parseFloat(longitude) : null);
+
+    // 1. Update users table with extended biodata and location coordinates
     await c.env.DB.prepare(`
       UPDATE users 
-      SET full_name = ?, dob = ?, gender = ?, location = ?, height = ?, bio = ?, 
+      SET full_name = ?, dob = ?, gender = ?, location = ?, city = ?, country = ?, 
+          latitude = ?, longitude = ?, height = ?, bio = ?, 
           profession = ?, education = ?, university = ?, family_structure = ?,
           living_preference = ?, siblings_count = ?, willingness_to_relocate = ?,
           smoking_status = ?, languages_spoken = ?, mahr_philosophy = ?,
@@ -34,7 +39,11 @@ usersRouter.post('/complete-onboarding', async (c) => {
       fullName || 'Member',
       dob || '1998-01-01',
       gender || 'male',
-      location || 'Global',
+      location || (city ? `${city}, ${country || ''}`.trim() : 'Global'),
+      city || null,
+      country || null,
+      latNum,
+      lonNum,
       height || "5'11\"",
       bio || '',
       profession || 'Professional',
@@ -130,6 +139,10 @@ usersRouter.get('/:id', async (c) => {
         dob: user.dob,
         gender: user.gender,
         location: user.location,
+        city: user.city,
+        country: user.country,
+        latitude: user.latitude,
+        longitude: user.longitude,
         height: user.height,
         bio: user.bio,
         profession: user.profession,
@@ -228,24 +241,44 @@ profilesRouter.post('/privacy', async (c) => {
   }
 });
 
-// 3. Discover Profiles with Islamic Opposite-Gender Matching
+// 3. Discover Profiles with Islamic Opposite-Gender Matching & Dynamic Distance
 profilesRouter.get('/discover', async (c) => {
   try {
     const currentUserId = c.req.query('userId') || '';
+    const queryLat = c.req.query('lat') ? parseFloat(c.req.query('lat')!) : null;
+    const queryLon = c.req.query('lon') ? parseFloat(c.req.query('lon')!) : null;
+    const maxDistanceKm = c.req.query('maxDistance') ? parseFloat(c.req.query('maxDistance')!) : null;
     
     let targetGender: string | null = null;
+    let viewerLat: number | null = (queryLat !== null && !isNaN(queryLat)) ? queryLat : null;
+    let viewerLon: number | null = (queryLon !== null && !isNaN(queryLon)) ? queryLon : null;
+
     if (currentUserId) {
-      const userRow: any = await c.env.DB.prepare(`SELECT gender FROM users WHERE id = ?`).bind(currentUserId).first();
+      const userRow: any = await c.env.DB.prepare(`SELECT gender, latitude, longitude FROM users WHERE id = ?`).bind(currentUserId).first();
       if (userRow?.gender) {
         targetGender = userRow.gender.toLowerCase() === 'female' ? 'male' : (userRow.gender.toLowerCase() === 'male' ? 'female' : null);
       }
+      if (viewerLat === null && typeof userRow?.latitude === 'number') {
+        viewerLat = userRow.latitude;
+      }
+      if (viewerLon === null && typeof userRow?.longitude === 'number') {
+        viewerLon = userRow.longitude;
+      }
     }
 
+    // Determine bounding box if maxDistance is specified
+    const box = (maxDistanceKm && viewerLat !== null && viewerLon !== null)
+      ? getBoundingBox(viewerLat, viewerLon, maxDistanceKm)
+      : null;
+
     const genderFilter = targetGender ? `AND LOWER(u.gender) = ?` : '';
+    const geoFilter = box ? `AND u.latitude BETWEEN ? AND ? AND u.longitude BETWEEN ? AND ?` : '';
+
     const query = `
       SELECT 
         u.id, u.phone, u.email, u.full_name as fullName, u.dob, u.gender, 
-        u.location, u.city, u.country, u.profession, u.education, u.university, u.height, 
+        u.location, u.city, u.country, u.latitude, u.longitude,
+        u.profession, u.education, u.university, u.height, 
         u.ethnicity, u.marriage_timeline as marriageTimeline, u.bio, 
         u.family_structure as familyStructure, u.living_preference as livingPreference,
         u.siblings_count as siblingsCount, u.willingness_to_relocate as willingnessToRelocate,
@@ -265,14 +298,17 @@ profilesRouter.get('/discover', async (c) => {
       LEFT JOIN wali_details w ON u.id = w.user_id
       WHERE u.id != ? AND (u.full_name != 'New Member' OR u.full_name IS NULL)
       ${genderFilter}
+      ${geoFilter}
       ORDER BY u.is_vip DESC, u.created_at DESC
     `;
 
+    const bindParams: any[] = [currentUserId];
+    if (targetGender) bindParams.push(targetGender);
+    if (box) {
+      bindParams.push(box.minLat, box.maxLat, box.minLon, box.maxLon);
+    }
 
-    const stmt = targetGender
-      ? c.env.DB.prepare(query).bind(currentUserId, targetGender)
-      : c.env.DB.prepare(query).bind(currentUserId);
-
+    const stmt = c.env.DB.prepare(query).bind(...bindParams);
     const { results } = await stmt.all();
 
     // Fetch photos safely
@@ -298,6 +334,21 @@ profilesRouter.get('/discover', async (c) => {
       const age = new Date().getFullYear() - (birthYear || 1998);
       const userPhotos = photoMap[row.id] || [];
 
+      let distanceKm: number | null = null;
+      if (
+        viewerLat !== null && 
+        viewerLon !== null && 
+        typeof row.latitude === 'number' && 
+        typeof row.longitude === 'number'
+      ) {
+        distanceKm = calculateDistanceKm(viewerLat, viewerLon, row.latitude, row.longitude);
+      }
+
+      // If maxDistance filter was specified, filter exact circular radius
+      if (maxDistanceKm !== null && distanceKm !== null && distanceKm > maxDistanceKm) {
+        return null;
+      }
+
       return {
         id: row.id,
         phone: row.phone,
@@ -308,6 +359,9 @@ profilesRouter.get('/discover', async (c) => {
         location: row.location || 'Global',
         city: row.city,
         country: row.country,
+        latitude: row.latitude,
+        longitude: row.longitude,
+        distanceKm,
         profession: row.profession || 'Professional',
         education: row.education || 'Graduate',
         university: row.university || '',
@@ -354,6 +408,15 @@ profilesRouter.get('/discover', async (c) => {
           isVerified: Boolean(row.waliVerified)
         } : null,
       };
+    }).filter(Boolean) as any[];
+
+    // Sort: VIP first, then by closest distance if distance is known
+    formatted.sort((a, b) => {
+      if (b.isVip !== a.isVip) return (b.isVip ? 1 : 0) - (a.isVip ? 1 : 0);
+      if (a.distanceKm !== null && b.distanceKm !== null) return a.distanceKm - b.distanceKm;
+      if (a.distanceKm !== null) return -1;
+      if (b.distanceKm !== null) return 1;
+      return 0;
     });
 
     return c.json({ success: true, count: formatted.length, profiles: formatted });
@@ -367,7 +430,7 @@ profilesRouter.post('/', async (c) => {
   try {
     const data = await c.req.json();
     const { 
-      id, userId, fullName, dob, gender, location, height, bio, 
+      id, userId, fullName, dob, gender, location, city, country, latitude, longitude, height, bio, 
       blurPhotosByDefault, marriageTimeline, timeline, profession, education, university,
       familyStructure, livingPreference, siblingsCount, willingnessToRelocate,
       smokingStatus, languagesSpoken, mahrPhilosophy, childrenDesire,
@@ -380,19 +443,26 @@ profilesRouter.post('/', async (c) => {
       return c.json({ success: false, error: 'User ID is required' }, 400);
     }
 
+    const latNum = typeof latitude === 'number' ? latitude : (latitude ? parseFloat(latitude) : null);
+    const lonNum = typeof longitude === 'number' ? longitude : (longitude ? parseFloat(longitude) : null);
+
     // Insert or update users table
     await c.env.DB.prepare(`
       INSERT INTO users (
-        id, phone, email, full_name, dob, gender, location, height, bio,
+        id, phone, email, full_name, dob, gender, location, city, country, latitude, longitude, height, bio,
         profession, education, university, family_structure, living_preference,
         siblings_count, willingness_to_relocate, smoking_status, languages_spoken,
         mahr_philosophy, children_desire, blur_photos_by_default, marriage_timeline
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         full_name = excluded.full_name,
         dob = excluded.dob,
         gender = excluded.gender,
         location = excluded.location,
+        city = COALESCE(excluded.city, users.city),
+        country = COALESCE(excluded.country, users.country),
+        latitude = COALESCE(excluded.latitude, users.latitude),
+        longitude = COALESCE(excluded.longitude, users.longitude),
         height = excluded.height,
         bio = excluded.bio,
         profession = excluded.profession,
@@ -416,7 +486,11 @@ profilesRouter.post('/', async (c) => {
       fullName || 'Member',
       dob || '1998-01-01',
       gender || 'female',
-      location || 'Global',
+      location || (city ? `${city}, ${country || ''}`.trim() : 'Global'),
+      city || null,
+      country || null,
+      latNum,
+      lonNum,
       height || "5'10\"",
       bio || '',
       profession || 'Professional',

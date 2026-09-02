@@ -175,5 +175,45 @@ describe('Profiles & Discovery API Integration Tests', () => {
     expect(userRow.blur_photos_by_default).toBe(0);
     expect(userRow.profile_visibility).toBe('verified_only');
   });
+
+  it('GET /api/profiles/discover accurately computes distances and filters by maxDistance', async () => {
+    // 1. Pre-insert current user in London (51.5074, -0.1278)
+    const viewerId = 'viewer_001';
+    await env.DB.prepare(`
+      INSERT INTO users (id, phone, full_name, dob, gender, location, city, country, latitude, longitude)
+      VALUES (?, '+447000000001', 'Viewer Brother', '1995-01-01', 'male', 'London, UK', 'London', 'UK', 51.5074, -0.1278)
+    `).bind(viewerId).run();
+
+    // 2. Insert candidate in Manchester (53.4808, -2.2426) - ~260 km away
+    await env.DB.prepare(`
+      INSERT INTO users (id, phone, full_name, dob, gender, location, city, country, latitude, longitude)
+      VALUES ('cand_manchester', '+447000000002', 'Sister Manchester', '1997-01-01', 'female', 'Manchester, UK', 'Manchester', 'UK', 53.4808, -2.2426)
+    `).run();
+
+    // 3. Insert candidate in Dubai (25.2048, 55.2708) - ~5500 km away
+    await env.DB.prepare(`
+      INSERT INTO users (id, phone, full_name, dob, gender, location, city, country, latitude, longitude)
+      VALUES ('cand_dubai', '+971500000001', 'Sister Dubai', '1998-01-01', 'female', 'Dubai, UAE', 'Dubai', 'UAE', 25.2048, 55.2708)
+    `).run();
+
+    // Call discover without maxDistance -> should return both with distanceKm
+    const allRes = await app.request(`/api/profiles/discover?userId=${viewerId}`, { method: 'GET' }, env);
+    expect(allRes.status).toBe(200);
+    const allData = await allRes.json();
+    expect(allData.profiles.length).toBeGreaterThanOrEqual(2);
+
+    const manchesterProfile = allData.profiles.find((p: any) => p.id === 'cand_manchester');
+    expect(manchesterProfile).toBeDefined();
+    expect(manchesterProfile.distanceKm).toBeGreaterThan(250);
+    expect(manchesterProfile.distanceKm).toBeLessThan(275);
+
+    // Call discover with maxDistance=300 km -> should return Manchester (~260 km) but EXCLUDE Dubai (~5500 km)
+    const filteredRes = await app.request(`/api/profiles/discover?userId=${viewerId}&maxDistance=300`, { method: 'GET' }, env);
+    expect(filteredRes.status).toBe(200);
+    const filteredData = await filteredRes.json();
+    
+    expect(filteredData.profiles.some((p: any) => p.id === 'cand_manchester')).toBe(true);
+    expect(filteredData.profiles.some((p: any) => p.id === 'cand_dubai')).toBe(false);
+  });
 });
 

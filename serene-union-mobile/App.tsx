@@ -11,9 +11,12 @@ import {
   StatusBar,
   Dimensions,
   Platform,
-  Alert
+  Alert,
+  ActivityIndicator,
+  ImageBackground
 } from 'react-native';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { useFonts, PlayfairDisplay_600SemiBold, PlayfairDisplay_700Bold } from '@expo-google-fonts/playfair-display';
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
 
@@ -36,13 +39,17 @@ const COLORS = {
   white: '#ffffff',
 };
 
-// INITIAL MOCK PROFILES
+// INITIAL MOCK PROFILES WITH GEOGRAPHIC COORDINATES
 const PROFILES = [
   {
     id: 'usr_001',
     name: 'Aisha Al-Mansoor',
     age: 26,
     location: 'London, UK',
+    city: 'London',
+    country: 'United Kingdom',
+    latitude: 51.5074,
+    longitude: -0.1278,
     profession: 'Data Analyst',
     education: 'MSc Data Science, UCL',
     sect: 'Sunni · Hanafi',
@@ -53,10 +60,32 @@ const PROFILES = [
     wali: 'Tariq Al-Mansoor (Father)',
   },
   {
+    id: 'usr_006',
+    name: 'Fatima Zahra',
+    age: 27,
+    location: 'Manchester, UK',
+    city: 'Manchester',
+    country: 'United Kingdom',
+    latitude: 53.4808,
+    longitude: -2.2426,
+    profession: 'Speech Therapist',
+    education: 'BSc Speech Sciences, Manchester',
+    sect: 'Sunni · Maliki',
+    practice: 'Practicing',
+    photo: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=600&q=80',
+    blur: true,
+    bio: 'Calm and patient temperament. Love baking, charity projects, and striving to learn classical Arabic.',
+    wali: 'Omar Zahra (Father)',
+  },
+  {
     id: 'usr_002',
     name: 'Maryam Khan',
     age: 25,
     location: 'Dubai, UAE',
+    city: 'Dubai',
+    country: 'UAE',
+    latitude: 25.2048,
+    longitude: 55.2708,
     profession: 'Architect',
     education: 'B.Arch, AUS Dubai',
     sect: 'Sunni · Hanafi',
@@ -71,6 +100,10 @@ const PROFILES = [
     name: 'Zayn Malik',
     age: 28,
     location: 'Toronto, Canada',
+    city: 'Toronto',
+    country: 'Canada',
+    latitude: 43.6532,
+    longitude: -79.3832,
     profession: 'Software Engineer',
     education: 'BSc Computer Science, Waterloo',
     sect: 'Sunni · Shafi\'i',
@@ -104,14 +137,112 @@ export default function App() {
   const [chatInput, setChatInput] = useState('');
   const [blurPhotosState, setBlurPhotosState] = useState(true);
 
+  // USER LOCATION & DISTANCE FILTER STATE
+  const [userLocation, setUserLocation] = useState<{
+    city: string;
+    country: string;
+    latitude: number | null;
+    longitude: number | null;
+  }>({
+    city: 'London',
+    country: 'UK',
+    latitude: 51.5074,
+    longitude: -0.1278,
+  });
+  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
+  const [maxDistanceFilter, setMaxDistanceFilter] = useState<number | null>(null);
+
+  // Native Location Auto-Detection via OS Geocoder
+  const handleDetectLocation = async () => {
+    setIsDetectingLocation(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Location Permission Needed',
+          'Please grant location access so Serene Union can display nearby matrimonial profiles and calculate distances.'
+        );
+        setIsDetectingLocation(false);
+        return;
+      }
+
+      const position = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+
+      const { latitude, longitude } = position.coords;
+
+      // Reverse geocoding via Native phone geocoder (free, fast, zero server load)
+      const places = await Location.reverseGeocodeAsync({ latitude, longitude });
+      let detectedCity = 'Current Location';
+      let detectedCountry = '';
+
+      if (places && places.length > 0) {
+        const p = places[0];
+        detectedCity = p.city || p.subregion || p.region || 'City';
+        detectedCountry = p.country || '';
+      }
+
+      setUserLocation({
+        city: detectedCity,
+        country: detectedCountry,
+        latitude,
+        longitude
+      });
+
+      Alert.alert(
+        'Location Detected 📍',
+        `Successfully set your location to ${detectedCity}${detectedCountry ? ', ' + detectedCountry : ''}.`
+      );
+    } catch (err: any) {
+      console.log('Location detection fallback:', err);
+      Alert.alert('Notice', 'Could not detect GPS location. You can enter your city manually.');
+    } finally {
+      setIsDetectingLocation(false);
+    }
+  };
+
+  // Spherical Haversine Distance Helper
+  const getDistanceToProfile = (pLat?: number, pLon?: number) => {
+    if (
+      userLocation.latitude === null ||
+      userLocation.longitude === null ||
+      pLat === undefined ||
+      pLon === undefined
+    ) {
+      return null;
+    }
+    const R = 6371;
+    const dLat = ((pLat - userLocation.latitude) * Math.PI) / 180;
+    const dLon = ((pLon - userLocation.longitude) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((userLocation.latitude * Math.PI) / 180) *
+        Math.cos((pLat * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const dist = R * c;
+    return dist >= 10 ? Math.round(dist) : Math.round(dist * 10) / 10;
+  };
+
   if (!fontsLoaded) {
     return null;
   }
 
-  const currentProfile = PROFILES[profileIndex % PROFILES.length];
+  // Active profiles filtered by maxDistanceFilter
+  const activeProfiles = PROFILES.filter((p) => {
+    if (maxDistanceFilter === null) return true;
+    const dist = getDistanceToProfile(p.latitude, p.longitude);
+    return dist !== null && dist <= maxDistanceFilter;
+  });
+
+  const currentProfile = activeProfiles.length > 0 
+    ? activeProfiles[profileIndex % activeProfiles.length]
+    : null;
 
   const handleLike = () => {
-    if (currentProfile.id === 'usr_001') {
+    if (currentProfile && currentProfile.id === 'usr_001') {
       setShowMatchModal(true);
     } else {
       setProfileIndex(prev => prev + 1);
@@ -165,19 +296,26 @@ export default function App() {
 
         {/* Step 1: Welcome */}
         {onboardingStep === 1 && (
-          <View style={styles.onboardingContent}>
-            <View style={styles.logoBadge}>
-              <MaterialIcons name="favorite" size={48} color={COLORS.onPrimary} />
+          <ImageBackground
+            source={require('./assets/halal_couple_bg.jpg')}
+            style={styles.welcomeHeroBg}
+            resizeMode="cover"
+          >
+            <View style={styles.welcomeHeroOverlay} />
+            <View style={styles.welcomeHeroInner}>
+              <View style={styles.logoBadge}>
+                <MaterialIcons name="favorite" size={40} color={COLORS.onPrimary} />
+              </View>
+              <Text style={styles.arabicHeaderWhite}>بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</Text>
+              <Text style={styles.heroTitleWhite}>Serene Union</Text>
+              <Text style={styles.heroSubtitleWhite}>Finding your spouse, the pure halal way.</Text>
+              
+              <TouchableOpacity style={styles.primaryBtn} onPress={() => setOnboardingStep(2)}>
+                <Text style={styles.primaryBtnText}>Begin with Bismillah</Text>
+                <MaterialIcons name="arrow-forward" size={18} color={COLORS.white} />
+              </TouchableOpacity>
             </View>
-            <Text style={styles.arabicHeader}>بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</Text>
-            <Text style={styles.heroTitle}>Serene Union</Text>
-            <Text style={styles.heroSubtitle}>Finding your spouse, the halal way.</Text>
-            
-            <TouchableOpacity style={styles.primaryBtn} onPress={() => setOnboardingStep(2)}>
-              <Text style={styles.primaryBtnText}>Begin with Bismillah</Text>
-              <MaterialIcons name="arrow-forward" size={18} color={COLORS.white} />
-            </TouchableOpacity>
-          </View>
+          </ImageBackground>
         )}
 
         {/* Step 2: Intent */}
@@ -223,7 +361,31 @@ export default function App() {
             </View>
 
             <Text style={styles.inputLabel}>LOCATION / CITY</Text>
-            <TextInput style={styles.input} defaultValue="New York, USA" />
+            <View style={styles.locationInputRow}>
+              <TextInput 
+                style={[styles.input, { flex: 1, marginBottom: 0 }]} 
+                value={userLocation.city ? `${userLocation.city}${userLocation.country ? ', ' + userLocation.country : ''}` : ''}
+                onChangeText={(val) => setUserLocation(prev => ({ ...prev, city: val }))}
+                placeholder="e.g. Lahore, Pakistan"
+              />
+              <TouchableOpacity 
+                style={styles.detectLocationBtn} 
+                onPress={handleDetectLocation}
+                disabled={isDetectingLocation}
+              >
+                {isDetectingLocation ? (
+                  <ActivityIndicator size="small" color={COLORS.white} />
+                ) : (
+                  <MaterialIcons name="my-location" size={16} color={COLORS.white} />
+                )}
+                <Text style={styles.detectLocationText}>
+                  {isDetectingLocation ? 'Detecting...' : 'Auto-Detect'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.locationHelpText}>
+              🔒 Privacy-first: Only your general city & distance are shown to others, never your street address.
+            </Text>
 
             <TouchableOpacity style={styles.primaryBtn} onPress={() => setOnboardingStep(4)}>
               <Text style={styles.primaryBtnText}>Continue</Text>
@@ -298,54 +460,115 @@ export default function App() {
         {/* TAB 1: DISCOVER FEED */}
         {activeTab === 'discover' && (
           <View style={styles.discoverContainer}>
-            <View style={styles.cardContainer}>
-              <View style={styles.cardPhotoWrapper}>
-                <Image
-                  source={{ uri: currentProfile.photo }}
-                  style={[styles.cardPhoto, currentProfile.blur && blurPhotosState && styles.blurredImage]}
-                  blurRadius={currentProfile.blur && blurPhotosState ? 20 : 0}
-                />
-                
-                {/* Modesty Photo Notice */}
-                {currentProfile.blur && blurPhotosState && (
-                  <View style={styles.blurOverlay}>
-                    <MaterialIcons name="visibility-off" size={28} color={COLORS.white} />
-                    <Text style={styles.blurText}>Modesty Mode Active</Text>
-                    <TouchableOpacity
-                      style={styles.requestPhotoBtn}
-                      onPress={() => Alert.alert('Request Sent', 'Photo reveal request sent to ' + currentProfile.name)}
-                    >
-                      <Text style={styles.requestPhotoText}>Request Photo</Text>
+            {/* Distance Filter Horizontal Bar */}
+            <View style={styles.distanceFilterRow}>
+              <Text style={styles.distanceFilterLabel}>DISTANCE:</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.distanceFilterScroll}>
+                {[
+                  { label: 'Anywhere', value: null },
+                  { label: 'Within 50 km', value: 50 },
+                  { label: 'Within 150 km', value: 150 },
+                  { label: 'Within 300 km', value: 300 },
+                  { label: 'Within 1000 km', value: 1000 },
+                ].map((opt, idx) => (
+                  <TouchableOpacity
+                    key={idx}
+                    style={[
+                      styles.filterPill,
+                      maxDistanceFilter === opt.value && styles.filterPillActive
+                    ]}
+                    onPress={() => {
+                      setMaxDistanceFilter(opt.value);
+                      setProfileIndex(0);
+                    }}
+                  >
+                    <Text style={[
+                      styles.filterPillText,
+                      maxDistanceFilter === opt.value && styles.filterPillTextActive
+                    ]}>
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            {currentProfile ? (
+              <View style={styles.cardContainer}>
+                <View style={styles.cardPhotoWrapper}>
+                  <Image
+                    source={{ uri: currentProfile.photo }}
+                    style={[styles.cardPhoto, currentProfile.blur && blurPhotosState && styles.blurredImage]}
+                    blurRadius={currentProfile.blur && blurPhotosState ? 20 : 0}
+                  />
+                  
+                  {/* Modesty Photo Notice */}
+                  {currentProfile.blur && blurPhotosState && (
+                    <View style={styles.blurOverlay}>
+                      <MaterialIcons name="visibility-off" size={28} color={COLORS.white} />
+                      <Text style={styles.blurText}>Modesty Mode Active</Text>
+                      <TouchableOpacity
+                        style={styles.requestPhotoBtn}
+                        onPress={() => Alert.alert('Request Sent', 'Photo reveal request sent to ' + currentProfile.name)}
+                      >
+                        <Text style={styles.requestPhotoText}>Request Photo</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+
+                  {/* Wali Badge */}
+                  {currentProfile.wali && (
+                    <View style={styles.waliPill}>
+                      <MaterialIcons name="verified-user" size={12} color={COLORS.primary} />
+                      <Text style={styles.waliPillText}>Wali Verified</Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Card Details */}
+                <View style={styles.cardInfo}>
+                  <Text style={styles.cardName}>{currentProfile.name}, {currentProfile.age}</Text>
+                  
+                  {/* Location & Dynamic Distance Pill */}
+                  <View style={styles.locationBadgeRow}>
+                    <MaterialIcons name="place" size={14} color={COLORS.primary} />
+                    <Text style={styles.cardMetaLocation}>{currentProfile.city || currentProfile.location}</Text>
+                    {getDistanceToProfile(currentProfile.latitude, currentProfile.longitude) !== null && (
+                      <View style={styles.distanceBadge}>
+                        <MaterialIcons name="near-me" size={10} color={COLORS.primary} />
+                        <Text style={styles.distanceBadgeText}>
+                          {getDistanceToProfile(currentProfile.latitude, currentProfile.longitude)} km away
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+
+                  <Text style={styles.cardSectMeta}>{currentProfile.sect} · {currentProfile.profession}</Text>
+                  <Text style={styles.cardBio} numberOfLines={2}>{currentProfile.bio}</Text>
+
+                  {/* Action Buttons */}
+                  <View style={styles.actionRow}>
+                    <TouchableOpacity style={styles.passBtn} onPress={handlePass}>
+                      <MaterialIcons name="close" size={26} color={COLORS.secondary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.likeBtn} onPress={handleLike}>
+                      <MaterialIcons name="favorite" size={28} color={COLORS.onPrimary} />
                     </TouchableOpacity>
                   </View>
-                )}
-
-                {/* Wali Badge */}
-                {currentProfile.wali && (
-                  <View style={styles.waliPill}>
-                    <MaterialIcons name="verified-user" size={12} color={COLORS.primary} />
-                    <Text style={styles.waliPillText}>Wali Verified</Text>
-                  </View>
-                )}
-              </View>
-
-              {/* Card Details */}
-              <View style={styles.cardInfo}>
-                <Text style={styles.cardName}>{currentProfile.name}, {currentProfile.age}</Text>
-                <Text style={styles.cardMeta}>{currentProfile.sect} · {currentProfile.location}</Text>
-                <Text style={styles.cardBio} numberOfLines={2}>{currentProfile.bio}</Text>
-
-                {/* Action Buttons */}
-                <View style={styles.actionRow}>
-                  <TouchableOpacity style={styles.passBtn} onPress={handlePass}>
-                    <MaterialIcons name="close" size={26} color={COLORS.secondary} />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.likeBtn} onPress={handleLike}>
-                    <MaterialIcons name="favorite" size={28} color={COLORS.onPrimary} />
-                  </TouchableOpacity>
                 </View>
               </View>
-            </View>
+            ) : (
+              <View style={styles.emptyDistanceState}>
+                <MaterialIcons name="explore-off" size={44} color={COLORS.secondary} />
+                <Text style={styles.emptyTitle}>No Profiles Within {maxDistanceFilter} km</Text>
+                <Text style={styles.emptyDesc}>
+                  Try expanding your distance radius or exploring worldwide to discover more intentional candidates.
+                </Text>
+                <TouchableOpacity style={styles.clearFilterBtn} onPress={() => setMaxDistanceFilter(null)}>
+                  <Text style={styles.clearFilterText}>Show All Distances</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         )}
 
@@ -476,7 +699,7 @@ export default function App() {
             
             <View style={styles.matchPhotosRow}>
               <Image source={{ uri: PROFILES[2].photo }} style={styles.matchCirclePhoto} />
-              <Image source={{ uri: currentProfile.photo }} style={styles.matchCirclePhoto} />
+              <Image source={{ uri: currentProfile?.photo || PROFILES[0].photo }} style={styles.matchCirclePhoto} />
             </View>
 
             <TouchableOpacity
@@ -1088,5 +1311,187 @@ const styles = StyleSheet.create({
     borderRadius: 36,
     borderWidth: 3,
     borderColor: COLORS.surface,
+  },
+  // GEO & DISTANCE STYLES
+  distanceFilterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: COLORS.surface,
+  },
+  distanceFilterLabel: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 10,
+    color: COLORS.secondary,
+    letterSpacing: 0.8,
+    marginRight: 8,
+  },
+  distanceFilterScroll: {
+    gap: 8,
+    paddingRight: 16,
+  },
+  filterPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: COLORS.surfaceCard,
+    borderWidth: 1,
+    borderColor: COLORS.surfaceVariant,
+  },
+  filterPillActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  filterPillText: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 11,
+    color: COLORS.onSurfaceVariant,
+  },
+  filterPillTextActive: {
+    color: COLORS.white,
+    fontFamily: 'Inter_600SemiBold',
+  },
+  locationBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+    marginBottom: 4,
+    gap: 4,
+  },
+  cardMetaLocation: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 12,
+    color: COLORS.primary,
+  },
+  distanceBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#eaf4e8',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 8,
+    gap: 3,
+    marginLeft: 4,
+  },
+  distanceBadgeText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 10,
+    color: COLORS.primary,
+  },
+  cardSectMeta: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    color: COLORS.secondary,
+    marginBottom: 4,
+  },
+  locationInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  detectLocationBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 5,
+  },
+  detectLocationText: {
+    color: COLORS.white,
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 12,
+  },
+  locationHelpText: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 11,
+    color: COLORS.secondary,
+    marginBottom: 16,
+    marginTop: 4,
+  },
+  emptyDistanceState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+    backgroundColor: COLORS.surfaceCard,
+    borderRadius: 24,
+    marginHorizontal: 16,
+    marginTop: 40,
+  },
+  emptyTitle: {
+    fontFamily: 'PlayfairDisplay_700Bold',
+    fontSize: 18,
+    color: COLORS.onSurface,
+    marginTop: 12,
+    textAlign: 'center',
+  },
+  emptyDesc: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    color: COLORS.secondary,
+    textAlign: 'center',
+    marginTop: 6,
+    marginBottom: 16,
+    lineHeight: 18,
+  },
+  clearFilterBtn: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  clearFilterText: {
+    color: COLORS.white,
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 12,
+  },
+  // WELCOME HERO IMAGE STYLES
+  welcomeHeroBg: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'flex-end',
+  },
+  welcomeHeroOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(10, 16, 12, 0.65)',
+  },
+  welcomeHeroInner: {
+    padding: 32,
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  arabicHeaderWhite: {
+    fontSize: 14,
+    color: '#cca730',
+    fontFamily: 'Inter_600SemiBold',
+    marginBottom: 6,
+    letterSpacing: 2,
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  heroTitleWhite: {
+    fontFamily: 'PlayfairDisplay_700Bold',
+    fontSize: 34,
+    color: COLORS.white,
+    marginBottom: 8,
+    textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 6,
+  },
+  heroSubtitleWhite: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.9)',
+    textAlign: 'center',
+    marginBottom: 32,
+    lineHeight: 20,
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
 });

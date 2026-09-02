@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS users (
     location TEXT NOT NULL,
     city TEXT,
     country TEXT,
+    latitude REAL,
+    longitude REAL,
     profession TEXT,
     education TEXT,
     height TEXT,
@@ -94,4 +96,5 @@ CREATE INDEX IF NOT EXISTS idx_conversations_p1_p2 ON conversations(participant_
 CREATE INDEX IF NOT EXISTS idx_conversations_last_msg ON conversations(last_message_time);
 CREATE INDEX IF NOT EXISTS idx_religious_profiles_user ON religious_profiles(user_id);
 CREATE INDEX IF NOT EXISTS idx_wali_details_user ON wali_details(user_id);
+CREATE INDEX IF NOT EXISTS idx_users_lat_lon ON users(latitude, longitude);
 

@@ -14,11 +14,13 @@ import { DiscoverFeed } from './components/DiscoverFeed';
 import { MatchesLikedYouScreen } from './components/MatchesLikedYouScreen';
 import { ChatScreen } from './components/ChatScreen';
 import { SettingsPrivacy } from './components/SettingsPrivacy';
+import { ResetPasswordScreen } from './screens/ResetPasswordScreen';
 import { dbService, API_BASE } from './services/dbService';
 
 type OnboardingStep = 
   | 'welcome' 
   | 'auth' 
+  | 'reset_password'
   | 'basic_info' 
   | 'practice' 
   | 'family_lifestyle' 
@@ -30,9 +32,17 @@ type OnboardingStep =
 type MainTab = 'discover' | 'matches' | 'chat' | 'my_profile' | 'settings';
 
 export const App: React.FC = () => {
+  const [resetCode] = useState<string>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('oobCode') || '';
+  });
+
   const [currentStep, setCurrentStep] = useState<OnboardingStep>(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('view') === 'wali_portal') return 'wali_portal';
+    if (params.get('mode') === 'resetPassword' || (params.get('oobCode') && params.get('mode') !== 'verifyEmail')) {
+      return 'reset_password';
+    }
     
     // Check saved session in localStorage
     const saved = localStorage.getItem('serene_current_user_v1');
@@ -47,6 +57,7 @@ export const App: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<MainTab>('discover');
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
+  const [authInitialTab, setAuthInitialTab] = useState<'signup' | 'login'>('signup');
 
   // Active User Profile State
   const [currentUser, setCurrentUser] = useState<UserProfile>(() => dbService.getCurrentUser());
@@ -238,14 +249,35 @@ export const App: React.FC = () => {
 
         {/* STEP 0: WELCOME & HALAL TRUST VALUE PROP */}
         {currentStep === 'welcome' && (
-          <WelcomeScreen onGetStarted={() => setCurrentStep('auth')} />
+          <WelcomeScreen 
+            onGetStarted={() => {
+              setAuthInitialTab('signup');
+              setCurrentStep('auth');
+            }}
+            onLogin={() => {
+              setAuthInitialTab('login');
+              setCurrentStep('auth');
+            }}
+          />
         )}
 
-        {/* STEP 0.5: PHONE OTP & EMAIL AUTHENTICATION */}
+        {/* STEP 0.5: EMAIL & GOOGLE AUTHENTICATION */}
         {currentStep === 'auth' && (
           <AuthScreen 
+            initialTab={authInitialTab}
             onBack={() => setCurrentStep('welcome')}
             onAuthSuccess={handleAuthSuccess}
+          />
+        )}
+
+        {/* STEP 0.6: CUSTOM FIREBASE PASSWORD RESET */}
+        {currentStep === 'reset_password' && (
+          <ResetPasswordScreen 
+            oobCode={resetCode}
+            onComplete={() => {
+              window.history.replaceState({}, document.title, window.location.pathname);
+              setCurrentStep('auth');
+            }}
           />
         )}
 

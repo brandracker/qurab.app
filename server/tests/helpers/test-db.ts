@@ -32,6 +32,8 @@ export class MockD1Database {
         location TEXT NOT NULL,
         city TEXT,
         country TEXT,
+        latitude REAL,
+        longitude REAL,
         profession TEXT,
         education TEXT,
         university TEXT,

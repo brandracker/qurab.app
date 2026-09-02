@@ -1,17 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Smartphone, Mail, Eye, EyeOff, ArrowRight, AlertCircle } from 'lucide-react';
-import { setupRecaptcha, sendPhoneOtp, formatE164Phone } from '../services/firebase';
+import React, { useState } from 'react';
+import { ArrowLeft, Mail, Eye, EyeOff, ArrowRight, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { signInWithGoogle, signUpWithEmail, signInWithEmail, sendResetPasswordEmail } from '../services/firebase';
 import { API_BASE } from '../services/dbService';
-import type { ConfirmationResult, RecaptchaVerifier } from 'firebase/auth';
 
 interface Props {
   onAuthSuccess: (session: { token: string; user: any; isNewUser: boolean }) => void;
   onBack: () => void;
+  initialTab?: 'signup' | 'login';
 }
 
-export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
-  const [authMethod, setAuthMethod] = useState<'phone' | 'email'>('phone');
-  const [tab, setTab] = useState<'signup' | 'login'>('signup');
+export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack, initialTab = 'signup' }) => {
+  const [tab, setTab] = useState<'signup' | 'login'>(initialTab);
   
   // Email Auth State
   const [email, setEmail] = useState('');
@@ -20,29 +19,16 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
   const [fullName, setFullName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [gender, setGender] = useState<'male' | 'female'>('female');
-  
-  // Phone Auth State
-  const [countryCode, setCountryCode] = useState('+92');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [otpCode, setOtpCode] = useState('');
-  const [phoneStep, setPhoneStep] = useState<'enter_phone' | 'enter_otp'>('enter_phone');
-  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
-  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
 
-  useEffect(() => {
-    // Setup invisible reCAPTCHA container
-    if (authMethod === 'phone' && !recaptchaVerifierRef.current) {
-      recaptchaVerifierRef.current = setupRecaptcha('recaptcha-verifier-div');
-    }
-  }, [authMethod]);
-
-  // Handle Email / Password Submit
+  // Handle Email / Password Submit via Firebase Auth + D1 Sync
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
+    setSuccessMsg('');
 
     if (!email || !password) {
       setErrorMsg('Please enter your email and password.');
@@ -61,18 +47,30 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
     }
 
     setIsLoading(true);
-    const endpoint = tab === 'signup' ? 'signup' : 'login';
-    const payload = tab === 'signup' 
-      ? { email: email.trim(), password, fullName: fullName.trim(), gender } 
-      : { email: email.trim(), password };
-
 
     try {
-      const res = await fetch(`${API_BASE}/auth/${endpoint}`, {
+      let fbUid = '';
+      if (tab === 'signup') {
+        const creds = await signUpWithEmail(email.trim(), password, fullName.trim());
+        fbUid = creds.user.uid;
+      } else {
+        const creds = await signInWithEmail(email.trim(), password);
+        fbUid = creds.user.uid;
+      }
+
+      // Synchronize with Cloudflare D1 Backend
+      const res = await fetch(`${API_BASE}/auth/email-sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          email: email.trim(),
+          fullName: fullName.trim(),
+          gender,
+          firebaseUid: fbUid,
+          isSignUp: tab === 'signup'
+        })
       });
+
       const data = await res.json();
       if (data.success) {
         onAuthSuccess({
@@ -81,134 +79,99 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
           isNewUser: tab === 'signup' || Boolean(data.user?.isNewUser)
         });
       } else {
-        setErrorMsg(data.error || 'Authentication failed. Please check your credentials.');
-      }
-    } catch {
-      // Offline fallback
-      onAuthSuccess({
-        token: 'st_demo_' + Date.now(),
-        user: { id: 'usr_' + Date.now(), email, fullName: fullName || 'New Member' },
-        isNewUser: tab === 'signup'
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Handle Send Firebase Phone SMS OTP (with Cloudflare D1 Fallback)
-  const [d1OtpPreview, setD1OtpPreview] = useState<string | null>(null);
-
-  const handleSendPhoneOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg('');
-    setD1OtpPreview(null);
-
-    const formattedNumber = formatE164Phone(countryCode, phoneNumber);
-    const digitsOnly = formattedNumber.replace('+', '');
-
-    if (!phoneNumber.trim() || digitsOnly.length < 10) {
-      setErrorMsg(`Please enter a valid mobile number (e.g. 300 1234567). Current: ${formattedNumber}`);
-      return;
-    }
-
-    setIsLoading(true);
-
-    // 1. Try Firebase Phone Auth first
-    try {
-      if (!recaptchaVerifierRef.current) {
-        recaptchaVerifierRef.current = setupRecaptcha('recaptcha-verifier-div');
-      }
-
-      if (recaptchaVerifierRef.current) {
-        const result = await sendPhoneOtp(formattedNumber, recaptchaVerifierRef.current);
-        setConfirmationResult(result);
-        setPhoneStep('enter_otp');
-        setIsLoading(false);
-        return;
-      }
-    } catch (fbErr: any) {
-      console.warn('Firebase SMS OTP not available, activating Cloudflare D1 Native OTP Engine:', fbErr);
-    }
-
-    // 2. Seamless Cloudflare D1 OTP Fallback Engine
-    try {
-      const res = await fetch(`${API_BASE}/auth/send-phone-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: formattedNumber })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setD1OtpPreview(data.otpPreview);
-        setPhoneStep('enter_otp');
-      } else {
-        setErrorMsg(data.error || 'Failed to send verification code.');
+        setErrorMsg(data.error || 'Authentication synchronization failed.');
       }
     } catch (err: any) {
-      setErrorMsg('Network error while generating OTP code.');
+      console.error('Firebase Email Auth Error:', err);
+      if (err.code === 'auth/email-already-in-use') {
+        setErrorMsg('An account with this email already exists. Please switch to Sign In.');
+      } else if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
+        setErrorMsg('Invalid email or password. Please check your credentials or reset your password.');
+      } else if (err.code === 'auth/weak-password') {
+        setErrorMsg('Password must be at least 6 characters long.');
+      } else if (err.code === 'auth/invalid-email') {
+        setErrorMsg('Please enter a valid email address.');
+      } else {
+        // Fallback to direct D1 API authentication
+        try {
+          const endpoint = tab === 'signup' ? 'signup' : 'login';
+          const payload = tab === 'signup' 
+            ? { email: email.trim(), password, fullName: fullName.trim(), gender } 
+            : { email: email.trim(), password };
+          const res = await fetch(`${API_BASE}/auth/${endpoint}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          if (data.success) {
+            onAuthSuccess({
+              token: data.token,
+              user: data.user,
+              isNewUser: tab === 'signup' || Boolean(data.user?.isNewUser)
+            });
+            return;
+          }
+        } catch {}
+        setErrorMsg(err.message || 'Authentication failed. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Handle Verify SMS OTP
-  const handleVerifyPhoneOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg('');
-
-    if (!otpCode || otpCode.length < 6) {
-      setErrorMsg('Please enter the 6-digit OTP code.');
+  // Handle Self-Service Password Reset via Firebase
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      setErrorMsg('Please enter your email address above to receive a password reset link.');
       return;
     }
-
-    const formattedNumber = formatE164Phone(countryCode, phoneNumber);
+    setErrorMsg('');
+    setSuccessMsg('');
     setIsLoading(true);
-
-    // If confirmationResult exists (Firebase succeeded)
-    if (confirmationResult) {
-      try {
-        const userCredential = await confirmationResult.confirm(otpCode);
-        const fbUser = userCredential.user;
-        
-        onAuthSuccess({
-          token: await fbUser.getIdToken(),
-          user: {
-            id: 'usr_' + fbUser.uid.substring(0, 12),
-            phone: fbUser.phoneNumber || formattedNumber,
-            fullName: fullName.trim() || 'Muslim Seeker',
-            isPhoneVerified: true
-          },
-          isNewUser: true
-        });
-        return;
-      } catch (err: any) {
-        console.error('Firebase OTP Verification Error:', err);
-      }
-    }
-
-    // Verify via Cloudflare D1 Engine
     try {
-      const res = await fetch(`${API_BASE}/auth/verify-phone-otp`, {
+      await sendResetPasswordEmail(email.trim());
+      setSuccessMsg(`Password reset link sent to ${email.trim()}! Please check your inbox.`);
+    } catch (err: any) {
+      setErrorMsg('Failed to send reset email. Please ensure the email is correct.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Google 1-Click Sign-In
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    setErrorMsg('');
+    try {
+      const creds = await signInWithGoogle();
+      const fbUser = creds.user;
+      const res = await fetch(`${API_BASE}/auth/email-sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          phone: formattedNumber,
-          otpCode: otpCode.trim(),
-          fullName: fullName.trim()
+          email: fbUser.email,
+          fullName: fbUser.displayName || 'Google Member',
+          gender,
+          firebaseUid: fbUser.uid,
+          isSignUp: false
         })
       });
+
       const data = await res.json();
       if (data.success) {
         onAuthSuccess({
           token: data.token,
           user: data.user,
-          isNewUser: data.user.isNewUser
+          isNewUser: Boolean(data.user?.isNewUser)
         });
       } else {
-        setErrorMsg(data.error || 'Invalid verification code. Please try again.');
+        setErrorMsg(data.error || 'Google authentication failed.');
       }
     } catch (err: any) {
-      setErrorMsg('Could not verify OTP. Please try again.');
+      if (err.code !== 'auth/popup-closed-by-user') {
+        setErrorMsg('Google Sign-In failed. Please try email & password.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -216,14 +179,12 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
 
   return (
     <div className="w-full h-full flex flex-col justify-between p-6 bg-white relative overflow-y-auto font-sans select-none text-on-surface">
-      {/* Invisible reCAPTCHA container */}
-      <div id="recaptcha-verifier-div"></div>
-
+      
       {/* Top Header */}
       <header className="flex items-center justify-between w-full pt-1">
         <button
           onClick={onBack}
-          className="w-9 h-9 flex items-center justify-center rounded-full bg-surface-variant border border-outline text-on-surface hover:bg-outline-variant transition-colors"
+          className="w-9 h-9 flex items-center justify-center rounded-full bg-surface-variant border border-outline text-on-surface hover:bg-outline-variant transition-colors cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
         </button>
@@ -233,60 +194,85 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
             Qurab
           </span>
         </div>
-
         <div className="w-9" />
       </header>
 
       {/* Main Auth Form */}
       <main className="flex-1 flex flex-col justify-center my-3 max-w-sm mx-auto w-full">
         <div className="flex flex-col items-center text-center animate-fade-in">
+          
           {/* Logo Badge */}
           <div className="w-12 h-12 rounded-2xl bg-pastel-rose border border-pastel-rose-border flex items-center justify-center mb-3 shadow-subtle p-2">
             <img src="/icon.svg" alt="Qurab" className="w-full h-full object-contain" />
           </div>
 
           <h1 className="font-serif text-2xl font-bold text-on-surface mb-1">
-            {authMethod === 'phone' ? 'Phone Verification' : tab === 'signup' ? 'Create Your Account' : 'Welcome Back'}
+            {tab === 'signup' ? 'Create Your Account' : 'Welcome Back'}
           </h1>
           <p className="text-xs text-secondary mb-4 leading-relaxed max-w-[280px]">
-            {authMethod === 'phone' 
-              ? 'Receive an instant SMS verification code on your mobile phone.'
-              : 'Sign in to access your halal matrimonial connections.'}
+            {tab === 'signup' 
+              ? 'Join thousands of intentional Muslims seeking half their deen.' 
+              : 'Sign in to continue your matrimonial journey.'}
           </p>
 
-          {/* Auth Method Switcher (Phone SMS vs Email) */}
+          {/* Google 1-Click Sign-In */}
+          <button
+            type="button"
+            onClick={handleGoogleSignIn}
+            disabled={isLoading}
+            className="w-full py-3 px-4 rounded-2xl bg-white border border-outline hover:border-primary/40 hover:bg-surface-variant/40 text-on-surface font-sans text-xs font-bold shadow-subtle transition-all flex items-center justify-center gap-2.5 mb-3.5 active:scale-98 disabled:opacity-50 cursor-pointer"
+          >
+            <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+              <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
+              <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+              <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+            </svg>
+            <span>Continue with Google</span>
+          </button>
+
+          {/* Divider */}
+          <div className="w-full flex items-center gap-3 mb-3.5">
+            <div className="flex-1 h-px bg-outline/60"></div>
+            <span className="text-[10px] font-semibold text-secondary uppercase tracking-wider">or with email</span>
+            <div className="flex-1 h-px bg-outline/60"></div>
+          </div>
+
+          {/* Tab Switcher: Create Account vs Sign In */}
           <div className="w-full bg-surface-variant p-1 rounded-2xl flex mb-4 border border-outline">
             <button
               type="button"
               onClick={() => {
-                setAuthMethod('phone');
+                setTab('signup');
                 setErrorMsg('');
               }}
-              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all duration-150 flex items-center justify-center gap-1.5 ${
-                authMethod === 'phone' 
-                  ? 'bg-white text-primary shadow-subtle' 
-                  : 'text-secondary hover:text-on-surface'
+              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                tab === 'signup' ? 'bg-white text-primary shadow-subtle' : 'text-secondary hover:text-on-surface'
               }`}
             >
-              <Smartphone className="w-3.5 h-3.5" />
-              <span>Phone SMS</span>
+              Create Account
             </button>
             <button
               type="button"
               onClick={() => {
-                setAuthMethod('email');
+                setTab('login');
                 setErrorMsg('');
               }}
-              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all duration-150 flex items-center justify-center gap-1.5 ${
-                authMethod === 'email' 
-                  ? 'bg-white text-primary shadow-subtle' 
-                  : 'text-secondary hover:text-on-surface'
+              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                tab === 'login' ? 'bg-white text-primary shadow-subtle' : 'text-secondary hover:text-on-surface'
               }`}
             >
-              <Mail className="w-3.5 h-3.5" />
-              <span>Email & Password</span>
+              Sign In
             </button>
           </div>
+
+          {/* Status Messages */}
+          {successMsg && (
+            <div className="w-full mb-3 p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold text-left flex items-start gap-2 animate-fade-in">
+              <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600" />
+              <span>{successMsg}</span>
+            </div>
+          )}
 
           {errorMsg && (
             <div className="w-full mb-3 p-3 rounded-2xl bg-pastel-rose border border-pastel-rose-border text-primary text-xs font-semibold text-left flex items-start gap-2 animate-fade-in">
@@ -295,268 +281,128 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
             </div>
           )}
 
-          {/* 1. PHONE SMS OTP AUTH METHOD */}
-          {authMethod === 'phone' && (
-            <div className="w-full">
-              {phoneStep === 'enter_phone' ? (
-                <form onSubmit={handleSendPhoneOtp} className="w-full space-y-3 text-left">
-                  <div>
-                    <label className="block text-xs font-bold text-on-surface mb-1">Full Name</label>
-                    <input
-                      type="text"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      placeholder="e.g. Bilal Ahmad"
-                      className="w-full bg-surface-variant/40 border border-outline rounded-2xl px-4 py-2.5 text-xs text-on-surface outline-none focus:bg-white focus:border-primary transition-all placeholder:text-secondary/70"
-                    />
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="block text-xs font-bold text-on-surface">Mobile Phone Number</label>
-                      {phoneNumber && (
-                        <span className="text-[10px] text-primary font-mono font-bold">
-                          {formatE164Phone(countryCode, phoneNumber)}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      <select
-                        value={countryCode}
-                        onChange={(e) => setCountryCode(e.target.value)}
-                        className="bg-surface-variant/40 border border-outline rounded-2xl px-2.5 py-2.5 text-xs font-bold text-on-surface outline-none focus:bg-white focus:border-primary shrink-0"
-                      >
-                        <option value="+92">🇵🇰 +92 (PK)</option>
-                        <option value="+44">🇬🇧 +44 (UK)</option>
-                        <option value="+1">🇺🇸 +1 (USA)</option>
-                        <option value="+971">🇦🇪 +971 (UAE)</option>
-                        <option value="+966">🇸🇦 +966 (KSA)</option>
-                        <option value="+1">🇨🇦 +1 (CA)</option>
-                      </select>
-
-                      <input
-                        type="tel"
-                        required
-                        value={phoneNumber}
-                        onChange={(e) => setPhoneNumber(e.target.value)}
-                        placeholder="300 1234567"
-                        className="flex-1 bg-surface-variant/40 border border-outline rounded-2xl px-4 py-2.5 text-xs text-on-surface outline-none focus:bg-white focus:border-primary font-mono placeholder:text-secondary/70"
-                      />
-                    </div>
-                    <p className="text-[10px] text-secondary mt-1">
-                      Enter without leading 0 (e.g. <strong>3001234567</strong> for Pakistan)
-                    </p>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full py-3.5 rounded-full bg-primary text-white font-sans text-xs font-bold shadow-brand hover:bg-primary-dark active:scale-98 disabled:opacity-50 transition-all flex items-center justify-center gap-2 mt-3"
-                  >
-                    <span>{isLoading ? 'Sending SMS Code...' : 'Send 6-Digit SMS OTP'}</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                </form>
-              ) : (
-                <form onSubmit={handleVerifyPhoneOtp} className="w-full space-y-3 text-left animate-fade-in">
-                  <div className="bg-pastel-mint p-3 rounded-2xl text-xs text-pastel-mint-text font-semibold flex items-center justify-between border border-pastel-mint-border">
-                    <span>Sent to: <strong>{formatE164Phone(countryCode, phoneNumber)}</strong></span>
-                    <button
-                      type="button"
-                      onClick={() => setPhoneStep('enter_phone')}
-                      className="text-[11px] underline font-bold"
-                    >
-                      Edit
-                    </button>
-                  </div>
-
-                  {d1OtpPreview && (
-                    <div className="bg-pastel-amber border border-pastel-amber-border p-3.5 rounded-2xl text-center space-y-1">
-                      <span className="text-[10px] text-pastel-amber-text uppercase font-bold tracking-wider block">
-                        Verification Code Preview
-                      </span>
-                      <span className="font-mono text-2xl font-bold text-pastel-amber-text tracking-widest block">
-                        {d1OtpPreview}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setOtpCode(d1OtpPreview)}
-                        className="text-[11px] text-primary font-bold underline"
-                      >
-                        Auto-Fill Code ({d1OtpPreview})
-                      </button>
-                    </div>
-                  )}
-
-                  <div>
-                    <label className="block text-xs font-bold text-on-surface mb-1 text-center">
-                      Enter 6-Digit Code
-                    </label>
-                    <input
-                      type="text"
-                      maxLength={6}
-                      required
-                      value={otpCode}
-                      onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
-                      placeholder="123456"
-                      className="w-full bg-surface-variant/40 border border-outline rounded-2xl px-4 py-3 text-center text-xl font-mono tracking-widest text-on-surface outline-none focus:bg-white focus:border-primary"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isLoading || otpCode.length < 6}
-                    className="w-full py-3.5 rounded-full bg-primary text-white font-sans text-xs font-bold shadow-brand hover:bg-primary-dark active:scale-98 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
-                  >
-                    <span>{isLoading ? 'Verifying...' : 'Verify OTP & Continue'}</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                </form>
-              )}
-            </div>
-          )}
-
-          {/* 2. EMAIL & PASSWORD AUTH METHOD */}
-          {authMethod === 'email' && (
-            <div className="w-full">
-              {/* Tab Switcher (Signup vs Login) */}
-              <div className="w-full bg-surface-variant p-1 rounded-2xl flex mb-4 border border-outline">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTab('signup');
-                    setErrorMsg('');
-                  }}
-                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
-                    tab === 'signup' ? 'bg-white text-primary shadow-subtle' : 'text-secondary hover:text-on-surface'
-                  }`}
-                >
-                  Create Account
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTab('login');
-                    setErrorMsg('');
-                  }}
-                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
-                    tab === 'login' ? 'bg-white text-primary shadow-subtle' : 'text-secondary hover:text-on-surface'
-                  }`}
-                >
-                  Sign In
-                </button>
-              </div>
-
-              <form onSubmit={handleEmailSubmit} className="w-full space-y-3 text-left">
-                {tab === 'signup' && (
-                  <>
-                    <div>
-                      <label className="block text-xs font-bold text-on-surface mb-1">Full Name</label>
-                      <input
-                        type="text"
-                        required
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        placeholder="e.g. Tariq Hussain"
-                        className="w-full bg-surface-variant/40 border border-outline rounded-2xl px-4 py-2.5 text-xs text-on-surface outline-none focus:bg-white focus:border-primary"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-on-surface mb-1">I am a</label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setGender('male')}
-                          className={`py-2 px-3 rounded-2xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${
-                            gender === 'male'
-                              ? 'bg-primary text-white border-primary shadow-subtle'
-                              : 'bg-surface-variant/40 text-secondary border-outline hover:bg-surface-variant'
-                          }`}
-                        >
-                          <span>Brother 🧔</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setGender('female')}
-                          className={`py-2 px-3 rounded-2xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${
-                            gender === 'female'
-                              ? 'bg-primary text-white border-primary shadow-subtle'
-                              : 'bg-surface-variant/40 text-secondary border-outline hover:bg-surface-variant'
-                          }`}
-                        >
-                          <span>Sister 🧕</span>
-                        </button>
-                      </div>
-                    </div>
-                  </>
-                )}
-
-
+          {/* Email / Password Form */}
+          <form onSubmit={handleEmailSubmit} className="w-full space-y-3 text-left">
+            {tab === 'signup' && (
+              <>
                 <div>
-                  <label className="block text-xs font-bold text-on-surface mb-1">Email Address</label>
+                  <label className="block text-xs font-bold text-on-surface mb-1">Full Name</label>
                   <input
-                    type="email"
+                    type="text"
                     required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@example.com"
-                    className="w-full bg-surface-variant/40 border border-outline rounded-2xl px-4 py-2.5 text-xs text-on-surface outline-none focus:bg-white focus:border-primary"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="e.g. Tariq Hussain"
+                    className="w-full bg-surface-variant/40 border border-outline rounded-2xl px-4 py-2.5 text-xs text-on-surface outline-none focus:bg-white focus:border-primary transition-all"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-on-surface mb-1">Password</label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="w-full bg-surface-variant/40 border border-outline rounded-2xl px-4 py-2.5 text-xs text-on-surface outline-none focus:bg-white focus:border-primary pr-10"
-                    />
+                  <label className="block text-xs font-bold text-on-surface mb-1">I am a</label>
+                  <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-2.5 text-secondary hover:text-on-surface"
+                      onClick={() => setGender('male')}
+                      className={`py-2 px-3 rounded-2xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        gender === 'male'
+                          ? 'bg-primary text-white border-primary shadow-subtle'
+                          : 'bg-surface-variant/40 text-secondary border-outline hover:bg-surface-variant'
+                      }`}
                     >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      <span>Brother 🧔</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGender('female')}
+                      className={`py-2 px-3 rounded-2xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        gender === 'female'
+                          ? 'bg-primary text-white border-primary shadow-subtle'
+                          : 'bg-surface-variant/40 text-secondary border-outline hover:bg-surface-variant'
+                      }`}
+                    >
+                      <span>Sister 🧕</span>
                     </button>
                   </div>
                 </div>
+              </>
+            )}
 
-                {tab === 'signup' && (
-                  <div>
-                    <label className="block text-xs font-bold text-on-surface mb-1">Confirm Password</label>
-                    <input
-                      type="password"
-                      required
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="w-full bg-surface-variant/40 border border-outline rounded-2xl px-4 py-2.5 text-xs text-on-surface outline-none focus:bg-white focus:border-primary"
-                    />
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full py-3.5 rounded-full bg-primary text-white font-sans text-xs font-bold shadow-brand hover:bg-primary-dark active:scale-98 disabled:opacity-50 transition-all flex items-center justify-center gap-2 mt-3"
-                >
-                  <span>
-                    {isLoading 
-                      ? 'Please wait...' 
-                      : tab === 'signup' 
-                        ? 'Sign Up with Email' 
-                        : 'Sign In'}
-                  </span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </form>
+            <div>
+              <label className="block text-xs font-bold text-on-surface mb-1">Email Address</label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@example.com"
+                className="w-full bg-surface-variant/40 border border-outline rounded-2xl px-4 py-2.5 text-xs text-on-surface outline-none focus:bg-white focus:border-primary transition-all"
+              />
             </div>
-          )}
+
+            <div>
+              <label className="block text-xs font-bold text-on-surface mb-1">Password</label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full bg-surface-variant/40 border border-outline rounded-2xl px-4 py-2.5 text-xs text-on-surface outline-none focus:bg-white focus:border-primary pr-10 transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-2.5 text-secondary hover:text-on-surface cursor-pointer"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            {tab === 'login' && (
+              <div className="flex justify-end pt-0.5">
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  className="text-[11px] font-semibold text-primary hover:text-primary-dark underline cursor-pointer"
+                >
+                  Forgot password?
+                </button>
+              </div>
+            )}
+
+            {tab === 'signup' && (
+              <div>
+                <label className="block text-xs font-bold text-on-surface mb-1">Confirm Password</label>
+                <input
+                  type="password"
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full bg-surface-variant/40 border border-outline rounded-2xl px-4 py-2.5 text-xs text-on-surface outline-none focus:bg-white focus:border-primary transition-all"
+                />
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full py-3.5 rounded-full bg-primary text-white font-sans text-xs font-bold shadow-brand hover:bg-primary-dark active:scale-98 disabled:opacity-50 transition-all flex items-center justify-center gap-2 mt-3 cursor-pointer"
+            >
+              <Mail className="w-4 h-4" />
+              <span>
+                {isLoading 
+                  ? 'Please wait...' 
+                  : tab === 'signup' 
+                    ? 'Create Free Account' 
+                    : 'Sign In with Email'}
+              </span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </form>
+
         </div>
       </main>
 
@@ -567,6 +413,5 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack }) => {
     </div>
   );
 };
+
 export default AuthScreen;
-
-

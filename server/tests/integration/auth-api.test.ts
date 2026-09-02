@@ -151,4 +151,110 @@ describe('Auth & Health API Integration Tests', () => {
     expect(verifyData.user.phone).toBe(phone);
     expect(verifyData.token).toBeDefined();
   });
+
+  it('POST /api/auth/google-login creates a new user on first sign-in', async () => {
+    const payload = {
+      email: 'google.newseeker@gmail.com',
+      fullName: 'Zayd Al-Ansari',
+      photoUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
+      googleUid: 'goog_123456789'
+    };
+
+    const res = await app.request('/api/auth/google-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }, env);
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.token).toBeDefined();
+    expect(data.user.email).toBe('google.newseeker@gmail.com');
+    expect(data.user.fullName).toBe('Zayd Al-Ansari');
+    expect(data.user.isNewUser).toBe(true);
+    expect(data.user.photos).toContain(payload.photoUrl);
+  });
+
+  it('POST /api/auth/google-login logs in existing user seamlessly', async () => {
+    // 1. Initial login (registers user)
+    await app.request('/api/auth/google-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: 'returning.seeker@gmail.com',
+        fullName: 'Amina Begum'
+      })
+    }, env);
+
+    // 2. Second login
+    const res = await app.request('/api/auth/google-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: 'returning.seeker@gmail.com',
+        fullName: 'Amina Begum'
+      })
+    }, env);
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.user.isNewUser).toBe(false);
+    expect(data.user.fullName).toBe('Amina Begum');
+  });
+
+  it('POST /api/auth/email-sync creates a new matrimony profile on initial registration', async () => {
+    const payload = {
+      email: 'khadija.seeker@sereneunion.com',
+      fullName: 'Khadija Al-Zahra',
+      gender: 'female',
+      firebaseUid: 'fb_khadija_991'
+    };
+
+    const res = await app.request('/api/auth/email-sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }, env);
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.token).toBeDefined();
+    expect(data.user.email).toBe('khadija.seeker@sereneunion.com');
+    expect(data.user.fullName).toBe('Khadija Al-Zahra');
+    expect(data.user.gender).toBe('female');
+    expect(data.user.isNewUser).toBe(true);
+  });
+
+  it('POST /api/auth/email-sync returns full profile for returning user', async () => {
+    // 1. Initial sync
+    await app.request('/api/auth/email-sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: 'returning.sister@sereneunion.com',
+        fullName: 'Fatima Noor',
+        gender: 'female'
+      })
+    }, env);
+
+    // 2. Subsequent sync
+    const res = await app.request('/api/auth/email-sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: 'returning.sister@sereneunion.com'
+      })
+    }, env);
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.user.isNewUser).toBe(false);
+    expect(data.user.fullName).toBe('Fatima Noor');
+  });
 });
+
+

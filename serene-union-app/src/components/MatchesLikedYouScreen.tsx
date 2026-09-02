@@ -66,7 +66,15 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
 
   useEffect(() => {
     loadAllData();
+    const handleSync = () => loadAllData();
+    window.addEventListener('serene_activity_updated', handleSync);
+    window.addEventListener('serene_block_updated', handleSync);
+    return () => {
+      window.removeEventListener('serene_activity_updated', handleSync);
+      window.removeEventListener('serene_block_updated', handleSync);
+    };
   }, []);
+
 
   const handleInstantMatch = async (candidate: UserProfile) => {
     const res = await dbService.sendMatchAction(candidate.id, 'liked');

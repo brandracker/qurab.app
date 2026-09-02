@@ -304,18 +304,32 @@ class DBService {
     blocked: any[];
   }> {
     const user = this.getCurrentUser();
+    const localKey = `serene_blocked_${user.id}`;
+    let localBlocked: any[] = [];
+    try {
+      localBlocked = JSON.parse(localStorage.getItem(localKey) || '[]');
+    } catch {}
+
     try {
       const res = await fetch(`${API_BASE}/matches/activity?userId=${user.id}`);
       const data = await res.json();
       if (data.success) {
+        const remoteBlocked = data.blocked || [];
+        const mergedBlockedMap = new Map();
+        [...localBlocked, ...remoteBlocked].forEach(b => {
+          if (b && b.id) mergedBlockedMap.set(b.id, b);
+        });
+        const mergedBlocked = Array.from(mergedBlockedMap.values());
+        localStorage.setItem(localKey, JSON.stringify(mergedBlocked));
+
         return {
           sentLikes: data.sentLikes || [],
           passed: data.passed || [],
-          blocked: data.blocked || []
+          blocked: mergedBlocked
         };
       }
     } catch {}
-    return { sentLikes: [], passed: [], blocked: [] };
+    return { sentLikes: [], passed: [], blocked: localBlocked };
   }
 
   async undoPass(targetId: string): Promise<boolean> {
@@ -335,6 +349,32 @@ class DBService {
 
   async blockProfile(targetId: string, reason?: string): Promise<boolean> {
     const user = this.getCurrentUser();
+    const localKey = `serene_blocked_${user.id}`;
+    let localBlocked: any[] = [];
+    try {
+      localBlocked = JSON.parse(localStorage.getItem(localKey) || '[]');
+    } catch {}
+
+    const profiles = this.getAllProfiles();
+    const targetProf = profiles.find(p => p.id === targetId);
+
+    const newBlockedItem = {
+      id: targetId,
+      fullName: targetProf?.fullName || 'Candidate',
+      location: targetProf?.location || 'Global',
+      reason: reason || 'User requested block',
+      actionTime: new Date().toISOString()
+    };
+
+    if (!localBlocked.some(b => b.id === targetId)) {
+      localBlocked.unshift(newBlockedItem);
+      localStorage.setItem(localKey, JSON.stringify(localBlocked));
+    }
+
+    // Remove from active conversations
+    const convs = this.getConversations().filter(c => c.otherUser?.id !== targetId);
+    localStorage.setItem(this.conversationsKey, JSON.stringify(convs));
+
     try {
       const res = await fetch(`${API_BASE}/matches/block`, {
         method: 'POST',
@@ -344,12 +384,19 @@ class DBService {
       const data = await res.json();
       return Boolean(data.success);
     } catch {
-      return false;
+      return true;
     }
   }
 
   async unblockProfile(targetId: string): Promise<boolean> {
     const user = this.getCurrentUser();
+    const localKey = `serene_blocked_${user.id}`;
+    try {
+      const localBlocked = JSON.parse(localStorage.getItem(localKey) || '[]');
+      const updated = localBlocked.filter((b: any) => b.id !== targetId);
+      localStorage.setItem(localKey, JSON.stringify(updated));
+    } catch {}
+
     try {
       const res = await fetch(`${API_BASE}/matches/unblock`, {
         method: 'POST',
@@ -359,9 +406,10 @@ class DBService {
       const data = await res.json();
       return Boolean(data.success);
     } catch {
-      return false;
+      return true;
     }
   }
+
 
   async fetchLiveConversations(): Promise<Conversation[]> {
     try {

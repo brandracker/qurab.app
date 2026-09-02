@@ -87,26 +87,17 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
         } flex flex-col gap-3 shadow-subtle`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-subtle ${
+              <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-xs ${
                 isVip 
-                  ? 'bg-white text-pastel-amber-text border border-pastel-amber-border' 
-                  : 'bg-white text-primary border border-pastel-rose-border'
+                  ? 'bg-amber-50 text-amber-600 border border-amber-200' 
+                  : 'bg-rose-50 text-primary border border-rose-200'
               }`}>
-                <Crown className={`w-5 h-5 ${isVip ? 'text-pastel-amber-text' : 'text-primary'}`} />
+                <Crown className={`w-5 h-5 ${isVip ? 'text-amber-600 fill-amber-500/20' : 'text-primary'}`} />
               </div>
               <div>
-                <div className="flex items-center gap-1.5">
-                  <h3 className="font-serif text-xs font-bold text-on-surface">
-                    {isVip ? 'Barakah VIP Active' : 'Free Member'}
-                  </h3>
-                  <span className={`px-2 py-0.2 rounded-full text-[9px] font-bold uppercase tracking-wide ${
-                    isVip 
-                      ? 'bg-white text-pastel-amber-text border border-pastel-amber-border' 
-                      : 'bg-white text-secondary border border-outline'
-                  }`}>
-                    {isVip ? '👑 VIP Member' : 'Standard'}
-                  </span>
-                </div>
+                <h3 className="font-serif text-sm font-bold text-on-surface">
+                  {isVip ? 'Barakah VIP Active' : 'Free Member'}
+                </h3>
                 <p className="text-[10px] text-secondary mt-0.5">
                   {isVip 
                     ? 'All Premium Privileges Active · Unlimited Likes & Direct Salam' 
@@ -124,40 +115,65 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
                 <span>Upgrade</span>
               </button>
             ) : (
-              <span className="px-2.5 py-0.5 rounded-full bg-white text-pastel-amber-text text-[10px] font-bold border border-pastel-amber-border flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3 text-pastel-amber-text" />
+              <span className="px-2.5 py-1 rounded-full bg-white text-emerald-700 text-[10px] font-bold border border-emerald-200 flex items-center gap-1 shadow-xs">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                 <span>Unlocked</span>
               </span>
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-outline/50 text-xs">
-            <button
-              onClick={() => {
-                setAdRewardType('likes');
-                setShowAdModal(true);
-              }}
-              className="p-2 rounded-xl bg-white border border-outline hover:bg-surface-variant text-left flex items-center gap-2 transition-colors active:scale-95 shadow-subtle"
-            >
-              <PlayCircle className="text-primary w-4 h-4 shrink-0" />
-              <div>
-                <strong className="block text-[10px] text-on-surface">+10 Extra Likes</strong>
-                <span className="text-[9px] text-secondary">Watch 15s ad</span>
+          {isVip ? (
+            <div className="grid grid-cols-2 gap-2 pt-2.5 border-t border-pastel-amber-border/70 text-xs">
+              <div className="p-2.5 rounded-2xl bg-white border border-pastel-amber-border/80 flex items-center gap-2.5 shadow-xs">
+                <div className="w-7 h-7 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center shrink-0">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                </div>
+                <div className="min-w-0">
+                  <strong className="block text-[10px] text-on-surface font-bold truncate">Unlimited Likes</strong>
+                  <span className="text-[9px] text-secondary">No daily limits</span>
+                </div>
               </div>
-            </button>
 
-            <button
-              onClick={() => setShowUpgradeModal(true)}
-              className="p-2 rounded-xl bg-white border border-outline hover:bg-surface-variant text-left flex items-center gap-2 transition-colors active:scale-95 shadow-subtle"
-            >
-              <Crown className="text-pastel-amber-text w-4 h-4 shrink-0" />
-              <div>
-                <strong className="block text-[10px] text-primary">{isVip ? 'VIP Active' : 'Barakah VIP'}</strong>
-                <span className="text-[9px] text-secondary">{isVip ? 'Unlimited Quota' : 'PKR 830 / mo'}</span>
+              <div className="p-2.5 rounded-2xl bg-white border border-pastel-amber-border/80 flex items-center gap-2.5 shadow-xs">
+                <div className="w-7 h-7 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center shrink-0">
+                  <Crown className="w-3.5 h-3.5 text-amber-600" />
+                </div>
+                <div className="min-w-0">
+                  <strong className="block text-[10px] text-on-surface font-bold truncate">Direct Salams</strong>
+                  <span className="text-[9px] text-secondary">VIP Priority</span>
+                </div>
               </div>
-            </button>
-          </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-outline/50 text-xs">
+              <button
+                onClick={() => {
+                  setAdRewardType('likes');
+                  setShowAdModal(true);
+                }}
+                className="p-2 rounded-xl bg-white border border-outline hover:bg-surface-variant text-left flex items-center gap-2 transition-colors active:scale-95 shadow-subtle"
+              >
+                <PlayCircle className="text-primary w-4 h-4 shrink-0" />
+                <div>
+                  <strong className="block text-[10px] text-on-surface">+10 Extra Likes</strong>
+                  <span className="text-[9px] text-secondary">Watch 15s ad</span>
+                </div>
+              </button>
+
+              <button
+                onClick={() => setShowUpgradeModal(true)}
+                className="p-2 rounded-xl bg-white border border-outline hover:bg-surface-variant text-left flex items-center gap-2 transition-colors active:scale-95 shadow-subtle"
+              >
+                <Crown className="text-pastel-amber-text w-4 h-4 shrink-0" />
+                <div>
+                  <strong className="block text-[10px] text-primary">Barakah VIP</strong>
+                  <span className="text-[9px] text-secondary">PKR 830 / mo</span>
+                </div>
+              </button>
+            </div>
+          )}
         </div>
+
 
         <div className="bg-white rounded-3xl overflow-hidden shadow-card border border-outline flex flex-col">
           {/* Main Photo Banner */}

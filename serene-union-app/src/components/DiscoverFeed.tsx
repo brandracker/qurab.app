@@ -92,6 +92,12 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
       setIsLoading(false);
     });
 
+    const handleSync = () => {
+      setProfiles(dbService.getDiscoverFeed(filters));
+    };
+    window.addEventListener('serene_activity_updated', handleSync);
+    window.addEventListener('serene_block_updated', handleSync);
+
     const handleVipUpdate = (e: any) => {
       const targetUserId = e.detail?.userId;
       if (!targetUserId || targetUserId === currentUser.id) {
@@ -99,8 +105,13 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
       }
     };
     window.addEventListener('serene_vip_updated', handleVipUpdate);
-    return () => window.removeEventListener('serene_vip_updated', handleVipUpdate);
+    return () => {
+      window.removeEventListener('serene_activity_updated', handleSync);
+      window.removeEventListener('serene_block_updated', handleSync);
+      window.removeEventListener('serene_vip_updated', handleVipUpdate);
+    };
   }, [currentUser.id]);
+
 
   const handleApplyFilters = (newFilters: FilterState) => {
     setFilters(newFilters);

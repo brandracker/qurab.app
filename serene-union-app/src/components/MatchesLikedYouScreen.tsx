@@ -79,10 +79,33 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
   const handleInstantMatch = async (candidate: UserProfile) => {
     const res = await dbService.sendMatchAction(candidate.id, 'liked');
     setInterestedProfiles(prev => prev.filter(p => p.id !== candidate.id));
+
+    // Remove from local liked_you cache
+    const localKey = `serene_liked_you_${currentUser.id}`;
+    try {
+      const saved = JSON.parse(localStorage.getItem(localKey) || '[]');
+      const filtered = saved.filter((p: any) => p.id !== candidate.id);
+      localStorage.setItem(localKey, JSON.stringify(filtered));
+    } catch {}
     
     const convId = res.conversationId || `conv_${[currentUser.id, candidate.id].sort().join('_')}`;
     const newConv = dbService.createMatchConversation(candidate);
     onOpenChat(convId || newConv.id);
+  };
+
+  const handlePassCandidate = async (candidate: UserProfile) => {
+    await dbService.sendMatchAction(candidate.id, 'passed');
+    setInterestedProfiles(prev => prev.filter(p => p.id !== candidate.id));
+
+    const localKey = `serene_liked_you_${currentUser.id}`;
+    try {
+      const saved = JSON.parse(localStorage.getItem(localKey) || '[]');
+      const filtered = saved.filter((p: any) => p.id !== candidate.id);
+      localStorage.setItem(localKey, JSON.stringify(filtered));
+    } catch {}
+
+    setToastMessage(`Passed on ${candidate.fullName.split(' ')[0]}. Moved to your Passed History.`);
+    setTimeout(() => setToastMessage(null), 3500);
   };
 
   const handleUndoPass = async (targetId: string, name: string) => {
@@ -93,6 +116,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
       setTimeout(() => setToastMessage(null), 3500);
     }
   };
+
 
   const handleUnblock = async (targetId: string, name: string) => {
     const ok = await dbService.unblockProfile(targetId);
@@ -360,22 +384,31 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
                         </p>
                       </div>
 
-                      <div className="pt-1.5 border-t border-outline">
-                        {isVip ? (
-                          <button
-                            onClick={() => handleInstantMatch(candidate)}
-                            className="w-full py-1.5 rounded-xl bg-primary text-white text-[10px] font-bold shadow-brand hover:bg-primary-dark active:scale-95 transition-all flex items-center justify-center gap-1"
-                          >
-                            <Heart className="w-3 h-3 fill-current" />
-                            <span>Match & Chat</span>
-                          </button>
-                        ) : (
+                      <div className="pt-1.5 border-t border-outline flex items-center gap-1.5">
+                        <button
+                          onClick={() => handleInstantMatch(candidate)}
+                          className="flex-1 py-1.5 rounded-xl bg-primary text-white text-[10px] font-bold shadow-brand hover:bg-primary-dark active:scale-95 transition-all flex items-center justify-center gap-1"
+                        >
+                          <Heart className="w-3 h-3 fill-current" />
+                          <span>Match & Chat</span>
+                        </button>
+
+                        <button
+                          onClick={() => handlePassCandidate(candidate)}
+                          className="px-2 py-1.5 rounded-xl bg-surface-variant hover:bg-outline text-secondary text-[10px] font-semibold transition-all"
+                          title="Pass"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+
+                        {!isVip && (
                           <button
                             onClick={() => setShowUpgradeModal(true)}
-                            className="w-full py-1.5 rounded-xl bg-pastel-rose text-primary text-[10px] font-bold hover:bg-pastel-rose/80 transition-all flex items-center justify-center gap-1"
+                            className="px-2 py-1.5 rounded-xl bg-pastel-amber text-pastel-amber-text text-[10px] font-bold hover:bg-pastel-amber/80 transition-all flex items-center justify-center gap-0.5"
+                            title="Reveal Unblurred Photo with VIP"
                           >
                             <Crown className="w-3 h-3" />
-                            <span>Reveal Profile</span>
+                            <span>VIP</span>
                           </button>
                         )}
                       </div>
@@ -385,6 +418,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
               })}
             </div>
           ) : (
+
             <div className="flex flex-col items-center justify-center py-14 text-center px-4 bg-white rounded-3xl border border-outline shadow-card">
               <div className="w-10 h-10 rounded-full bg-pastel-rose text-primary flex items-center justify-center mb-2">
                 <Heart className="w-5 h-5 text-primary" />
@@ -406,15 +440,26 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
               {sentLikes.map(item => (
                 <div
                   key={item.id}
-                  className="bg-white p-3 rounded-2xl border border-outline shadow-subtle flex items-center justify-between gap-3"
+                  onClick={() => {
+                    const prof = dbService.getAllProfiles().find(p => p.id === item.id);
+                    if (prof) setSelectedProfile(prof);
+                  }}
+                  className="bg-white p-3 rounded-2xl border border-outline shadow-subtle flex items-center justify-between gap-3 cursor-pointer hover:border-primary transition-all"
                 >
                   <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-full bg-pastel-rose text-primary flex items-center justify-center font-serif font-bold text-xs border border-pastel-rose-border">
-                      {item.fullName ? item.fullName[0] : 'S'}
+                    <div className="w-10 h-10 rounded-full overflow-hidden border border-pastel-rose-border bg-surface-variant flex items-center justify-center shrink-0">
+                      {item.photos && item.photos.length > 0 ? (
+                        <img src={item.photos[0]} alt={item.fullName} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="font-serif font-bold text-xs text-primary">{item.fullName ? item.fullName[0] : 'C'}</span>
+                      )}
                     </div>
                     <div>
                       <h4 className="font-serif font-bold text-xs text-on-surface">{item.fullName}</h4>
                       <p className="text-[10px] text-secondary">{item.profession || 'Professional'} · {item.location || 'Global'}</p>
+                      {item.marriageTimeline && (
+                        <p className="text-[9px] text-primary/80 font-medium">Timeline: {item.marriageTimeline.replace(/_/g, ' ')}</p>
+                      )}
                     </div>
                   </div>
 
@@ -438,6 +483,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
                 </div>
               ))}
             </div>
+
           ) : (
             <div className="flex flex-col items-center justify-center py-14 text-center px-4 bg-white rounded-3xl border border-outline shadow-card">
               <div className="w-10 h-10 rounded-full bg-pastel-rose text-primary flex items-center justify-center mb-2">
@@ -545,9 +591,18 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
                   key={item.id}
                   className="bg-white p-3 rounded-2xl border border-outline shadow-subtle flex items-center justify-between gap-3"
                 >
-                  <div>
-                    <h4 className="font-serif font-bold text-xs text-on-surface">{item.fullName}</h4>
-                    <p className="text-[10px] text-secondary">{item.profession || 'Professional'} · {item.location || 'Global'}</p>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-full overflow-hidden border border-outline bg-surface-variant flex items-center justify-center shrink-0">
+                      {item.photos && item.photos.length > 0 ? (
+                        <img src={item.photos[0]} alt={item.fullName} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="font-serif font-bold text-xs text-secondary">{item.fullName ? item.fullName[0] : 'C'}</span>
+                      )}
+                    </div>
+                    <div>
+                      <h4 className="font-serif font-bold text-xs text-on-surface">{item.fullName}</h4>
+                      <p className="text-[10px] text-secondary">{item.profession || 'Professional'} · {item.location || 'Global'}</p>
+                    </div>
                   </div>
 
                   <button
@@ -560,6 +615,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
                 </div>
               ))}
             </div>
+
           ) : (
             <div className="flex flex-col items-center justify-center py-14 text-center px-4 bg-white rounded-3xl border border-outline shadow-card">
               <div className="w-10 h-10 rounded-full bg-surface-variant text-secondary flex items-center justify-center mb-2">

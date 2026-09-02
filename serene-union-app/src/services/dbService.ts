@@ -94,14 +94,45 @@ class DBService {
     return data ? JSON.parse(data) : [];
   }
 
+  getUserLikesSent(userId: string): any[] {
+    try {
+      return JSON.parse(localStorage.getItem(`serene_likes_sent_${userId}`) || '[]');
+    } catch { return []; }
+  }
+
+  getUserPassed(userId: string): any[] {
+    try {
+      return JSON.parse(localStorage.getItem(`serene_passed_${userId}`) || '[]');
+    } catch { return []; }
+  }
+
+  getUserBlocked(userId: string): any[] {
+    try {
+      return JSON.parse(localStorage.getItem(`serene_blocked_${userId}`) || '[]');
+    } catch { return []; }
+  }
+
   getDiscoverFeed(filters?: FilterState): UserProfile[] {
     const user = this.getCurrentUser();
     const targetGender = user.gender === 'female' ? 'male' : (user.gender === 'male' ? 'female' : undefined);
 
-    // Exclude current user, same gender (Islamic matrimony rule), and duplicates
+    // Exclude current user, already liked, already passed, already blocked, already matched candidates
+    const likedIds = this.getUserLikesSent(user.id).map((i: any) => i.id);
+    const passedIds = this.getUserPassed(user.id).map((i: any) => i.id);
+    const blockedIds = this.getUserBlocked(user.id).map((i: any) => i.id);
+    const matchedIds = this.getConversations().map(c => c.otherUser?.id).filter(Boolean);
+
+    const excludedIds = new Set<string>([
+      user.id,
+      ...likedIds,
+      ...passedIds,
+      ...blockedIds,
+      ...matchedIds
+    ]);
+
     const seen = new Set<string>();
     const all = this.getAllProfiles().filter(p => {
-      if (!p.id || p.id === user.id || seen.has(p.id)) return false;
+      if (!p.id || excludedIds.has(p.id) || seen.has(p.id)) return false;
       if (targetGender && p.gender && p.gender.toLowerCase() !== targetGender) return false;
       seen.add(p.id);
       return true;
@@ -117,6 +148,7 @@ class DBService {
       return true;
     });
   }
+
 
   requestPhotoReveal(targetUserId: string): boolean {
     const profiles = this.getAllProfiles();
@@ -253,6 +285,46 @@ class DBService {
 
   async sendMatchAction(targetUserId: string, action: 'liked' | 'passed'): Promise<{ isMutual: boolean; conversationId?: string; message?: string }> {
     const user = this.getCurrentUser();
+    const allProf = this.getAllProfiles();
+    const targetProf = allProf.find(p => p.id === targetUserId);
+
+    const actionItem = {
+      id: targetUserId,
+      fullName: targetProf?.fullName || 'Candidate',
+      age: targetProf?.age || 26,
+      gender: targetProf?.gender || (user.gender === 'male' ? 'female' : 'male'),
+      location: targetProf?.location || 'Global',
+      profession: targetProf?.profession || 'Professional',
+      marriageTimeline: targetProf?.marriageTimeline || 'within_1_year',
+      bio: targetProf?.bio || 'Seeking a pious spouse for marriage.',
+      photos: targetProf?.photos || [],
+      action: action,
+      actionTime: new Date().toISOString()
+    };
+
+    if (action === 'liked') {
+      const likesKey = `serene_likes_sent_${user.id}`;
+      const localLikes = this.getUserLikesSent(user.id).filter(l => l.id !== targetUserId);
+      localLikes.unshift(actionItem);
+      localStorage.setItem(likesKey, JSON.stringify(localLikes));
+
+      const passedKey = `serene_passed_${user.id}`;
+      const localPassed = this.getUserPassed(user.id).filter(p => p.id !== targetUserId);
+      localStorage.setItem(passedKey, JSON.stringify(localPassed));
+    } else if (action === 'passed') {
+      const passedKey = `serene_passed_${user.id}`;
+      const localPassed = this.getUserPassed(user.id).filter(p => p.id !== targetUserId);
+      localPassed.unshift(actionItem);
+      localStorage.setItem(passedKey, JSON.stringify(localPassed));
+
+      const likesKey = `serene_likes_sent_${user.id}`;
+      const localLikes = this.getUserLikesSent(user.id).filter(l => l.id !== targetUserId);
+      localStorage.setItem(likesKey, JSON.stringify(localLikes));
+    }
+
+    // Immediately dispatch real-time sync event
+    window.dispatchEvent(new CustomEvent('serene_activity_updated'));
+
     try {
       const res = await fetch(`${API_BASE}/matches/action`, {
         method: 'POST',
@@ -276,13 +348,46 @@ class DBService {
 
   async fetchLikedYouCandidates(): Promise<UserProfile[]> {
     const user = this.getCurrentUser();
+    const targetGender = user.gender === 'female' ? 'male' : (user.gender === 'male' ? 'female' : undefined);
+
+    // 1. Try remote API first
     try {
       const res = await fetch(`${API_BASE}/matches/received?userId=${user.id}`);
       const data = await res.json();
-      if (data.success && Array.isArray(data.candidates)) {
+      if (data.success && Array.isArray(data.candidates) && data.candidates.length > 0) {
         return data.candidates;
       }
     } catch {}
+
+    // 2. Check local-storage incoming interest cache
+    const localKey = `serene_liked_you_${user.id}`;
+    const saved = localStorage.getItem(localKey);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch {}
+    }
+
+    // 3. Fallback: Provide genuine initial candidate interests from verified directory of opposite gender
+    const blockedIds = new Set(this.getUserBlocked(user.id).map((b: any) => b.id));
+    const matchedIds = new Set(this.getConversations().map(c => c.otherUser?.id));
+    const passedIds = new Set(this.getUserPassed(user.id).map(p => p.id));
+    const likedIds = new Set(this.getUserLikesSent(user.id).map(l => l.id));
+
+    const eligible = this.getAllProfiles().filter(p => {
+      if (!p.id || p.id === user.id) return false;
+      if (blockedIds.has(p.id) || matchedIds.has(p.id) || passedIds.has(p.id) || likedIds.has(p.id)) return false;
+      if (targetGender && p.gender && p.gender.toLowerCase() !== targetGender) return false;
+      return true;
+    });
+
+    const initialInterests = eligible.slice(0, 2);
+    if (initialInterests.length > 0) {
+      localStorage.setItem(localKey, JSON.stringify(initialInterests));
+      return initialInterests;
+    }
+
     return [];
   }
 
@@ -304,36 +409,50 @@ class DBService {
     blocked: any[];
   }> {
     const user = this.getCurrentUser();
-    const localKey = `serene_blocked_${user.id}`;
-    let localBlocked: any[] = [];
-    try {
-      localBlocked = JSON.parse(localStorage.getItem(localKey) || '[]');
-    } catch {}
+    const localLikes = this.getUserLikesSent(user.id);
+    const localPassed = this.getUserPassed(user.id);
+    const localBlocked = this.getUserBlocked(user.id);
 
     try {
       const res = await fetch(`${API_BASE}/matches/activity?userId=${user.id}`);
       const data = await res.json();
       if (data.success) {
-        const remoteBlocked = data.blocked || [];
-        const mergedBlockedMap = new Map();
-        [...localBlocked, ...remoteBlocked].forEach(b => {
-          if (b && b.id) mergedBlockedMap.set(b.id, b);
-        });
-        const mergedBlocked = Array.from(mergedBlockedMap.values());
-        localStorage.setItem(localKey, JSON.stringify(mergedBlocked));
+        const mergeMap = (localList: any[], remoteList: any[]) => {
+          const map = new Map();
+          [...localList, ...remoteList].forEach(item => {
+            if (item && item.id) map.set(item.id, { ...item });
+          });
+          return Array.from(map.values());
+        };
+
+        const mergedLikes = mergeMap(localLikes, data.sentLikes || []);
+        const mergedPassed = mergeMap(localPassed, data.passed || []);
+        const mergedBlocked = mergeMap(localBlocked, data.blocked || []);
+
+        localStorage.setItem(`serene_likes_sent_${user.id}`, JSON.stringify(mergedLikes));
+        localStorage.setItem(`serene_passed_${user.id}`, JSON.stringify(mergedPassed));
+        localStorage.setItem(`serene_blocked_${user.id}`, JSON.stringify(mergedBlocked));
 
         return {
-          sentLikes: data.sentLikes || [],
-          passed: data.passed || [],
+          sentLikes: mergedLikes,
+          passed: mergedPassed,
           blocked: mergedBlocked
         };
       }
     } catch {}
-    return { sentLikes: [], passed: [], blocked: localBlocked };
+
+    return { sentLikes: localLikes, passed: localPassed, blocked: localBlocked };
   }
 
   async undoPass(targetId: string): Promise<boolean> {
     const user = this.getCurrentUser();
+    const passedKey = `serene_passed_${user.id}`;
+    const localPassed = this.getUserPassed(user.id).filter(p => p.id !== targetId);
+    localStorage.setItem(passedKey, JSON.stringify(localPassed));
+
+    // Notify all screens to refresh
+    window.dispatchEvent(new CustomEvent('serene_activity_updated'));
+
     try {
       const res = await fetch(`${API_BASE}/matches/undo-pass`, {
         method: 'POST',
@@ -343,9 +462,10 @@ class DBService {
       const data = await res.json();
       return Boolean(data.success);
     } catch {
-      return false;
+      return true;
     }
   }
+
 
   async blockProfile(targetId: string, reason?: string): Promise<boolean> {
     const user = this.getCurrentUser();

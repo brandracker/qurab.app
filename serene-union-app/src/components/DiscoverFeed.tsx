@@ -418,16 +418,15 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
                   </>
                 )}
 
-                {/* Top Location & Photo Counter Pill */}
-
-                <div className="absolute top-5 left-3 flex items-center gap-1.5 z-10">
-                  <div className="bg-black/60 backdrop-blur-sm px-2.5 py-0.5 rounded-full text-white text-xs font-medium flex items-center gap-1">
-                    <MapPin className="w-3 h-3 text-primary-light" />
+                {/* Top Location & Photo Counter Pill (Clean Frosted White) */}
+                <div className="absolute top-4 left-3 flex items-center gap-1.5 z-10">
+                  <div className="bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-on-surface text-xs font-semibold flex items-center gap-1.5 border border-outline/80 shadow-subtle">
+                    <MapPin className="w-3.5 h-3.5 text-primary" />
                     <span>{currentProfile.location}</span>
                   </div>
                   {photos.length > 1 && (
-                    <div className="bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded-full text-white text-[10px] font-semibold flex items-center gap-1">
-                      <Camera className="w-3 h-3" />
+                    <div className="bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-full text-secondary text-[10px] font-bold flex items-center gap-1 border border-outline/80 shadow-subtle">
+                      <Camera className="w-3 h-3 text-secondary" />
                       <span>{currentPhotoIdx + 1}/{photos.length}</span>
                     </div>
                   )}
@@ -435,37 +434,39 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
 
                 {/* Top Right VIP Badge */}
                 {currentProfile.isVip && (
-                  <div className="absolute top-5 right-3 bg-pastel-amber text-pastel-amber-text border border-pastel-amber-border text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 backdrop-blur-sm z-10">
-                    <Crown className="w-3 h-3 text-pastel-amber-text" />
+                  <div className="absolute top-4 right-3 bg-pastel-amber text-pastel-amber-text border border-pastel-amber-border text-[10px] font-bold px-3 py-1 rounded-full flex items-center gap-1 backdrop-blur-md shadow-subtle z-10">
+                    <Crown className="w-3.5 h-3.5 text-pastel-amber-text fill-pastel-amber-text/30" />
                     <span>VIP Member</span>
                   </div>
                 )}
 
-
-                {/* Candidate Name & Timeline Overlay on Photo (Clean Solid scrim) */}
-                <div className="absolute bottom-0 inset-x-0 bg-black/60 backdrop-blur-xs p-3.5 flex items-end justify-between text-white">
+                {/* Candidate Name & Timeline Bar (Crisp White Frosted Glassmorphism) */}
+                <div className="absolute bottom-0 inset-x-0 bg-white/95 backdrop-blur-md p-3.5 flex items-end justify-between text-on-surface border-t border-outline shadow-subtle">
                   <div>
-                    <h2 className="font-serif text-xl font-bold leading-tight flex items-center gap-1.5">
+                    <h2 className="font-serif text-xl font-bold leading-tight flex items-center gap-1.5 text-on-surface">
                       <span>{currentProfile.fullName.split(' ')[0]}, {currentProfile.age}</span>
                       {currentProfile.isVip && (
-                        <Crown className="w-3.5 h-3.5 text-amber-300" />
+                        <Crown className="w-4 h-4 text-amber-500 fill-amber-400" />
                       )}
                     </h2>
-                    <p className="text-xs text-white/90 font-medium flex items-center gap-1 mt-0.5">
-                      <span>{currentProfile.profession}</span>
+                    <p className="text-xs text-secondary font-medium flex items-center gap-1.5 mt-0.5">
+                      <span className="text-on-surface font-semibold">{currentProfile.profession}</span>
                       {currentProfile.workArrangement && (
-                        <span className="bg-white/20 px-1.5 py-0.2 rounded-full text-[9px] uppercase font-mono">
+                        <span className="bg-pastel-sky text-pastel-sky-text border border-pastel-sky-border px-2 py-0.2 rounded-full text-[9px] uppercase font-bold tracking-wider">
                           {currentProfile.workArrangement}
                         </span>
                       )}
                     </p>
                   </div>
 
-                  <span className="bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-subtle">
-                    {currentProfile.marriageTimeline?.replace('_', ' ') || 'Within 1 Year'}
-                  </span>
+                  {currentProfile.marriageTimeline && (
+                    <span className="bg-pastel-rose text-primary border border-pastel-rose-border text-[10px] font-bold px-2.5 py-1 rounded-full shadow-2xs capitalize">
+                      {currentProfile.marriageTimeline.replace(/_/g, ' ')}
+                    </span>
+                  )}
                 </div>
               </div>
+
 
               {/* In-Card Deep Navigation Tabs (Clean Solid) */}
               <div className="flex border-b border-outline bg-surface-variant">

@@ -39,9 +39,10 @@ interface Props {
 export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, onLike, onPass }) => {
 
   const [selectedPhotoIdx, setSelectedPhotoIdx] = useState<number>(0);
-  const isUnblurred = !profile.blurPhotosByDefault || Boolean(profile.photoRevealApproved);
-  const [showCompatibilityModal, setShowCompatibilityModal] = useState<boolean>(false);
   const currentUser = dbService.getCurrentUser();
+  const isRevealedToMe = dbService.isPhotoRevealedTo(profile.id, currentUser.id);
+  const isUnblurred = !profile.blurPhotosByDefault || isRevealedToMe || Boolean(profile.photoRevealApproved);
+  const [showCompatibilityModal, setShowCompatibilityModal] = useState<boolean>(false);
 
   if (!isOpen) return null;
 

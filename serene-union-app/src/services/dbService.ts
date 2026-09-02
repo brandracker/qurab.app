@@ -112,6 +112,33 @@ class DBService {
     } catch { return []; }
   }
 
+  // 1-to-1 Modesty Photo Reveal system
+  isPhotoRevealedTo(ownerId: string, viewerId: string): boolean {
+    try {
+      const list: string[] = JSON.parse(localStorage.getItem(`serene_revealed_${ownerId}`) || '[]');
+      return list.includes(viewerId);
+    } catch { return false; }
+  }
+
+  togglePhotoReveal(ownerId: string, viewerId: string): boolean {
+    try {
+      const key = `serene_revealed_${ownerId}`;
+      const list: string[] = JSON.parse(localStorage.getItem(key) || '[]');
+      const idx = list.indexOf(viewerId);
+      let isRevealed = false;
+      if (idx > -1) {
+        list.splice(idx, 1);
+        isRevealed = false;
+      } else {
+        list.push(viewerId);
+        isRevealed = true;
+      }
+      localStorage.setItem(key, JSON.stringify(list));
+      window.dispatchEvent(new CustomEvent('serene_activity_updated'));
+      return isRevealed;
+    } catch { return false; }
+  }
+
   getDiscoverFeed(filters?: FilterState): UserProfile[] {
     const user = this.getCurrentUser();
     const targetGender = user.gender === 'female' ? 'male' : (user.gender === 'male' ? 'female' : undefined);

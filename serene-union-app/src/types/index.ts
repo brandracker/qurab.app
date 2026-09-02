@@ -63,6 +63,7 @@ export interface UserProfile {
   };
   photoRevealRequested?: boolean;
   photoRevealApproved?: boolean;
+  revealedToUserIds?: string[];
   isVip?: boolean;
   isSpotlightActive?: boolean;
   isOnline?: boolean;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, CheckCheck, Send, Heart, Sparkles, MessageCircle, FileText, Ban, MoreVertical } from 'lucide-react';
+import { ArrowLeft, CheckCheck, Send, Heart, Sparkles, MessageCircle, FileText, Ban, MoreVertical, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import type { Conversation, ChatMessage, UserProfile } from '../types';
 
 import { dbService, API_BASE } from '../services/dbService';
@@ -80,6 +80,52 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [activeConv?.messages?.length]);
+
+  // 1-to-1 Modesty Photo Reveal State
+  const [hasRevealedToPartner, setHasRevealedToPartner] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (activeConv?.otherUser) {
+      setHasRevealedToPartner(dbService.isPhotoRevealedTo(currentUser.id, activeConv.otherUser.id));
+    }
+  }, [activeConvId, activeConv?.otherUser?.id, currentUser.id]);
+
+  const handleToggleRevealPhotos = () => {
+    if (!activeConv?.otherUser) return;
+    const partnerId = activeConv.otherUser.id;
+    const partnerFirstName = activeConv.otherUser.fullName.split(' ')[0];
+    const isNowRevealed = dbService.togglePhotoReveal(currentUser.id, partnerId);
+    setHasRevealedToPartner(isNowRevealed);
+
+    const statusMsg = isNowRevealed 
+      ? `📸 ${currentUser.fullName.split(' ')[0]} revealed their unblurred photos for this conversation.` 
+      : `🔒 ${currentUser.fullName.split(' ')[0]} restored photo blur for modesty.`;
+
+    // Local instant feedback
+    const convs = dbService.getConversations();
+    const curr = convs.find(c => c.id === activeConvId || (c.otherUser && c.otherUser.id === partnerId));
+    if (curr) {
+      if (!curr.messages) curr.messages = [];
+      curr.messages.push({
+        id: 'sys_' + Date.now(),
+        senderId: 'system',
+        senderName: 'Modesty Shield',
+        text: statusMsg,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        isRead: true,
+        waliNotified: false
+      });
+      localStorage.setItem('serene_conversations_v1', JSON.stringify(convs));
+      setConversations([...convs]);
+    }
+
+    setToastMessage(isNowRevealed 
+      ? `Photos revealed to ${partnerFirstName}!` 
+      : `Photos blurred again for ${partnerFirstName}.`
+    );
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
 
   // Live polling for real multi-device messages from Cloudflare D1
   useEffect(() => {
@@ -388,7 +434,13 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                 <img
                   src={activeConv.otherUser.photos[0]}
                   alt={activeConv.otherUser.fullName}
-                  className="w-full h-full object-cover"
+                  className={`w-full h-full object-cover transition-all ${
+                    activeConv.otherUser.blurPhotosByDefault && 
+                    !dbService.isPhotoRevealedTo(activeConv.otherUser.id, currentUser.id) && 
+                    !activeConv.otherUser.photoRevealApproved
+                      ? 'filter blur-xs opacity-75 scale-105'
+                      : 'scale-100'
+                  }`}
                 />
               ) : (
                 <span className="font-serif text-xs font-bold text-primary">
@@ -456,6 +508,22 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
               onClick={() => setShowMoreMenu(false)}
             >
               <button
+                onClick={handleToggleRevealPhotos}
+                className="w-full px-3.5 py-2.5 text-xs text-on-surface hover:text-primary hover:bg-surface-variant flex items-center gap-2.5 transition-colors font-medium text-left"
+              >
+                {hasRevealedToPartner ? (
+                  <>
+                    <EyeOff className="w-4 h-4 text-secondary shrink-0" />
+                    <span>Blur My Photos</span>
+                  </>
+                ) : (
+                  <>
+                    <Eye className="w-4 h-4 text-primary shrink-0" />
+                    <span className="font-bold text-primary">Reveal My Photos</span>
+                  </>
+                )}
+              </button>
+              <button
                 onClick={() => setShowRespectfulCloseModal(true)}
                 className="w-full px-3.5 py-2.5 text-xs text-secondary hover:text-primary hover:bg-surface-variant flex items-center gap-2.5 transition-colors font-medium text-left"
               >
@@ -473,6 +541,40 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
           )}
         </div>
       </header>
+
+      {/* 1-to-1 Modesty Photo Reveal Privacy Quick Bar */}
+      <div className="bg-surface-variant/80 backdrop-blur-xs px-3.5 py-1.5 border-b border-outline flex items-center justify-between z-10 text-xs shadow-2xs">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+          <span className="text-[11px] font-medium text-on-surface truncate">
+            {hasRevealedToPartner 
+              ? `Your photos are unblurred for ${activeConv.otherUser.fullName.split(' ')[0]}` 
+              : `Modesty Shield: Your photos are blurred`}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={handleToggleRevealPhotos}
+          className={`px-3 py-1 rounded-full text-[10px] font-bold border transition-all flex items-center gap-1 shrink-0 shadow-2xs active:scale-95 ${
+            hasRevealedToPartner
+              ? 'bg-white border-outline text-secondary hover:bg-surface-variant hover:text-on-surface'
+              : 'bg-primary text-white border-primary shadow-brand hover:bg-primary-dark'
+          }`}
+        >
+          {hasRevealedToPartner ? (
+            <>
+              <EyeOff className="w-3 h-3" />
+              <span>Blur Again</span>
+            </>
+          ) : (
+            <>
+              <Eye className="w-3 h-3" />
+              <span>Reveal Photos</span>
+            </>
+          )}
+        </button>
+      </div>
+
 
       {/* Messages Scroll Area */}
 

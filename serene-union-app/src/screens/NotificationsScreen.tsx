@@ -11,17 +11,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 
-export interface NotificationItem {
-  id: string;
-  type: 'like' | 'match' | 'salam' | 'wali' | 'system';
-  title: string;
-  message: string;
-  time: string;
-  read: boolean;
-  actionLabel?: string;
-  targetId?: string;
-  avatarUrl?: string;
-}
+import { notificationService, type LiveNotification } from '../services/notificationService';
 
 interface Props {
   isOpen: boolean;
@@ -30,73 +20,21 @@ interface Props {
   onNavigateToChat?: (convId?: string) => void;
 }
 
-const INITIAL_NOTIFICATIONS: NotificationItem[] = [
-  {
-    id: 'n1',
-    type: 'like',
-    title: 'New Interest Received',
-    message: 'A practicing candidate from Lahore expressed interest in your matrimonial biodata.',
-    time: '10m ago',
-    read: false,
-    actionLabel: 'View Candidate',
-    avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&q=80'
-  },
-  {
-    id: 'n2',
-    type: 'salam',
-    title: 'Direct Salam Request',
-    message: 'Tariq sent you a Direct Salam pass with a sincere marriage intent note.',
-    time: '1h ago',
-    read: false,
-    actionLabel: 'View Salam Note',
-    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&q=80'
-  },
-  {
-    id: 'n3',
-    type: 'match',
-    title: 'Mutual Match Confirmed! 🎉',
-    message: 'You and Maryam both expressed mutual interest. Chaperoned chat is now unlocked!',
-    time: '3h ago',
-    read: false,
-    actionLabel: 'Start Chat',
-    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&q=80'
-  },
-  {
-    id: 'n4',
-    type: 'wali',
-    title: 'Wali Guardian Linked',
-    message: 'Guardian Tariq Al-Mansoor was successfully linked to oversee communications with modesty.',
-    time: '1d ago',
-    read: true
-  },
-  {
-    id: 'n5',
-    type: 'system',
-    title: 'Deen Compatibility Alert',
-    message: '5 new verified Sunni/Hanafi candidates matching your 5 daily prayers criteria joined Qurab.',
-    time: '2d ago',
-    read: true,
-    actionLabel: 'Explore Matches'
-  }
-];
-
 export const NotificationsScreen: React.FC<Props> = ({
   isOpen,
   onBack,
   onNavigateToMatches,
   onNavigateToChat
 }) => {
-  const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
-    const saved = localStorage.getItem('serene_notifications_v1');
-    return saved ? JSON.parse(saved) : INITIAL_NOTIFICATIONS;
+  const [notifications, setNotifications] = useState<LiveNotification[]>(() => {
+    return notificationService.getNotifications();
   });
 
   const [activeCategory, setActiveCategory] = useState<'all' | 'interests' | 'matches' | 'wali'>('all');
 
   useEffect(() => {
     const handleUpdate = () => {
-      const saved = localStorage.getItem('serene_notifications_v1');
-      if (saved) setNotifications(JSON.parse(saved));
+      setNotifications(notificationService.getNotifications());
     };
     window.addEventListener('serene_notifications_updated', handleUpdate);
     return () => window.removeEventListener('serene_notifications_updated', handleUpdate);
@@ -104,35 +42,29 @@ export const NotificationsScreen: React.FC<Props> = ({
 
   if (!isOpen) return null;
 
-  const saveNotifications = (items: NotificationItem[]) => {
-    setNotifications(items);
-    localStorage.setItem('serene_notifications_v1', JSON.stringify(items));
-    window.dispatchEvent(new CustomEvent('serene_notifications_updated'));
-  };
-
   const handleMarkAllRead = () => {
-    const updated = notifications.map(n => ({ ...n, read: true }));
-    saveNotifications(updated);
+    notificationService.markAllAsRead();
+    setNotifications(notificationService.getNotifications());
   };
 
   const handleClearAll = () => {
-    saveNotifications([]);
+    notificationService.clearAll();
+    setNotifications([]);
   };
 
-  const handleNotificationClick = (item: NotificationItem) => {
-    const updated = notifications.map(n => n.id === item.id ? { ...n, read: true } : n);
-    saveNotifications(updated);
+  const handleNotificationClick = (item: LiveNotification) => {
+    notificationService.markAsRead(item.id);
+    setNotifications(notificationService.getNotifications());
 
     if (item.type === 'like' || item.type === 'salam') {
       if (onNavigateToMatches) onNavigateToMatches();
       onBack();
-    } else if (item.type === 'match') {
-      if (onNavigateToChat) onNavigateToChat();
-      onBack();
-    } else if (item.type === 'system') {
+    } else if (item.type === 'match' || item.type === 'message') {
+      if (onNavigateToChat) onNavigateToChat(item.targetId);
       onBack();
     }
   };
+
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -143,7 +75,7 @@ export const NotificationsScreen: React.FC<Props> = ({
     return true;
   });
 
-  const getIcon = (type: NotificationItem['type']) => {
+  const getIcon = (type: LiveNotification['type']) => {
     switch (type) {
       case 'like':
         return <Heart className="w-4 h-4 text-primary" />;
@@ -158,7 +90,7 @@ export const NotificationsScreen: React.FC<Props> = ({
     }
   };
 
-  const getBadgeBg = (type: NotificationItem['type']) => {
+  const getBadgeBg = (type: LiveNotification['type']) => {
     switch (type) {
       case 'like':
       case 'match':
@@ -170,6 +102,7 @@ export const NotificationsScreen: React.FC<Props> = ({
         return 'bg-surface-variant border-outline';
     }
   };
+
 
   return (
     <div className="absolute inset-0 z-50 bg-white flex flex-col select-none text-on-surface animate-fade-in font-sans">

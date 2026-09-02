@@ -65,6 +65,8 @@ export interface UserProfile {
   photoRevealApproved?: boolean;
   isVip?: boolean;
   isSpotlightActive?: boolean;
+  isOnline?: boolean;
+  lastActive?: string;
 }
 
 export interface ChatMessage {
@@ -90,7 +92,9 @@ export interface Conversation {
   waliName?: string;
   status: 'active' | 'respectfully_closed' | 'blocked';
   messages: ChatMessage[];
+  isOnline?: boolean;
 }
+
 
 export interface FilterState {
   minAge: number;

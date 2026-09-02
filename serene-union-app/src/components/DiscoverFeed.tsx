@@ -29,6 +29,8 @@ import { RewardedAdModal } from './RewardedAdModal';
 import { MembershipUpgradeModal } from './MembershipUpgradeModal';
 import { NotificationsScreen } from '../screens/NotificationsScreen';
 import { dbService } from '../services/dbService';
+import { notificationService } from '../services/notificationService';
+
 
 interface Props {
   onOpenChat: (convId: string) => void;
@@ -128,11 +130,27 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
     const result = await dbService.sendMatchAction(profile.id, 'liked');
     if (result.isMutual) {
       setMatchedProfile(profile);
+      notificationService.addNotification({
+        type: 'match',
+        title: `Connected with ${profile.fullName.split(' ')[0]} 🎉`,
+        message: `You and ${profile.fullName} both expressed mutual interest. Chaperoned chat is now unlocked!`,
+        actionLabel: 'Start Chat',
+        targetId: result.conversationId,
+        avatarUrl: profile.photos?.[0]
+      });
     } else {
       setToastMessage(`Interest expressed to ${profile.fullName.split(' ')[0]}. You will be notified when they connect!`);
       setTimeout(() => setToastMessage(null), 3500);
+      notificationService.addNotification({
+        type: 'like',
+        title: 'Interest Expressed',
+        message: `You expressed matrimonial interest in ${profile.fullName}'s biodata.`,
+        actionLabel: 'View in Matches',
+        avatarUrl: profile.photos?.[0]
+      });
     }
   };
+
 
   const handleClaimAdLikes = () => {
     const nextLikes = likesRemaining + 10;
@@ -591,8 +609,17 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
                   onClick={(e) => {
                     e.stopPropagation();
                     const conv = dbService.createMatchConversation(currentProfile);
+                    notificationService.addNotification({
+                      type: 'salam',
+                      title: 'Direct Salam Sent',
+                      message: `Your Direct Salam pass was sent to ${currentProfile.fullName}.`,
+                      actionLabel: 'Open Conversation',
+                      targetId: conv.id,
+                      avatarUrl: currentProfile.photos?.[0]
+                    });
                     onOpenChat(conv.id);
                   }}
+
                   className="flex-1 h-12 rounded-2xl bg-white text-primary border border-pastel-rose-border text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-pastel-rose active:scale-95 transition-all shadow-subtle"
                 >
                   <Hand className="w-4 h-4 text-primary" />

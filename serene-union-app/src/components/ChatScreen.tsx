@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Users, CheckCheck, Send, Archive, Heart, Sparkles, MessageCircle } from 'lucide-react';
-import type { Conversation, ChatMessage } from '../types';
+import { ArrowLeft, Users, CheckCheck, Send, Archive, Heart, Sparkles, MessageCircle, FileText } from 'lucide-react';
+import type { Conversation, ChatMessage, UserProfile } from '../types';
 import { dbService, API_BASE } from '../services/dbService';
+import { ProfileDetailModal } from './ProfileDetailModal';
 
 interface Props {
   initialConvId?: string;
@@ -13,8 +14,20 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
   const [activeConvId, setActiveConvId] = useState<string | null>(initialConvId || null);
   const [inputText, setInputText] = useState<string>('');
   const [showRespectfulCloseModal, setShowRespectfulCloseModal] = useState<boolean>(false);
+  const [selectedProfile, setSelectedProfile] = useState<UserProfile | null>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const currentUser = dbService.getCurrentUser();
+
+  const isUserOnline = (user: UserProfile): boolean => {
+    if (user.isOnline !== undefined) return user.isOnline;
+    return user.fullName.toLowerCase().includes('sarah') || user.fullName.toLowerCase().includes('fatima');
+  };
+
+  const getUserStatusText = (user: UserProfile): string => {
+    if (isUserOnline(user)) return 'Active now';
+    return user.lastActive || 'Active 20m ago';
+  };
+
 
   // Load and sync conversation list
   useEffect(() => {
@@ -164,44 +177,101 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
 
         <div className="flex-1 overflow-y-auto divide-y divide-outline p-3 space-y-1">
           {conversations.length > 0 ? (
-            conversations.map(conv => (
-              <div
-                key={conv.id}
-                onClick={() => setActiveConvId(conv.id)}
-                className="p-3 bg-white rounded-2xl border border-outline hover:border-primary flex items-center gap-3 cursor-pointer transition-all shadow-subtle group"
-              >
-                <div className="relative w-11 h-11 rounded-full overflow-hidden shrink-0 border border-primary bg-surface-variant flex items-center justify-center group-hover:scale-105 transition-transform">
-                  {conv.otherUser.photos && conv.otherUser.photos.length > 0 ? (
-                    <img
-                      src={conv.otherUser.photos[0]}
-                      alt={conv.otherUser.fullName}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className="font-serif text-sm font-bold text-primary">
-                      {conv.otherUser.fullName.charAt(0)}
-                    </span>
-                  )}
-                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border border-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-0.5">
-                    <h3 className="font-serif font-bold text-xs text-on-surface truncate group-hover:text-primary transition-colors">
-                      {conv.otherUser.fullName}
-                    </h3>
-                    <span className="text-[10px] text-secondary">{conv.lastMessageTime}</span>
+            conversations.map(conv => {
+              const online = isUserOnline(conv.otherUser);
+              return (
+                <div
+                  key={conv.id}
+                  onClick={() => setActiveConvId(conv.id)}
+                  className="p-3.5 bg-white rounded-2xl border border-outline hover:border-primary flex items-center gap-3 cursor-pointer transition-all shadow-subtle group"
+                >
+                  {/* Clickable Profile Avatar with Real-time Presence Badge */}
+                  <div 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedProfile(conv.otherUser);
+                    }}
+                    className="relative w-12 h-12 rounded-full overflow-hidden shrink-0 border-2 border-primary/30 bg-surface-variant flex items-center justify-center group-hover:scale-105 transition-transform hover:border-primary shadow-subtle cursor-pointer"
+                    title={`Click to view ${conv.otherUser.fullName}'s Biodata`}
+                  >
+                    {conv.otherUser.photos && conv.otherUser.photos.length > 0 ? (
+                      <img
+                        src={conv.otherUser.photos[0]}
+                        alt={conv.otherUser.fullName}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="font-serif text-sm font-bold text-primary">
+                        {conv.otherUser.fullName.charAt(0)}
+                      </span>
+                    )}
+
+                    {/* Live Online / Offline Presence Badge */}
+                    {online ? (
+                      <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-500 ring-2 ring-white shadow-xs flex items-center justify-center" title="Online now">
+                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                      </span>
+                    ) : (
+                      <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-gray-300 ring-2 ring-white shadow-2xs" title="Offline" />
+                    )}
                   </div>
-                  <p className="text-xs text-secondary truncate">{conv.lastMessageText || 'Tap to start conversation...'}</p>
-                  {conv.waliName && (
-                    <span className="inline-flex items-center gap-1 text-[9px] font-bold text-pastel-mint-text bg-pastel-mint px-2 py-0.2 rounded-full mt-1 border border-pastel-mint-border">
-                      <Users className="w-3 h-3 text-pastel-mint-text" />
-                      Wali Observed
-                    </span>
-                  )}
+
+                  {/* Conversation Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <h3 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedProfile(conv.otherUser);
+                          }}
+                          className="font-serif font-bold text-xs text-on-surface truncate group-hover:text-primary transition-colors cursor-pointer hover:underline"
+                          title="Click to view full biodata"
+                        >
+                          {conv.otherUser.fullName}
+                        </h3>
+
+                        {online ? (
+                          <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-bold px-1.5 py-0.2 rounded-full flex items-center gap-1 shrink-0">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            Online
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-secondary shrink-0">
+                            {getUserStatusText(conv.otherUser)}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-secondary shrink-0">{conv.lastMessageTime}</span>
+                    </div>
+
+                    <p className="text-xs text-secondary truncate">{conv.lastMessageText || 'Tap to start conversation...'}</p>
+
+                    <div className="flex items-center gap-2 mt-1">
+                      {conv.waliName && (
+                        <span className="inline-flex items-center gap-1 text-[9px] font-bold text-pastel-mint-text bg-pastel-mint px-2 py-0.2 rounded-full border border-pastel-mint-border">
+                          <Users className="w-3 h-3 text-pastel-mint-text" />
+                          Wali Observed
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedProfile(conv.otherUser);
+                        }}
+                        className="text-[10px] text-primary hover:underline font-semibold flex items-center gap-0.5 ml-auto"
+                      >
+                        <FileText className="w-3 h-3" />
+                        <span>View Biodata</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           ) : (
+
             <div className="flex flex-col items-center justify-center py-20 text-center px-4 bg-white rounded-3xl border border-outline my-6 shadow-card">
               <div className="w-12 h-12 rounded-full bg-pastel-rose text-primary flex items-center justify-center mb-3">
                 <MessageCircle className="w-6 h-6 text-primary" />
@@ -226,15 +296,21 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
   return (
     <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden font-sans select-none pb-20 text-on-surface">
       {/* Chat Top Header */}
-      <header className="sticky top-0 bg-white px-3.5 py-2 border-b border-outline flex items-center justify-between z-20 shadow-subtle">
-        <div className="flex items-center gap-2">
+      <header className="sticky top-0 bg-white px-3.5 py-2.5 border-b border-outline flex items-center justify-between z-20 shadow-subtle">
+        <div className="flex items-center gap-2.5 min-w-0">
           <button
             onClick={() => setActiveConvId(null)}
-            className="w-8 h-8 rounded-full bg-surface-variant border border-outline flex items-center justify-center text-on-surface hover:bg-outline transition-colors"
+            className="w-8 h-8 rounded-full bg-surface-variant border border-outline flex items-center justify-center text-on-surface hover:bg-outline transition-colors shrink-0"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
-          <div className="relative w-9 h-9 rounded-full overflow-hidden border border-primary bg-surface-variant flex items-center justify-center">
+
+          {/* Clickable Avatar to View Full Biodata */}
+          <div 
+            onClick={() => setSelectedProfile(activeConv.otherUser)}
+            className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-primary/40 bg-surface-variant flex items-center justify-center cursor-pointer hover:scale-105 transition-transform shadow-subtle shrink-0 hover:border-primary"
+            title="Click to view full biodata"
+          >
             {activeConv.otherUser.photos && activeConv.otherUser.photos.length > 0 ? (
               <img
                 src={activeConv.otherUser.photos[0]}
@@ -246,25 +322,58 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                 {activeConv.otherUser.fullName.charAt(0)}
               </span>
             )}
+            {isUserOnline(activeConv.otherUser) ? (
+              <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-white" />
+            ) : (
+              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-gray-300 ring-2 ring-white" />
+            )}
           </div>
-          <div>
-            <h2 className="font-serif font-bold text-xs text-on-surface flex items-center gap-1">
+
+          {/* Clickable Name & Live Online Presence */}
+          <div 
+            onClick={() => setSelectedProfile(activeConv.otherUser)}
+            className="cursor-pointer group flex flex-col min-w-0"
+            title="Click to view full biodata"
+          >
+            <h2 className="font-serif font-bold text-xs text-on-surface flex items-center gap-1 group-hover:text-primary transition-colors truncate">
               <span>{activeConv.otherUser.fullName.split(' ')[0]}</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+              {isUserOnline(activeConv.otherUser) && (
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
+              )}
             </h2>
-            <p className="text-[10px] text-secondary">{activeConv.otherUser.location || 'Global'}</p>
+            <p className="text-[10px] flex items-center gap-1.5 truncate">
+              {isUserOnline(activeConv.otherUser) ? (
+                <span className="text-emerald-600 font-semibold">Active now</span>
+              ) : (
+                <span className="text-secondary">{getUserStatusText(activeConv.otherUser)}</span>
+              )}
+              <span className="text-secondary">•</span>
+              <span className="text-primary font-bold group-hover:underline">View Biodata</span>
+            </p>
           </div>
         </div>
 
-        <button
-          onClick={() => setShowRespectfulCloseModal(true)}
-          className="text-[10px] text-secondary hover:text-error px-2.5 py-1 rounded-full border border-outline hover:border-error transition-colors flex items-center gap-1 font-semibold"
-          title="End Conversation Respectfully"
-        >
-          <Archive className="w-3 h-3" />
-          <span>Close Chat</span>
-        </button>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            onClick={() => setSelectedProfile(activeConv.otherUser)}
+            className="text-[10px] text-primary font-bold bg-pastel-rose hover:bg-pastel-rose/80 px-2.5 py-1 rounded-full border border-pastel-rose-border transition-colors flex items-center gap-1 shadow-2xs"
+            title="View Full Biodata"
+          >
+            <FileText className="w-3 h-3" />
+            <span className="hidden sm:inline">Biodata</span>
+          </button>
+
+          <button
+            onClick={() => setShowRespectfulCloseModal(true)}
+            className="text-[10px] text-secondary hover:text-error px-2 py-1 rounded-full border border-outline hover:border-error transition-colors flex items-center gap-1 font-semibold"
+            title="End Conversation Respectfully"
+          >
+            <Archive className="w-3 h-3" />
+            <span>Close</span>
+          </button>
+        </div>
       </header>
+
 
       {/* Advisory & Wali Chaperone Banner (Clean Pastel) */}
       <div className="bg-pastel-mint px-3.5 py-1.5 border-b border-pastel-mint-border flex items-center justify-between text-xs text-pastel-mint-text z-10">
@@ -375,9 +484,20 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
           </div>
         </div>
       )}
+
+      {/* Full Matrimonial Biodata Profile Modal */}
+      {selectedProfile && (
+        <ProfileDetailModal
+          profile={selectedProfile}
+          isOpen={Boolean(selectedProfile)}
+          onClose={() => setSelectedProfile(null)}
+        />
+      )}
+
     </div>
   );
 };
 export default ChatScreen;
+
 
 

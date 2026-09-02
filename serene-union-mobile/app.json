@@ -13,14 +13,15 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.sereneunion.app"
+      "bundleIdentifier": "com.qurab.app"
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#154212"
       },
-      "package": "com.sereneunion.app"
+      "package": "com.qurab.app"
     },
+
     "web": {
       "favicon": "./assets/favicon.png"
     },

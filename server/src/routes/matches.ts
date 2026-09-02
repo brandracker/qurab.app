@@ -214,7 +214,14 @@ matchesRouter.get('/mutual', async (c) => {
       JOIN users u ON (m.sender_id = u.id OR m.receiver_id = u.id) AND u.id != ?
       LEFT JOIN religious_profiles rp ON u.id = rp.user_id
       LEFT JOIN wali_details w ON u.id = w.user_id
-      WHERE (m.sender_id = ? OR m.receiver_id = ?) AND m.action = 'mutual_match'
+      WHERE (m.sender_id = ? OR m.receiver_id = ?) 
+        AND (
+          m.action = 'mutual_match' 
+          OR (m.action = 'liked' AND EXISTS (
+            SELECT 1 FROM matches_and_likes m2 
+            WHERE m2.sender_id = m.receiver_id AND m2.receiver_id = m.sender_id AND (m2.action = 'liked' OR m2.action = 'mutual_match')
+          ))
+        )
       ORDER BY m.created_at DESC
     `;
 

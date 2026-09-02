@@ -71,10 +71,23 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
     });
   }, [initialConvId]);
 
-  const activeConv = conversations.find(c => 
+  let activeConv = conversations.find(c => 
     c.id === activeConvId || 
     (activeConvId && c.otherUser?.id && activeConvId.includes(c.otherUser.id))
   );
+
+  // Dynamic fallback: If opening a match with a new profile not yet in local conversations list
+  if (!activeConv && activeConvId) {
+    const rawParts = activeConvId.replace('conv_', '').split('_');
+    const partnerId = rawParts.find(id => id !== currentUser.id && id.length > 0);
+    if (partnerId) {
+      const allProfiles = dbService.getAllProfiles();
+      const candidate = allProfiles.find(p => p.id === partnerId);
+      if (candidate) {
+        activeConv = dbService.createMatchConversation(candidate);
+      }
+    }
+  }
 
   // Auto-scroll on new messages
   useEffect(() => {

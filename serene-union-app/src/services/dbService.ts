@@ -293,9 +293,11 @@ class DBService {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          id: msg.id,
           senderId: user.id,
           senderName: user.fullName,
-          text
+          text,
+          receiverId: conv?.otherUser?.id
         })
       });
     } catch {}
@@ -593,24 +595,36 @@ class DBService {
       const res = await fetch(`${API_BASE}/conversations?userId=${user.id}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.conversations)) {
-        const userConversations: Conversation[] = data.conversations
-          .filter((rc: any) => rc.participantOne === user.id || rc.participantTwo === user.id)
-          .map((rc: any) => ({
-            id: rc.id,
-            participantOne: rc.participantOne,
-            participantTwo: rc.participantTwo,
-            otherUser: rc.otherUser,
-            lastMessageText: rc.lastMessageText || 'You matched! Start with Bismillah.',
-            lastMessageSenderId: rc.lastMessageSenderId || 'system',
-            lastMessageTime: rc.lastMessageTime || 'Just now',
-            unreadCount: 0,
-            waliName: rc.waliName,
-            status: rc.status || 'active',
-            messages: []
-          }));
+        const localConvs = this.getConversations();
+        const convMap = new Map<string, Conversation>();
 
-        localStorage.setItem(this.conversationsKey, JSON.stringify(userConversations));
-        return userConversations;
+        // Preload local conversations so messages and local drafts are preserved
+        localConvs.forEach(c => {
+          if (c && c.id) convMap.set(c.id, c);
+        });
+
+        data.conversations
+          .filter((rc: any) => rc.participantOne === user.id || rc.participantTwo === user.id)
+          .forEach((rc: any) => {
+            const existing = convMap.get(rc.id);
+            convMap.set(rc.id, {
+              id: rc.id,
+              participantOne: rc.participantOne,
+              participantTwo: rc.participantTwo,
+              otherUser: rc.otherUser || existing?.otherUser,
+              lastMessageText: rc.lastMessageText || existing?.lastMessageText || 'You matched! Start with Bismillah.',
+              lastMessageSenderId: rc.lastMessageSenderId || existing?.lastMessageSenderId || 'system',
+              lastMessageTime: rc.lastMessageTime || existing?.lastMessageTime || 'Just now',
+              unreadCount: rc.unreadCount || 0,
+              waliName: rc.waliName || existing?.waliName,
+              status: rc.status || existing?.status || 'active',
+              messages: existing?.messages && existing.messages.length > 0 ? existing.messages : (rc.messages || [])
+            });
+          });
+
+        const mergedList = Array.from(convMap.values());
+        localStorage.setItem(this.conversationsKey, JSON.stringify(mergedList));
+        return mergedList;
       }
     } catch {}
     return this.getConversations();

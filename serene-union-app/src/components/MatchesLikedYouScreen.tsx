@@ -569,8 +569,8 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        const convId = `conv_${[currentUser.id, match.id].sort().join('_')}`;
-                        onOpenChat(convId);
+                        const newConv = dbService.createMatchConversation(match);
+                        onOpenChat(newConv.id);
                       }}
                       className="px-3.5 py-2 rounded-xl bg-primary text-white text-xs font-bold flex items-center gap-1 shadow-brand hover:bg-primary-dark active:scale-95 transition-all"
                     >

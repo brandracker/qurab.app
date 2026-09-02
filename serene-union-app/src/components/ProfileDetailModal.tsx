@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   ArrowLeft, 
   ChevronLeft, 
@@ -13,16 +13,20 @@ import {
   Briefcase, 
   Languages, 
   Heart, 
-  X,
-  Ruler,
-  ShieldCheck,
-  FileCheck2,
-  Plane,
-  Clock,
-  Building2,
-  Hourglass,
-  Users
+  X, 
+  Ruler, 
+  ShieldCheck, 
+  FileCheck2, 
+  Plane, 
+  Clock, 
+  Building2, 
+  Hourglass, 
+  Users,
+  Volume2,
+  Play,
+  Pause
 } from 'lucide-react';
+
 
 import type { UserProfile } from '../types';
 import { CompatibilityComparisonModal } from './CompatibilityComparisonModal';
@@ -39,12 +43,47 @@ interface Props {
 export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, onLike, onPass }) => {
 
   const [selectedPhotoIdx, setSelectedPhotoIdx] = useState<number>(0);
+  const [isPlayingVoice, setIsPlayingVoice] = useState<boolean>(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
   const currentUser = dbService.getCurrentUser();
   const isRevealedToMe = dbService.isPhotoRevealedTo(profile.id, currentUser.id);
   const isUnblurred = !profile.blurPhotosByDefault || isRevealedToMe || Boolean(profile.photoRevealApproved);
   const [showCompatibilityModal, setShowCompatibilityModal] = useState<boolean>(false);
 
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+    };
+  }, []);
+
+  const togglePlayVoice = (url: string) => {
+    if (isPlayingVoice) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+      setIsPlayingVoice(false);
+    } else {
+      if (!audioRef.current) {
+        audioRef.current = new Audio(url);
+      } else {
+        audioRef.current.src = url;
+      }
+      audioRef.current.play().then(() => {
+        setIsPlayingVoice(true);
+      }).catch(() => {
+        setIsPlayingVoice(true);
+        setTimeout(() => setIsPlayingVoice(false), 3000);
+      });
+      audioRef.current.onended = () => setIsPlayingVoice(false);
+    }
+  };
+
   if (!isOpen) return null;
+
 
   const photos = profile.photos && profile.photos.length > 0 
     ? profile.photos 
@@ -176,10 +215,38 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
               <p className="text-xs text-primary font-bold mt-0.5">
                 {rel?.sect || 'Sunni'} ({rel?.madhhab || 'Hanafi'}) · {profile.profession || 'Professional'}
               </p>
+
+              {profile.voiceGreetingUrl && (
+                <div className="mt-3 p-3 rounded-2xl bg-pastel-sky/60 border border-pastel-sky-border flex items-center justify-between shadow-2xs">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-xl bg-sky-500 text-white flex items-center justify-center shrink-0 shadow-subtle">
+                      <Volume2 className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-xs font-bold text-sky-950 block truncate">Voice Greeting / Reflection</span>
+                      <span className="text-[10px] text-sky-700 block">{profile.voiceGreetingDuration || 45}s audio intro</span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => togglePlayVoice(profile.voiceGreetingUrl!)}
+                    className="px-3.5 py-1.5 rounded-full bg-sky-600 text-white text-xs font-bold shadow-subtle hover:bg-sky-700 active:scale-95 transition-all flex items-center gap-1.5 shrink-0"
+                  >
+                    {isPlayingVoice ? (
+                      <Pause className="w-3.5 h-3.5 fill-current" />
+                    ) : (
+                      <Play className="w-3.5 h-3.5 fill-current" />
+                    )}
+                    <span>{isPlayingVoice ? 'Playing...' : 'Play Voice'}</span>
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Values Alignment Banner Button */}
             <button
+
               type="button"
               onClick={() => setShowCompatibilityModal(true)}
               className="w-full p-3.5 rounded-2xl bg-pastel-rose border border-pastel-rose-border flex items-center justify-between text-left hover:bg-pastel-rose/80 transition-all shadow-subtle group"

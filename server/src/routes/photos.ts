@@ -58,7 +58,7 @@ photosRouter.post('/upload-voice', async (c) => {
         await c.env.MEDIA_BUCKET.put(fileId, bytes.buffer, {
           httpMetadata: { contentType: 'audio/webm' }
         });
-        voiceUrl = `https://assets.serene-union.com/${fileId}`;
+        voiceUrl = `https://serene-union-api.brandracker.workers.dev/api/photos/media/${fileId}`;
       } catch (r2Err) {
         console.warn('R2 voice storage warning, preserving audio payload:', r2Err);
       }
@@ -84,4 +84,31 @@ photosRouter.post('/upload-voice', async (c) => {
     return c.json({ success: false, error: error.message }, 500);
   }
 });
+
+// 3. Stream Voice Media directly from R2 Storage
+photosRouter.get('/media/:fileId', async (c) => {
+  try {
+    const fileId = c.req.param('fileId');
+    if (!c.env.MEDIA_BUCKET) {
+      return c.text('Media bucket not configured', 404);
+    }
+
+    const object = await c.env.MEDIA_BUCKET.get(fileId);
+    if (!object) {
+      return c.text('Audio file not found in storage', 404);
+    }
+
+    const headers = new Headers();
+    object.writeHttpMetadata(headers);
+    headers.set('etag', object.httpEtag);
+    headers.set('Content-Type', object.httpMetadata?.contentType || 'audio/webm');
+    headers.set('Cache-Control', 'public, max-age=31536000');
+    headers.set('Access-Control-Allow-Origin', '*');
+
+    return new Response(object.body, { headers });
+  } catch (error: any) {
+    return c.text(`Error reading media: ${error.message}`, 500);
+  }
+});
+
 

@@ -58,9 +58,19 @@ export const App: React.FC = () => {
         setCurrentUser(prev => ({ ...prev, isVip: true }));
       }
     };
+    const handleProfileUpdate = (e: any) => {
+      if (e.detail?.user) {
+        setCurrentUser({ ...e.detail.user });
+      }
+    };
     window.addEventListener('serene_vip_updated', handleVipUpdate);
-    return () => window.removeEventListener('serene_vip_updated', handleVipUpdate);
+    window.addEventListener('serene_user_profile_updated', handleProfileUpdate);
+    return () => {
+      window.removeEventListener('serene_vip_updated', handleVipUpdate);
+      window.removeEventListener('serene_user_profile_updated', handleProfileUpdate);
+    };
   }, [currentUser.id]);
+
 
   // Onboarding In-Progress Data
   const [onboardingData, setOnboardingData] = useState<Record<string, any>>({});

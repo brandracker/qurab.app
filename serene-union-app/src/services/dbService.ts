@@ -161,11 +161,14 @@ class DBService {
       if (data.success && data.voiceUrl) {
         user.voiceGreetingUrl = data.voiceUrl;
         this.setCurrentUser(user);
+        window.dispatchEvent(new CustomEvent('serene_user_profile_updated', { detail: { user } }));
         return { success: true, voiceUrl: data.voiceUrl };
       }
+      window.dispatchEvent(new CustomEvent('serene_user_profile_updated', { detail: { user } }));
       return { success: true, voiceUrl: audioBase64 };
     } catch (err) {
       console.warn('Voice upload offline fallback:', err);
+      window.dispatchEvent(new CustomEvent('serene_user_profile_updated', { detail: { user: this.getCurrentUser() } }));
       return { success: true, voiceUrl: audioBase64 };
     }
   }
@@ -175,7 +178,9 @@ class DBService {
     delete user.voiceGreetingUrl;
     delete user.voiceGreetingDuration;
     this.setCurrentUser(user);
+    window.dispatchEvent(new CustomEvent('serene_user_profile_updated', { detail: { user } }));
   }
+
 
 
 

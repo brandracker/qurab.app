@@ -17,8 +17,12 @@ import {
   Loader2
 } from 'lucide-react';
 import type { UserProfile } from '../types';
+
 import { dbService } from '../services/dbService';
+import { notificationService } from '../services/notificationService';
 import { MembershipUpgradeModal } from './MembershipUpgradeModal';
+
+
 import { ProfileDetailModal } from './ProfileDetailModal';
 
 interface Props {
@@ -90,8 +94,19 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
     
     const convId = res.conversationId || `conv_${[currentUser.id, candidate.id].sort().join('_')}`;
     const newConv = dbService.createMatchConversation(candidate);
+
+    notificationService.addNotification({
+      type: 'match',
+      title: `Connected with ${candidate.fullName.split(' ')[0]} 🎉`,
+      message: `You and ${candidate.fullName} both expressed mutual interest. Chaperoned chat is now unlocked!`,
+      actionLabel: 'Open Chat',
+      targetId: convId || newConv.id,
+      avatarUrl: candidate.photos?.[0]
+    });
+
     onOpenChat(convId || newConv.id);
   };
+
 
   const handlePassCandidate = async (candidate: UserProfile) => {
     await dbService.sendMatchAction(candidate.id, 'passed');

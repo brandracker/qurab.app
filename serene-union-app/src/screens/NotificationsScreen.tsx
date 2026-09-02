@@ -33,12 +33,16 @@ export const NotificationsScreen: React.FC<Props> = ({
   const [activeCategory, setActiveCategory] = useState<'all' | 'interests' | 'matches'>('all');
 
   useEffect(() => {
+    if (isOpen) {
+      notificationService.syncLiveNotifications();
+    }
     const handleUpdate = () => {
       setNotifications(notificationService.getNotifications());
     };
     window.addEventListener('serene_notifications_updated', handleUpdate);
     return () => window.removeEventListener('serene_notifications_updated', handleUpdate);
-  }, []);
+  }, [isOpen]);
+
 
   if (!isOpen) return null;
 

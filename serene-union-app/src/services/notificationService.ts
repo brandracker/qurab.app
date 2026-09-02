@@ -1,4 +1,4 @@
-import { dbService } from './dbService';
+import { dbService, API_BASE } from './dbService';
 
 export interface LiveNotification {
   id: string;
@@ -13,12 +13,91 @@ export interface LiveNotification {
   avatarUrl?: string;
 }
 
-
 class NotificationService {
   private getStorageKey(): string {
     const user = dbService.getCurrentUser();
     return `serene_live_notifications_${user.id || 'guest'}`;
   }
+
+  hasUnread(): boolean {
+    return this.getNotifications().some(n => !n.read);
+  }
+
+  async syncLiveNotifications(): Promise<LiveNotification[]> {
+    const user = dbService.getCurrentUser();
+    if (!user || user.id === 'usr_guest') return this.getNotifications();
+
+    const existingNotifs = this.getNotifications();
+    let hasNew = false;
+
+    try {
+      // 1. Fetch live mutual matches from Cloudflare D1
+      const matchRes = await fetch(`${API_BASE}/matches/mutual?userId=${user.id}`);
+      const matchData = await matchRes.json();
+
+      if (matchData.success && Array.isArray(matchData.matches)) {
+        for (const match of matchData.matches) {
+          const notifId = `notif_match_${match.id}`;
+          const alreadyNotified = existingNotifs.some(
+            n => n.id === notifId || (n.type === 'match' && (n.targetId === match.id || n.targetId?.includes(match.id)))
+          );
+
+          if (!alreadyNotified) {
+            existingNotifs.unshift({
+              id: notifId,
+              type: 'match',
+              title: `Connected with ${match.fullName.split(' ')[0]} 🎉`,
+              message: `You and ${match.fullName} are now mutually matched! Start your chaperoned halal conversation.`,
+              time: 'Just now',
+              timestamp: Date.now(),
+              read: false,
+              actionLabel: 'Open Chat',
+              targetId: `conv_${[user.id, match.id].sort().join('_')}`,
+              avatarUrl: match.photos && match.photos.length > 0 ? match.photos[0] : undefined
+            });
+            hasNew = true;
+          }
+        }
+      }
+
+      // 2. Fetch live incoming likes from Cloudflare D1
+      const likesRes = await fetch(`${API_BASE}/matches/received?userId=${user.id}`);
+      const likesData = await likesRes.json();
+
+      if (likesData.success && Array.isArray(likesData.candidates)) {
+        for (const candidate of likesData.candidates) {
+          const notifId = `notif_like_${candidate.id}`;
+          const alreadyNotified = existingNotifs.some(
+            n => n.id === notifId || (n.type === 'like' && n.targetId === candidate.id)
+          );
+
+          if (!alreadyNotified) {
+            existingNotifs.unshift({
+              id: notifId,
+              type: 'like',
+              title: 'New Matrimonial Interest 💖',
+              message: `${candidate.fullName.split(' ')[0]} expressed interest in your profile!`,
+              time: 'Just now',
+              timestamp: Date.now(),
+              read: false,
+              actionLabel: 'View in Matches',
+              targetId: candidate.id,
+              avatarUrl: candidate.photos && candidate.photos.length > 0 ? candidate.photos[0] : undefined
+            });
+            hasNew = true;
+          }
+        }
+      }
+    } catch {
+      // offline fallback
+    }
+
+    if (hasNew) {
+      this.save(existingNotifs);
+    }
+    return existingNotifs;
+  }
+
 
   getNotifications(): LiveNotification[] {
     const key = this.getStorageKey();

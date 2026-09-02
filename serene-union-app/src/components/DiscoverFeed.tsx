@@ -67,7 +67,8 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
   const [showRewardedAdModal, setShowRewardedAdModal] = useState<boolean>(false);
   const [showVipModal, setShowVipModal] = useState<boolean>(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState<boolean>(false);
-  const [hasUnreadNotifications, setHasUnreadNotifications] = useState<boolean>(true);
+  const [hasUnreadNotifications, setHasUnreadNotifications] = useState<boolean>(() => notificationService.hasUnread());
+
 
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [currentPhotoIdx, setCurrentPhotoIdx] = useState<number>(0);
@@ -139,6 +140,17 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
     window.addEventListener('serene_activity_updated', handleSync);
     window.addEventListener('serene_block_updated', handleSync);
 
+    // Sync live notifications from Cloudflare D1 immediately and every 20s
+    notificationService.syncLiveNotifications();
+    const notifTimer = setInterval(() => {
+      notificationService.syncLiveNotifications();
+    }, 20000);
+
+    const handleNotifsUpdate = () => {
+      setHasUnreadNotifications(notificationService.hasUnread());
+    };
+    window.addEventListener('serene_notifications_updated', handleNotifsUpdate);
+
     const handleVipUpdate = (e: any) => {
       const targetUserId = e.detail?.userId;
       if (!targetUserId || targetUserId === currentUser.id) {
@@ -147,11 +159,14 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
     };
     window.addEventListener('serene_vip_updated', handleVipUpdate);
     return () => {
+      clearInterval(notifTimer);
       window.removeEventListener('serene_activity_updated', handleSync);
       window.removeEventListener('serene_block_updated', handleSync);
+      window.removeEventListener('serene_notifications_updated', handleNotifsUpdate);
       window.removeEventListener('serene_vip_updated', handleVipUpdate);
     };
   }, [currentUser.id]);
+
 
 
   const handleApplyFilters = (newFilters: FilterState) => {

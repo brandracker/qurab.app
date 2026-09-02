@@ -30,7 +30,7 @@ export const NotificationsScreen: React.FC<Props> = ({
     return notificationService.getNotifications();
   });
 
-  const [activeCategory, setActiveCategory] = useState<'all' | 'interests' | 'matches' | 'wali'>('all');
+  const [activeCategory, setActiveCategory] = useState<'all' | 'interests' | 'matches'>('all');
 
   useEffect(() => {
     const handleUpdate = () => {
@@ -71,9 +71,9 @@ export const NotificationsScreen: React.FC<Props> = ({
   const filteredItems = notifications.filter(n => {
     if (activeCategory === 'interests') return n.type === 'like' || n.type === 'salam';
     if (activeCategory === 'matches') return n.type === 'match';
-    if (activeCategory === 'wali') return n.type === 'wali' || n.type === 'system';
     return true;
   });
+
 
   const getIcon = (type: LiveNotification['type']) => {
     switch (type) {
@@ -159,9 +159,9 @@ export const NotificationsScreen: React.FC<Props> = ({
         {[
           { id: 'all', label: 'All', count: notifications.length },
           { id: 'interests', label: 'Interests & Salams', count: notifications.filter(n => n.type === 'like' || n.type === 'salam').length },
-          { id: 'matches', label: 'Mutual Matches', count: notifications.filter(n => n.type === 'match').length },
-          { id: 'wali', label: 'Wali & Deen', count: notifications.filter(n => n.type === 'wali' || n.type === 'system').length }
+          { id: 'matches', label: 'Mutual Matches', count: notifications.filter(n => n.type === 'match').length }
         ].map((tab) => (
+
           <button
             key={tab.id}
             onClick={() => setActiveCategory(tab.id as any)}

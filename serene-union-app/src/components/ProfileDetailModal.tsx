@@ -6,7 +6,6 @@ import {
   ChevronLeft, 
   ChevronRight, 
   Shield, 
-  ShieldCheck, 
   MapPin, 
   Camera, 
   Crown, 
@@ -17,9 +16,9 @@ import {
   Briefcase, 
   Languages, 
   Heart, 
-  Users, 
   X
 } from 'lucide-react';
+
 import type { UserProfile } from '../types';
 import { CompatibilityComparisonModal } from './CompatibilityComparisonModal';
 import { dbService } from '../services/dbService';
@@ -144,19 +143,15 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
               )}
             </div>
 
-            {/* Top Right VIP or Wali Badge */}
-            {profile.isVip ? (
+            {/* Top Right VIP Badge */}
+            {profile.isVip && (
               <div className="absolute top-5 right-4 bg-pastel-amber text-pastel-amber-text border border-pastel-amber-border px-3 py-1 rounded-full flex items-center gap-1 text-xs font-bold shadow-subtle z-10">
                 <Crown className="w-3.5 h-3.5 text-pastel-amber-text" />
                 <span>VIP Member</span>
               </div>
-            ) : profile.wali ? (
-              <div className="absolute top-5 right-4 bg-pastel-mint text-pastel-mint-text border border-pastel-mint-border px-3 py-1 rounded-full flex items-center gap-1 text-xs font-semibold shadow-subtle z-10">
-                <ShieldCheck className="w-3.5 h-3.5 text-pastel-mint-text" />
-                <span>Wali Verified</span>
-              </div>
-            ) : null}
+            )}
           </div>
+
 
           {/* Photo Thumbnails */}
           {photos.length > 1 && (
@@ -370,26 +365,9 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
                 "{profile.bio || rel?.deenRelationshipBio || "Seeking a pious spouse to build a righteous Islamic household founded on mutual love and respect."}"
               </p>
             </div>
-
-            {/* 6. Wali & Chaperone Info */}
-            {profile.wali && (
-              <div className="bg-pastel-mint rounded-2xl p-3.5 border border-pastel-mint-border flex items-center justify-between shadow-subtle">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-2xl bg-white text-pastel-mint-text flex items-center justify-center shadow-subtle shrink-0">
-                    <Users className="w-4 h-4 text-pastel-mint-text" />
-                  </div>
-                  <div>
-                    <h4 className="font-serif font-bold text-xs text-on-surface">Wali: {profile.wali.name}</h4>
-                    <p className="text-[10px] text-pastel-mint-text">{profile.wali.relationship} · Verified Chaperone</p>
-                  </div>
-                </div>
-                <span className="text-[9px] font-bold text-pastel-mint-text bg-white px-2 py-0.5 rounded-full border border-pastel-mint-border">
-                  Chaperoned
-                </span>
-              </div>
-            )}
           </div>
         </main>
+
 
         {/* Bottom Actions */}
         <footer className="sticky bottom-0 bg-white p-4 border-t border-outline flex items-center justify-between z-20 shadow-lg">

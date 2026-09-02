@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   LogOut, 
   Crown, 
-  ShieldCheck, 
   EyeOff, 
+
   MapPin, 
   Sparkles, 
   PlayCircle, 
@@ -194,14 +194,8 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
                 <span>Barakah VIP</span>
               </div>
             )}
-
-            {!isVip && user.wali && (
-              <div className="absolute top-4 right-4 bg-pastel-mint text-pastel-mint-text border border-pastel-mint-border px-3 py-1 rounded-full flex items-center gap-1 text-xs font-semibold shadow-subtle">
-                <ShieldCheck className="w-3.5 h-3.5 text-pastel-mint-text" />
-                <span>Wali Verified</span>
-              </div>
-            )}
           </div>
+
 
           {/* User Details */}
           <div className="p-4 space-y-4">

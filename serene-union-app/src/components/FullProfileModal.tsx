@@ -1,6 +1,7 @@
 import React from 'react';
-import { Lock, Eye, X, ShieldCheck, MapPin, Users, Heart } from 'lucide-react';
+import { Lock, Eye, X, MapPin, Heart } from 'lucide-react';
 import type { UserProfile } from '../types';
+
 
 interface Props {
   profile: UserProfile;
@@ -50,15 +51,8 @@ export const FullProfileModal: React.FC<Props> = ({
           >
             <X className="w-4 h-4" />
           </button>
-
-          {/* Wali Badge */}
-          {profile.wali && (
-            <div className="absolute top-4 left-4 bg-pastel-mint text-pastel-mint-text border border-pastel-mint-border text-xs font-semibold px-3 py-1 rounded-full flex items-center gap-1 backdrop-blur-md shadow-subtle">
-              <ShieldCheck className="w-3.5 h-3.5 text-pastel-mint-text" />
-              <span>Wali Verified</span>
-            </div>
-          )}
         </div>
+
 
         {/* Scrollable Details */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
@@ -119,20 +113,8 @@ export const FullProfileModal: React.FC<Props> = ({
               )}
             </div>
           </div>
-
-          {/* Wali & Guardian Info */}
-          {profile.wali && (
-            <div className="p-3.5 bg-pastel-rose rounded-2xl border border-pastel-rose-border flex items-start gap-2.5 shadow-subtle">
-              <Users className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-              <div className="text-xs">
-                <span className="font-bold text-primary block">Wali Chaperone Active</span>
-                <span className="text-secondary text-[11px]">
-                  {profile.wali.name} ({profile.wali.relationship}) participates in discussions for modesty and transparency.
-                </span>
-              </div>
-            </div>
-          )}
         </div>
+
 
         {/* Floating Action Bar */}
         <footer className="p-3 bg-white border-t border-outline flex items-center justify-around shadow-card">

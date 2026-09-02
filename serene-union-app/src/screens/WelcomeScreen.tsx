@@ -48,9 +48,10 @@ export const WelcomeScreen: React.FC<Props> = ({ onGetStarted, onLogin }) => {
               <ShieldCheck className="w-4 h-4 text-pastel-mint-text" />
             </div>
             <div>
-              <h4 className="text-xs font-bold text-on-surface">100% Wali & Chaperone Friendly</h4>
-              <p className="text-[10px] text-secondary">Transparent family involvement built-in</p>
+              <h4 className="text-xs font-bold text-on-surface">100% Verified Islamic Profiles</h4>
+              <p className="text-[10px] text-secondary">Serious marriage seekers committed to Sunnah</p>
             </div>
+
           </div>
 
           <div className="flex items-center gap-3 p-3 rounded-2xl bg-pastel-rose border border-pastel-rose-border shadow-subtle">

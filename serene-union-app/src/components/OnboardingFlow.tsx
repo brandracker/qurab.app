@@ -94,9 +94,10 @@ export const OnboardingFlow: React.FC<Props> = ({ onComplete }) => {
               <ArrowRight className="w-4 h-4" />
             </button>
             <p className="text-[11px] text-secondary">
-              Wali-inclusive · Modesty Protection · Verified Community
+              Halal Matrimony · Modesty Protection · Verified Community
             </p>
           </div>
+
         </div>
       )}
 

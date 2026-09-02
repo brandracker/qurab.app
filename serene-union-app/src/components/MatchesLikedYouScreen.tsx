@@ -478,10 +478,8 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
                         <h4 className="font-serif font-bold text-xs text-on-surface group-hover:text-primary transition-colors">
                           {match.fullName}
                         </h4>
-                        {match.wali && (
-                          <Shield className="w-3 h-3 text-pastel-mint-text" />
-                        )}
                       </div>
+
                       <p className="text-[10px] text-primary font-semibold">
                         {match.profession || 'Professional'} · {match.location}
                       </p>

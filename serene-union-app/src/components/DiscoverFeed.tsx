@@ -401,18 +401,14 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
                   )}
                 </div>
 
-                {/* Top Right VIP or Wali Badge */}
-                {currentProfile.isVip ? (
+                {/* Top Right VIP Badge */}
+                {currentProfile.isVip && (
                   <div className="absolute top-5 right-3 bg-pastel-amber text-pastel-amber-text border border-pastel-amber-border text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 backdrop-blur-sm z-10">
                     <Crown className="w-3 h-3 text-pastel-amber-text" />
                     <span>VIP Member</span>
                   </div>
-                ) : currentProfile.wali ? (
-                  <div className="absolute top-5 right-3 bg-pastel-mint text-pastel-mint-text border border-pastel-mint-border text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 backdrop-blur-sm z-10">
-                    <ShieldCheck className="w-3 h-3 text-pastel-mint-text" />
-                    <span>Wali Verified</span>
-                  </div>
-                ) : null}
+                )}
+
 
                 {/* Candidate Name & Timeline Overlay on Photo (Clean Solid scrim) */}
                 <div className="absolute bottom-0 inset-x-0 bg-black/60 backdrop-blur-xs p-3.5 flex items-end justify-between text-white">

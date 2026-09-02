@@ -28,6 +28,24 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
     return user.lastActive || 'Active 20m ago';
   };
 
+  const formatChatTime = (timeStr?: string): string => {
+    if (!timeStr) return '';
+    if (timeStr.includes('-') || timeStr.includes('T')) {
+      try {
+        const d = new Date(timeStr);
+        if (!isNaN(d.getTime())) {
+          const now = new Date();
+          const isToday = d.toDateString() === now.toDateString();
+          if (isToday) {
+            return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          }
+          return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+        }
+      } catch {}
+    }
+    return timeStr;
+  };
+
 
   // Load and sync conversation list
   useEffect(() => {
@@ -185,41 +203,44 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                   onClick={() => setActiveConvId(conv.id)}
                   className="p-3.5 bg-white rounded-2xl border border-outline hover:border-primary flex items-center gap-3 cursor-pointer transition-all shadow-subtle group"
                 >
-                  {/* Clickable Profile Avatar with Real-time Presence Badge */}
+                  {/* Clickable Profile Avatar with Clean Floating Presence Badge (Not clipped) */}
                   <div 
                     onClick={(e) => {
                       e.stopPropagation();
                       setSelectedProfile(conv.otherUser);
                     }}
-                    className="relative w-12 h-12 rounded-full overflow-hidden shrink-0 border-2 border-primary/30 bg-surface-variant flex items-center justify-center group-hover:scale-105 transition-transform hover:border-primary shadow-subtle cursor-pointer"
+                    className="relative shrink-0 cursor-pointer group/avatar"
                     title={`Click to view ${conv.otherUser.fullName}'s Biodata`}
                   >
-                    {conv.otherUser.photos && conv.otherUser.photos.length > 0 ? (
-                      <img
-                        src={conv.otherUser.photos[0]}
-                        alt={conv.otherUser.fullName}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <span className="font-serif text-sm font-bold text-primary">
-                        {conv.otherUser.fullName.charAt(0)}
-                      </span>
-                    )}
+                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-primary/30 bg-surface-variant flex items-center justify-center group-hover/avatar:border-primary transition-all shadow-subtle">
+                      {conv.otherUser.photos && conv.otherUser.photos.length > 0 ? (
+                        <img
+                          src={conv.otherUser.photos[0]}
+                          alt={conv.otherUser.fullName}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="font-serif text-sm font-bold text-primary">
+                          {conv.otherUser.fullName.charAt(0)}
+                        </span>
+                      )}
+                    </div>
 
-                    {/* Live Online / Offline Presence Badge */}
-                    {online ? (
-                      <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-500 ring-2 ring-white shadow-xs flex items-center justify-center" title="Online now">
+                    {/* Live Online Presence Badge - Floating clean on bottom-right corner */}
+                    {online && (
+                      <span 
+                        className="absolute bottom-0 right-0 translate-x-0.5 translate-y-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white shadow-sm flex items-center justify-center z-10" 
+                        title="Online now"
+                      >
                         <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
                       </span>
-                    ) : (
-                      <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-gray-300 ring-2 ring-white shadow-2xs" title="Offline" />
                     )}
                   </div>
 
                   {/* Conversation Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-0.5">
-                      <div className="flex items-center gap-1.5 min-w-0">
+                      <div className="flex items-center gap-2 min-w-0">
                         <h3 
                           onClick={(e) => {
                             e.stopPropagation();
@@ -232,24 +253,24 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                         </h3>
 
                         {online ? (
-                          <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-bold px-1.5 py-0.2 rounded-full flex items-center gap-1 shrink-0">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
                             Online
                           </span>
                         ) : (
-                          <span className="text-[10px] text-secondary shrink-0">
+                          <span className="text-[11px] text-secondary font-normal shrink-0">
                             {getUserStatusText(conv.otherUser)}
                           </span>
                         )}
                       </div>
-                      <span className="text-[10px] text-secondary shrink-0">{conv.lastMessageTime}</span>
+                      <span className="text-[11px] text-secondary shrink-0">{formatChatTime(conv.lastMessageTime)}</span>
                     </div>
 
                     <p className="text-xs text-secondary truncate">{conv.lastMessageText || 'Tap to start conversation...'}</p>
 
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="flex items-center gap-2 mt-1.5">
                       {conv.waliName && (
-                        <span className="inline-flex items-center gap-1 text-[9px] font-bold text-pastel-mint-text bg-pastel-mint px-2 py-0.2 rounded-full border border-pastel-mint-border">
+                        <span className="inline-flex items-center gap-1 text-[9px] font-bold text-pastel-mint-text bg-pastel-mint px-2 py-0.5 rounded-full border border-pastel-mint-border">
                           <Users className="w-3 h-3 text-pastel-mint-text" />
                           Wali Observed
                         </span>
@@ -267,6 +288,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                       </button>
                     </div>
                   </div>
+
                 </div>
               );
             })
@@ -308,26 +330,30 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
           {/* Clickable Avatar to View Full Biodata */}
           <div 
             onClick={() => setSelectedProfile(activeConv.otherUser)}
-            className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-primary/40 bg-surface-variant flex items-center justify-center cursor-pointer hover:scale-105 transition-transform shadow-subtle shrink-0 hover:border-primary"
+            className="relative shrink-0 cursor-pointer group/avatar"
             title="Click to view full biodata"
           >
-            {activeConv.otherUser.photos && activeConv.otherUser.photos.length > 0 ? (
-              <img
-                src={activeConv.otherUser.photos[0]}
-                alt={activeConv.otherUser.fullName}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <span className="font-serif text-xs font-bold text-primary">
-                {activeConv.otherUser.fullName.charAt(0)}
+            <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-primary/40 bg-surface-variant flex items-center justify-center group-hover/avatar:border-primary transition-all shadow-subtle">
+              {activeConv.otherUser.photos && activeConv.otherUser.photos.length > 0 ? (
+                <img
+                  src={activeConv.otherUser.photos[0]}
+                  alt={activeConv.otherUser.fullName}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="font-serif text-xs font-bold text-primary">
+                  {activeConv.otherUser.fullName.charAt(0)}
+                </span>
+              )}
+            </div>
+
+            {isUserOnline(activeConv.otherUser) && (
+              <span className="absolute bottom-0 right-0 translate-x-0.5 translate-y-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white shadow-xs z-10 flex items-center justify-center">
+                <span className="w-1 h-1 rounded-full bg-white animate-pulse" />
               </span>
             )}
-            {isUserOnline(activeConv.otherUser) ? (
-              <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-white" />
-            ) : (
-              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-gray-300 ring-2 ring-white" />
-            )}
           </div>
+
 
           {/* Clickable Name & Live Online Presence */}
           <div 

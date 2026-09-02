@@ -13,7 +13,15 @@ import {
   Briefcase, 
   Languages, 
   Heart, 
-  X
+  X,
+  Ruler,
+  ShieldCheck,
+  FileCheck2,
+  Plane,
+  Clock,
+  Building2,
+  Hourglass,
+  Users
 } from 'lucide-react';
 
 import type { UserProfile } from '../types';
@@ -219,33 +227,107 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
               )}
             </div>
 
-            {/* 1. Deen & Religious Practice (Pastel Mint) */}
-            <div className="bg-pastel-mint rounded-2xl p-3.5 border border-pastel-mint-border space-y-2.5 shadow-subtle">
-              <h3 className="font-serif text-xs font-bold text-pastel-mint-text flex items-center gap-1.5">
-                <BookOpen className="w-3.5 h-3.5 text-pastel-mint-text" />
-                <span>Deen & Religious Practice</span>
+            {/* 1. Personal Background & Biodata (Pastel Rose) */}
+            <div className="bg-pastel-rose rounded-2xl p-3.5 border border-pastel-rose-border space-y-2.5 shadow-subtle">
+              <h3 className="font-serif text-xs font-bold text-primary flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-primary" />
+                <span>Personal Background & Biodata</span>
               </h3>
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="bg-white p-2 rounded-xl border border-pastel-mint-border shadow-subtle">
-                  <span className="text-[10px] text-pastel-mint-text font-medium block">Daily Prayers</span>
-                  <strong className="text-on-surface text-[11px]">{rel?.prayerFrequency || '5 times daily'}</strong>
+                <div className="bg-white p-2.5 rounded-xl border border-pastel-rose-border shadow-2xs flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-pink-50 text-primary border border-pink-200 flex items-center justify-center shrink-0">
+                    <Ruler className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] text-secondary font-medium block">Height</span>
+                    <strong className="text-on-surface text-[11px] block truncate">{profile.height || "5'10\" (178 cm)"}</strong>
+                  </div>
                 </div>
-                <div className="bg-white p-2 rounded-xl border border-pastel-mint-border shadow-subtle">
-                  <span className="text-[10px] text-pastel-mint-text font-medium block">Quran Engagement</span>
-                  <strong className="text-on-surface text-[11px] capitalize">{rel?.quranRecitation || 'Daily'}</strong>
+
+                <div className="bg-white p-2.5 rounded-xl border border-pastel-rose-border shadow-2xs flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 border border-purple-200 flex items-center justify-center shrink-0">
+                    <Sparkles className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] text-secondary font-medium block">Ethnicity</span>
+                    <strong className="text-on-surface text-[11px] block truncate">{profile.ethnicity || 'South Asian'}</strong>
+                  </div>
                 </div>
-                <div className="bg-white p-2 rounded-xl border border-pastel-mint-border shadow-subtle">
-                  <span className="text-[10px] text-pastel-mint-text font-medium block">Modesty & Attire</span>
-                  <strong className="text-on-surface text-[11px] capitalize">{rel?.modestyPractice?.replace('_', ' ') || 'Modest'}</strong>
+
+                <div className="bg-white p-2.5 rounded-xl border border-pastel-rose-border shadow-2xs flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-200 flex items-center justify-center shrink-0">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] text-secondary font-medium block">Citizenship / Visa</span>
+                    <strong className="text-on-surface text-[11px] block truncate">{profile.citizenship || 'Citizen'}</strong>
+                  </div>
                 </div>
-                <div className="bg-white p-2 rounded-xl border border-pastel-mint-border shadow-subtle">
-                  <span className="text-[10px] text-pastel-mint-text font-medium block">Dietary Standard</span>
-                  <strong className="text-on-surface text-[11px] capitalize">{rel?.halalDiet || 'Strictly Halal'}</strong>
+
+                <div className="bg-white p-2.5 rounded-xl border border-pastel-rose-border shadow-2xs flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center shrink-0">
+                    <FileCheck2 className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] text-secondary font-medium block">Marital Status</span>
+                    <strong className="text-on-surface text-[11px] block truncate capitalize">
+                      {profile.maritalStatus ? profile.maritalStatus.replace('_', ' ') : 'Never Married'}
+                    </strong>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* 2. Interests & Personality Badges */}
+            {/* 2. Deen & Religious Practice (Pastel Mint) */}
+            <div className="bg-pastel-mint rounded-2xl p-3.5 border border-pastel-mint-border space-y-2.5 shadow-subtle">
+              <h3 className="font-serif text-xs font-bold text-pastel-mint-text flex items-center gap-1.5">
+                <BookOpen className="w-3.5 h-3.5 text-pastel-mint-text" />
+                <span>Deen & Religious Routine</span>
+              </h3>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="bg-white p-2.5 rounded-xl border border-pastel-mint-border shadow-2xs flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center shrink-0">
+                    <Clock className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] text-pastel-mint-text font-medium block">Daily Prayers</span>
+                    <strong className="text-on-surface text-[11px] block truncate">{rel?.prayerFrequency || '5 times daily'}</strong>
+                  </div>
+                </div>
+
+                <div className="bg-white p-2.5 rounded-xl border border-pastel-mint-border shadow-2xs flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center shrink-0">
+                    <BookOpen className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] text-pastel-mint-text font-medium block">Quran Recitation</span>
+                    <strong className="text-on-surface text-[11px] block truncate capitalize">{rel?.quranRecitation || 'Daily'}</strong>
+                  </div>
+                </div>
+
+                <div className="bg-white p-2.5 rounded-xl border border-pastel-mint-border shadow-2xs flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center shrink-0">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] text-pastel-mint-text font-medium block">Modesty Style</span>
+                    <strong className="text-on-surface text-[11px] block truncate capitalize">{rel?.modestyPractice?.replace('_', ' ') || 'Modest'}</strong>
+                  </div>
+                </div>
+
+                <div className="bg-white p-2.5 rounded-xl border border-pastel-mint-border shadow-2xs flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center shrink-0">
+                    <Sparkles className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] text-pastel-mint-text font-medium block">Dietary Standard</span>
+                    <strong className="text-on-surface text-[11px] block truncate capitalize">{rel?.halalDiet || 'Strictly Halal'}</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 3. Interests & Personality Badges */}
             {((profile.hobbies && profile.hobbies.length > 0) || (profile.personalityTraits && profile.personalityTraits.length > 0)) && (
               <div className="bg-white rounded-2xl p-3.5 border border-outline space-y-2.5 shadow-subtle">
                 <h3 className="text-xs font-bold text-secondary uppercase tracking-wider flex items-center gap-1.5">
@@ -281,73 +363,159 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
               </div>
             )}
 
-            {/* 3. Family Setup & Post-Marriage Living (Pastel Sand) */}
+            {/* 4. Family Setup & Post-Marriage Living (Pastel Sand) */}
             <div className="bg-pastel-sand rounded-2xl p-3.5 border border-pastel-sand-border space-y-2.5 shadow-subtle">
               <h3 className="text-xs font-bold text-pastel-sand-text uppercase tracking-wider flex items-center gap-1.5">
                 <Home className="w-3.5 h-3.5 text-pastel-sand-text" />
                 <span>Family & Living Arrangements</span>
               </h3>
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="bg-white p-2 rounded-xl border border-pastel-sand-border shadow-subtle">
-                  <span className="text-[10px] text-pastel-sand-text font-medium block">Living Post-Marriage</span>
-                  <strong className="text-on-surface capitalize text-primary text-[11px]">
-                    {profile.livingPreference?.replace('_', ' ') || 'Independent'}
-                  </strong>
+                <div className="bg-white p-2.5 rounded-xl border border-pastel-sand-border shadow-2xs flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center shrink-0">
+                    <Home className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] text-pastel-sand-text font-medium block">Post-Marriage Living</span>
+                    <strong className="text-primary capitalize text-[11px] block truncate">
+                      {profile.livingPreference?.replace('_', ' ') || 'Independent'}
+                    </strong>
+                  </div>
                 </div>
-                <div className="bg-white p-2 rounded-xl border border-pastel-sand-border shadow-subtle">
-                  <span className="text-[10px] text-pastel-sand-text font-medium block">Dual-Income Preference</span>
-                  <strong className="text-on-surface capitalize text-[11px]">
-                    {profile.dualIncomePreference?.replace('_', ' ') || 'Career Supportive'}
-                  </strong>
+
+                <div className="bg-white p-2.5 rounded-xl border border-pastel-sand-border shadow-2xs flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center shrink-0">
+                    <Users className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] text-pastel-sand-text font-medium block">Family Structure</span>
+                    <strong className="text-on-surface capitalize text-[11px] block truncate">
+                      {profile.familyStructure || 'Nuclear'} {profile.siblingsCount !== undefined ? `(${profile.siblingsCount} Siblings)` : ''}
+                    </strong>
+                  </div>
                 </div>
-                <div className="bg-white p-2 rounded-xl border border-pastel-sand-border shadow-subtle">
-                  <span className="text-[10px] text-pastel-sand-text font-medium block">Relocation Outlook</span>
-                  <strong className="text-on-surface capitalize text-[11px]">
-                    {profile.willingnessToRelocate?.replace('_', ' ') || 'Open'}
-                  </strong>
+
+                <div className="bg-white p-2.5 rounded-xl border border-pastel-sand-border shadow-2xs flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-200 flex items-center justify-center shrink-0">
+                    <Briefcase className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] text-pastel-sand-text font-medium block">Dual-Income</span>
+                    <strong className="text-on-surface capitalize text-[11px] block truncate">
+                      {profile.dualIncomePreference ? profile.dualIncomePreference.replace('_', ' ') : 'Career Supportive'}
+                    </strong>
+                  </div>
                 </div>
-                <div className="bg-white p-2 rounded-xl border border-pastel-sand-border shadow-subtle">
-                  <span className="text-[10px] text-pastel-sand-text font-medium block">Smoking & Habits</span>
-                  <strong className="text-on-surface capitalize text-[11px]">
-                    {profile.smokingStatus?.replace('_', ' ') || 'Non-Smoker'}
-                  </strong>
+
+                <div className="bg-white p-2.5 rounded-xl border border-pastel-sand-border shadow-2xs flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-sky-50 text-sky-600 border border-sky-200 flex items-center justify-center shrink-0">
+                    <Plane className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] text-pastel-sand-text font-medium block">Relocation</span>
+                    <strong className="text-on-surface capitalize text-[11px] block truncate">
+                      {profile.willingnessToRelocate ? profile.willingnessToRelocate.replace('_', ' ') : 'Flexible'}
+                    </strong>
+                  </div>
+                </div>
+
+                <div className="bg-white p-2.5 rounded-xl border border-pastel-sand-border shadow-2xs flex items-center gap-2.5 col-span-2">
+                  <div className="w-7 h-7 rounded-lg bg-slate-50 text-slate-600 border border-slate-200 flex items-center justify-center shrink-0">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] text-pastel-sand-text font-medium block">Smoking & Substance Status</span>
+                    <strong className="text-on-surface capitalize text-[11px] block truncate">
+                      {profile.smokingStatus ? profile.smokingStatus.replace('_', ' ') : 'Non-Smoker'}
+                    </strong>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* 4. Career, Education & Mahr Philosophy (Pastel Sky) */}
-            <div className="bg-pastel-sky rounded-2xl p-3.5 border border-pastel-sky-border space-y-2 text-xs shadow-subtle">
+            {/* 5. Career, Education & Intent (Pastel Sky) */}
+            <div className="bg-pastel-sky rounded-2xl p-3.5 border border-pastel-sky-border space-y-2.5 text-xs shadow-subtle">
               <h3 className="text-xs font-bold text-pastel-sky-text uppercase tracking-wider flex items-center gap-1.5">
                 <GraduationCap className="w-3.5 h-3.5 text-pastel-sky-text" />
                 <span>Education & Career Pedigree</span>
               </h3>
-              <div className="space-y-1.5 text-xs">
-                <div className="flex items-center gap-2 text-on-surface">
-                  <GraduationCap className="w-3.5 h-3.5 text-pastel-sky-text" />
-                  <span>{profile.education} {profile.university ? `· ${profile.university}` : ''}</span>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-white p-2.5 rounded-xl border border-pastel-sky-border shadow-2xs flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-sky-50 text-sky-600 border border-sky-200 flex items-center justify-center shrink-0">
+                    <GraduationCap className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] text-pastel-sky-text font-medium block">Education</span>
+                    <strong className="text-on-surface text-[11px] block truncate">
+                      {profile.education || 'Graduate'} {profile.university ? `· ${profile.university}` : ''}
+                    </strong>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 text-on-surface">
-                  <Briefcase className="w-3.5 h-3.5 text-pastel-sky-text" />
-                  <span>{profile.profession} {profile.workArrangement ? `(${profile.workArrangement.toUpperCase()})` : ''}</span>
+
+                <div className="bg-white p-2.5 rounded-xl border border-pastel-sky-border shadow-2xs flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-200 flex items-center justify-center shrink-0">
+                    <Briefcase className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] text-pastel-sky-text font-medium block">Profession</span>
+                    <strong className="text-on-surface text-[11px] block truncate">
+                      {profile.profession || 'Professional'}
+                    </strong>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 text-on-surface">
-                  <Languages className="w-3.5 h-3.5 text-pastel-sky-text" />
-                  <span>Languages: {profile.languagesSpoken || 'English, Urdu'}</span>
-                </div>
-                <div className="flex items-center gap-2 text-on-surface">
-                  <Heart className="w-3.5 h-3.5 text-pastel-sky-text" />
-                  <span className="capitalize">Mahr Outlook: {profile.mahrPhilosophy?.replace('_', ' ') || 'Mutual Agreement'}</span>
+
+                {profile.workArrangement && (
+                  <div className="bg-white p-2.5 rounded-xl border border-pastel-sky-border shadow-2xs flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center shrink-0">
+                      <Building2 className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[10px] text-pastel-sky-text font-medium block">Work Setup</span>
+                      <strong className="text-on-surface text-[11px] block truncate capitalize">
+                        {profile.workArrangement.replace('_', ' ')}
+                      </strong>
+                    </div>
+                  </div>
+                )}
+
+                {profile.marriageTimeline && (
+                  <div className="bg-white p-2.5 rounded-xl border border-pastel-sky-border shadow-2xs flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 border border-purple-200 flex items-center justify-center shrink-0">
+                      <Hourglass className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[10px] text-pastel-sky-text font-medium block">Marriage Timeline</span>
+                      <strong className="text-on-surface text-[11px] block truncate capitalize">
+                        {profile.marriageTimeline.replace('_', ' ')}
+                      </strong>
+                    </div>
+                  </div>
+                )}
+
+                <div className="bg-white p-2.5 rounded-xl border border-pastel-sky-border shadow-2xs flex items-center gap-2.5 col-span-2">
+                  <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center shrink-0">
+                    <Languages className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] text-pastel-sky-text font-medium block">Languages Spoken</span>
+                    <strong className="text-on-surface text-[11px] block truncate">
+                      {profile.languagesSpoken || 'English, Urdu'}
+                    </strong>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* 5. About My Deen & Bio Essay */}
-            <div className="bg-pastel-lavender rounded-2xl p-3.5 border border-pastel-lavender-border space-y-1 shadow-subtle">
-              <h3 className="text-xs font-bold text-pastel-lavender-text uppercase tracking-wider">About Me & My Faith</h3>
-              <p className="text-xs text-on-surface leading-relaxed italic">
+            {/* 6. About My Deen & Bio Essay */}
+            <div className="bg-pastel-lavender rounded-2xl p-3.5 border border-pastel-lavender-border space-y-1.5 shadow-subtle">
+              <h3 className="text-xs font-bold text-pastel-lavender-text uppercase tracking-wider flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-pastel-lavender-text" />
+                <span>About Me & My Faith</span>
+              </h3>
+              <p className="text-xs text-on-surface leading-relaxed italic bg-white/60 p-3 rounded-xl border border-pastel-lavender-border">
                 "{profile.bio || rel?.deenRelationshipBio || "Seeking a pious spouse to build a righteous Islamic household founded on mutual love and respect."}"
               </p>
             </div>
+
           </div>
         </main>
 

@@ -1,11 +1,8 @@
 import React, { useState } from 'react';
 import { 
   ArrowLeft, 
-  Eye, 
-  EyeOff, 
   ChevronLeft, 
   ChevronRight, 
-  Shield, 
   MapPin, 
   Camera, 
   Crown, 
@@ -34,7 +31,7 @@ interface Props {
 export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, onLike, onPass }) => {
 
   const [selectedPhotoIdx, setSelectedPhotoIdx] = useState<number>(0);
-  const [isUnblurred, setIsUnblurred] = useState<boolean>(!profile.blurPhotosByDefault || Boolean(profile.photoRevealApproved));
+  const isUnblurred = !profile.blurPhotosByDefault || Boolean(profile.photoRevealApproved);
   const [showCompatibilityModal, setShowCompatibilityModal] = useState<boolean>(false);
   const currentUser = dbService.getCurrentUser();
 
@@ -62,13 +59,7 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
             Matrimonial Profile
           </div>
 
-          <button
-            onClick={() => setIsUnblurred(!isUnblurred)}
-            className="text-xs text-primary font-bold flex items-center gap-1 bg-pastel-rose border border-pastel-rose-border px-3 py-1 rounded-full hover:bg-pastel-rose/80 transition-colors"
-          >
-            {isUnblurred ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-            <span>{isUnblurred ? 'Blur' : 'Unblur'}</span>
-          </button>
+          <div className="w-8" />
         </header>
 
         {/* Scrollable Profile Body */}
@@ -122,14 +113,6 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
               </>
             )}
 
-            {!isUnblurred && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/25 backdrop-blur-xs pointer-events-none">
-                <div className="bg-white/95 backdrop-blur-md px-3.5 py-1.5 rounded-full text-xs font-bold text-on-surface flex items-center gap-1.5 shadow-subtle border border-outline">
-                  <Shield className="w-3.5 h-3.5 text-primary" />
-                  <span>Modesty Shield Active</span>
-                </div>
-              </div>
-            )}
             <div className="absolute top-5 left-4 flex items-center gap-1.5 z-10">
               <div className="bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-full flex items-center gap-1 text-xs font-semibold text-white">
                 <MapPin className="w-3.5 h-3.5 text-primary-light" />

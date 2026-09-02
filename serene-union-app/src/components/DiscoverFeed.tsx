@@ -9,7 +9,6 @@ import {
   ChevronRight, 
   MapPin, 
   Camera, 
-  ShieldCheck, 
   Crown, 
   BookOpen, 
   GraduationCap, 
@@ -419,17 +418,8 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
                   </>
                 )}
 
-                {/* Modesty Shield Badge */}
-                {currentProfile.blurPhotosByDefault && !currentProfile.photoRevealApproved && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/15 pointer-events-none">
-                    <div className="bg-white/95 px-3 py-1.5 rounded-full text-on-surface font-sans text-[10px] font-bold shadow-subtle flex items-center gap-1.5 border border-outline">
-                      <ShieldCheck className="w-3.5 h-3.5 text-primary" />
-                      <span>Modesty Shield Active</span>
-                    </div>
-                  </div>
-                )}
-
                 {/* Top Location & Photo Counter Pill */}
+
                 <div className="absolute top-5 left-3 flex items-center gap-1.5 z-10">
                   <div className="bg-black/60 backdrop-blur-sm px-2.5 py-0.5 rounded-full text-white text-xs font-medium flex items-center gap-1">
                     <MapPin className="w-3 h-3 text-primary-light" />

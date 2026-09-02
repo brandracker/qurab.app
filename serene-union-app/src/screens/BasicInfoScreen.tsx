@@ -11,7 +11,8 @@ import {
   Home, 
   Check, 
   ChevronDown,
-  Sparkles
+  Sparkles,
+  ShieldCheck
 } from 'lucide-react';
 import { Country, State, type ICountry, type IState } from 'country-state-city';
 
@@ -484,33 +485,39 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
           <div className="grid grid-cols-2 gap-2.5">
             <div>
               <label className="block text-xs font-bold text-on-surface mb-1">Heritage / Ethnicity</label>
-              <div className="relative">
+              <div className="relative flex items-center bg-white border border-outline rounded-2xl p-1.5 shadow-subtle hover:border-primary transition-all focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10">
+                <div className="w-7 h-7 rounded-xl bg-rose-50 text-primary border border-rose-200 flex items-center justify-center shrink-0 shadow-2xs">
+                  <Sparkles className="w-3.5 h-3.5" />
+                </div>
                 <select
                   value={ethnicity}
                   onChange={(e) => setEthnicity(e.target.value)}
-                  className="w-full bg-white border border-outline rounded-2xl px-3 py-2.5 text-xs text-on-surface outline-none focus:border-primary shadow-subtle font-medium appearance-none pr-8"
+                  className="w-full bg-transparent pl-2 pr-6 py-1 text-xs text-on-surface outline-none font-bold appearance-none cursor-pointer truncate"
                 >
                   {['South Asian', 'Arab / Middle Eastern', 'Turkish', 'Caucasian / European', 'African', 'East Asian', 'Hispanic / Latino', 'Mixed / Other'].map(eth => (
                     <option key={eth} value={eth}>{eth}</option>
                   ))}
                 </select>
-                <ChevronDown className="w-3.5 h-3.5 text-secondary absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <ChevronDown className="w-3.5 h-3.5 text-secondary absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
             </div>
 
             <div>
               <label className="block text-xs font-bold text-on-surface mb-1">Citizenship / Visa</label>
-              <div className="relative">
+              <div className="relative flex items-center bg-white border border-outline rounded-2xl p-1.5 shadow-subtle hover:border-primary transition-all focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10">
+                <div className="w-7 h-7 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-200 flex items-center justify-center shrink-0 shadow-2xs">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                </div>
                 <select
                   value={citizenship}
                   onChange={(e) => setCitizenship(e.target.value)}
-                  className="w-full bg-white border border-outline rounded-2xl px-3 py-2.5 text-xs text-on-surface outline-none focus:border-primary shadow-subtle font-medium appearance-none pr-8"
+                  className="w-full bg-transparent pl-2 pr-6 py-1 text-xs text-on-surface outline-none font-bold appearance-none cursor-pointer truncate"
                 >
                   {['Citizen', 'Permanent Resident / PR', 'Work Visa', 'Student Visa', 'Dual National', 'Prefer not to say'].map(c => (
                     <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
-                <ChevronDown className="w-3.5 h-3.5 text-secondary absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <ChevronDown className="w-3.5 h-3.5 text-secondary absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
             </div>
           </div>
@@ -533,11 +540,14 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
                 <span className="text-[10px] text-secondary font-bold uppercase block mb-1">
                   Country ({allCountries.length})
                 </span>
-                <div className="relative">
+                <div className="relative flex items-center bg-surface-variant border border-outline rounded-xl p-1 shadow-2xs hover:border-primary transition-all focus-within:border-primary focus-within:bg-white">
+                  <div className="w-6 h-6 rounded-lg bg-sky-50 text-sky-600 border border-sky-200 flex items-center justify-center shrink-0">
+                    <Globe2 className="w-3 h-3" />
+                  </div>
                   <select
                     value={selectedCountryCode}
                     onChange={(e) => handleCountryChange(e.target.value)}
-                    className="w-full bg-surface-variant border border-outline rounded-xl px-2.5 py-2 text-xs font-semibold text-on-surface outline-none focus:border-primary appearance-none pr-7 truncate"
+                    className="w-full bg-transparent pl-1.5 pr-5 py-1 text-xs font-bold text-on-surface outline-none appearance-none truncate cursor-pointer"
                   >
                     {allCountries.map((c) => (
                       <option key={c.isoCode} value={c.isoCode}>
@@ -570,14 +580,17 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
                     value={customStateText}
                     onChange={(e) => setCustomStateText(e.target.value)}
                     placeholder="Enter state/region"
-                    className="w-full bg-surface-variant border border-outline rounded-xl px-2.5 py-2 text-xs text-on-surface font-semibold outline-none focus:border-primary"
+                    className="w-full bg-surface-variant border border-outline rounded-xl px-2.5 py-1.5 text-xs text-on-surface font-semibold outline-none focus:border-primary"
                   />
                 ) : (
-                  <div className="relative">
+                  <div className="relative flex items-center bg-surface-variant border border-outline rounded-xl p-1 shadow-2xs hover:border-primary transition-all focus-within:border-primary focus-within:bg-white">
+                    <div className="w-6 h-6 rounded-lg bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center shrink-0">
+                      <Home className="w-3 h-3" />
+                    </div>
                     <select
                       value={selectedStateCode}
                       onChange={(e) => handleStateChange(e.target.value)}
-                      className="w-full bg-surface-variant border border-outline rounded-xl px-2.5 py-2 text-xs font-semibold text-on-surface outline-none focus:border-primary appearance-none pr-7 truncate"
+                      className="w-full bg-transparent pl-1.5 pr-5 py-1 text-xs font-bold text-on-surface outline-none appearance-none truncate cursor-pointer"
                     >
                       {availableStates.map(st => (
                         <option key={st.isoCode} value={st.isoCode}>{st.name}</option>
@@ -613,11 +626,14 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
                   className="w-full bg-surface-variant border border-outline rounded-xl px-3 py-2 text-xs text-on-surface font-semibold outline-none focus:border-primary"
                 />
               ) : (
-                <div className="relative">
+                <div className="relative flex items-center bg-surface-variant border border-outline rounded-xl p-1 shadow-2xs hover:border-primary transition-all focus-within:border-primary focus-within:bg-white">
+                  <div className="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center shrink-0">
+                    <MapPin className="w-3 h-3" />
+                  </div>
                   <select
                     value={selectedCityName}
                     onChange={(e) => setSelectedCityName(e.target.value)}
-                    className="w-full bg-surface-variant border border-outline rounded-xl px-2.5 py-2 text-xs font-semibold text-on-surface outline-none focus:border-primary appearance-none pr-7"
+                    className="w-full bg-transparent pl-1.5 pr-5 py-1 text-xs font-bold text-on-surface outline-none appearance-none truncate cursor-pointer"
                   >
                     {availableCities.map(ct => (
                       <option key={ct} value={ct}>{ct}</option>
@@ -628,6 +644,7 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
               )}
             </div>
           </div>
+
 
           {/* International Relocation (Professional Colorful Icons) */}
           <div>

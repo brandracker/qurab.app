@@ -117,24 +117,30 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
       }
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       audioChunksRef.current = [];
-      const recorder = new MediaRecorder(stream);
+
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : (MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : (MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : ''));
+
+      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
       mediaRecorderRef.current = recorder;
 
       recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
+        if (e.data && e.data.size > 0) {
           audioChunksRef.current.push(e.data);
         }
       };
 
       recorder.onstop = () => {
-        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const actualType = recorder.mimeType || 'audio/webm';
+        const blob = new Blob(audioChunksRef.current, { type: actualType });
         setRecordedAudioBlob(blob);
         const url = URL.createObjectURL(blob);
         setRecordedAudioUrl(url);
         stream.getTracks().forEach(track => track.stop());
       };
 
-      recorder.start();
+      recorder.start(250);
       setIsRecording(true);
       setRecordSeconds(0);
 
@@ -165,7 +171,9 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
   };
 
   const togglePlayRecordedAudio = () => {
-    if (!recordedAudioUrl) return;
+    const targetUrl = recordedAudioUrl || currentUserProfile.voiceGreetingUrl;
+    if (!targetUrl) return;
+
     if (isPlayingVoice) {
       if (audioPlayerRef.current) {
         audioPlayerRef.current.pause();
@@ -173,21 +181,27 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
       }
       setIsPlayingVoice(false);
     } else {
-      if (!audioPlayerRef.current) {
-        audioPlayerRef.current = new Audio(recordedAudioUrl);
-      } else {
-        audioPlayerRef.current.src = recordedAudioUrl;
-      }
-      audioPlayerRef.current.play().then(() => {
-        setIsPlayingVoice(true);
-      }).catch(err => {
-        console.warn('Audio preview error:', err);
-        setIsPlayingVoice(true);
-        setTimeout(() => setIsPlayingVoice(false), 3000);
-      });
-      audioPlayerRef.current.onended = () => {
+      try {
+        if (!audioPlayerRef.current) {
+          audioPlayerRef.current = new Audio();
+        }
+        audioPlayerRef.current.src = targetUrl;
+        audioPlayerRef.current.volume = 1.0;
+        audioPlayerRef.current.load();
+        
+        audioPlayerRef.current.play().then(() => {
+          setIsPlayingVoice(true);
+        }).catch(err => {
+          console.warn('Audio preview error:', err);
+          setIsPlayingVoice(false);
+        });
+
+        audioPlayerRef.current.onended = () => {
+          setIsPlayingVoice(false);
+        };
+      } catch (e) {
         setIsPlayingVoice(false);
-      };
+      }
     }
   };
 
@@ -209,12 +223,11 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
         const updatedUser = dbService.getCurrentUser();
         setCurrentUserProfile({ ...updatedUser });
         setRecordedAudioBlob(null);
-        if (res.voiceUrl) {
-          setRecordedAudioUrl(res.voiceUrl);
-        }
+        setRecordedAudioUrl(base64String);
         setVoiceToast('✓ Voice greeting saved successfully');
         setTimeout(() => setVoiceToast(null), 3000);
       }
+
     } catch (err: any) {
       console.error('Failed to upload voice:', err);
       setRecordedAudioBlob(null);
@@ -410,17 +423,33 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
           {/* User Details */}
           <div className="p-4 space-y-4">
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="font-serif text-xl font-bold text-on-surface">
                   {user.fullName}, {user.age || 28}
                 </h2>
                 {isVip && (
                   <Crown className="w-4 h-4 text-amber-500" />
                 )}
+                {currentUserProfile.voiceGreetingUrl && (
+                  <button
+                    type="button"
+                    onClick={togglePlayRecordedAudio}
+                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border transition-all flex items-center gap-1 shadow-2xs active:scale-95 ${
+                      isPlayingVoice
+                        ? 'bg-sky-500 text-white border-sky-600 animate-pulse'
+                        : 'bg-pastel-sky text-sky-700 border-pastel-sky-border hover:bg-sky-100'
+                    }`}
+                    title="Play your recorded voice introduction"
+                  >
+                    <Volume2 className={`w-3 h-3 ${isPlayingVoice ? 'animate-bounce' : ''}`} />
+                    <span>{isPlayingVoice ? 'Playing...' : `Voice Intro (${currentUserProfile.voiceGreetingDuration || 45}s)`}</span>
+                  </button>
+                )}
               </div>
               <p className="text-xs text-primary font-semibold mt-0.5">
                 {rel?.sect || 'Sunni'} ({rel?.madhhab || 'Hanafi'}) · {user.profession || 'Professional'}
               </p>
+
             </div>
 
             {/* Photo Gallery Grid */}
@@ -492,37 +521,50 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
                   </button>
                 </div>
               ) : recordedAudioUrl || currentUserProfile.voiceGreetingUrl ? (
-                /* Preview & Manage State */
-                <div className="p-3.5 rounded-2xl bg-surface-variant border border-outline flex flex-col sm:flex-row items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                /* Preview & Manage State (2-Row Responsive Layout) */
+                <div className="p-3.5 rounded-2xl bg-surface-variant border border-outline space-y-3">
+                  {/* Row 1: Playback Controls & Delete Button */}
+                  <div className="flex items-center justify-between gap-2.5">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <button
+                        type="button"
+                        onClick={togglePlayRecordedAudio}
+                        className="w-11 h-11 rounded-full bg-primary text-white flex items-center justify-center shadow-brand hover:bg-primary-dark active:scale-95 transition-all shrink-0"
+                      >
+                        {isPlayingVoice ? (
+                          <Pause className="w-5 h-5 fill-current" />
+                        ) : (
+                          <Play className="w-5 h-5 fill-current ml-0.5" />
+                        )}
+                      </button>
+                      <div className="min-w-0">
+                        <strong className="text-xs text-on-surface block font-bold truncate">
+                          {isPlayingVoice ? 'Playing Greeting...' : 'Voice Greeting Ready'}
+                        </strong>
+                        <span className="text-[10px] text-secondary block font-mono">
+                          {recordSeconds > 0 ? `${formatSeconds(recordSeconds)} duration` : 'Tap play to listen'}
+                        </span>
+                      </div>
+                    </div>
+
                     <button
                       type="button"
-                      onClick={togglePlayRecordedAudio}
-                      className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center shadow-brand hover:bg-primary-dark active:scale-95 transition-all shrink-0"
+                      onClick={deleteVoiceGreeting}
+                      className="p-2 rounded-xl bg-white border border-outline text-secondary hover:text-rose-600 hover:bg-rose-50 transition-all shrink-0 shadow-2xs"
+                      title="Delete Voice Greeting"
                     >
-                      {isPlayingVoice ? (
-                        <Pause className="w-4 h-4 fill-current" />
-                      ) : (
-                        <Play className="w-4 h-4 fill-current ml-0.5" />
-                      )}
+                      <Trash2 className="w-4 h-4" />
                     </button>
-                    <div className="min-w-0 flex-1">
-                      <strong className="text-xs text-on-surface block font-bold truncate">
-                        {isPlayingVoice ? 'Playing Greeting...' : 'Voice Greeting Ready'}
-                      </strong>
-                      <span className="text-[10px] text-secondary block">
-                        {recordSeconds > 0 ? `${formatSeconds(recordSeconds)} duration` : 'Click play to listen'}
-                      </span>
-                    </div>
                   </div>
 
-                  <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                    {recordedAudioBlob && (
+                  {/* Row 2: Actions Grid (Full-width, zero overflow) */}
+                  <div className="grid grid-cols-2 gap-2 pt-1 border-t border-outline/50">
+                    {recordedAudioBlob ? (
                       <button
                         type="button"
                         onClick={saveVoiceToLive}
                         disabled={isUploadingVoice}
-                        className="px-3.5 py-2 rounded-xl bg-primary text-white text-xs font-bold shadow-brand hover:bg-primary-dark active:scale-95 transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 disabled:opacity-50"
+                        className="w-full py-2.5 px-3 rounded-xl bg-primary text-white text-xs font-bold shadow-brand hover:bg-primary-dark active:scale-95 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
                       >
                         {isUploadingVoice ? (
                           <>
@@ -532,32 +574,29 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
                         ) : (
                           <>
                             <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>Save Voice</span>
+                            <span>Save to Profile</span>
                           </>
                         )}
                       </button>
+                    ) : (
+                      <div className="w-full py-2.5 px-3 rounded-xl bg-pastel-mint text-pastel-mint-text border border-pastel-mint-border text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs select-none">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Saved on Profile</span>
+                      </div>
                     )}
 
                     <button
                       type="button"
                       onClick={startRecording}
-                      className="px-3 py-2 rounded-xl bg-white border border-outline text-secondary hover:text-on-surface hover:bg-surface-variant text-xs font-semibold transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0"
+                      className="w-full py-2.5 px-3 rounded-xl bg-white border border-outline text-on-surface hover:bg-surface-variant text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-2xs"
                       title="Record Again"
                     >
-                      <Mic className="w-3.5 h-3.5 text-secondary" />
+                      <Mic className="w-3.5 h-3.5 text-primary" />
                       <span>Re-record</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={deleteVoiceGreeting}
-                      className="p-2 rounded-xl bg-white border border-outline text-secondary hover:text-rose-600 hover:bg-rose-50 transition-all shrink-0"
-                      title="Delete Voice Greeting"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
+
               ) : (
 
                 /* Initial Idle State */

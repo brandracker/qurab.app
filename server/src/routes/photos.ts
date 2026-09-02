@@ -46,17 +46,25 @@ photosRouter.post('/upload-voice', async (c) => {
     const fileId = `voice_${userId}_${Date.now()}.webm`;
     let voiceUrl = audioBase64;
 
+    // Extract mime type if available
+    let contentType = 'audio/webm';
+    const mimeMatch = audioBase64.match(/^data:([^;]+);/);
+    if (mimeMatch && mimeMatch[1]) {
+      contentType = mimeMatch[1];
+    }
+
     // Upload to Cloudflare R2 if available
     if (c.env.MEDIA_BUCKET) {
       try {
-        const base64Clean = audioBase64.replace(/^data:audio\/\w+;base64,/, '');
+        const commaIdx = audioBase64.indexOf(',');
+        const base64Clean = commaIdx !== -1 ? audioBase64.substring(commaIdx + 1) : audioBase64;
         const binaryString = atob(base64Clean);
         const bytes = new Uint8Array(binaryString.length);
         for (let i = 0; i < binaryString.length; i++) {
           bytes[i] = binaryString.charCodeAt(i);
         }
         await c.env.MEDIA_BUCKET.put(fileId, bytes.buffer, {
-          httpMetadata: { contentType: 'audio/webm' }
+          httpMetadata: { contentType }
         });
         voiceUrl = `https://serene-union-api.brandracker.workers.dev/api/photos/media/${fileId}`;
       } catch (r2Err) {
@@ -102,13 +110,16 @@ photosRouter.get('/media/:fileId', async (c) => {
     object.writeHttpMetadata(headers);
     headers.set('etag', object.httpEtag);
     headers.set('Content-Type', object.httpMetadata?.contentType || 'audio/webm');
+    headers.set('Accept-Ranges', 'bytes');
     headers.set('Cache-Control', 'public, max-age=31536000');
     headers.set('Access-Control-Allow-Origin', '*');
+    headers.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
 
     return new Response(object.body, { headers });
   } catch (error: any) {
     return c.text(`Error reading media: ${error.message}`, 500);
   }
+
 });
 
 

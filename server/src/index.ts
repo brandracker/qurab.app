@@ -46,6 +46,16 @@ app.get('/api/health', (c) => {
   });
 });
 
+app.get('/health', (c) => {
+  return c.json({
+    status: 'healthy',
+    service: 'serene-union-api',
+    database: 'Cloudflare D1 (Live)',
+    architecture: 'Layered Modular Edge Routers',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Mount Modular Sub-Routers
 app.route('/api/auth', authRouter);
 app.route('/api/users', usersRouter);

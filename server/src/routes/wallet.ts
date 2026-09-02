@@ -119,9 +119,15 @@ walletRouter.post('/reward-ad', async (c) => {
       `).bind(userId).run();
     }
 
+    const walletRow: any = await c.env.DB.prepare(`
+      SELECT daily_messages_quota FROM user_wallets WHERE user_id = ?
+    `).bind(userId).first();
+
     return c.json({
       success: true,
       rewardType: rewardType || 'likes',
+      likesAdded: 10,
+      newDailyQuota: walletRow ? walletRow.daily_messages_quota : 40,
       message: 'Rewarded ad verified! +10 Discover likes credited to your account.'
     });
   } catch (error: any) {

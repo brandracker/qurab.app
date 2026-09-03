@@ -247,9 +247,9 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
   // Search filtering
   const filteredFeed = profiles.filter(p => {
     return (
-      p.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.profession.toLowerCase().includes(searchQuery.toLowerCase())
+      (p.fullName?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+      (p.location?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+      (p.profession?.toLowerCase() || '').includes(searchQuery.toLowerCase())
     );
   });
 
@@ -751,7 +751,7 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
                         {currentProfile.hobbies.slice(0, 4).map((h, i) => (
                           <span key={i} className="bg-pastel-rose text-primary text-[10px] font-bold px-2.5 py-1 rounded-full border border-pastel-rose-border shadow-2xs flex items-center gap-1">
                             <Sparkles className="w-2.5 h-2.5 text-primary" />
-                            <span>{h.replace(/[^\w\s\(\)\-]/gi, '').trim()}</span>
+                            <span>{h.replace(/[^\w\s()-]/gi, '').trim()}</span>
                           </span>
                         ))}
                       </div>

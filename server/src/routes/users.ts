@@ -249,13 +249,22 @@ profilesRouter.get('/discover', async (c) => {
     const queryLon = c.req.query('lon') ? parseFloat(c.req.query('lon')!) : null;
     const maxDistanceKm = c.req.query('maxDistance') ? parseFloat(c.req.query('maxDistance')!) : null;
     
+    const queryGender = c.req.query('gender');
+    const queryTargetGender = c.req.query('targetGender');
+    
     let targetGender: string | null = null;
+    if (queryTargetGender && (queryTargetGender.toLowerCase() === 'male' || queryTargetGender.toLowerCase() === 'female')) {
+      targetGender = queryTargetGender.toLowerCase();
+    } else if (queryGender && (queryGender.toLowerCase() === 'male' || queryGender.toLowerCase() === 'female')) {
+      targetGender = queryGender.toLowerCase() === 'female' ? 'male' : 'female';
+    }
+
     let viewerLat: number | null = (queryLat !== null && !isNaN(queryLat)) ? queryLat : null;
     let viewerLon: number | null = (queryLon !== null && !isNaN(queryLon)) ? queryLon : null;
 
     if (currentUserId) {
       const userRow: any = await c.env.DB.prepare(`SELECT gender, latitude, longitude FROM users WHERE id = ?`).bind(currentUserId).first();
-      if (userRow?.gender) {
+      if (!targetGender && userRow?.gender) {
         targetGender = userRow.gender.toLowerCase() === 'female' ? 'male' : (userRow.gender.toLowerCase() === 'male' ? 'female' : null);
       }
       if (viewerLat === null && typeof userRow?.latitude === 'number') {
@@ -485,7 +494,7 @@ profilesRouter.post('/', async (c) => {
       data.email || `${targetUserId}@sereneunion.app`,
       fullName || 'Member',
       dob || '1998-01-01',
-      gender || 'female',
+      (gender === 'female' || gender === 'male') ? gender : ((fullName && (fullName.toLowerCase().includes('fatima') || fullName.toLowerCase().includes('zainab') || fullName.toLowerCase().includes('maryam') || fullName.toLowerCase().includes('aisha') || fullName.toLowerCase().includes('sarah') || fullName.toLowerCase().includes('noor'))) ? 'female' : 'male'),
       location || (city ? `${city}, ${country || ''}`.trim() : 'Global'),
       city || null,
       country || null,

@@ -57,7 +57,8 @@ photosRouter.post('/upload-voice', async (c) => {
     if (c.env.MEDIA_BUCKET) {
       try {
         const commaIdx = audioBase64.indexOf(',');
-        const base64Clean = commaIdx !== -1 ? audioBase64.substring(commaIdx + 1) : audioBase64;
+        const rawBase64 = commaIdx !== -1 ? audioBase64.substring(commaIdx + 1) : audioBase64;
+        const base64Clean = rawBase64.replace(/[^A-Za-z0-9+/=]/g, '');
         const binaryString = atob(base64Clean);
         const bytes = new Uint8Array(binaryString.length);
         for (let i = 0; i < binaryString.length; i++) {

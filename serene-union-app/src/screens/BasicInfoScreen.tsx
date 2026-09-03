@@ -45,7 +45,18 @@ const TOP_COUNTRY_CODES = ['GB', 'PK', 'US', 'CA', 'AE', 'SA', 'TR', 'AU', 'DE',
 
 export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) => {
   const [fullName, setFullName] = useState(data?.fullName || '');
-  const [gender, setGender] = useState(data?.gender || 'male');
+  const [gender, setGender] = useState<'male' | 'female'>(() => {
+    if (data?.gender === 'female' || data?.gender === 'male') return data.gender;
+    const lower = (data?.fullName || '').toLowerCase();
+    if (
+      lower.includes('fatima') || lower.includes('zainab') || lower.includes('maryam') ||
+      lower.includes('aisha') || lower.includes('sarah') || lower.includes('noor') ||
+      lower.includes('ayesha') || lower.includes('naheed')
+    ) {
+      return 'female';
+    }
+    return 'male';
+  });
 
   // --- Date of Birth System ---
   const initialDobParts = useMemo(() => {
@@ -346,8 +357,8 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
             <label className="block text-xs font-bold text-on-surface mb-1">Gender</label>
             <div className="grid grid-cols-2 gap-2.5">
               {[
-                { id: 'male', label: 'Brother (Male)' },
-                { id: 'female', label: 'Sister (Female)' }
+                { id: 'male' as const, label: 'Brother (Male)' },
+                { id: 'female' as const, label: 'Sister (Female)' }
               ].map(g => (
                 <button
                   key={g.id}

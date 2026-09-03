@@ -57,8 +57,6 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
 
   // Load and sync conversation list
   useEffect(() => {
-    const list = dbService.getConversations();
-    setConversations(list);
     if (initialConvId) {
       setActiveConvId(initialConvId);
     }

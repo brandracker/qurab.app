@@ -94,6 +94,7 @@ export const App: React.FC = () => {
         userId: user?.id,
         email: user?.email,
         fullName: user?.fullName,
+        gender: user?.gender,
         photos: [],
         sessionToken: session.token
       });
@@ -199,8 +200,12 @@ export const App: React.FC = () => {
       }
     };
 
-    setCurrentUser(merged);
-    dbService.setCurrentUser(merged);
+    try {
+      setCurrentUser(merged);
+      dbService.setCurrentUser(merged);
+    } catch (err) {
+      console.warn('Local session state notice:', err);
+    }
 
     // Save permanently to Cloudflare D1
     try {
@@ -210,8 +215,9 @@ export const App: React.FC = () => {
         body: JSON.stringify(merged)
       });
       await dbService.fetchLiveProfiles();
-    } catch {}
-
+    } catch (err) {
+      console.warn('Remote profile save notice:', err);
+    }
 
     setCurrentStep('main_app');
     setActiveTab('discover');

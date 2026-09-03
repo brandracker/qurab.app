@@ -30,7 +30,7 @@ describe('Voice Greeting & Media Audio Storage Tests', () => {
   });
 
   it('2. Successfully uploads voice greeting and updates user table in D1', async () => {
-    const sampleAudio = 'data:audio/webm;base64,GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQRChYECGFOAZwEAAAAAA...';
+    const sampleAudio = 'data:audio/webm;base64,GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQRChYECGFOAZwEAAAAAAA==';
     const res = await app.request('/api/photos/upload-voice', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

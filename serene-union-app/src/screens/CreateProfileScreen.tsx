@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { ArrowLeft, Camera, Plus, X, EyeOff, Eye, Check } from 'lucide-react';
 import { API_BASE } from '../services/dbService';
+import { optimizeImage } from '../utils/imageOptimizer';
 
 interface Props {
   userId?: string;
@@ -39,39 +40,44 @@ export const CreateProfileScreen: React.FC<Props> = ({
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setIsUploading(true);
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const result = reader.result as string;
+    try {
+      // Hardware-accelerated client-side compression (1200px Retina HD, ~150KB)
+      const optimized = await optimizeImage(file, { maxWidth: 1200, maxHeight: 1200, quality: 0.82 });
+      const photoPayload = optimized || '';
+      if (!photoPayload) return;
+
       const newPhotos = [...photos];
-      newPhotos[activeSlot] = result;
+      newPhotos[activeSlot] = photoPayload;
       setPhotos(newPhotos);
 
-      // Async upload to Cloudflare R2 if userId exists
+      // Fast background sync to Cloudflare R2 if userId exists
       if (userId) {
-        try {
-          await fetch(`${API_BASE}/photos/upload`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId,
-              photoBase64: result,
-              isPrimary: activeSlot === 0,
-              blurByDefault: blurPhotos
-            })
-          });
-        } catch (err) {
-          console.error('Photo upload error:', err);
-        }
+        fetch(`${API_BASE}/photos/upload`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId,
+            photoBase64: photoPayload,
+            isPrimary: activeSlot === 0,
+            blurByDefault: blurPhotos
+          })
+        }).catch(err => {
+          console.warn('Background photo upload warning:', err);
+        });
       }
+    } catch (err) {
+      console.error('Photo optimization error:', err);
+    } finally {
       setIsUploading(false);
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
   };
 
   const handleRemovePhoto = (index: number, e: React.MouseEvent) => {

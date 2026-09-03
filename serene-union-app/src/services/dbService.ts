@@ -21,7 +21,9 @@ class DBService {
   async fetchLiveProfiles(): Promise<UserProfile[]> {
     try {
       const user = this.getCurrentUser();
-      const res = await fetch(`${API_BASE}/profiles/discover?userId=${user.id}`);
+      const targetGender = user.gender === 'female' ? 'male' : (user.gender === 'male' ? 'female' : '');
+      const url = `${API_BASE}/profiles/discover?userId=${encodeURIComponent(user.id || '')}&gender=${encodeURIComponent(user.gender || '')}&targetGender=${encodeURIComponent(targetGender)}`;
+      const res = await fetch(url);
       const data = await res.json();
       if (data.success && Array.isArray(data.profiles)) {
         localStorage.setItem(this.profilesKey, JSON.stringify(data.profiles));
@@ -64,10 +66,32 @@ class DBService {
 
   setCurrentUser(user: UserProfile): void {
     if (this.currentUserId && this.currentUserId !== user.id) {
-      localStorage.removeItem(this.conversationsKey);
+      try {
+        localStorage.removeItem(this.conversationsKey);
+      } catch {}
     }
     this.currentUserId = user.id;
-    localStorage.setItem(this.userKey, JSON.stringify(user));
+    try {
+      localStorage.setItem(this.userKey, JSON.stringify(user));
+    } catch (quotaErr) {
+      console.warn('LocalStorage quota constraint detected, applying storage protection:', quotaErr);
+      try {
+        // If photos are large, store a lightweight profile in localStorage
+        const lightweightUser: UserProfile = {
+          ...user,
+          photos: (user.photos || []).slice(0, 2)
+        };
+        localStorage.setItem(this.userKey, JSON.stringify(lightweightUser));
+      } catch {
+        try {
+          const minimalUser: UserProfile = {
+            ...user,
+            photos: []
+          };
+          localStorage.setItem(this.userKey, JSON.stringify(minimalUser));
+        } catch {}
+      }
+    }
   }
 
   getCurrentUser(): UserProfile {

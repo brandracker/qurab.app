@@ -27,7 +27,7 @@ describe('Live Cloudflare Production Worker API Health & Verification Tests', ()
     expect(firstProfile.id).toBeDefined();
     expect(firstProfile.fullName).toBeDefined();
     expect(firstProfile.gender).toBeDefined();
-  });
+  }, 20000);
 
   it('3. Live Conversations endpoint returns 200 with active array', async () => {
     const res = await fetch(`${PROD_URL}/api/conversations?userId=usr_guest`);

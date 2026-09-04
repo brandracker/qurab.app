@@ -255,6 +255,71 @@ describe('Auth & Health API Integration Tests', () => {
     expect(data.user.isNewUser).toBe(false);
     expect(data.user.fullName).toBe('Fatima Noor');
   });
+
+  it('POST /api/auth/google-login creates a new user profile on initial Google Sign-In', async () => {
+    const payload = {
+      email: 'bilal.google@example.com',
+      fullName: 'Bilal Ahmed',
+      photoUrl: 'https://lh3.googleusercontent.com/a/test-photo',
+      googleUid: 'google_sub_108234'
+    };
+
+    const res = await app.request('/api/auth/google-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }, env);
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.token).toBeDefined();
+    expect(data.user.email).toBe('bilal.google@example.com');
+    expect(data.user.fullName).toBe('Bilal Ahmed');
+    expect(data.user.isNewUser).toBe(true);
+    expect(data.user.photos).toContain('https://lh3.googleusercontent.com/a/test-photo');
+  });
+
+  it('POST /api/auth/google-login returns full existing profile on returning Google user login', async () => {
+    const payload = {
+      email: 'bilal.google@example.com',
+      fullName: 'Bilal Ahmed'
+    };
+
+    // 1. Initial Google Sign-in
+    await app.request('/api/auth/google-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }, env);
+
+    // 2. Subsequent Google Sign-in
+    const res = await app.request('/api/auth/google-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }, env);
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.user.email).toBe('bilal.google@example.com');
+    expect(data.user.isNewUser).toBe(false);
+    expect(data.message).toBe('Welcome back!');
+  });
+
+  it('POST /api/auth/google-login rejects request without email', async () => {
+    const res = await app.request('/api/auth/google-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fullName: 'Missing Email' })
+    }, env);
+
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.success).toBe(false);
+    expect(data.error).toBe('Email is required from Google profile');
+  });
 });
 
 

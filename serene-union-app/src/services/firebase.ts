@@ -6,6 +6,7 @@ import {
   type ConfirmationResult,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithCredential,
   type UserCredential,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -25,6 +26,8 @@ export const firebaseConfig = {
   measurementId: "G-DB5QCW7F6W"
 };
 
+export const GOOGLE_CLIENT_ID = "865198689748-utp5e8o5g1445ja1hvnovot1l888vuhg.apps.googleusercontent.com";
+
 export const VAPID_KEY = "BGHcrtyFtJaBUbmCWaE7VMxekE2ucC8q_rnFlN7jAU7GuxEScNxK8B8LiqLTeu5KkwjLZqpjdcO_mpTU7Pbdt5c";
 
 // Initialize Firebase singleton
@@ -32,7 +35,15 @@ export const firebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig
 export const firebaseAuth = getAuth(firebaseApp);
 
 /**
- * Sign in with Google using Firebase Auth Popup
+ * Sign in with Google ID Token using Firebase Auth Credential (GSI - 0 popup hangs)
+ */
+export const signInWithGoogleIdToken = async (idToken: string): Promise<UserCredential> => {
+  const credential = GoogleAuthProvider.credential(idToken);
+  return await signInWithCredential(firebaseAuth, credential);
+};
+
+/**
+ * Sign in with Google using Firebase Auth Popup (Legacy fallback)
  */
 export const signInWithGoogle = async (): Promise<UserCredential> => {
   const provider = new GoogleAuthProvider();

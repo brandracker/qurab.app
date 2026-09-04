@@ -1,6 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Mail, Eye, EyeOff, ArrowRight, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { signInWithGoogle, signUpWithEmail, signInWithEmail, sendResetPasswordEmail } from '../services/firebase';
+import { 
+  signInWithGoogle, 
+  signInWithGoogleIdToken, 
+  GOOGLE_CLIENT_ID, 
+  signUpWithEmail, 
+  signInWithEmail, 
+  sendResetPasswordEmail 
+} from '../services/firebase';
 import { API_BASE } from '../services/dbService';
 
 interface Props {
@@ -23,6 +30,10 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack, initialTab 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Google Identity Services (GSI) Integration
+  const googleBtnRef = useRef<HTMLDivElement>(null);
+  const [gsiReady, setGsiReady] = useState(false);
 
   // Handle Email / Password Submit via Firebase Auth + D1 Sync
   const handleEmailSubmit = async (e: React.FormEvent) => {
@@ -139,8 +150,108 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack, initialTab 
     }
   };
 
-  // Google 1-Click Sign-In
+  // Google ID Token Handler via Google Identity Services (GSI - Instant & Never Hangs)
+  const handleGoogleIdToken = async (idToken: string) => {
+    setIsLoading(true);
+    setErrorMsg('');
+    try {
+      const creds = await signInWithGoogleIdToken(idToken);
+      const fbUser = creds.user;
+      const res = await fetch(`${API_BASE}/auth/email-sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: fbUser.email,
+          fullName: fbUser.displayName || 'Google Member',
+          gender,
+          firebaseUid: fbUser.uid,
+          isSignUp: false
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        onAuthSuccess({
+          token: data.token,
+          user: data.user,
+          isNewUser: Boolean(data.user?.isNewUser)
+        });
+      } else {
+        setErrorMsg(data.error || 'Google authentication failed.');
+      }
+    } catch (err: any) {
+      console.error('Google GSI Auth Error:', err);
+      setErrorMsg(err.message || 'Google Sign-In failed. Please try email & password.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Google Identity Services Initialization
+  useEffect(() => {
+    let isMounted = true;
+
+    const setupGsi = () => {
+      if (typeof window === 'undefined') return;
+      const google = (window as any).google;
+      if (google?.accounts?.id && googleBtnRef.current) {
+        try {
+          google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: (response: any) => {
+              if (response?.credential && isMounted) {
+                handleGoogleIdToken(response.credential);
+              }
+            },
+            auto_select: false,
+            cancel_on_tap_outside: true,
+          });
+
+          // Render official Google button
+          google.accounts.id.renderButton(googleBtnRef.current, {
+            theme: 'outline',
+            size: 'large',
+            text: 'continue_with',
+            shape: 'pill',
+            width: 320,
+            logo_alignment: 'left'
+          });
+
+          if (isMounted) setGsiReady(true);
+        } catch (err) {
+          console.warn('Google GSI render notice:', err);
+        }
+      }
+    };
+
+    setupGsi();
+    const timer = setInterval(() => {
+      if ((window as any).google?.accounts?.id && googleBtnRef.current) {
+        setupGsi();
+        clearInterval(timer);
+      }
+    }, 250);
+
+    const safetyTimeout = setTimeout(() => {
+      clearInterval(timer);
+    }, 4000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(timer);
+      clearTimeout(safetyTimeout);
+    };
+  }, [gender]);
+
+  // Google 1-Click Sign-In (Fallback to Popup if GSI is not loaded)
   const handleGoogleSignIn = async () => {
+    // If GSI is available, trigger prompt
+    const google = typeof window !== 'undefined' ? (window as any).google : null;
+    if (google?.accounts?.id) {
+      google.accounts.id.prompt();
+      return;
+    }
+
     setIsLoading(true);
     setErrorMsg('');
     try {
@@ -217,21 +328,29 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack, initialTab 
               : 'Sign in to continue your matrimonial journey.'}
           </p>
 
-          {/* Google 1-Click Sign-In */}
-          <button
-            type="button"
-            onClick={handleGoogleSignIn}
-            disabled={isLoading}
-            className="w-full py-3 px-4 rounded-2xl bg-white border border-outline hover:border-primary/40 hover:bg-surface-variant/40 text-on-surface font-sans text-xs font-bold shadow-subtle transition-all flex items-center justify-center gap-2.5 mb-3.5 active:scale-98 disabled:opacity-50 cursor-pointer"
-          >
-            <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-              <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
-              <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
-              <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
-              <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
-            </svg>
-            <span>Continue with Google</span>
-          </button>
+          {/* Google Sign-In Container (GSI Official + Fallback) */}
+          <div className="w-full flex flex-col items-center justify-center mb-3.5 min-h-[44px]">
+            <div 
+              ref={googleBtnRef} 
+              className={`w-full flex justify-center ${gsiReady ? 'block' : 'hidden'}`} 
+            />
+            {!gsiReady && (
+              <button
+                type="button"
+                onClick={handleGoogleSignIn}
+                disabled={isLoading}
+                className="w-full py-3 px-4 rounded-2xl bg-white border border-outline hover:border-primary/40 hover:bg-surface-variant/40 text-on-surface font-sans text-xs font-bold shadow-subtle transition-all flex items-center justify-center gap-2.5 active:scale-98 disabled:opacity-50 cursor-pointer"
+              >
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+                  <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
+                  <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+                  <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+                </svg>
+                <span>Continue with Google</span>
+              </button>
+            )}
+          </div>
 
           {/* Divider */}
           <div className="w-full flex items-center gap-3 mb-3.5">

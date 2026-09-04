@@ -169,6 +169,7 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack, initialTab 
         setErrorMsg(data.error || 'Google authentication failed.');
       }
     } catch (err: any) {
+      console.error('Google Sign-In Error:', err);
       if (err.code !== 'auth/popup-closed-by-user') {
         const detail = err.code ? ` (${err.code.replace('auth/', '')})` : '';
         setErrorMsg(`Google Sign-In failed${detail}. Please try email & password.`);

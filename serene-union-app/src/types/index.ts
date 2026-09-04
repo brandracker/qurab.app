@@ -70,6 +70,7 @@ export interface UserProfile {
   lastActive?: string;
   voiceGreetingUrl?: string;
   voiceGreetingDuration?: number;
+  isProfileCompleted?: boolean;
 }
 
 

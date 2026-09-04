@@ -25,7 +25,8 @@ export const sampleBrotherUser = {
   marriage_timeline: 'within_1_year',
   bio: 'Practicing Muslim focused on building a righteous family with Taqwa and Barakah.',
   blur_photos_by_default: 0,
-  profile_visibility: 'approved_only'
+  profile_visibility: 'approved_only',
+  is_profile_completed: 1
 };
 
 export const sampleSisterUser = {
@@ -55,7 +56,8 @@ export const sampleSisterUser = {
   marriage_timeline: 'within_1_year',
   bio: 'Seeking a practicing partner who values family, halal livelihood, and continuous learning.',
   blur_photos_by_default: 1,
-  profile_visibility: 'approved_only'
+  profile_visibility: 'approved_only',
+  is_profile_completed: 1
 };
 
 export const sampleBrotherReligious = {

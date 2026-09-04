@@ -52,12 +52,30 @@ export const App: React.FC = () => {
       return 'reset_password';
     }
     
-    // Check saved session in localStorage
+    // 1. Check if user has an ongoing onboarding draft in progress
+    const savedDraft = localStorage.getItem('serene_onboarding_draft_v1');
+    if (savedDraft) {
+      try {
+        const draft = JSON.parse(savedDraft);
+        if (draft?.step && draft.step !== 'main_app' && draft.step !== 'welcome') {
+          return draft.step;
+        }
+      } catch {}
+    }
+
+    // 2. Check saved session in localStorage
     const saved = localStorage.getItem('serene_current_user_v1');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed?.id && parsed.id !== 'usr_guest') return 'main_app';
+        if (parsed?.id && parsed.id !== 'usr_guest') {
+          // If profile is fully completed, allow into main_app
+          const isComplete = parsed.isProfileCompleted ?? (parsed.city || (parsed.location && parsed.location !== 'Global'));
+          if (isComplete) {
+            return 'main_app';
+          }
+          return 'basic_info';
+        }
       } catch {}
     }
     return 'welcome';
@@ -91,24 +109,47 @@ export const App: React.FC = () => {
   }, [currentUser.id]);
 
 
-  // Onboarding In-Progress Data
-  const [onboardingData, setOnboardingData] = useState<Record<string, any>>({});
+  // Onboarding In-Progress Data (persisted in draft)
+  const [onboardingData, setOnboardingData] = useState<Record<string, any>>(() => {
+    try {
+      const savedDraft = localStorage.getItem('serene_onboarding_draft_v1');
+      if (savedDraft) {
+        const parsed = JSON.parse(savedDraft);
+        if (parsed?.data) return parsed.data;
+      }
+    } catch {}
+    return {};
+  });
+
+  const goToStep = (step: OnboardingStep, nextData?: Record<string, any>) => {
+    const updated = nextData || onboardingData;
+    if (nextData) {
+      setOnboardingData(updated);
+    }
+    localStorage.setItem('serene_onboarding_draft_v1', JSON.stringify({ step, data: updated }));
+    setCurrentStep(step);
+  };
 
   const handleAuthSuccess = (session: { token: string; user: any; isNewUser: boolean }) => {
     const user = session.user;
-    if (session.isNewUser) {
+    const isProfileCompleted = user?.isProfileCompleted ?? (user?.city || (user?.location && user?.location !== 'Global'));
+    const needsOnboarding = session.isNewUser || !isProfileCompleted;
+
+    if (needsOnboarding) {
       setCurrentUser(dbService.getGuestUser());
-      setOnboardingData({
+      const initialDraft = {
         userId: user?.id,
         email: user?.email,
         fullName: user?.fullName,
         gender: user?.gender,
-        photos: [],
+        photos: user?.photos || [],
         sessionToken: session.token
-      });
+      };
+      setOnboardingData(initialDraft);
+      localStorage.setItem('serene_onboarding_draft_v1', JSON.stringify({ step: 'basic_info', data: initialDraft }));
       setCurrentStep('basic_info');
     } else {
-      // Existing user with saved profile
+      // Existing user with saved completed profile
       if (user) {
         const fullProfile: UserProfile = {
           id: user.id || 'usr_004',
@@ -117,8 +158,10 @@ export const App: React.FC = () => {
           fullName: user.fullName || 'Member',
           dob: user.dob || '1998-01-01',
           age: user.dob ? (new Date().getFullYear() - new Date(user.dob).getFullYear()) : 28,
-          gender: user.gender || (user.fullName?.toLowerCase().includes('zainab') || user.email?.toLowerCase().includes('zainab') || user.fullName?.toLowerCase().includes('fatima') || user.fullName?.toLowerCase().includes('maryam') || user.fullName?.toLowerCase().includes('aisha') ? 'female' : 'male'),
-          location: user.location || 'Lahore, Pakistan',
+          gender: user.gender || 'male',
+          location: user.location || user.city || 'Global',
+          city: user.city,
+          country: user.country,
           profession: user.profession || 'Professional',
           education: user.education || 'Graduate Degree',
           university: user.university || '',
@@ -126,14 +169,14 @@ export const App: React.FC = () => {
           ethnicity: user.ethnicity || 'South Asian',
           familyStructure: user.familyStructure || 'nuclear',
           livingPreference: user.livingPreference || 'independent',
-          siblingsCount: user.siblingsCount || 2,
+          siblingsCount: user.siblingsCount ?? 2,
           willingnessToRelocate: user.willingnessToRelocate || 'open',
           smokingStatus: user.smokingStatus || 'non_smoker',
           languagesSpoken: user.languagesSpoken || 'English, Urdu',
           mahrPhilosophy: user.mahrPhilosophy || 'mutual_agreement',
           childrenDesire: user.childrenDesire || 'desires_children',
           marriageTimeline: user.marriageTimeline || 'within_1_year',
-          bio: user.bio || 'Seeking half my deen.',
+          bio: user.bio || '',
           blurPhotosByDefault: Boolean(user.blurPhotosByDefault),
           profileVisibility: 'all_users',
           photos: user.photos?.length > 0 ? user.photos : [],
@@ -148,15 +191,16 @@ export const App: React.FC = () => {
             hajjUmrahStatus: user.religiousProfile?.hajjUmrahStatus || 'planning',
             deenRelationshipBio: user.religiousProfile?.deenRelationshipBio || user.bio
           },
-          wali: user.wali || null
+          wali: user.wali || null,
+          isProfileCompleted: true
         };
         setCurrentUser(fullProfile);
         dbService.setCurrentUser(fullProfile);
         dbService.fetchLiveProfiles();
       }
+      localStorage.removeItem('serene_onboarding_draft_v1');
       setCurrentStep('main_app');
       setActiveTab('discover');
-
     }
   };
 
@@ -205,7 +249,8 @@ export const App: React.FC = () => {
         modestyPractice: onboardingData.modestyPractice || 'modest',
         hajjUmrahStatus: onboardingData.hajjUmrahStatus || 'planning',
         deenRelationshipBio: onboardingData.bio
-      }
+      },
+      isProfileCompleted: true
     };
 
     try {
@@ -227,11 +272,13 @@ export const App: React.FC = () => {
       console.warn('Remote profile save notice:', err);
     }
 
+    localStorage.removeItem('serene_onboarding_draft_v1');
     setCurrentStep('main_app');
     setActiveTab('discover');
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('serene_onboarding_draft_v1');
     localStorage.removeItem('serene_current_user_v1');
     localStorage.removeItem('serene_auth_token');
     setCurrentUser(dbService.getGuestUser());
@@ -321,8 +368,7 @@ export const App: React.FC = () => {
             data={onboardingData as any}
             onBack={() => setCurrentStep('auth')}
             onContinue={(basicData: any) => {
-              setOnboardingData(prev => ({ ...prev, ...basicData }));
-              setCurrentStep('practice');
+              goToStep('practice', { ...onboardingData, ...basicData });
             }}
           />
         )}
@@ -331,10 +377,9 @@ export const App: React.FC = () => {
         {currentStep === 'practice' && (
           <ReligiousPracticeScreen
             data={onboardingData as any}
-            onBack={() => setCurrentStep('basic_info')}
+            onBack={() => goToStep('basic_info')}
             onContinue={(relData) => {
-              setOnboardingData(prev => ({ ...prev, ...relData }));
-              setCurrentStep('family_lifestyle');
+              goToStep('family_lifestyle', { ...onboardingData, ...relData });
             }}
           />
         )}
@@ -343,10 +388,9 @@ export const App: React.FC = () => {
         {currentStep === 'family_lifestyle' && (
           <FamilyLifestyleScreen
             data={onboardingData as any}
-            onBack={() => setCurrentStep('practice')}
+            onBack={() => goToStep('practice')}
             onNext={(famData) => {
-              setOnboardingData(prev => ({ ...prev, ...famData }));
-              setCurrentStep('career_intent');
+              goToStep('career_intent', { ...onboardingData, ...famData });
             }}
           />
         )}
@@ -355,10 +399,9 @@ export const App: React.FC = () => {
         {currentStep === 'career_intent' && (
           <YourIntentScreen
             data={onboardingData as any}
-            onBack={() => setCurrentStep('family_lifestyle')}
+            onBack={() => goToStep('family_lifestyle')}
             onContinue={(careerData) => {
-              setOnboardingData(prev => ({ ...prev, ...careerData }));
-              setCurrentStep('photos_modesty');
+              goToStep('photos_modesty', { ...onboardingData, ...careerData });
             }}
           />
         )}
@@ -369,7 +412,7 @@ export const App: React.FC = () => {
             userId={onboardingData.userId || currentUser.id}
             initialPhotos={onboardingData.photos || []}
             initialBlurPhotos={true}
-            onBack={() => setCurrentStep('career_intent')}
+            onBack={() => goToStep('career_intent')}
             onComplete={handleFinishOnboarding}
           />
         )}

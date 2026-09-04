@@ -54,6 +54,7 @@ export class MockD1Database {
         is_phone_verified BOOLEAN DEFAULT 0,
         is_id_verified BOOLEAN DEFAULT 0,
         is_vip BOOLEAN DEFAULT 0,
+        is_profile_completed BOOLEAN DEFAULT 1,
         voice_greeting_url TEXT,
         voice_greeting_duration INTEGER DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

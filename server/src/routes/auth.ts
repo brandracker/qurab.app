@@ -24,8 +24,8 @@ authRouter.post('/signup', async (c) => {
     const userGender = gender === 'female' ? 'female' : (gender === 'male' ? 'male' : (name.toLowerCase().includes('zainab') || name.toLowerCase().includes('fatima') || name.toLowerCase().includes('maryam') || name.toLowerCase().includes('aisha') ? 'female' : 'male'));
 
     await c.env.DB.prepare(`
-      INSERT INTO users (id, phone, email, password_hash, full_name, dob, gender, location, marriage_timeline, blur_photos_by_default)
-      VALUES (?, ?, ?, ?, ?, '1998-01-01', ?, 'Global', 'within_1_year', 1)
+      INSERT INTO users (id, phone, email, password_hash, full_name, dob, gender, location, marriage_timeline, blur_photos_by_default, is_profile_completed)
+      VALUES (?, ?, ?, ?, ?, '1998-01-01', ?, 'Global', 'within_1_year', 1, 0)
     `).bind(userId, cleanEmail, cleanEmail, passwordHash, name, userGender).run();
 
     const sessionToken = generateSessionToken(userId);
@@ -39,7 +39,8 @@ authRouter.post('/signup', async (c) => {
         email: cleanEmail,
         fullName: name,
         gender: userGender,
-        isNewUser: true
+        isNewUser: true,
+        isProfileCompleted: false
       }
     });
 
@@ -121,7 +122,8 @@ authRouter.post('/login', async (c) => {
         },
         photos: (photos || []).map((p: any) => p.photo_url),
         wali: user.waliName ? { name: user.waliName, phone: user.waliPhone, relationship: user.waliRelationship } : null,
-        isNewUser: false
+        isNewUser: false,
+        isProfileCompleted: user.is_profile_completed === 1 || (user.is_profile_completed === null && user.location !== 'Global' && user.full_name !== 'New Member')
       }
     });
   } catch (error: any) {
@@ -246,8 +248,8 @@ authRouter.post('/google-login', async (c) => {
       const name = fullName?.trim() || cleanEmail.split('@')[0];
 
       await c.env.DB.prepare(`
-        INSERT INTO users (id, phone, email, full_name, dob, gender, location, marriage_timeline, blur_photos_by_default)
-        VALUES (?, ?, ?, ?, '1998-01-01', 'male', 'Global', 'within_1_year', 1)
+        INSERT INTO users (id, phone, email, full_name, dob, gender, location, marriage_timeline, blur_photos_by_default, is_profile_completed)
+        VALUES (?, ?, ?, ?, '1998-01-01', 'male', 'Global', 'within_1_year', 1, 0)
       `).bind(userId, cleanEmail, cleanEmail, name).run();
 
       if (photoUrl) {
@@ -264,7 +266,8 @@ authRouter.post('/google-login', async (c) => {
         dob: '1998-01-01',
         gender: 'male',
         location: 'Global',
-        isNewUser: true
+        isNewUser: true,
+        is_profile_completed: 0
       };
     }
 
@@ -273,6 +276,8 @@ authRouter.post('/google-login', async (c) => {
     `).bind(user.id).all();
 
     const sessionToken = generateSessionToken(user.id);
+    const isProfileCompleted = user.is_profile_completed === 1 || (user.is_profile_completed === null && user.location !== 'Global' && user.full_name !== 'New Member');
+    const needsOnboarding = isNewUser || !isProfileCompleted;
 
     return c.json({
       success: true,
@@ -290,7 +295,9 @@ authRouter.post('/google-login', async (c) => {
         profession: user.profession,
         education: user.education,
         photos: (photos || []).map((p: any) => p.photo_url),
-        isNewUser
+        isNewUser: Boolean(isNewUser),
+        isProfileCompleted,
+        needsOnboarding
       }
     });
   } catch (error: any) {
@@ -331,8 +338,8 @@ authRouter.post('/email-sync', async (c) => {
       const userGender = gender === 'female' ? 'female' : (gender === 'male' ? 'male' : (name.toLowerCase().includes('zainab') || name.toLowerCase().includes('fatima') || name.toLowerCase().includes('maryam') || name.toLowerCase().includes('aisha') ? 'female' : 'male'));
 
       await c.env.DB.prepare(`
-        INSERT INTO users (id, phone, email, full_name, dob, gender, location, marriage_timeline, blur_photos_by_default)
-        VALUES (?, ?, ?, ?, '1998-01-01', ?, 'Global', 'within_1_year', 1)
+        INSERT INTO users (id, phone, email, full_name, dob, gender, location, marriage_timeline, blur_photos_by_default, is_profile_completed)
+        VALUES (?, ?, ?, ?, '1998-01-01', ?, 'Global', 'within_1_year', 1, 0)
       `).bind(userId, cleanEmail, cleanEmail, name, userGender).run();
 
       user = {
@@ -342,7 +349,8 @@ authRouter.post('/email-sync', async (c) => {
         dob: '1998-01-01',
         gender: userGender,
         location: 'Global',
-        isNewUser: true
+        isNewUser: true,
+        is_profile_completed: 0
       };
     }
 
@@ -351,6 +359,8 @@ authRouter.post('/email-sync', async (c) => {
     `).bind(user.id).all();
 
     const sessionToken = generateSessionToken(user.id);
+    const isProfileCompleted = user.is_profile_completed === 1 || (user.is_profile_completed === null && user.location !== 'Global' && user.full_name !== 'New Member');
+    const needsOnboarding = isNewUser || !isProfileCompleted;
 
     return c.json({
       success: true,
@@ -391,7 +401,9 @@ authRouter.post('/email-sync', async (c) => {
         } : undefined,
         photos: (photos || []).map((p: any) => p.photo_url),
         wali: user.waliName ? { name: user.waliName, phone: user.waliPhone, relationship: user.waliRelationship } : null,
-        isNewUser
+        isNewUser: Boolean(isNewUser),
+        isProfileCompleted,
+        needsOnboarding
       }
     });
   } catch (error: any) {

@@ -215,5 +215,50 @@ describe('Profiles & Discovery API Integration Tests', () => {
     expect(filteredData.profiles.some((p: any) => p.id === 'cand_manchester')).toBe(true);
     expect(filteredData.profiles.some((p: any) => p.id === 'cand_dubai')).toBe(false);
   });
+
+  it('GET /api/profiles/discover strictly excludes accounts with incomplete onboarding (is_profile_completed = 0)', async () => {
+    const viewerId = 'usr_brother_test_guard';
+    await env.DB.prepare(`
+      INSERT INTO users (id, phone, full_name, dob, gender, location, is_profile_completed)
+      VALUES ('${viewerId}', '+15550009999', 'Brother Viewer', '1995-01-01', 'male', 'London, UK', 1)
+    `).run();
+
+    // Incomplete user who dropped out during onboarding
+    const incompleteUserId = 'usr_sister_incomplete_999';
+    await env.DB.prepare(`
+      INSERT INTO users (id, phone, email, full_name, dob, gender, location, is_profile_completed)
+      VALUES ('${incompleteUserId}', '+15550008888', 'incomplete@example.com', 'Sister Incomplete', '1998-01-01', 'female', 'London, UK', 0)
+    `).run();
+
+    const res = await app.request(`/api/profiles/discover?userId=${viewerId}`, { method: 'GET' }, env);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+
+    // The incomplete user MUST NOT appear in Discover feed
+    const foundIncomplete = data.profiles.some((p: any) => p.id === incompleteUserId);
+    expect(foundIncomplete).toBe(false);
+
+    // Now user completes onboarding
+    await app.request('/api/users/complete-onboarding', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: incompleteUserId,
+        fullName: 'Sister Completed',
+        dob: '1998-01-01',
+        gender: 'female',
+        city: 'London',
+        country: 'United Kingdom',
+        practiceLevel: 'practicing'
+      })
+    }, env);
+
+    // Now check discover again -> completed user MUST now appear
+    const secondRes = await app.request(`/api/profiles/discover?userId=${viewerId}`, { method: 'GET' }, env);
+    const secondData = await secondRes.json();
+    const foundNow = secondData.profiles.some((p: any) => p.id === incompleteUserId);
+    expect(foundNow).toBe(true);
+  });
 });
+
 

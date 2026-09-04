@@ -33,6 +33,7 @@ usersRouter.post('/complete-onboarding', async (c) => {
           living_preference = ?, siblings_count = ?, willingness_to_relocate = ?,
           smoking_status = ?, languages_spoken = ?, mahr_philosophy = ?,
           children_desire = ?, blur_photos_by_default = ?, marriage_timeline = ?,
+          is_profile_completed = 1,
           updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).bind(
@@ -305,8 +306,11 @@ profilesRouter.get('/discover', async (c) => {
       FROM users u
       LEFT JOIN religious_profiles rp ON u.id = rp.user_id
       LEFT JOIN wali_details w ON u.id = w.user_id
-      WHERE u.id != ? AND (u.full_name != 'New Member' OR u.full_name IS NULL)
-      ${genderFilter}
+      WHERE u.id != ? 
+        AND (u.full_name != 'New Member' OR u.full_name IS NULL)
+        AND (u.is_profile_completed != 0 OR u.is_profile_completed IS NULL)
+        AND (u.is_profile_completed = 1 OR (u.location != 'Global' AND u.location IS NOT NULL))
+        ${genderFilter}
       ${geoFilter}
       ORDER BY u.is_vip DESC, u.created_at DESC
     `;
@@ -461,8 +465,9 @@ profilesRouter.post('/', async (c) => {
         id, phone, email, full_name, dob, gender, location, city, country, latitude, longitude, height, bio,
         profession, education, university, family_structure, living_preference,
         siblings_count, willingness_to_relocate, smoking_status, languages_spoken,
-        mahr_philosophy, children_desire, blur_photos_by_default, marriage_timeline
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        mahr_philosophy, children_desire, blur_photos_by_default, marriage_timeline,
+        is_profile_completed
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
       ON CONFLICT(id) DO UPDATE SET
         full_name = excluded.full_name,
         dob = excluded.dob,
@@ -487,6 +492,7 @@ profilesRouter.post('/', async (c) => {
         children_desire = excluded.children_desire,
         blur_photos_by_default = excluded.blur_photos_by_default,
         marriage_timeline = excluded.marriage_timeline,
+        is_profile_completed = 1,
         updated_at = CURRENT_TIMESTAMP
     `).bind(
       targetUserId,

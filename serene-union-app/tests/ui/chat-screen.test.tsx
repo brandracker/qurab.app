@@ -4,7 +4,7 @@ import React from 'react';
 import { ChatScreen } from '../../src/components/ChatScreen';
 import { dbService } from '../../src/services/dbService';
 
-describe('UI & Button Interactions: Chaperoned Chat Screen', () => {
+describe('UI & Button Interactions: Matrimonial Chat Screen', () => {
   const currentUser = {
     id: 'usr_me',
     fullName: 'Ahmed Farooq',
@@ -28,11 +28,7 @@ describe('UI & Button Interactions: Chaperoned Chat Screen', () => {
     education: 'PharmD',
     marriageTimeline: 'within_1_year' as const,
     bio: 'Partner bio',
-    photos: ['https://example.com/aisha.jpg'],
-    wali: {
-      name: 'Tariq Malik',
-      relationship: 'Father'
-    }
+    photos: ['https://example.com/aisha.jpg']
   };
 
   beforeEach(() => {
@@ -41,7 +37,7 @@ describe('UI & Button Interactions: Chaperoned Chat Screen', () => {
     dbService.createMatchConversation(partnerUser);
   });
 
-  it('1. Loads conversation, displays partner info and Wali chaperone header', () => {
+  it('1. Loads conversation, displays partner info and biodata action', () => {
     const handleBack = vi.fn();
     render(
       <ChatScreen

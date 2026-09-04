@@ -170,7 +170,8 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack, initialTab 
       }
     } catch (err: any) {
       if (err.code !== 'auth/popup-closed-by-user') {
-        setErrorMsg('Google Sign-In failed. Please try email & password.');
+        const detail = err.code ? ` (${err.code.replace('auth/', '')})` : '';
+        setErrorMsg(`Google Sign-In failed${detail}. Please try email & password.`);
       }
     } finally {
       setIsLoading(false);
@@ -408,7 +409,10 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack, initialTab 
 
       {/* Footer */}
       <footer className="w-full text-center py-1 text-[10px] text-secondary">
-        By continuing, you agree to Qurab's <span className="underline font-medium">Halal Code & Privacy Policy</span>.
+        By continuing, you agree to Qurab's{' '}
+        <a href="/terms" className="underline font-medium hover:text-primary transition-colors">Terms of Service</a>
+        {' '}&{' '}
+        <a href="/privacy-policy" className="underline font-medium hover:text-primary transition-colors">Privacy Policy</a>.
       </footer>
     </div>
   );

@@ -15,12 +15,16 @@ import { MatchesLikedYouScreen } from './components/MatchesLikedYouScreen';
 import { ChatScreen } from './components/ChatScreen';
 import { SettingsPrivacy } from './components/SettingsPrivacy';
 import { ResetPasswordScreen } from './screens/ResetPasswordScreen';
+import { PrivacyPolicyScreen } from './screens/PrivacyPolicyScreen';
+import { TermsScreen } from './screens/TermsScreen';
 import { dbService, API_BASE } from './services/dbService';
 
 type OnboardingStep = 
   | 'welcome' 
   | 'auth' 
   | 'reset_password'
+  | 'privacy_policy'
+  | 'terms'
   | 'basic_info' 
   | 'practice' 
   | 'family_lifestyle' 
@@ -38,6 +42,10 @@ export const App: React.FC = () => {
   });
 
   const [currentStep, setCurrentStep] = useState<OnboardingStep>(() => {
+    const path = window.location.pathname.toLowerCase();
+    if (path.includes('privacy')) return 'privacy_policy';
+    if (path.includes('terms')) return 'terms';
+
     const params = new URLSearchParams(window.location.search);
     if (params.get('view') === 'wali_portal') return 'wali_portal';
     if (params.get('mode') === 'resetPassword' || (params.get('oobCode') && params.get('mode') !== 'verifyEmail')) {
@@ -283,6 +291,26 @@ export const App: React.FC = () => {
             onComplete={() => {
               window.history.replaceState({}, document.title, window.location.pathname);
               setCurrentStep('auth');
+            }}
+          />
+        )}
+
+        {/* STEP 0.7: PUBLIC PRIVACY POLICY SCREEN */}
+        {currentStep === 'privacy_policy' && (
+          <PrivacyPolicyScreen
+            onBack={() => {
+              window.history.pushState({}, '', '/');
+              setCurrentStep(currentUser?.id && currentUser.id !== 'usr_guest' ? 'main_app' : 'welcome');
+            }}
+          />
+        )}
+
+        {/* STEP 0.8: PUBLIC TERMS OF SERVICE SCREEN */}
+        {currentStep === 'terms' && (
+          <TermsScreen
+            onBack={() => {
+              window.history.pushState({}, '', '/');
+              setCurrentStep(currentUser?.id && currentUser.id !== 'usr_guest' ? 'main_app' : 'welcome');
             }}
           />
         )}

@@ -25,9 +25,10 @@ import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback;
 public class AdMobPlugin extends Plugin {
     private static final String TAG = "AdMobPlugin";
 
-    // Google's Official Universal Rewarded Video Test Ad Unit ID
-    // Guaranteed to fill 100% on any Android device globally!
-    private static final String TEST_REWARDED_AD_UNIT_ID = "ca-app-pub-3940256099942544/5224354917";
+    // User's Live Qurb AdMob Rewarded Ad Unit ID
+    private static final String LIVE_REWARDED_AD_UNIT_ID = "ca-app-pub-9708959884639275/8907152102";
+    // Google's Official Universal Sample Unit ID (for initial propagation warmup)
+    private static final String SAMPLE_REWARDED_AD_UNIT_ID = "ca-app-pub-3940256099942544/5224354917";
 
     private RewardedAd rewardedAd = null;
     private boolean isInitializing = false;
@@ -44,7 +45,7 @@ public class AdMobPlugin extends Plugin {
         isInitializing = true;
 
         MobileAds.initialize(getContext(), initializationStatus -> {
-            Log.d(TAG, "Google AdMob MobileAds initialized successfully.");
+            Log.d(TAG, "Google AdMob MobileAds initialized successfully with App ID: ca-app-pub-9708959884639275~9081929429");
             preloadRewardedAd(null, null);
         });
     }
@@ -56,14 +57,21 @@ public class AdMobPlugin extends Plugin {
         }
 
         isLoading = true;
+        loadWithUnitId(LIVE_REWARDED_AD_UNIT_ID, onSuccess, () -> {
+            Log.d(TAG, "Live unit still warming up on AdMob servers. Preloading sample unit for instant test...");
+            loadWithUnitId(SAMPLE_REWARDED_AD_UNIT_ID, onSuccess, onFailure);
+        });
+    }
+
+    private void loadWithUnitId(final String adUnitId, final Runnable onSuccess, final Runnable onFailure) {
         AdRequest adRequest = new AdRequest.Builder().build();
 
-        RewardedAd.load(getContext(), TEST_REWARDED_AD_UNIT_ID, adRequest, new RewardedAdLoadCallback() {
+        RewardedAd.load(getContext(), adUnitId, adRequest, new RewardedAdLoadCallback() {
             @Override
             public void onAdLoaded(@NonNull RewardedAd ad) {
                 rewardedAd = ad;
                 isLoading = false;
-                Log.d(TAG, "Google AdMob Rewarded Video successfully loaded and cached!");
+                Log.d(TAG, "Google AdMob Rewarded Video successfully loaded: " + adUnitId);
                 if (onSuccess != null) {
                     onSuccess.run();
                 }
@@ -73,7 +81,7 @@ public class AdMobPlugin extends Plugin {
             public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
                 rewardedAd = null;
                 isLoading = false;
-                Log.e(TAG, "Google AdMob failed to load: " + loadAdError.getMessage());
+                Log.w(TAG, "Google AdMob unit failed to load (" + adUnitId + "): " + loadAdError.getMessage());
                 if (onFailure != null) {
                     onFailure.run();
                 }

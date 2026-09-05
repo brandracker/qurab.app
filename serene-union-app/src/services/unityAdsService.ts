@@ -6,6 +6,7 @@
  * - Format: Rewarded Video
  */
 
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { API_BASE } from './dbService';
 
 export interface UnityAdsConfig {
@@ -21,67 +22,52 @@ export const UNITY_ADS_CONFIG: UnityAdsConfig = {
   placementId: 'Rewarded_Android',
   adFormat: 'Rewarded',
   appName: 'Qurb',
-  testMode: false
+  testMode: true
 };
+
+interface UnityAdsPluginInterface {
+  showRewardedAd(options: { userId: string; rewardType: string }): Promise<{ rewarded: boolean; userId: string; rewardType: string }>;
+  isAdReady(): Promise<{ ready: boolean }>;
+}
+
+const UnityAdsNative = registerPlugin<UnityAdsPluginInterface>('UnityAdsPlugin');
 
 class UnityAdsService {
   private config: UnityAdsConfig = UNITY_ADS_CONFIG;
-  private isInitialized: boolean = false;
 
   public getConfig(): UnityAdsConfig {
     return this.config;
   }
 
   /**
-   * Check if running in a native Android wrapper with Unity Ads native bridge
+   * Check if running in a native Android app
    */
   public isNativeBridgeAvailable(): boolean {
-    return Boolean(
-      (window as any).AndroidUnityAds?.showRewardedAd ||
-      (window as any).UnityAds || 
-      (window as any).Capacitor?.Plugins?.UnityAds ||
-      (window as any).AndroidBridge?.showRewardedAd
-    );
-  }
-
-  /**
-   * Show native Android Unity Ads Rewarded Video
-   */
-  public showNativeRewardedAd(userId: string, rewardType: 'likes' | 'salam' | 'messages' | 'photo_unblur' = 'likes'): Promise<boolean> {
-    return new Promise((resolve) => {
-      if ((window as any).AndroidUnityAds?.showRewardedAd) {
-        const handler = (_e: any) => {
-          window.removeEventListener('unity_ad_completed', handler);
-          this.claimReward(userId, rewardType).then(() => resolve(true));
-        };
-        window.addEventListener('unity_ad_completed', handler);
-        (window as any).AndroidUnityAds.showRewardedAd(userId, rewardType);
-      } else {
-        resolve(false);
-      }
-    });
+    return Capacitor.isNativePlatform();
   }
 
   /**
    * Initialize Unity Ads SDK
    */
   public async initialize(): Promise<boolean> {
-    if (this.isInitialized) return true;
+    return true;
+  }
+
+  /**
+   * Show native Android Unity Ads Fullscreen Rewarded Video
+   */
+  public async showNativeRewardedAd(userId: string, rewardType: 'likes' | 'salam' | 'messages' | 'photo_unblur' = 'likes'): Promise<boolean> {
+    if (!Capacitor.isNativePlatform()) return false;
 
     try {
-      if (this.isNativeBridgeAvailable()) {
-        const nativeAds = (window as any).UnityAds || (window as any).Capacitor?.Plugins?.UnityAds;
-        if (nativeAds?.initialize) {
-          await nativeAds.initialize({
-            gameId: this.config.gameId,
-            testMode: this.config.testMode
-          });
-        }
+      const res = await UnityAdsNative.showRewardedAd({ userId, rewardType });
+      if (res?.rewarded) {
+        await this.claimReward(userId, rewardType);
+        return true;
       }
-      this.isInitialized = true;
-      return true;
-    } catch (error) {
-      console.warn('Unity Ads initialization warning:', error);
+      return false;
+    } catch (err) {
+      console.warn('Native Unity Ads playback notice:', err);
       return false;
     }
   }

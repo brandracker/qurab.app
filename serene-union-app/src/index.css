@@ -1,6 +1,11 @@
 @import "tailwindcss";
 @config "../tailwind.config.js";
 
+*, *::before, *::after {
+  -webkit-tap-highlight-color: transparent !important;
+  -webkit-touch-callout: none;
+}
+
 @layer base {
   body {
     font-family: 'Raleway', 'Plus Jakarta Sans', sans-serif;

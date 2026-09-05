@@ -1,6 +1,8 @@
 package app.qurb.serene;
 
 import android.util.Log;
+import android.widget.Toast;
+
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -18,8 +20,8 @@ public class UnityAdsPlugin extends Plugin implements IUnityAdsInitializationLis
     private static final String GAME_ID = "800368124";
     private static final String REWARDED_PLACEMENT_ID = "Rewarded_Android";
 
-    // During development before official Google Play Store verification,
-    // testMode MUST be true so Unity Ads servers deliver real test video commercials!
+    // testMode must be true for debug APK builds so Unity Ads servers deliver test commercials
+    // before official Google Play Store verification!
     private static final boolean TEST_MODE = true;
 
     private boolean isInitialized = false;
@@ -40,8 +42,8 @@ public class UnityAdsPlugin extends Plugin implements IUnityAdsInitializationLis
     @Override
     public void onInitializationComplete() {
         isInitialized = true;
-        Log.d(TAG, "Unity Ads Initialization Complete! Loading rewarded ad...");
-        loadRewardedAd();
+        Log.d(TAG, "Unity Ads Initialization Complete! Pre-buffering rewarded ad...");
+        loadRewardedAd(null);
     }
 
     @Override
@@ -49,27 +51,74 @@ public class UnityAdsPlugin extends Plugin implements IUnityAdsInitializationLis
         Log.e(TAG, "Unity Ads Initialization Failed: " + error + " - " + message);
     }
 
-    private void loadRewardedAd() {
+    private void loadRewardedAd(final Runnable onLoaded) {
+        loadRewardedAd(onLoaded, null);
+    }
+
+    private void loadRewardedAd(final Runnable onLoaded, final Runnable onFailed) {
         UnityAds.load(REWARDED_PLACEMENT_ID, new IUnityAdsLoadListener() {
             @Override
             public void onUnityAdsAdLoaded(String placementId) {
                 isAdLoaded = true;
-                Log.d(TAG, "Unity Rewarded Ad successfully loaded: " + placementId);
+                Log.d(TAG, "Unity Rewarded Ad loaded successfully: " + placementId);
+                if (onLoaded != null) {
+                    onLoaded.run();
+                }
             }
 
             @Override
             public void onUnityAdsFailedToLoad(String placementId, UnityAds.UnityAdsLoadError error, String message) {
                 isAdLoaded = false;
                 Log.e(TAG, "Unity Ad Failed To Load: " + error + " - " + message);
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(getContext(), "Unity Ad Buffering: " + message, Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
+                if (onFailed != null) {
+                    onFailed.run();
+                }
             }
         });
     }
 
     @PluginMethod
-    public void showRewardedAd(PluginCall call) {
+    public void showRewardedAd(final PluginCall call) {
         final String userId = call.getString("userId", "");
         final String rewardType = call.getString("rewardType", "likes");
 
+        initUnityAds();
+
+        if (isAdLoaded) {
+            displayAd(call, userId, rewardType);
+        } else {
+            if (getActivity() != null) {
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Toast.makeText(getContext(), "Loading sponsor video, please wait...", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
+
+            loadRewardedAd(new Runnable() {
+                @Override
+                public void run() {
+                    displayAd(call, userId, rewardType);
+                }
+            }, new Runnable() {
+                @Override
+                public void run() {
+                    call.reject("Unity ad is still buffering. Please try again in a few moments.");
+                }
+            });
+        }
+    }
+
+    private void displayAd(final PluginCall call, final String userId, final String rewardType) {
         getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -82,14 +131,17 @@ public class UnityAdsPlugin extends Plugin implements IUnityAdsInitializationLis
                         ret.put("userId", userId);
                         ret.put("rewardType", rewardType);
                         call.resolve(ret);
-                        loadRewardedAd();
+                        isAdLoaded = false;
+                        loadRewardedAd(null);
                     }
 
                     @Override
                     public void onUnityAdsShowFailure(String placementId, UnityAds.UnityAdsShowError error, String message) {
                         Log.e(TAG, "Unity Ad Show Failure: " + error + " - " + message);
-                        call.reject("Unity Ad failed to show: " + message);
-                        loadRewardedAd();
+                        Toast.makeText(getContext(), "Unity Ad Notice: " + message, Toast.LENGTH_LONG).show();
+                        call.reject("Unity Ad show error: " + message);
+                        isAdLoaded = false;
+                        loadRewardedAd(null);
                     }
 
                     @Override

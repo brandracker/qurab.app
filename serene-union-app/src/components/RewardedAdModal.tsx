@@ -27,8 +27,8 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes',
       unityAdsService.showNativeRewardedAd(userId, rewardType).then((rewarded) => {
         if (rewarded) {
           onRewardClaimed();
-          onClose();
         }
+        onClose();
       });
       return;
     }
@@ -51,6 +51,11 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes',
   }, [isOpen]);
 
   if (!isOpen) return null;
+
+  // On Native Mobile, Unity Ads runs in native full-screen; do not render web fallback dialog
+  if (unityAdsService.isNativeBridgeAvailable()) {
+    return null;
+  }
 
   const handleClaim = async () => {
     try {

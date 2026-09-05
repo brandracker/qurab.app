@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import confetti from 'canvas-confetti';
 import { 
   Search, 
   SlidersHorizontal, 
@@ -226,14 +225,6 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches, onOpe
     });
     setCurrentPhotoIdx(0);
     setActiveTab('deen');
-
-    // Playful matrimonial confetti
-    confetti({
-      particleCount: 30,
-      spread: 60,
-      origin: { y: 0.8 },
-      colors: ['#FF2560', '#FCD34D', '#F472B6', '#10B981']
-    });
 
     const result = await dbService.sendMatchAction(profile.id, 'liked');
     if (result.isMutual) {
@@ -478,7 +469,7 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches, onOpe
             </button>
           </div>
         ) : (
-          <div className="w-full flex flex-col flex-1 justify-between gap-2.5 animate-fade-in">
+          <div className="w-full flex flex-col flex-1 justify-between gap-2.5 hardware-accelerated">
             {/* Card Shell */}
             <article className="w-full bg-white rounded-3xl overflow-hidden border border-outline shadow-card flex flex-col">
               {/* Top Photo Header (Enlarged & Prominent) */}
@@ -909,12 +900,6 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches, onOpe
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    confetti({
-                      particleCount: 30,
-                      spread: 60,
-                      origin: { y: 0.8 },
-                      colors: ['#38BDF8', '#818CF8', '#FF2560']
-                    });
                     const conv = dbService.createMatchConversation(currentProfile);
                     notificationService.addNotification({
                       type: 'salam',

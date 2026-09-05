@@ -44,4 +44,12 @@
   scrollbar-width: none;
 }
 
+/* GPU Hardware Acceleration to prevent Android WebView screen blinking */
+.hardware-accelerated {
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
 

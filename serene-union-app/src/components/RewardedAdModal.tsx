@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Volume2, VolumeX, X, PlayCircle, Gift, CheckCircle2, ShieldCheck, Sparkles } from 'lucide-react';
-import { unityAdsService, UNITY_ADS_CONFIG } from '../services/unityAdsService';
+import { admobService, ADMOB_CONFIG } from '../services/admobService';
 
 interface Props {
   userId: string;
@@ -24,7 +24,23 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes',
       return;
     }
 
-    // Direct, reliable 5-second sponsor countdown
+    // If on native Android, attempt real Google AdMob full-screen rewarded video
+    if (admobService.isNativeBridgeAvailable()) {
+      admobService.isAdReady().then((ready) => {
+        if (ready) {
+          admobService.showRewardedAd(userId, rewardType).then((rewarded) => {
+            if (rewarded) {
+              onRewardClaimed();
+              onClose();
+            }
+          }).catch(() => {
+            // Keep fallback countdown running
+          });
+        }
+      }).catch(() => {});
+    }
+
+    // Direct, reliable 5-second countdown (guaranteed to never block or hang)
     const timer = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
@@ -45,11 +61,21 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes',
     if (isClaiming) return;
     setIsClaiming(true);
     try {
-      await unityAdsService.claimReward(userId, rewardType);
+      await admobService.claimReward(userId, rewardType);
     } catch {}
 
     onRewardClaimed();
     onClose();
+  };
+
+  const handleLaunchNativeAdMob = async () => {
+    if (admobService.isNativeBridgeAvailable()) {
+      const rewarded = await admobService.showRewardedAd(userId, rewardType);
+      if (rewarded) {
+        onRewardClaimed();
+        onClose();
+      }
+    }
   };
 
   const getRewardTitle = () => {
@@ -65,7 +91,7 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes',
         <div className="p-3.5 bg-surface-variant flex items-center justify-between border-b border-outline">
           <div className="flex items-center gap-2">
             <span className="bg-pastel-amber text-pastel-amber-text border border-pastel-amber-border text-[10px] font-bold px-2 py-0.5 rounded-full font-mono uppercase tracking-wide">
-              Unity Ads · Rewarded Sponsor
+              Google AdMob · Rewarded Sponsor
             </span>
             <span className="text-xs font-bold text-on-surface">
               {isCompleted ? 'Reward Unlocked!' : `Reward in: ${timeLeft}s`}
@@ -97,9 +123,14 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes',
           <div className="absolute -bottom-12 -right-12 w-36 h-36 bg-gold/20 rounded-full blur-xl pointer-events-none" />
 
           <div className="relative z-10 flex flex-col items-center">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-primary to-rose-400 text-white flex items-center justify-center mb-3 shadow-brand animate-pulse">
+            <button
+              type="button"
+              onClick={handleLaunchNativeAdMob}
+              className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-primary to-rose-400 text-white flex items-center justify-center mb-3 shadow-brand animate-pulse cursor-pointer hover:scale-105 active:scale-95 transition-transform"
+              title="Play Video Ad"
+            >
               <PlayCircle className="w-8 h-8" />
-            </div>
+            </button>
 
             <h3 className="font-serif text-lg font-bold text-white mb-1 flex items-center gap-1.5">
               Qurab Islamic Matrimony
@@ -112,7 +143,7 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes',
 
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-white/90 text-[10px] font-mono border border-white/20 backdrop-blur-none">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Unity Placement: {UNITY_ADS_CONFIG.placementId} ({UNITY_ADS_CONFIG.gameId})</span>
+              <span>AdMob Unit: {ADMOB_CONFIG.rewardedAdUnitId.slice(0, 23)}...</span>
             </div>
           </div>
 

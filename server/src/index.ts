@@ -9,6 +9,7 @@ import { photosRouter } from './routes/photos';
 import { waliRouter } from './routes/wali';
 import { compatibilityRouter } from './routes/compatibility';
 import { walletRouter } from './routes/wallet';
+import { notificationsRouter } from './routes/notifications';
 
 const app = new Hono<AppContext>();
 
@@ -66,6 +67,7 @@ app.route('/api/photos', photosRouter);
 app.route('/api/wali', waliRouter);
 app.route('/api/compatibility', compatibilityRouter);
 app.route('/api/wallet', walletRouter);
+app.route('/api/notifications', notificationsRouter);
 
 // Global 404 & Error Handler
 app.notFound((c) => {

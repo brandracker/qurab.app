@@ -17,7 +17,9 @@ import { SettingsPrivacy } from './components/SettingsPrivacy';
 import { ResetPasswordScreen } from './screens/ResetPasswordScreen';
 import { PrivacyPolicyScreen } from './screens/PrivacyPolicyScreen';
 import { TermsScreen } from './screens/TermsScreen';
+import { NotificationsScreen } from './screens/NotificationsScreen';
 import { dbService, API_BASE } from './services/dbService';
+import { notificationService } from './services/notificationService';
 
 type OnboardingStep = 
   | 'welcome' 
@@ -30,8 +32,7 @@ type OnboardingStep =
   | 'family_lifestyle' 
   | 'career_intent' 
   | 'photos_modesty' 
-  | 'main_app' 
-  | 'wali_portal';
+  | 'main_app';
 
 type MainTab = 'discover' | 'matches' | 'chat' | 'my_profile' | 'settings';
 
@@ -47,7 +48,6 @@ export const App: React.FC = () => {
     if (path.includes('terms')) return 'terms';
 
     const params = new URLSearchParams(window.location.search);
-    if (params.get('view') === 'wali_portal') return 'wali_portal';
     if (params.get('mode') === 'resetPassword' || (params.get('oobCode') && params.get('mode') !== 'verifyEmail')) {
       return 'reset_password';
     }
@@ -84,11 +84,22 @@ export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<MainTab>('discover');
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
   const [authInitialTab, setAuthInitialTab] = useState<'signup' | 'login'>('signup');
+  const [showNotifications, setShowNotifications] = useState<boolean>(false);
+  const [hasUnreadNotifs, setHasUnreadNotifs] = useState<boolean>(() => notificationService.hasUnread());
 
   // Active User Profile State
   const [currentUser, setCurrentUser] = useState<UserProfile>(() => dbService.getCurrentUser());
 
   useEffect(() => {
+    // Live Cloudflare D1 Wallet & VIP status sync on app boot
+    if (currentUser.id && currentUser.id !== 'usr_guest') {
+      dbService.fetchLikesRemaining(currentUser.id).then(({ isVip }) => {
+        if (typeof isVip === 'boolean' && isVip !== currentUser.isVip) {
+          setCurrentUser(prev => ({ ...prev, isVip }));
+        }
+      });
+    }
+
     const handleVipUpdate = (e: any) => {
       const targetUserId = e.detail?.userId;
       if (!targetUserId || targetUserId === currentUser.id) {
@@ -162,6 +173,8 @@ export const App: React.FC = () => {
           location: user.location || user.city || 'Global',
           city: user.city,
           country: user.country,
+          latitude: user.latitude,
+          longitude: user.longitude,
           profession: user.profession || 'Professional',
           education: user.education || 'Graduate Degree',
           university: user.university || '',
@@ -214,6 +227,10 @@ export const App: React.FC = () => {
       age: onboardingData.dob ? (new Date().getFullYear() - new Date(onboardingData.dob).getFullYear()) : 28,
       gender: onboardingData.gender || currentUser.gender || 'male',
       location: onboardingData.location || currentUser.location || 'London, UK',
+      city: onboardingData.city || currentUser.city,
+      country: onboardingData.country || currentUser.country,
+      latitude: onboardingData.latitude ?? currentUser.latitude,
+      longitude: onboardingData.longitude ?? currentUser.longitude,
       profession: onboardingData.profession || currentUser.profession || 'Professional',
       education: onboardingData.education || currentUser.education || 'Graduate Degree',
       university: onboardingData.university || '',
@@ -236,6 +253,14 @@ export const App: React.FC = () => {
       childrenDesire: onboardingData.childrenDesire || 'desires_children',
       marriageTimeline: onboardingData.timeline || 'within_1_year',
       bio: onboardingData.bio || 'Seeking a practicing partner on the Sunnah.',
+      partnerRequirements: onboardingData.partnerRequirements || {
+        minAge: 20,
+        maxAge: 35,
+        maritalStatus: 'any',
+        practiceLevel: 'practicing',
+        relocation: 'open',
+        description: 'Seeking a pious, practicing spouse with good character.'
+      },
       blurPhotosByDefault: photoData.blurPhotos,
       profileVisibility: 'all_users',
       photos: photoData.photos,
@@ -427,6 +452,7 @@ export const App: React.FC = () => {
                 <DiscoverFeed 
                   onOpenChat={handleOpenChat} 
                   onOpenMatches={() => setActiveTab('matches')}
+                  onOpenNotifications={() => setShowNotifications(true)}
                 />
               )}
 
@@ -459,6 +485,27 @@ export const App: React.FC = () => {
 
             </div>
 
+            {/* Global Notifications Screen Modal */}
+            {showNotifications && (
+              <NotificationsScreen
+                isOpen={showNotifications}
+                onBack={() => {
+                  setShowNotifications(false);
+                  setHasUnreadNotifs(notificationService.hasUnread());
+                }}
+                onNavigateToMatches={() => {
+                  setShowNotifications(false);
+                  setActiveTab('matches');
+                  setHasUnreadNotifs(notificationService.hasUnread());
+                }}
+                onNavigateToChat={(convId) => {
+                  setShowNotifications(false);
+                  handleOpenChat(convId || '');
+                  setHasUnreadNotifs(notificationService.hasUnread());
+                }}
+              />
+            )}
+
             {/* CLEAN SOLID BOTTOM NAVIGATION BAR (No Gradients, Lucide Icons) */}
             <nav className="w-full bg-white border-t border-outline px-2 py-2 flex items-center justify-around z-30 shadow-subtle">
               {[
@@ -476,13 +523,16 @@ export const App: React.FC = () => {
                       setActiveTab(id as MainTab);
                       if (id !== 'chat') setActiveConvId(null);
                     }}
-                    className={`flex flex-col items-center gap-1 py-1 px-3 rounded-2xl transition-all duration-150 ${
+                    className={`relative flex flex-col items-center gap-1 py-1 px-3 rounded-2xl transition-all duration-150 ${
                       isActive 
                         ? 'text-primary' 
                         : 'text-secondary hover:text-on-surface'
                     }`}
                   >
                     <Icon className={`w-5 h-5 transition-transform ${isActive ? 'stroke-[2.5px] scale-105' : 'stroke-[1.75px]'}`} />
+                    {(id === 'matches' || id === 'chat') && hasUnreadNotifs && (
+                      <span className="w-2 h-2 bg-primary rounded-full absolute top-1 right-3 ring-2 ring-white" />
+                    )}
                     <span className={`text-[10px] tracking-tight ${isActive ? 'font-bold text-primary' : 'font-medium'}`}>
                       {label}
                     </span>

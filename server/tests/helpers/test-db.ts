@@ -153,6 +153,22 @@ export class MockD1Database {
         messages_sent_today INTEGER DEFAULT 0,
         subscription_tier TEXT DEFAULT 'free',
         is_spotlight_active BOOLEAN DEFAULT 0,
+        daily_likes_quota INTEGER DEFAULT 50,
+        likes_used_today INTEGER DEFAULT 0,
+        last_likes_reset_date TEXT DEFAULT '',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS notifications (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        type TEXT NOT NULL,
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        target_id TEXT,
+        avatar_url TEXT,
+        action_label TEXT,
+        is_read BOOLEAN DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
 

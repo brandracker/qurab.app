@@ -69,6 +69,9 @@ export const FullProfileModal: React.FC<Props> = ({
             <p className="text-xs text-secondary mt-1 flex items-center gap-1">
               <MapPin className="w-3.5 h-3.5 text-primary" />
               <span>{profile.location}</span>
+              {typeof profile.distanceKm === 'number' && (
+                <span className="text-primary font-bold">· {profile.distanceKm} km away</span>
+              )}
             </p>
           </div>
 

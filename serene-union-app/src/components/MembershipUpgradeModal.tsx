@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Crown, Zap, ShieldCheck, PlayCircle, Wallet, CheckCircle2, ArrowRight, X, Check } from 'lucide-react';
+import { Crown, TrendingUp, ShieldCheck, PlayCircle, Wallet, CheckCircle2, ArrowRight, X, Check } from 'lucide-react';
 import { API_BASE, dbService } from '../services/dbService';
 
 interface Props {
@@ -41,7 +41,7 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
       price: '$0.99',
       localPrice: 'PKR 275 (24 Hours)',
       description: 'Feature your profile at the #1 top spot in your city’s Discover stream.',
-      Icon: Zap,
+      Icon: TrendingUp,
       isSubscription: false
     },
     {
@@ -87,6 +87,7 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
           currency: 'USD'
         })
       });
+      await dbService.fetchLikesRemaining(userId);
     } catch {}
 
     setIsProcessing(false);

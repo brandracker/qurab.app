@@ -31,7 +31,23 @@ class NotificationService {
     let hasNew = false;
 
     try {
-      // 1. Fetch live mutual matches from Cloudflare D1
+      // 1. Fetch live D1 notifications first
+      const notifRes = await fetch(`${API_BASE}/notifications?userId=${user.id}`);
+      if (notifRes.ok) {
+        const notifData = await notifRes.json();
+        if (notifData.success && Array.isArray(notifData.notifications) && notifData.notifications.length > 0) {
+          const map = new Map<string, LiveNotification>();
+          notifData.notifications.forEach((n: any) => map.set(n.id, n));
+          existingNotifs.forEach(n => {
+            if (!map.has(n.id)) map.set(n.id, n);
+          });
+          const merged = Array.from(map.values()).sort((a, b) => b.timestamp - a.timestamp);
+          this.save(merged);
+          return merged;
+        }
+      }
+
+      // 2. Fetch live mutual matches from Cloudflare D1
       const matchRes = await fetch(`${API_BASE}/matches/mutual?userId=${user.id}`);
       const matchData = await matchRes.json();
 
@@ -47,7 +63,7 @@ class NotificationService {
               id: notifId,
               type: 'match',
               title: `Connected with ${match.fullName.split(' ')[0]} 🎉`,
-              message: `You and ${match.fullName} are now mutually matched! Start your chaperoned halal conversation.`,
+              message: `You and ${match.fullName} are now mutually matched! Say Salam and start your conversation.`,
               time: 'Just now',
               timestamp: Date.now(),
               read: false,
@@ -60,7 +76,7 @@ class NotificationService {
         }
       }
 
-      // 2. Fetch live incoming likes from Cloudflare D1
+      // 3. Fetch live incoming likes from Cloudflare D1
       const likesRes = await fetch(`${API_BASE}/matches/received?userId=${user.id}`);
       const likesData = await likesRes.json();
 
@@ -132,7 +148,7 @@ class NotificationService {
         id: `notif_match_${conv.id}`,
         type: 'match',
         title: `Connected with ${other.fullName.split(' ')[0]}`,
-        message: conv.lastMessageText || 'Mutual matrimonial interest confirmed. Chaperoned chat is active.',
+        message: conv.lastMessageText || 'Mutual matrimonial interest confirmed. Chat is active.',
         time: timeAgo,
         timestamp: Date.now() - (idx + 1) * 3600000,
         read: idx > 0,
@@ -141,19 +157,6 @@ class NotificationService {
         avatarUrl: other.photos && other.photos.length > 0 ? other.photos[0] : undefined
       });
     });
-
-    // If user has a Wali linked, add real Wali confirmation
-    if (user.wali) {
-      notifications.push({
-        id: 'notif_wali_linked',
-        type: 'wali',
-        title: 'Wali Chaperone Active',
-        message: `Guardian ${user.wali.name} (${user.wali.relationship}) is registered to monitor communications with modesty.`,
-        time: '1d ago',
-        timestamp: Date.now() - 86400000,
-        read: true
-      });
-    }
 
     // Save to storage
     this.save(notifications);
@@ -172,17 +175,53 @@ class NotificationService {
 
     notifications.unshift(newNotif);
     this.save(notifications);
+
+    const user = dbService.getCurrentUser();
+    if (user?.id && user.id !== 'usr_guest') {
+      fetch(`${API_BASE}/notifications/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          type: notif.type,
+          title: notif.title,
+          message: notif.message,
+          targetId: notif.targetId,
+          avatarUrl: notif.avatarUrl,
+          actionLabel: notif.actionLabel
+        })
+      }).catch(() => {});
+    }
+
     return newNotif;
   }
 
   markAllAsRead(): void {
     const notifications = this.getNotifications().map(n => ({ ...n, read: true }));
     this.save(notifications);
+
+    const user = dbService.getCurrentUser();
+    if (user?.id && user.id !== 'usr_guest') {
+      fetch(`${API_BASE}/notifications/mark-read`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id })
+      }).catch(() => {});
+    }
   }
 
   markAsRead(id: string): void {
     const notifications = this.getNotifications().map(n => n.id === id ? { ...n, read: true } : n);
     this.save(notifications);
+
+    const user = dbService.getCurrentUser();
+    if (user?.id && user.id !== 'usr_guest') {
+      fetch(`${API_BASE}/notifications/mark-read`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, notificationId: id })
+      }).catch(() => {});
+    }
   }
 
   clearAll(): void {

@@ -5,7 +5,7 @@ import {
   Heart, 
   MessageCircle, 
   ShieldCheck, 
-  Sparkles, 
+  HeartHandshake, 
   CheckCheck, 
   Trash2,
   ChevronRight
@@ -84,7 +84,7 @@ export const NotificationsScreen: React.FC<Props> = ({
       case 'like':
         return <Heart className="w-4 h-4 text-primary" />;
       case 'match':
-        return <Sparkles className="w-4 h-4 text-primary" />;
+        return <HeartHandshake className="w-4 h-4 text-primary" />;
       case 'salam':
         return <MessageCircle className="w-4 h-4 text-emerald-600" />;
       case 'wali':

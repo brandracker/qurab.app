@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, X, BookOpen, Home, Wallet, Heart } from 'lucide-react';
+import { HeartHandshake, X, BookOpen, Home, Wallet, Heart } from 'lucide-react';
 import type { UserProfile } from '../types';
 
 interface Props {
@@ -28,7 +28,7 @@ export const CompatibilityComparisonModal: React.FC<Props> = ({ currentUser, pro
         <div className="flex items-center justify-between pb-3.5 border-b border-outline">
           <div className="flex items-center gap-2">
             <div className="w-9 h-9 rounded-2xl bg-pastel-rose text-primary border border-pastel-rose-border flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-primary" />
+              <HeartHandshake className="w-4 h-4 text-primary" />
             </div>
             <div>
               <h2 className="font-serif text-base font-bold text-on-surface">

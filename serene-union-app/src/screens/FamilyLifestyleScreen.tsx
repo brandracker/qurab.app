@@ -5,7 +5,8 @@ import {
   Home, 
   Users, 
   HeartHandshake, 
-  Sparkles, 
+  UserCheck, 
+  TrendingUp, 
   FileCheck2, 
   Heart, 
   Baby, 
@@ -234,7 +235,7 @@ export const FamilyLifestyleScreen: React.FC<Props> = ({ data, onNext, onBack })
                 { 
                   id: 'never_married', 
                   label: 'Never Married', 
-                  icon: Sparkles,
+                  icon: UserCheck,
                   colorBg: 'bg-rose-50 text-primary border-rose-200'
                 },
                 { 
@@ -356,7 +357,7 @@ export const FamilyLifestyleScreen: React.FC<Props> = ({ data, onNext, onBack })
                 { 
                   id: 'trying_to_quit', 
                   label: 'Trying to Quit', 
-                  icon: Sparkles,
+                  icon: TrendingUp,
                   colorBg: 'bg-amber-50 text-amber-600 border-amber-200'
                 },
                 { 

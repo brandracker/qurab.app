@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, ShieldCheck, EyeOff, ArrowRight } from 'lucide-react';
+import { HeartHandshake, ShieldCheck, EyeOff, ArrowRight } from 'lucide-react';
 
 interface Props {
   onGetStarted: () => void;
@@ -26,7 +26,7 @@ export const WelcomeScreen: React.FC<Props> = ({ onGetStarted, onLogin }) => {
       {/* 3. Top Header: Pure Halal Matrimony Badge */}
       <header className="relative z-10 w-full pt-5 px-6 flex flex-col items-center">
         <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/20 shadow-lg text-white text-[11px] font-bold tracking-wider uppercase">
-          <Sparkles className="w-3.5 h-3.5 text-[#FFD700]" />
+          <HeartHandshake className="w-3.5 h-3.5 text-[#FFD700]" />
           <span>Pure Halal Matrimony</span>
         </div>
       </header>

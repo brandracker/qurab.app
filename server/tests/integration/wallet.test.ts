@@ -164,4 +164,71 @@ describe('Wallet, In-App Purchases & Rewarded Ads API Integration Tests', () => 
     const data = await res.json();
     expect(data.success).toBe(false);
   });
+
+  it('9. POST /api/wallet/use-like decrements daily likes in D1', async () => {
+    const res = await app.request('/api/wallet/use-like', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: 'usr_test_like_dec' })
+    }, env);
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.likesRemaining).toBe(49);
+    expect(data.likesUsedToday).toBe(1);
+  });
+
+  it('10. Centralized Notifications: GET & POST /api/notifications in D1', async () => {
+    const createRes = await app.request('/api/notifications/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: 'usr_test_notif_sync',
+        type: 'match',
+        title: 'Mutual Match',
+        message: 'You have a mutual connection!'
+      })
+    }, env);
+
+    expect(createRes.status).toBe(200);
+    const createData = await createRes.json();
+    expect(createData.success).toBe(true);
+
+    const getRes = await app.request('/api/notifications?userId=usr_test_notif_sync', { method: 'GET' }, env);
+    expect(getRes.status).toBe(200);
+    const getData = await getRes.json();
+    expect(getData.success).toBe(true);
+    expect(getData.notifications.length).toBe(1);
+    expect(getData.notifications[0].title).toBe('Mutual Match');
+  });
+
+  it('11. GET /api/wallet/unity-s2s-callback credits reward via Unity Ads S2S webhook', async () => {
+    // Initialize wallet
+    await app.request('/api/wallet/usr_test_unity_s2s', { method: 'GET' }, env);
+
+    const res = await app.request('/api/wallet/unity-s2s-callback?sid=usr_test_unity_s2s&rewardType=likes&oid=unity_order_123', {
+      method: 'GET'
+    }, env);
+
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    expect(text).toBe('OK');
+
+    const walletRes = await app.request('/api/wallet/usr_test_unity_s2s', { method: 'GET' }, env);
+    const walletData = await walletRes.json();
+    expect(walletData.wallet.dailyLikesQuota).toBe(60); // 50 default + 10 reward
+  });
+
+  it('12. GET /api/wallet/unity-s2s-callback rejects request when sid or userId is missing', async () => {
+    const res = await app.request('/api/wallet/unity-s2s-callback?rewardType=likes', {
+      method: 'GET'
+    }, env);
+
+    expect(res.status).toBe(400);
+    const text = await res.text();
+    expect(text).toContain('Missing');
+  });
 });
+
+

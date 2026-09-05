@@ -17,10 +17,11 @@ import {
   User, 
   FileText,
   Hand,
-  Heart, 
   PlayCircle,
   Loader2,
-  Sparkles,
+  Heart,
+  HeartHandshake,
+  Bookmark,
   Volume2,
   VolumeX,
   Clock,
@@ -37,7 +38,7 @@ import { ProfileDetailModal } from './ProfileDetailModal';
 import { RewardedAdModal } from './RewardedAdModal';
 import { MembershipUpgradeModal } from './MembershipUpgradeModal';
 import { NotificationsScreen } from '../screens/NotificationsScreen';
-import { dbService } from '../services/dbService';
+import { dbService, API_BASE } from '../services/dbService';
 import { notificationService } from '../services/notificationService';
 
 
@@ -46,11 +47,12 @@ interface Props {
   onOpenFilters?: () => void;
   onOpenMatches?: () => void;
   onOpenProfile?: () => void;
+  onOpenNotifications?: () => void;
 }
 
-type CardTab = 'deen' | 'career' | 'family' | 'bio';
+type CardTab = 'deen' | 'career' | 'family' | 'bio' | 'requirements';
 
-export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => {
+export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches, onOpenNotifications }) => {
   const currentUser = dbService.getCurrentUser();
   const [isVip, setIsVip] = useState<boolean>(() => {
     return Boolean(localStorage.getItem(`serene_vip_${currentUser.id}`) || currentUser.isVip);
@@ -76,12 +78,12 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
   
   const [filters, setFilters] = useState<FilterState>({
     minAge: 18,
-    maxAge: 45,
-    maxDistance: 50,
+    maxAge: 65,
+    maxDistance: 0,
     sects: [],
     practiceLevels: [],
     marriageTimelines: [],
-    languages: ['English']
+    languages: []
   });
 
   const [profiles, setProfiles] = useState<UserProfile[]>(() => dbService.getDiscoverFeed(filters));
@@ -126,9 +128,9 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
 
   useEffect(() => {
     setIsLoading(true);
-    dbService.fetchLiveProfiles().then(live => {
+    dbService.fetchLiveProfiles(filters).then(live => {
       if (live && live.length > 0) {
-        setProfiles(dbService.getDiscoverFeed(filters));
+        setProfiles(dbService.getDiscoverFeed(filters, live));
       }
     }).finally(() => {
       setIsLoading(false);
@@ -167,6 +169,23 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
     };
   }, [currentUser.id]);
 
+  // Live Cloudflare D1 Wallet & Likes Quota Sync
+  useEffect(() => {
+    dbService.fetchLikesRemaining(currentUser.id).then(({ likesRemaining: liveRem, isVip: liveVip }) => {
+      setLikesRemaining(liveRem);
+      setIsVip(liveVip);
+    });
+
+    const handleLikesUpdate = (e: any) => {
+      if (!e.detail?.userId || e.detail.userId === currentUser.id) {
+        if (typeof e.detail?.likesRemaining === 'number') {
+          setLikesRemaining(e.detail.likesRemaining);
+        }
+      }
+    };
+    window.addEventListener('serene_likes_updated', handleLikesUpdate);
+    return () => window.removeEventListener('serene_likes_updated', handleLikesUpdate);
+  }, [currentUser.id]);
 
 
   const handleApplyFilters = (newFilters: FilterState) => {
@@ -175,6 +194,11 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
     setProfiles(updated);
     setCurrentIndex(0);
     setCurrentPhotoIdx(0);
+    dbService.fetchLiveProfiles(newFilters).then(live => {
+      if (live && live.length > 0) {
+        setProfiles(dbService.getDiscoverFeed(newFilters));
+      }
+    });
   };
 
   const handleLike = async (profile: UserProfile, e?: React.MouseEvent) => {
@@ -189,13 +213,19 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
     if (!isVip) {
       const nextLikes = Math.max(0, likesRemaining - 1);
       setLikesRemaining(nextLikes);
-      localStorage.setItem(getTodayLikeKey(), nextLikes.toString());
+      dbService.consumeDailyLike(currentUser.id);
       if (nextLikes === 0) {
         setTimeout(() => setShowLikesLimitModal(true), 600);
       }
     }
 
-    setProfiles(prev => prev.filter(p => p.id !== profile.id));
+    setProfiles(prev => {
+      const nextRemaining = prev.filter(p => p.id !== profile.id);
+      setCurrentIndex(curr => Math.max(0, Math.min(curr, nextRemaining.length - 1)));
+      return nextRemaining;
+    });
+    setCurrentPhotoIdx(0);
+    setActiveTab('deen');
 
     // Playful matrimonial confetti
     confetti({
@@ -211,7 +241,7 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
       notificationService.addNotification({
         type: 'match',
         title: `Connected with ${profile.fullName.split(' ')[0]} 🎉`,
-        message: `You and ${profile.fullName} both expressed mutual interest. Chaperoned chat is now unlocked!`,
+        message: `You and ${profile.fullName} both expressed mutual interest. Chat is now unlocked!`,
         actionLabel: 'Start Chat',
         targetId: result.conversationId,
         avatarUrl: profile.photos?.[0]
@@ -230,18 +260,32 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
   };
 
 
-  const handleClaimAdLikes = () => {
+  const handleClaimAdLikes = async () => {
     const nextLikes = likesRemaining + 10;
     setLikesRemaining(nextLikes);
     localStorage.setItem(getTodayLikeKey(), nextLikes.toString());
     setToastMessage('+10 Extra Discover Likes added! 🎉');
     setTimeout(() => setToastMessage(null), 3500);
+
+    try {
+      await fetch(`${API_BASE}/wallet/reward-ad`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: currentUser.id, rewardType: 'likes' })
+      });
+    } catch {}
   };
 
   const handlePass = (profileId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     dbService.sendMatchAction(profileId, 'passed');
-    setProfiles(prev => prev.filter(p => p.id !== profileId));
+    setProfiles(prev => {
+      const nextRemaining = prev.filter(p => p.id !== profileId);
+      setCurrentIndex(curr => Math.max(0, Math.min(curr, nextRemaining.length - 1)));
+      return nextRemaining;
+    });
+    setCurrentPhotoIdx(0);
+    setActiveTab('deen');
   };
 
   // Search filtering
@@ -311,7 +355,11 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
           />
           {searchQuery && (
             <button
-              onClick={() => setSearchQuery('')}
+              onClick={() => {
+                setSearchQuery('');
+                setCurrentIndex(0);
+                setCurrentPhotoIdx(0);
+              }}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-secondary hover:text-on-surface"
             >
               <X className="w-3 h-3" />
@@ -349,7 +397,11 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
         {/* Notification Bell Button */}
         <button
           onClick={() => {
-            setShowNotificationsModal(true);
+            if (onOpenNotifications) {
+              onOpenNotifications();
+            } else {
+              setShowNotificationsModal(true);
+            }
             setHasUnreadNotifications(false);
           }}
           aria-label="Notifications"
@@ -409,10 +461,11 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
             <button
               onClick={() => {
                 setSearchQuery('');
+                dbService.resetPassedProfiles(currentUser.id);
                 handleApplyFilters({
                   minAge: 18,
-                  maxAge: 60,
-                  maxDistance: 100,
+                  maxAge: 65,
+                  maxDistance: 0,
                   sects: [],
                   practiceLevels: [],
                   marriageTimelines: [],
@@ -489,6 +542,9 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
                     <div className="bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-on-surface text-xs font-semibold flex items-center gap-1.5 border border-outline/80 shadow-subtle">
                       <MapPin className="w-3.5 h-3.5 text-primary" />
                       <span>{currentProfile.location}</span>
+                      {typeof currentProfile.distanceKm === 'number' && (
+                        <span className="text-primary font-bold">· {currentProfile.distanceKm} km</span>
+                      )}
                     </div>
                     {photos.length > 1 && (
                       <div className="bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-full text-secondary text-[10px] font-bold flex items-center gap-1 border border-outline/80 shadow-subtle">
@@ -507,7 +563,7 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
                       </div>
                     ) : (
                       <div className="bg-white/90 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 backdrop-blur-md shadow-subtle">
-                        <Sparkles className="w-3 h-3 text-emerald-500 fill-emerald-500/30" />
+                        <HeartHandshake className="w-3 h-3 text-emerald-600" />
                         <span>94% Match</span>
                       </div>
                     )}
@@ -583,7 +639,8 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
                   { id: 'deen', label: 'Deen & Taqwa', Icon: BookOpen, activeColor: 'bg-white text-emerald-700 border-emerald-300 shadow-2xs' },
                   { id: 'career', label: 'Career', Icon: GraduationCap, activeColor: 'bg-white text-sky-700 border-sky-300 shadow-2xs' },
                   { id: 'family', label: 'Family', Icon: Home, activeColor: 'bg-white text-amber-700 border-amber-300 shadow-2xs' },
-                  { id: 'bio', label: 'Bio & Values', Icon: User, activeColor: 'bg-white text-purple-700 border-purple-300 shadow-2xs' }
+                  { id: 'bio', label: 'Bio & Values', Icon: User, activeColor: 'bg-white text-purple-700 border-purple-300 shadow-2xs' },
+                  { id: 'requirements', label: 'Seeking', Icon: Heart, activeColor: 'bg-white text-rose-700 border-rose-300 shadow-2xs' }
                 ].map(({ id, label, Icon, activeColor }) => {
                   const isActive = activeTab === id;
                   return (
@@ -631,7 +688,7 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
 
                       <div className="bg-pastel-mint p-2.5 rounded-xl border border-pastel-mint-border flex items-center gap-2 hover:shadow-subtle transition-all">
                         <div className="w-7 h-7 rounded-lg bg-emerald-100 border border-emerald-200 flex items-center justify-center shrink-0">
-                          <Sparkles className="w-3.5 h-3.5 text-emerald-700" />
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
                         </div>
                         <div className="min-w-0">
                           <span className="text-[9px] text-pastel-mint-text font-bold uppercase block truncate">Dietary Standard</span>
@@ -750,12 +807,51 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches }) => 
                       <div className="flex flex-wrap gap-1.5 pt-0.5">
                         {currentProfile.hobbies.slice(0, 4).map((h, i) => (
                           <span key={i} className="bg-pastel-rose text-primary text-[10px] font-bold px-2.5 py-1 rounded-full border border-pastel-rose-border shadow-2xs flex items-center gap-1">
-                            <Sparkles className="w-2.5 h-2.5 text-primary" />
+                            <Bookmark className="w-2.5 h-2.5 text-primary" />
                             <span>{h.replace(/[^\w\s()-]/gi, '').trim()}</span>
                           </span>
                         ))}
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* 5. SEEKING / PARTNER REQUIREMENTS TAB */}
+                {activeTab === 'requirements' && (
+                  <div className="space-y-2 animate-fade-in text-xs">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-pastel-amber p-2.5 rounded-xl border border-pastel-amber-border flex items-center gap-2 hover:shadow-subtle transition-all">
+                        <div className="w-7 h-7 rounded-lg bg-amber-100 border border-amber-200 flex items-center justify-center shrink-0">
+                          <Heart className="w-3.5 h-3.5 text-amber-700 fill-amber-700/20" />
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-[9px] text-pastel-amber-text font-bold uppercase block truncate">Seeking Age</span>
+                          <strong className="text-on-surface text-[11px] truncate block">
+                            {currentProfile.partnerRequirements?.minAge && currentProfile.partnerRequirements?.maxAge
+                              ? `${currentProfile.partnerRequirements.minAge} - ${currentProfile.partnerRequirements.maxAge} yrs`
+                              : '20 - 35 yrs'}
+                          </strong>
+                        </div>
+                      </div>
+
+                      <div className="bg-pastel-amber p-2.5 rounded-xl border border-pastel-amber-border flex items-center gap-2 hover:shadow-subtle transition-all">
+                        <div className="w-7 h-7 rounded-lg bg-amber-100 border border-amber-200 flex items-center justify-center shrink-0">
+                          <ShieldCheck className="w-3.5 h-3.5 text-amber-700" />
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-[9px] text-pastel-amber-text font-bold uppercase block truncate">Practice Level</span>
+                          <strong className="text-on-surface text-[11px] capitalize truncate block">
+                            {currentProfile.partnerRequirements?.practiceLevel ? currentProfile.partnerRequirements.practiceLevel.replace(/_/g, ' ') : 'Practicing'}
+                          </strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-pastel-sand/80 p-2.5 rounded-xl border border-pastel-sand-border relative hover:shadow-subtle transition-all">
+                      <p className="text-[11px] text-on-surface leading-relaxed italic line-clamp-2">
+                        "{currentProfile.partnerRequirements?.description || 'Seeking a practicing, kind-hearted spouse with good Islamic manners.'}"
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>

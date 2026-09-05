@@ -6,7 +6,11 @@ import {
   MapPin, 
   Camera, 
   Crown, 
-  Sparkles, 
+  HeartHandshake,
+  User,
+  Globe2,
+  CheckCircle2,
+  Bookmark,
   BookOpen, 
   Home, 
   GraduationCap, 
@@ -165,6 +169,9 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
               <div className="bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-full flex items-center gap-1 text-xs font-semibold text-white">
                 <MapPin className="w-3.5 h-3.5 text-primary-light" />
                 <span>{profile.location || 'Global'}</span>
+                {typeof profile.distanceKm === 'number' && (
+                  <span className="text-primary-light font-bold">· {profile.distanceKm} km away</span>
+                )}
               </div>
               {photos.length > 1 && (
                 <div className="bg-black/60 backdrop-blur-sm px-2 py-1 rounded-full text-white text-xs font-semibold flex items-center gap-1">
@@ -253,7 +260,7 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
             >
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-white text-primary flex items-center justify-center shadow-subtle shrink-0">
-                  <Sparkles className="w-4 h-4 text-primary" />
+                  <HeartHandshake className="w-4 h-4 text-primary" />
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-on-surface flex items-center gap-1.5">
@@ -268,6 +275,12 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
 
             {/* Quick Universal Badges Strip */}
             <div className="flex flex-wrap gap-1.5 pt-0.5">
+              {typeof profile.distanceKm === 'number' && (
+                <span className="bg-pastel-emerald text-emerald-800 px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-pastel-emerald-border flex items-center gap-1">
+                  <MapPin className="w-3 h-3 text-emerald-700" />
+                  <span>{profile.distanceKm} km away</span>
+                </span>
+              )}
               {profile.ethnicity && (
                 <span className="bg-pastel-rose text-primary px-2.5 py-0.5 rounded-full text-[10px] font-semibold border border-pastel-rose-border">
                   {profile.ethnicity}
@@ -298,7 +311,7 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
             {/* 1. Personal Background & Biodata (Pastel Rose) */}
             <div className="bg-pastel-rose rounded-2xl p-3.5 border border-pastel-rose-border space-y-2.5 shadow-subtle">
               <h3 className="font-serif text-xs font-bold text-primary flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-primary" />
+                <User className="w-3.5 h-3.5 text-primary" />
                 <span>Personal Background & Biodata</span>
               </h3>
               <div className="grid grid-cols-2 gap-2 text-xs">
@@ -314,7 +327,7 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
 
                 <div className="bg-white p-2.5 rounded-xl border border-pastel-rose-border shadow-2xs flex items-center gap-2.5">
                   <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 border border-purple-200 flex items-center justify-center shrink-0">
-                    <Sparkles className="w-3.5 h-3.5" />
+                    <Globe2 className="w-3.5 h-3.5" />
                   </div>
                   <div className="min-w-0">
                     <span className="text-[10px] text-secondary font-medium block">Ethnicity</span>
@@ -385,7 +398,7 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
 
                 <div className="bg-white p-2.5 rounded-xl border border-pastel-mint-border shadow-2xs flex items-center gap-2.5">
                   <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center shrink-0">
-                    <Sparkles className="w-3.5 h-3.5" />
+                    <CheckCircle2 className="w-3.5 h-3.5" />
                   </div>
                   <div className="min-w-0">
                     <span className="text-[10px] text-pastel-mint-text font-medium block">Dietary Standard</span>
@@ -399,7 +412,7 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
             {((profile.hobbies && profile.hobbies.length > 0) || (profile.personalityTraits && profile.personalityTraits.length > 0)) && (
               <div className="bg-white rounded-2xl p-3.5 border border-outline space-y-2.5 shadow-subtle">
                 <h3 className="text-xs font-bold text-secondary uppercase tracking-wider flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-primary" />
+                  <Bookmark className="w-3.5 h-3.5 text-primary" />
                   <span>Interests & Personality</span>
                 </h3>
                 
@@ -576,12 +589,60 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
             {/* 6. About My Deen & Bio Essay */}
             <div className="bg-pastel-lavender rounded-2xl p-3.5 border border-pastel-lavender-border space-y-1.5 shadow-subtle">
               <h3 className="text-xs font-bold text-pastel-lavender-text uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-pastel-lavender-text" />
+                <BookOpen className="w-3.5 h-3.5 text-pastel-lavender-text" />
                 <span>About Me & My Faith</span>
               </h3>
               <p className="text-xs text-on-surface leading-relaxed italic bg-white/60 p-3 rounded-xl border border-pastel-lavender-border">
                 "{profile.bio || rel?.deenRelationshipBio || "Seeking a pious spouse to build a righteous Islamic household founded on mutual love and respect."}"
               </p>
+            </div>
+
+            {/* 7. Partner Requirements & Expectations */}
+            <div className="bg-pastel-amber/60 rounded-2xl p-3.5 border border-pastel-amber-border space-y-2.5 shadow-subtle">
+              <h3 className="text-xs font-bold text-pastel-amber-text uppercase tracking-wider flex items-center gap-1.5">
+                <Heart className="w-3.5 h-3.5 text-pastel-amber-text fill-pastel-amber-text/30" />
+                <span>Partner Requirements & Expectations</span>
+              </h3>
+              
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="bg-white p-2.5 rounded-xl border border-pastel-amber-border shadow-2xs">
+                  <span className="text-[10px] text-pastel-amber-text font-medium block">Preferred Age</span>
+                  <strong className="text-on-surface text-[11px] block truncate">
+                    {profile.partnerRequirements?.minAge && profile.partnerRequirements?.maxAge
+                      ? `${profile.partnerRequirements.minAge} - ${profile.partnerRequirements.maxAge} years`
+                      : '20 - 35 years'}
+                  </strong>
+                </div>
+
+                <div className="bg-white p-2.5 rounded-xl border border-pastel-amber-border shadow-2xs">
+                  <span className="text-[10px] text-pastel-amber-text font-medium block">Marital Status</span>
+                  <strong className="text-on-surface text-[11px] block truncate capitalize">
+                    {profile.partnerRequirements?.maritalStatus ? profile.partnerRequirements.maritalStatus.replace(/_/g, ' ') : 'Open to All'}
+                  </strong>
+                </div>
+
+                <div className="bg-white p-2.5 rounded-xl border border-pastel-amber-border shadow-2xs">
+                  <span className="text-[10px] text-pastel-amber-text font-medium block">Deen & Practice</span>
+                  <strong className="text-on-surface text-[11px] block truncate capitalize">
+                    {profile.partnerRequirements?.practiceLevel ? profile.partnerRequirements.practiceLevel.replace(/_/g, ' ') : 'Practicing'}
+                  </strong>
+                </div>
+
+                <div className="bg-white p-2.5 rounded-xl border border-pastel-amber-border shadow-2xs">
+                  <span className="text-[10px] text-pastel-amber-text font-medium block">Relocation</span>
+                  <strong className="text-on-surface text-[11px] block truncate capitalize">
+                    {profile.partnerRequirements?.relocation ? profile.partnerRequirements.relocation.replace(/_/g, ' ') : 'Flexible / Open'}
+                  </strong>
+                </div>
+              </div>
+
+              {/* Expectations Note */}
+              <div className="bg-white/80 p-2.5 rounded-xl border border-pastel-amber-border text-xs leading-relaxed text-on-surface">
+                <span className="text-[10px] text-pastel-amber-text font-bold uppercase tracking-wider block mb-0.5">Looking for in a spouse:</span>
+                <p className="italic text-[11px] text-on-surface">
+                  "{profile.partnerRequirements?.description || 'Seeking a practicing, kind-hearted partner who values Islamic principles and family harmony.'}"
+                </p>
+              </div>
             </div>
 
           </div>

@@ -41,6 +41,25 @@ matchesRouter.post('/action', async (c) => {
           VALUES (?, ?, ?, ?, 'You matched! Start with Bismillah.', CURRENT_TIMESTAMP)
         `).bind(convId, senderId, receiverId, `logs/${convId}.jsonl`).run();
 
+        // 3. Centralized Notifications in D1 for both users
+        try {
+          const senderUser: any = await c.env.DB.prepare(`SELECT full_name as fullName, (SELECT photo_url FROM user_photos WHERE user_id = id ORDER BY is_primary DESC LIMIT 1) as photoUrl FROM users WHERE id = ?`).bind(senderId).first();
+          const receiverUser: any = await c.env.DB.prepare(`SELECT full_name as fullName, (SELECT photo_url FROM user_photos WHERE user_id = id ORDER BY is_primary DESC LIMIT 1) as photoUrl FROM users WHERE id = ?`).bind(receiverId).first();
+
+          const notifOne = `notif_m_${Date.now()}_1`;
+          const notifTwo = `notif_m_${Date.now()}_2`;
+
+          await c.env.DB.prepare(`
+            INSERT INTO notifications (id, user_id, type, title, message, target_id, avatar_url, action_label, is_read)
+            VALUES (?, ?, 'match', ?, ?, ?, ?, 'Start Chat', 0)
+          `).bind(notifOne, senderId, `Connected with ${receiverUser?.fullName?.split(' ')[0] || 'Match'} 🎉`, `You and ${receiverUser?.fullName || 'a member'} both expressed mutual interest. Chat is unlocked!`, convId, receiverUser?.photoUrl || null).run();
+
+          await c.env.DB.prepare(`
+            INSERT INTO notifications (id, user_id, type, title, message, target_id, avatar_url, action_label, is_read)
+            VALUES (?, ?, 'match', ?, ?, ?, ?, 'Start Chat', 0)
+          `).bind(notifTwo, receiverId, `Connected with ${senderUser?.fullName?.split(' ')[0] || 'Match'} 🎉`, `You and ${senderUser?.fullName || 'a member'} both expressed mutual interest. Chat is unlocked!`, convId, senderUser?.photoUrl || null).run();
+        } catch {}
+
         return c.json({
           success: true,
           isMutual: true,
@@ -54,6 +73,23 @@ matchesRouter.post('/action', async (c) => {
         INSERT OR REPLACE INTO matches_and_likes (id, sender_id, receiver_id, action)
         VALUES (?, ?, ?, 'liked')
       `).bind(matchId, senderId, receiverId).run();
+
+      // Dispatch D1 notification to receiver
+      try {
+        const senderUser: any = await c.env.DB.prepare(`SELECT full_name as fullName, (SELECT photo_url FROM user_photos WHERE user_id = id ORDER BY is_primary DESC LIMIT 1) as photoUrl FROM users WHERE id = ?`).bind(senderId).first();
+        const notifId = `notif_like_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+        await c.env.DB.prepare(`
+          INSERT INTO notifications (id, user_id, type, title, message, target_id, avatar_url, action_label, is_read)
+          VALUES (?, ?, 'like', ?, ?, ?, ?, 'View in Matches', 0)
+        `).bind(
+          notifId,
+          receiverId,
+          `Interest Expressed by ${senderUser?.fullName?.split(' ')[0] || 'A Member'}`,
+          `${senderUser?.fullName || 'Someone'} expressed matrimonial interest in your biodata.`,
+          senderId,
+          senderUser?.photoUrl || null
+        ).run();
+      } catch {}
 
       return c.json({
         success: true,
@@ -313,15 +349,27 @@ matchesRouter.get('/activity', async (c) => {
     }
 
     // A. Sent Likes
-    const { results: sentLikes } = await c.env.DB.prepare(`
+    const { results: sentLikesRows } = await c.env.DB.prepare(`
       SELECT 
         u.id, u.full_name as fullName, u.location, u.profession, u.marriage_timeline as marriageTimeline,
+        (SELECT photo_url FROM user_photos WHERE user_id = u.id ORDER BY is_primary DESC LIMIT 1) as photoUrl,
         m.action, m.created_at as actionTime
       FROM matches_and_likes m
       JOIN users u ON m.receiver_id = u.id
       WHERE m.sender_id = ? AND (m.action = 'liked' OR m.action = 'mutual_match')
       ORDER BY m.created_at DESC
     `).bind(userId).all();
+
+    const sentLikes = (sentLikesRows || []).map((row: any) => ({
+      id: row.id,
+      fullName: row.fullName,
+      location: row.location,
+      profession: row.profession,
+      marriageTimeline: row.marriageTimeline,
+      action: row.action,
+      actionTime: row.actionTime,
+      photos: row.photoUrl ? [row.photoUrl] : []
+    }));
 
     // B. Passed Profiles
     const { results: passed } = await c.env.DB.prepare(`

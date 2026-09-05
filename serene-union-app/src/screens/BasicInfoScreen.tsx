@@ -11,8 +11,9 @@ import {
   Home, 
   Check, 
   ChevronDown,
-  Sparkles,
-  ShieldCheck
+  ShieldCheck,
+  Loader2,
+  Navigation
 } from 'lucide-react';
 import { Country, State, type ICountry, type IState } from 'country-state-city';
 
@@ -22,6 +23,10 @@ interface Props {
     dob?: string;
     gender?: string;
     location?: string;
+    city?: string;
+    country?: string;
+    latitude?: number;
+    longitude?: number;
     height?: string;
     ethnicity?: string;
     citizenship?: string;
@@ -33,6 +38,10 @@ interface Props {
     dob: string;
     gender: string;
     location: string;
+    city?: string;
+    country?: string;
+    latitude?: number;
+    longitude?: number;
     height: string;
     ethnicity: string;
     citizenship: string;
@@ -124,14 +133,25 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
     return [...priority, ...others];
   }, []);
 
-  const [selectedCountryCode, setSelectedCountryCode] = useState<string>('GB');
+  const initialCountryCode = useMemo(() => {
+    if (data?.country) {
+      const match = Country.getAllCountries().find(c => 
+        c.name.toLowerCase() === data.country?.toLowerCase() || 
+        c.isoCode.toLowerCase() === data.country?.toLowerCase()
+      );
+      if (match) return match.isoCode;
+    }
+    return 'GB';
+  }, [data?.country]);
+
+  const [selectedCountryCode, setSelectedCountryCode] = useState<string>(initialCountryCode);
   const [selectedStateCode, setSelectedStateCode] = useState<string>('');
   const [isCustomState, setIsCustomState] = useState<boolean>(false);
   const [customStateText, setCustomStateText] = useState<string>('');
 
-  const [selectedCityName, setSelectedCityName] = useState<string>('');
-  const [isCustomCity, setIsCustomCity] = useState<boolean>(false);
-  const [customCityText, setCustomCityText] = useState<string>('');
+  const [selectedCityName, setSelectedCityName] = useState<string>(data?.city || '');
+  const [isCustomCity, setIsCustomCity] = useState<boolean>(Boolean(data?.city));
+  const [customCityText, setCustomCityText] = useState<string>(data?.city || '');
 
   // Available states for chosen country
   const availableStates = useMemo<IState[]>(() => {
@@ -268,17 +288,60 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
     data?.willingnessToRelocate || 'open'
   );
 
+  // --- Accurate GPS Geolocation Coordinates ---
+  const [coords, setCoords] = useState<{ latitude?: number; longitude?: number }>({
+    latitude: data?.latitude,
+    longitude: data?.longitude
+  });
+  const [isLocating, setIsLocating] = useState<boolean>(false);
+  const [locationStatus, setLocationStatus] = useState<string | null>(
+    data?.latitude ? '📍 Accurate GPS coordinates active' : null
+  );
+
+  const handleDetectLocation = () => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setLocationStatus('Geolocation is not supported by your browser.');
+      return;
+    }
+    setIsLocating(true);
+    setLocationStatus('Detecting accurate GPS location...');
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = Math.round(position.coords.latitude * 10000) / 10000;
+        const lon = Math.round(position.coords.longitude * 10000) / 10000;
+        setCoords({ latitude: lat, longitude: lon });
+        setIsLocating(false);
+        setLocationStatus(`📍 Accurate coordinates captured (${lat.toFixed(2)}, ${lon.toFixed(2)})`);
+      },
+      (error) => {
+        setIsLocating(false);
+        if (error.code === 1) {
+          setLocationStatus('Location permission not granted. Selected city will be used.');
+        } else {
+          setLocationStatus('GPS signal unavailable. Selected city will be used.');
+        }
+      },
+      { timeout: 8000, enableHighAccuracy: true }
+    );
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName.trim()) return;
 
     const dobFormatted = `${birthYear}-${String(birthMonth).padStart(2, '0')}-${String(birthDay).padStart(2, '0')}`;
-    
+    const cityName = isCustomCity ? (customCityText.trim() || 'City') : (selectedCityName || 'City');
+    const countryName = selectedCountryObj?.name || 'Global';
+
     onContinue({
       fullName: fullName.trim(),
       dob: dobFormatted,
       gender,
       location: finalLocationString,
+      city: cityName,
+      country: countryName,
+      latitude: coords.latitude,
+      longitude: coords.longitude,
       height: formattedHeightFull,
       ethnicity,
       citizenship,
@@ -377,7 +440,7 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
             </div>
           </div>
 
-          {/* Date of Birth (Polished 3-Dropdown Calendar with Elegant Sparkle Age Badge) */}
+          {/* Date of Birth (Polished 3-Dropdown Calendar with Verified Age Badge) */}
           <div className="bg-white p-3.5 rounded-2xl border border-outline shadow-subtle space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-on-surface flex items-center gap-1.5">
@@ -386,7 +449,7 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
               </label>
               {/* Elegant Modern Age Badge without cake emoji */}
               <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold flex items-center gap-1.5 shadow-2xs">
-                <Sparkles className="w-3 h-3 text-emerald-600 fill-emerald-500/20" />
+                <ShieldCheck className="w-3 h-3 text-emerald-600" />
                 <span>{calculatedAge} years old</span>
               </span>
             </div>
@@ -498,7 +561,7 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
               <label className="block text-xs font-bold text-on-surface mb-1">Heritage / Ethnicity</label>
               <div className="relative flex items-center bg-white border border-outline rounded-2xl p-1.5 shadow-subtle hover:border-primary transition-all focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10">
                 <div className="w-7 h-7 rounded-xl bg-rose-50 text-primary border border-rose-200 flex items-center justify-center shrink-0 shadow-2xs">
-                  <Sparkles className="w-3.5 h-3.5" />
+                  <Globe2 className="w-3.5 h-3.5" />
                 </div>
                 <select
                   value={ethnicity}
@@ -653,6 +716,34 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
                   <ChevronDown className="w-3 h-3 text-secondary absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
               )}
+
+              {/* GPS Auto-Detect Location Button */}
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={handleDetectLocation}
+                  disabled={isLocating}
+                  aria-label="Auto-detect accurate GPS location"
+                  className="w-full py-2 px-3 rounded-xl bg-pastel-mint text-emerald-800 border border-pastel-mint-border hover:bg-pastel-mint/80 active:scale-98 transition-all flex items-center justify-center gap-1.5 text-xs font-bold shadow-2xs disabled:opacity-50"
+                >
+                  {isLocating ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-700" />
+                      <span>Detecting GPS Location...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Navigation className="w-3.5 h-3.5 text-emerald-700" />
+                      <span>{coords.latitude ? '📍 GPS Location Active (Tap to Update)' : '📍 Auto-Detect Exact Location (GPS)'}</span>
+                    </>
+                  )}
+                </button>
+                {locationStatus && (
+                  <p className="text-[10px] text-secondary mt-1 text-center font-medium">
+                    {locationStatus}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 

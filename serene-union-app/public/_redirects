@@ -1,0 +1,2 @@
+# Cloudflare Pages Edge Reverse-Proxy for Serene Union API
+/api/* https://serene-union-api.brandracker.workers.dev/api/:splat 200

@@ -386,6 +386,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
                       )}
                       <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded-full text-[9px] font-bold text-white">
                         {candidate.location?.split(',')[0]}
+                        {typeof candidate.distanceKm === 'number' && ` · ${candidate.distanceKm} km`}
                       </div>
                     </div>
 
@@ -523,7 +524,10 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
               {mutualMatches.map(match => (
                 <div
                   key={match.id}
-                  onClick={() => setSelectedProfile(match)}
+                  onClick={() => {
+                    const newConv = dbService.createMatchConversation(match);
+                    onOpenChat(newConv.id);
+                  }}
                   className="bg-white p-3 rounded-2xl border border-outline shadow-subtle flex items-center justify-between gap-3 hover:border-primary transition-all cursor-pointer group"
                 >
                   <div className="flex items-center gap-2.5">
@@ -547,7 +551,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
                         {match.profession || 'Professional'} · {match.location}
                       </p>
                       <span className="text-[9px] text-secondary">
-                        Tap to view complete biodata
+                        Tap to chat · Tap eye for biodata
                       </span>
                     </div>
                   </div>

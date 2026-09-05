@@ -70,7 +70,21 @@ export interface UserProfile {
   lastActive?: string;
   voiceGreetingUrl?: string;
   voiceGreetingDuration?: number;
+  latitude?: number;
+  longitude?: number;
+  distanceKm?: number | null;
+  partnerRequirements?: PartnerRequirements;
   isProfileCompleted?: boolean;
+}
+
+export interface PartnerRequirements {
+  minAge?: number;
+  maxAge?: number;
+  maritalStatus?: string;
+  practiceLevel?: string;
+  relocation?: string;
+  education?: string;
+  description?: string;
 }
 
 

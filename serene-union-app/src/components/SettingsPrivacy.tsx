@@ -7,7 +7,7 @@ import {
   MessageCircle, 
   Eye, 
   Shield, 
-  Zap, 
+  TrendingUp, 
   Infinity, 
   ShieldCheck,
   LogOut,
@@ -46,6 +46,11 @@ export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpda
   useEffect(() => {
     setIsVip(Boolean(localStorage.getItem(`serene_vip_${currentUser.id}`) || currentUser.isVip));
     
+    dbService.fetchLikesRemaining(currentUser.id).then(({ likesRemaining: liveRem, isVip: liveVip }) => {
+      setLikesRemaining(liveRem);
+      setIsVip(liveVip);
+    });
+
     const handleVipUpdate = (e: any) => {
       const targetUserId = e.detail?.userId;
       if (!targetUserId || targetUserId === currentUser.id) {
@@ -58,11 +63,20 @@ export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpda
       const saved = localStorage.getItem(getTodayLikeKey());
       setLikesRemaining(saved !== null ? parseInt(saved, 10) : 50);
     };
+    const handleLikes = (e: any) => {
+      if (!e.detail?.userId || e.detail.userId === currentUser.id) {
+        if (typeof e.detail?.likesRemaining === 'number') {
+          setLikesRemaining(e.detail.likesRemaining);
+        }
+      }
+    };
     window.addEventListener('serene_activity_updated', handleActivity);
+    window.addEventListener('serene_likes_updated', handleLikes);
 
     return () => {
       window.removeEventListener('serene_vip_updated', handleVipUpdate);
       window.removeEventListener('serene_activity_updated', handleActivity);
+      window.removeEventListener('serene_likes_updated', handleLikes);
     };
   }, [currentUser.id, currentUser.isVip]);
 
@@ -298,7 +312,7 @@ export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpda
 
                 <div className="flex items-center justify-between p-2 rounded-xl bg-white border border-pastel-amber-border shadow-subtle">
                   <div className="flex items-center gap-2">
-                    <Zap className="w-3.5 h-3.5 text-primary" />
+                    <TrendingUp className="w-3.5 h-3.5 text-primary" />
                     <span className="text-on-surface font-medium text-xs">Priority Stream Ranking (3x Views)</span>
                   </div>
                   <span className={`text-[10px] font-bold ${isVip ? 'text-primary' : 'text-secondary'}`}>

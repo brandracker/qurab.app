@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, CheckCheck, Send, Heart, Sparkles, MessageCircle, FileText, Ban, MoreVertical, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, CheckCheck, Send, Heart, MessageCircle, FileText, Ban, MoreVertical, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import type { Conversation, ChatMessage, UserProfile } from '../types';
 
 import { dbService, API_BASE } from '../services/dbService';
@@ -21,20 +21,11 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
   const [isBlocking, setIsBlocking] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [selectedProfile, setSelectedProfile] = useState<UserProfile | null>(null);
+  const [roomMessages, setRoomMessages] = useState<ChatMessage[]>([]);
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const currentUser = dbService.getCurrentUser();
 
 
-
-  const isUserOnline = (user: UserProfile): boolean => {
-    if (user.isOnline !== undefined) return user.isOnline;
-    return user.fullName.toLowerCase().includes('sarah') || user.fullName.toLowerCase().includes('fatima');
-  };
-
-  const getUserStatusText = (user: UserProfile): string => {
-    if (isUserOnline(user)) return 'Active now';
-    return user.lastActive || 'Active 20m ago';
-  };
 
   const formatChatTime = (timeStr?: string): string => {
     if (!timeStr) return '';
@@ -87,10 +78,31 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
     }
   }
 
+  // Fetch real messages from Cloudflare D1 and live poll every 4 seconds
+  useEffect(() => {
+    const targetRoomId = activeConv?.id || activeConvId;
+    if (!targetRoomId) return;
+
+    let isMounted = true;
+    const syncD1Messages = async () => {
+      const liveMsgs = await dbService.fetchConversationMessages(targetRoomId);
+      if (isMounted && liveMsgs && liveMsgs.length > 0) {
+        setRoomMessages(liveMsgs);
+      }
+    };
+
+    syncD1Messages();
+    const pollInterval = setInterval(syncD1Messages, 4000);
+    return () => {
+      isMounted = false;
+      clearInterval(pollInterval);
+    };
+  }, [activeConvId, activeConv?.id]);
+
   // Auto-scroll on new messages
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [activeConv?.messages?.length]);
+  }, [roomMessages.length, activeConv?.messages?.length]);
 
   // 1-to-1 Modesty Photo Reveal State
   const [hasRevealedToPartner, setHasRevealedToPartner] = useState<boolean>(false);
@@ -126,7 +138,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
         isRead: true,
         waliNotified: false
       });
-      localStorage.setItem('serene_conversations_v1', JSON.stringify(convs));
+      localStorage.setItem('serene_real_conversations_v3', JSON.stringify(convs));
       setConversations([...convs]);
     }
 
@@ -140,55 +152,32 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
 
   // Live polling for real multi-device messages from Cloudflare D1
   useEffect(() => {
-    if (!activeConvId || !activeConv) return;
+    if (!activeConvId && !activeConv?.id) return;
 
-    const targetRoomId = activeConv.otherUser?.id 
+    const targetRoomId = activeConv?.otherUser?.id 
       ? (`conv_${[currentUser.id, activeConv.otherUser.id].sort().join('_')}`)
-      : activeConvId;
+      : (activeConv?.id || activeConvId);
 
+    if (!targetRoomId) return;
+
+    let isMounted = true;
     const fetchLiveMessages = async () => {
       try {
-        const res = await fetch(`${API_BASE}/conversations/${targetRoomId}/messages`);
-        const data = await res.json();
-        if (data.success && Array.isArray(data.messages)) {
-          const convs = dbService.getConversations();
-          const curr = convs.find(c => c.id === activeConvId || c.id === targetRoomId || (activeConv.otherUser && c.otherUser?.id === activeConv.otherUser.id));
-          if (curr) {
-            curr.id = targetRoomId;
-
-            // Format D1 confirmed messages
-            const formattedMessages: ChatMessage[] = data.messages.map((m: any) => {
-              const formattedTime = m.timestamp && (m.timestamp.includes('T') || m.timestamp.includes('-') || m.timestamp.includes(':'))
-                ? (m.timestamp.includes('T') || m.timestamp.includes('-') ? new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : m.timestamp)
-                : (m.timestamp || 'Just now');
-
-              return {
-                id: m.id,
-                senderId: m.senderId,
-                senderName: m.senderName || 'Member',
-                text: m.text,
-                timestamp: formattedTime,
-                isRead: true,
-                waliNotified: true
-              };
-            });
-
-            if (formattedMessages.length > 0) {
-              curr.messages = formattedMessages;
-              curr.lastMessageText = formattedMessages[formattedMessages.length - 1]?.text || '';
-              curr.lastMessageTime = formattedMessages[formattedMessages.length - 1]?.timestamp || '';
-              localStorage.setItem('serene_conversations_v1', JSON.stringify(convs));
-              setConversations([...convs]);
-            }
-          }
+        const liveMsgs = await dbService.fetchConversationMessages(targetRoomId);
+        if (isMounted && liveMsgs && liveMsgs.length > 0) {
+          setRoomMessages(liveMsgs);
+          setConversations([...dbService.getConversations()]);
         }
       } catch {}
     };
 
     fetchLiveMessages();
-    const interval = setInterval(fetchLiveMessages, 2500);
-    return () => clearInterval(interval);
-  }, [activeConvId, activeConv?.otherUser?.id]);
+    const interval = setInterval(fetchLiveMessages, 3000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [activeConvId, activeConv?.id, activeConv?.otherUser?.id]);
 
   // Real User-to-User Send Message
   const handleSendMessage = async () => {
@@ -220,11 +209,14 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
       current.lastMessageText = text;
       current.lastMessageSenderId = user.id;
       current.lastMessageTime = newMsg.timestamp;
-      localStorage.setItem('serene_conversations_v1', JSON.stringify(convs));
+      localStorage.setItem('serene_real_conversations_v3', JSON.stringify(convs));
       setConversations([...convs]);
+      setRoomMessages(prev => [...prev, newMsg]);
       if (activeConvId !== targetRoomId) {
         setActiveConvId(targetRoomId);
       }
+    } else {
+      setRoomMessages(prev => [...prev, newMsg]);
     }
     setInputText('');
 
@@ -294,8 +286,8 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
   // If no active conversation, show conversation list
   if (!activeConv) {
     return (
-      <div className="flex-1 flex flex-col h-full bg-background font-sans select-none pb-24 text-on-surface">
-        <header className="sticky top-0 bg-white px-4 py-3.5 border-b border-outline flex items-center justify-between z-20 shadow-subtle">
+      <div className="flex-1 flex flex-col h-full bg-background font-sans select-none text-on-surface">
+        <header className="sticky top-0 bg-white px-4 py-3.5 border-b border-outline flex items-center justify-between z-20 shadow-subtle shrink-0">
           <div>
             <h1 className="font-serif text-xl font-bold text-on-surface">
               Messages
@@ -305,17 +297,16 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
         </header>
 
 
-        <div className="flex-1 overflow-y-auto divide-y divide-outline p-3 space-y-1">
+        <div className="flex-1 overflow-y-auto p-3 space-y-2.5 pb-8">
           {conversations.length > 0 ? (
             conversations.map(conv => {
-              const online = isUserOnline(conv.otherUser);
               return (
                 <div
                   key={conv.id}
                   onClick={() => setActiveConvId(conv.id)}
                   className="p-3.5 bg-white rounded-2xl border border-outline hover:border-primary flex items-center gap-3 cursor-pointer transition-all shadow-subtle group"
                 >
-                  {/* Clickable Profile Avatar with Clean Floating Presence Badge (Not clipped) */}
+                  {/* Clickable Profile Avatar */}
                   <div 
                     onClick={(e) => {
                       e.stopPropagation();
@@ -337,45 +328,22 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                         </span>
                       )}
                     </div>
-
-                    {/* Live Online Presence Badge - Floating clean on bottom-right corner */}
-                    {online && (
-                      <span 
-                        className="absolute bottom-0 right-0 translate-x-0.5 translate-y-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white shadow-sm flex items-center justify-center z-10" 
-                        title="Online now"
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                      </span>
-                    )}
                   </div>
 
                   {/* Conversation Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-0.5">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <h3 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedProfile(conv.otherUser);
-                          }}
-                          className="font-serif font-bold text-xs text-on-surface truncate group-hover:text-primary transition-colors cursor-pointer hover:underline"
-                          title="Click to view full biodata"
-                        >
-                          {conv.otherUser.fullName}
-                        </h3>
-
-                        {online ? (
-                          <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-                            Online
-                          </span>
-                        ) : (
-                          <span className="text-[11px] text-secondary font-normal shrink-0">
-                            {getUserStatusText(conv.otherUser)}
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-[11px] text-secondary shrink-0">{formatChatTime(conv.lastMessageTime)}</span>
+                      <h3 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedProfile(conv.otherUser);
+                        }}
+                        className="font-serif font-bold text-xs text-on-surface truncate group-hover:text-primary transition-colors cursor-pointer hover:underline"
+                        title="Click to view full biodata"
+                      >
+                        {conv.otherUser.fullName}
+                      </h3>
+                      <span className="text-[11px] text-secondary font-medium shrink-0">{formatChatTime(conv.lastMessageTime)}</span>
                     </div>
 
                     <p className="text-xs text-secondary truncate">{conv.lastMessageText || 'Tap to start conversation...'}</p>
@@ -459,35 +427,19 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                 </span>
               )}
             </div>
-
-            {isUserOnline(activeConv.otherUser) && (
-              <span className="absolute bottom-0 right-0 translate-x-0.5 translate-y-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white shadow-xs z-10 flex items-center justify-center">
-                <span className="w-1 h-1 rounded-full bg-white animate-pulse" />
-              </span>
-            )}
           </div>
 
-          {/* Clickable Name & Live Online Presence */}
+          {/* Clickable Name & Biodata Summary */}
           <div 
             onClick={() => setSelectedProfile(activeConv.otherUser)}
             className="cursor-pointer group flex flex-col min-w-0"
             title="Click to view full biodata"
           >
-            <h2 className="font-serif font-bold text-xs text-on-surface flex items-center gap-1 group-hover:text-primary transition-colors truncate">
-              <span>{activeConv.otherUser.fullName.split(' ')[0]}</span>
-              {isUserOnline(activeConv.otherUser) && (
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
-              )}
+            <h2 className="font-serif font-bold text-xs text-on-surface group-hover:text-primary transition-colors truncate">
+              {activeConv.otherUser.fullName}
             </h2>
-            <div className="text-[10px] truncate">
-              {isUserOnline(activeConv.otherUser) ? (
-                <span className="text-emerald-600 font-semibold flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-                  Active now
-                </span>
-              ) : (
-                <span className="text-secondary">{getUserStatusText(activeConv.otherUser)}</span>
-              )}
+            <div className="text-[10px] text-secondary truncate">
+              {activeConv.otherUser.profession || 'Member'} · {activeConv.otherUser.city || activeConv.otherUser.location || 'Global'}
             </div>
           </div>
         </div>
@@ -595,41 +547,44 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
         {/* Date Marker */}
         <div className="flex justify-center">
           <span className="text-[10px] text-secondary bg-white px-3 py-0.5 rounded-full border border-outline font-medium shadow-subtle flex items-center gap-1">
-            <Sparkles className="w-3 h-3 text-primary" />
+            <ShieldCheck className="w-3 h-3 text-primary" />
             <span>Conversation Began with Bismillah</span>
           </span>
         </div>
 
-        {activeConv.messages && activeConv.messages.length > 0 ? (
-          activeConv.messages.map((msg, idx) => {
-            const isMe = msg.senderId === currentUser.id;
-            return (
-              <div
-                key={msg.id || idx}
-                className={`flex flex-col gap-0.5 max-w-[82%] ${isMe ? 'items-end ml-auto' : 'items-start mr-auto'}`}
-              >
+        {(() => {
+          const activeMessages = roomMessages.length > 0 ? roomMessages : (activeConv.messages || []);
+          return activeMessages.length > 0 ? (
+            activeMessages.map((msg, idx) => {
+              const isMe = msg.senderId === currentUser.id;
+              return (
                 <div
-                  className={`p-3 rounded-2xl text-xs leading-relaxed ${
-                    isMe
-                      ? 'bg-primary text-white rounded-br-2xs shadow-brand'
-                      : 'bg-white text-on-surface rounded-bl-2xs border border-outline shadow-subtle'
-                  }`}
+                  key={msg.id || idx}
+                  className={`flex flex-col gap-0.5 max-w-[82%] ${isMe ? 'items-end ml-auto' : 'items-start mr-auto'}`}
                 >
-                  <p>{msg.text}</p>
+                  <div
+                    className={`p-3 rounded-2xl text-xs leading-relaxed ${
+                      isMe
+                        ? 'bg-primary text-white rounded-br-2xs shadow-brand'
+                        : 'bg-white text-on-surface rounded-bl-2xs border border-outline shadow-subtle'
+                    }`}
+                  >
+                    <p>{msg.text}</p>
+                  </div>
+                  <div className="flex items-center gap-1 text-[9px] text-secondary px-1 font-medium">
+                    <span>{msg.timestamp || 'Just now'}</span>
+                    {isMe && <CheckCheck className="w-3 h-3 text-primary" />}
+                  </div>
                 </div>
-                <div className="flex items-center gap-1 text-[9px] text-secondary px-1 font-medium">
-                  <span>{msg.timestamp || 'Just now'}</span>
-                  {isMe && <CheckCheck className="w-3 h-3 text-primary" />}
-                </div>
-              </div>
-            );
-          })
-        ) : (
-          <div className="text-center py-10 text-secondary text-xs">
-            <MessageCircle className="w-6 h-6 mx-auto mb-1 text-primary" />
-            <p>No messages yet. Send a respectful salam to begin.</p>
-          </div>
-        )}
+              );
+            })
+          ) : (
+            <div className="text-center py-10 text-secondary text-xs">
+              <MessageCircle className="w-6 h-6 mx-auto mb-1 text-primary" />
+              <p>No messages yet. Send a respectful salam to begin.</p>
+            </div>
+          );
+        })()}
 
         <div ref={chatBottomRef} />
       </main>

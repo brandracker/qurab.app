@@ -88,7 +88,7 @@ usersRouter.post('/complete-onboarding', async (c) => {
       await c.env.DB.prepare(`DELETE FROM user_photos WHERE user_id = ?`).bind(userId).run();
       for (let i = 0; i < photos.length; i++) {
         if (!photos[i]) continue;
-        const photoId = `ph_${Date.now()}_${i}`;
+        const photoId = `ph_${userId}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}_${i}`;
         await c.env.DB.prepare(`
           INSERT INTO user_photos (id, user_id, photo_url, is_primary, sort_order)
           VALUES (?, ?, ?, ?, ?)

@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import confetti from 'canvas-confetti';
-import { Sparkles, MessageCircle, EyeOff } from 'lucide-react';
+import { HeartHandshake, MessageCircle, EyeOff } from 'lucide-react';
 import type { UserProfile } from '../types';
 import { dbService } from '../services/dbService';
 
@@ -37,7 +37,7 @@ export const MutualMatchModal: React.FC<Props> = ({ profile, currentUser: propUs
       <div className="w-full max-w-[420px] bg-white rounded-[36px] p-6 sm:p-7 shadow-2xl border border-outline flex flex-col items-center text-center relative overflow-hidden animate-slide-up">
         {/* Header Badge */}
         <div className="bg-pastel-rose border border-pastel-rose-border text-primary px-4 py-1.5 rounded-full font-sans text-xs font-bold tracking-wider uppercase mb-3 flex items-center gap-1.5 shadow-subtle">
-          <Sparkles className="w-3.5 h-3.5 text-primary" />
+          <HeartHandshake className="w-3.5 h-3.5 text-primary" />
           <span>Alhamdulillah · It's a Match</span>
         </div>
 

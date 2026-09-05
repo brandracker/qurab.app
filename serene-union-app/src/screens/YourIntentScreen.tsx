@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, HeartHandshake } from 'lucide-react';
+import type { PartnerRequirements } from '../types';
 
 interface Props {
   data?: {
@@ -14,6 +15,7 @@ interface Props {
     timeline?: string;
     childrenDesire?: string;
     bio?: string;
+    partnerRequirements?: PartnerRequirements;
   };
   onBack: () => void;
   onContinue: (careerData: {
@@ -28,6 +30,7 @@ interface Props {
     timeline: string;
     childrenDesire: string;
     bio: string;
+    partnerRequirements?: PartnerRequirements;
   }) => void;
 }
 
@@ -44,6 +47,14 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
   const [childrenDesire, setChildrenDesire] = useState<string>(data?.childrenDesire || 'desires_children');
   const [bio, setBio] = useState<string>(data?.bio || '');
 
+  // Partner Requirements / Preferences
+  const [partnerMinAge, setPartnerMinAge] = useState<number>(data?.partnerRequirements?.minAge || 21);
+  const [partnerMaxAge, setPartnerMaxAge] = useState<number>(data?.partnerRequirements?.maxAge || 35);
+  const [partnerMaritalStatus, setPartnerMaritalStatus] = useState<string>(data?.partnerRequirements?.maritalStatus || 'any');
+  const [partnerPracticeLevel, setPartnerPracticeLevel] = useState<string>(data?.partnerRequirements?.practiceLevel || 'practicing');
+  const [partnerRelocation, setPartnerRelocation] = useState<string>(data?.partnerRequirements?.relocation || 'open');
+  const [partnerDescription, setPartnerDescription] = useState<string>(data?.partnerRequirements?.description || '');
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onContinue({
@@ -57,7 +68,15 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
       mahrPhilosophy,
       timeline,
       childrenDesire,
-      bio: bio.trim() || 'Striving on the path of deen and seeking a pious partner.'
+      bio: bio.trim() || 'Striving on the path of deen and seeking a pious partner.',
+      partnerRequirements: {
+        minAge: partnerMinAge,
+        maxAge: partnerMaxAge,
+        maritalStatus: partnerMaritalStatus,
+        practiceLevel: partnerPracticeLevel,
+        relocation: partnerRelocation,
+        description: partnerDescription.trim() || 'Seeking a practicing, family-oriented partner with good akhlaq.'
+      }
     });
   };
 
@@ -218,7 +237,7 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
                 '🤍 Family-Oriented',
                 '🌿 Calm & Patient',
                 '💡 Ambitious & Driven',
-                '✨ Optimistic & Warm',
+                '☀️ Optimistic & Warm',
                 '🕌 God-Fearing (Taqwa)',
                 '🤝 Humble & Honest'
               ].map(trait => {
@@ -331,6 +350,138 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
               placeholder="Share what practicing Islam means in your daily life, your character values, and what kind of partner you hope to build a home with..."
               className="w-full bg-white border border-outline rounded-2xl p-3 text-xs text-on-surface outline-none focus:border-primary leading-relaxed shadow-subtle"
             />
+          </div>
+
+          {/* Partner Requirements & Expectations (شریکِ حیات کے تقاضے) */}
+          <div className="bg-pastel-sand/60 rounded-2xl p-4 border border-pastel-sand-border space-y-3 shadow-subtle">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-xs shadow-2xs">
+                <HeartHandshake className="w-4 h-4 text-amber-800" />
+              </div>
+              <div>
+                <h3 className="text-xs font-bold text-on-surface">Partner Requirements & Expectations</h3>
+                <p className="text-[10px] text-secondary">What you are looking for in a prospective spouse</p>
+              </div>
+            </div>
+
+            {/* Preferred Age Range */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[11px] font-bold text-on-surface">Preferred Age Range</span>
+                <span className="text-[11px] font-mono font-bold text-primary">{partnerMinAge} - {partnerMaxAge} years</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <span className="text-[10px] text-secondary block mb-0.5">Min Age</span>
+                  <input
+                    type="number"
+                    min={18}
+                    max={partnerMaxAge}
+                    value={partnerMinAge}
+                    onChange={(e) => setPartnerMinAge(Math.min(Number(e.target.value) || 18, partnerMaxAge))}
+                    className="w-full bg-white border border-outline rounded-xl px-3 py-1.5 text-xs font-bold text-on-surface outline-none focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <span className="text-[10px] text-secondary block mb-0.5">Max Age</span>
+                  <input
+                    type="number"
+                    min={partnerMinAge}
+                    max={75}
+                    value={partnerMaxAge}
+                    onChange={(e) => setPartnerMaxAge(Math.max(Number(e.target.value) || partnerMinAge, partnerMinAge))}
+                    className="w-full bg-white border border-outline rounded-xl px-3 py-1.5 text-xs font-bold text-on-surface outline-none focus:border-primary"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Preferred Marital Status */}
+            <div>
+              <span className="text-[11px] font-bold text-on-surface block mb-1">Marital Status Preference</span>
+              <div className="grid grid-cols-3 gap-1.5">
+                {[
+                  { id: 'never_married', label: 'Never Married' },
+                  { id: 'any', label: 'Open to All' },
+                  { id: 'divorced_widowed_open', label: 'Divorced / Widowed OK' }
+                ].map(opt => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setPartnerMaritalStatus(opt.id)}
+                    className={`py-1.5 px-1 rounded-xl border text-[10px] font-semibold text-center transition-all ${
+                      partnerMaritalStatus === opt.id
+                        ? 'border-primary bg-pastel-rose text-primary font-bold shadow-subtle'
+                        : 'border-outline bg-white text-secondary hover:bg-surface-variant'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Religious Practice Requirement */}
+            <div>
+              <span className="text-[11px] font-bold text-on-surface block mb-1">Deen & Practice Expectation</span>
+              <div className="grid grid-cols-3 gap-1.5">
+                {[
+                  { id: 'practicing', label: 'Practicing' },
+                  { id: 'very_practicing', label: 'Very Practicing' },
+                  { id: 'any', label: 'Growing in Deen' }
+                ].map(opt => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setPartnerPracticeLevel(opt.id)}
+                    className={`py-1.5 px-1 rounded-xl border text-[10px] font-semibold text-center transition-all ${
+                      partnerPracticeLevel === opt.id
+                        ? 'border-primary bg-pastel-rose text-primary font-bold shadow-subtle'
+                        : 'border-outline bg-white text-secondary hover:bg-surface-variant'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Relocation Preference */}
+            <div>
+              <span className="text-[11px] font-bold text-on-surface block mb-1">Relocation Expectation</span>
+              <div className="grid grid-cols-3 gap-1.5">
+                {[
+                  { id: 'open', label: 'Open / Flexible' },
+                  { id: 'willing', label: 'Willing to Relocate' },
+                  { id: 'not_willing', label: 'Prefer Same City' }
+                ].map(opt => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setPartnerRelocation(opt.id)}
+                    className={`py-1.5 px-1 rounded-xl border text-[10px] font-semibold text-center transition-all ${
+                      partnerRelocation === opt.id
+                        ? 'border-primary bg-pastel-rose text-primary font-bold shadow-subtle'
+                        : 'border-outline bg-white text-secondary hover:bg-surface-variant'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Partner Requirements Description */}
+            <div>
+              <span className="text-[11px] font-bold text-on-surface block mb-1">Specific Partner Requirements (Optional)</span>
+              <textarea
+                rows={2}
+                value={partnerDescription}
+                onChange={(e) => setPartnerDescription(e.target.value)}
+                placeholder="e.g. Seeking a practicing, family-oriented partner with good akhlaq..."
+                className="w-full bg-white border border-outline rounded-xl p-2.5 text-xs text-on-surface outline-none focus:border-primary leading-relaxed shadow-2xs"
+              />
+            </div>
           </div>
         </form>
       </div>

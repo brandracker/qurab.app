@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Volume2, VolumeX, X, PlayCircle, Gift, CheckCircle2 } from 'lucide-react';
-import { API_BASE } from '../services/dbService';
+import { Volume2, VolumeX, X, PlayCircle, Gift, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { unityAdsService, UNITY_ADS_CONFIG } from '../services/unityAdsService';
 
 interface Props {
   userId: string;
@@ -22,6 +22,20 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes',
       return;
     }
 
+    // If running in Native Android App with Unity Ads SDK, trigger real full-screen ad
+    if (unityAdsService.isNativeBridgeAvailable()) {
+      unityAdsService.showNativeRewardedAd(userId, rewardType).then((rewarded) => {
+        if (rewarded) {
+          onRewardClaimed();
+          onClose();
+        }
+      });
+      return;
+    }
+
+    // Try initializing native Unity Ads SDK if available
+    unityAdsService.initialize().catch(() => {});
+
     const timer = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
@@ -40,11 +54,7 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes',
 
   const handleClaim = async () => {
     try {
-      await fetch(`${API_BASE}/wallet/reward-ad`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, rewardType })
-      });
+      await unityAdsService.claimReward(userId, rewardType);
     } catch {}
 
     onRewardClaimed();
@@ -64,7 +74,7 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes',
         <div className="p-3.5 bg-surface-variant flex items-center justify-between border-b border-outline">
           <div className="flex items-center gap-2">
             <span className="bg-pastel-amber text-pastel-amber-text border border-pastel-amber-border text-[10px] font-bold px-2 py-0.2 rounded-full font-mono uppercase">
-              Rewarded Sponsor
+              Unity Ads · Rewarded Sponsor
             </span>
             <span className="text-xs font-bold text-on-surface">Reward in: {timeLeft}s</span>
           </div>
@@ -97,9 +107,14 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes',
             Qurab Islamic Matrimony
           </h3>
 
-          <p className="text-xs text-white/80 max-w-xs leading-relaxed">
+          <p className="text-xs text-white/80 max-w-xs leading-relaxed mb-2">
             Discover thousands of verified practicing Muslim singles seeking sincere, blessed Nikah.
           </p>
+
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/10 text-white/90 text-[10px] font-mono border border-white/15">
+            <ShieldCheck className="w-3 h-3 text-emerald-400" />
+            <span>Unity Placement: {UNITY_ADS_CONFIG.placementId} ({UNITY_ADS_CONFIG.gameId})</span>
+          </div>
 
           {/* Ad Progress Bar */}
           <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-white/20">

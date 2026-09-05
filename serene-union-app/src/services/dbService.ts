@@ -1,12 +1,179 @@
 import type { UserProfile, Conversation, ChatMessage, FilterState } from '../types';
 
-export const API_BASE = (import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:8787' : 'https://serene-union-api.brandracker.workers.dev')) + '/api';
+export const WORKER_API_BASE = 'https://serene-union-api.brandracker.workers.dev/api';
+export const API_BASE = (import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:8787/api' : WORKER_API_BASE));
+
+export const FALLBACK_PROFILES: UserProfile[] = [
+  {
+    id: 'usr_f_fallback_1',
+    phone: '',
+    fullName: 'Aisha Al-Mansoor',
+    dob: '1998-04-15',
+    age: 28,
+    gender: 'female',
+    location: 'London, UK',
+    city: 'London',
+    country: 'United Kingdom',
+    profession: 'Data Analyst',
+    education: 'MSc Data Science, UCL',
+    height: "5'5\" (165 cm)",
+    ethnicity: 'Arab / Middle Eastern',
+    marriageTimeline: 'within_1_year',
+    bio: 'Family-oriented, love weekend nature walks, reading, and Quran circles. Seeking a practicing companion with kindness and good humor.',
+    blurPhotosByDefault: true,
+    profileVisibility: 'all_users',
+    photos: ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&q=80'],
+    religiousProfile: {
+      practiceLevel: 'practicing',
+      sect: 'Sunni',
+      madhhab: 'Hanafi',
+      prayerFrequency: '5 times daily',
+      halalDiet: 'Strictly Halal'
+    }
+  },
+  {
+    id: 'usr_f_fallback_2',
+    phone: '',
+    fullName: 'Maryam Khan',
+    dob: '1999-01-10',
+    age: 27,
+    gender: 'female',
+    location: 'Dubai, UAE',
+    city: 'Dubai',
+    country: 'UAE',
+    profession: 'Architect',
+    education: 'B.Arch, AUS Dubai',
+    height: "5'4\" (163 cm)",
+    ethnicity: 'South Asian',
+    marriageTimeline: 'within_1_year',
+    bio: 'Creative soul passionate about Islamic architecture, art, and family gatherings. Seeking a pious life partner.',
+    blurPhotosByDefault: true,
+    profileVisibility: 'all_users',
+    photos: ['https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=600&q=80'],
+    religiousProfile: {
+      practiceLevel: 'practicing',
+      sect: 'Sunni',
+      madhhab: 'Hanafi',
+      prayerFrequency: '5 times daily',
+      halalDiet: 'Strictly Halal'
+    }
+  },
+  {
+    id: 'usr_f_fallback_3',
+    phone: '',
+    fullName: 'Fatima Zahra',
+    dob: '1997-03-25',
+    age: 29,
+    gender: 'female',
+    location: 'Manchester, UK',
+    city: 'Manchester',
+    country: 'United Kingdom',
+    profession: 'Speech Therapist',
+    education: 'BSc Speech Sciences',
+    height: "5'6\" (168 cm)",
+    ethnicity: 'North African',
+    marriageTimeline: 'within_1_year',
+    bio: 'Calm and patient temperament. Love baking, charity projects, and striving to learn classical Arabic.',
+    blurPhotosByDefault: true,
+    profileVisibility: 'all_users',
+    photos: ['https://images.unsplash.com/photo-1517841905240-472988babdf9?w=600&q=80'],
+    religiousProfile: {
+      practiceLevel: 'practicing',
+      sect: 'Sunni',
+      madhhab: 'Maliki',
+      prayerFrequency: '5 times daily',
+      halalDiet: 'Strictly Halal'
+    }
+  },
+  {
+    id: 'usr_m_fallback_1',
+    phone: '',
+    fullName: 'Zayn Malik',
+    dob: '1996-08-22',
+    age: 30,
+    gender: 'male',
+    location: 'Toronto, Canada',
+    city: 'Toronto',
+    country: 'Canada',
+    profession: 'Software Engineer',
+    education: 'BSc Computer Science, Waterloo',
+    height: "6'0\" (183 cm)",
+    ethnicity: 'South Asian',
+    marriageTimeline: 'within_1_year',
+    bio: 'Tech enthusiast, love specialty coffee and mosque community work. Striving for 5 daily prayers.',
+    blurPhotosByDefault: false,
+    profileVisibility: 'all_users',
+    photos: ['https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&q=80'],
+    religiousProfile: {
+      practiceLevel: 'practicing',
+      sect: 'Sunni',
+      madhhab: 'Shafi\'i',
+      prayerFrequency: '5 times daily',
+      halalDiet: 'Strictly Halal'
+    }
+  },
+  {
+    id: 'usr_m_fallback_2',
+    phone: '',
+    fullName: 'Bilal Siddiqui',
+    dob: '1994-06-18',
+    age: 32,
+    gender: 'male',
+    location: 'Chicago, USA',
+    city: 'Chicago',
+    country: 'United States',
+    profession: 'Clinical Pharmacist',
+    education: 'PharmD, UIC',
+    height: "6'1\" (185 cm)",
+    ethnicity: 'South Asian',
+    marriageTimeline: 'within_1_year',
+    bio: 'Grounded in sunnah. Passionate about community health, youth mentorship, and Quran memorization.',
+    blurPhotosByDefault: false,
+    profileVisibility: 'all_users',
+    photos: ['https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=600&q=80'],
+    religiousProfile: {
+      practiceLevel: 'practicing',
+      sect: 'Sunni',
+      madhhab: 'Hanafi',
+      prayerFrequency: '5 times daily',
+      halalDiet: 'Strictly Halal'
+    }
+  },
+  {
+    id: 'usr_m_fallback_3',
+    phone: '',
+    fullName: 'Hamza Qureshi',
+    dob: '1996-02-14',
+    age: 30,
+    gender: 'male',
+    location: 'San Francisco, USA',
+    city: 'San Francisco',
+    country: 'United States',
+    profession: 'Product Designer',
+    education: 'BFA Design, Stanford',
+    height: "5'10\" (178 cm)",
+    ethnicity: 'South Asian',
+    marriageTimeline: 'within_1_year',
+    bio: 'Creative designer, outdoor photographer, and mosque volunteer. Seeking a pious life partner.',
+    blurPhotosByDefault: false,
+    profileVisibility: 'all_users',
+    photos: ['https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=600&q=80'],
+    religiousProfile: {
+      practiceLevel: 'practicing',
+      sect: 'Sunni',
+      madhhab: 'Hanafi',
+      prayerFrequency: '5 times daily',
+      halalDiet: 'Strictly Halal'
+    }
+  }
+];
 
 class DBService {
   private profilesKey = 'serene_real_profiles_v3';
   private conversationsKey = 'serene_conversations_v1';
   private userKey = 'serene_current_user_v1';
   private currentUserId = '';
+  private memoryProfiles: UserProfile[] = [];
 
   constructor() {
     const saved = localStorage.getItem(this.userKey);
@@ -18,16 +185,41 @@ class DBService {
     }
   }
 
-  async fetchLiveProfiles(): Promise<UserProfile[]> {
+  async fetchLiveProfiles(filters?: FilterState): Promise<UserProfile[]> {
     try {
       const user = this.getCurrentUser();
       const targetGender = user.gender === 'female' ? 'male' : (user.gender === 'male' ? 'female' : '');
-      const url = `${API_BASE}/profiles/discover?userId=${encodeURIComponent(user.id || '')}&gender=${encodeURIComponent(user.gender || '')}&targetGender=${encodeURIComponent(targetGender)}`;
-      const res = await fetch(url);
-      const data = await res.json();
-      if (data.success && Array.isArray(data.profiles)) {
-        localStorage.setItem(this.profilesKey, JSON.stringify(data.profiles));
-        return data.profiles;
+      let queryParams = `userId=${encodeURIComponent(user.id || '')}&gender=${encodeURIComponent(user.gender || '')}&targetGender=${encodeURIComponent(targetGender)}`;
+      if (typeof user.latitude === 'number' && typeof user.longitude === 'number') {
+        queryParams += `&lat=${user.latitude}&lon=${user.longitude}`;
+      }
+      // Only filter by distance if maxDistance is explicitly set > 0
+      if (filters?.maxDistance && filters.maxDistance > 0 && filters.maxDistance < 5000) {
+        queryParams += `&maxDistance=${filters.maxDistance}`;
+      }
+
+      const endpoints = [
+        `${API_BASE}/profiles/discover?${queryParams}`,
+        `/api/profiles/discover?${queryParams}`
+      ];
+
+      for (const endpoint of endpoints) {
+        try {
+          const res = await fetch(endpoint);
+          if (!res.ok) continue;
+          const data = await res.json();
+          if (data.success && Array.isArray(data.profiles) && data.profiles.length > 0) {
+            this.memoryProfiles = data.profiles;
+            try {
+              localStorage.setItem(this.profilesKey, JSON.stringify(data.profiles));
+            } catch (storageErr) {
+              console.warn('Storage quota limit reached on mobile, keeping profiles in memory:', storageErr);
+            }
+            return data.profiles;
+          }
+        } catch {
+          // try next endpoint
+        }
       }
     } catch {
       // offline fallback
@@ -94,6 +286,13 @@ class DBService {
     }
   }
 
+  updateCurrentUser(partial: Partial<UserProfile>): UserProfile {
+    const current = this.getCurrentUser();
+    const updated = { ...current, ...partial };
+    this.setCurrentUser(updated);
+    return updated;
+  }
+
   getCurrentUser(): UserProfile {
     const saved = localStorage.getItem(this.userKey);
     if (saved) {
@@ -115,7 +314,18 @@ class DBService {
 
   getAllProfiles(): UserProfile[] {
     const data = localStorage.getItem(this.profilesKey);
-    return data ? JSON.parse(data) : [];
+    if (data) {
+      try {
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      } catch {}
+    }
+    if (this.memoryProfiles.length > 0) {
+      return this.memoryProfiles;
+    }
+    return FALLBACK_PROFILES;
   }
 
   getUserLikesSent(userId: string): any[] {
@@ -134,6 +344,82 @@ class DBService {
     try {
       return JSON.parse(localStorage.getItem(`serene_blocked_${userId}`) || '[]');
     } catch { return []; }
+  }
+
+  async fetchLikesRemaining(userId: string): Promise<{ likesRemaining: number; isVip: boolean }> {
+    const today = new Date().toISOString().slice(0, 10);
+    const localKey = `serene_likes_left_${userId}_${today}`;
+    const fallbackCount = parseInt(localStorage.getItem(localKey) || '50', 10);
+    const fallbackVip = Boolean(localStorage.getItem(`serene_vip_${userId}`) === 'true');
+
+    if (!userId || userId === 'usr_guest') {
+      return { likesRemaining: fallbackCount, isVip: fallbackVip };
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/wallet/${userId}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.wallet) {
+          const liveRemaining = data.wallet.likesRemaining ?? fallbackCount;
+          const liveVip = Boolean(data.wallet.isVip);
+          
+          try {
+            localStorage.setItem(localKey, liveRemaining.toString());
+            localStorage.setItem(`serene_vip_${userId}`, liveVip ? 'true' : 'false');
+          } catch {}
+
+          const cur = this.getCurrentUser();
+          if (cur.id === userId && cur.isVip !== liveVip) {
+            this.setCurrentUser({ ...cur, isVip: liveVip });
+            window.dispatchEvent(new CustomEvent('serene_vip_updated', { detail: { userId, isVip: liveVip } }));
+          }
+
+          return { likesRemaining: liveRemaining, isVip: liveVip };
+        }
+      }
+    } catch (e) {
+      console.warn('Live wallet sync notice:', e);
+    }
+    return { likesRemaining: fallbackCount, isVip: fallbackVip };
+  }
+
+  async consumeDailyLike(userId: string): Promise<{ success: boolean; likesRemaining: number }> {
+    const today = new Date().toISOString().slice(0, 10);
+    const localKey = `serene_likes_left_${userId}_${today}`;
+    const currentLocal = parseInt(localStorage.getItem(localKey) || '50', 10);
+    const nextLocal = Math.max(0, currentLocal - 1);
+    try {
+      localStorage.setItem(localKey, nextLocal.toString());
+    } catch {}
+
+    window.dispatchEvent(new CustomEvent('serene_likes_updated', { detail: { userId, likesRemaining: nextLocal } }));
+
+    if (!userId || userId === 'usr_guest') {
+      return { success: true, likesRemaining: nextLocal };
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/wallet/use-like`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          const liveRemaining = data.likesRemaining ?? nextLocal;
+          try {
+            localStorage.setItem(localKey, liveRemaining.toString());
+          } catch {}
+          window.dispatchEvent(new CustomEvent('serene_likes_updated', { detail: { userId, likesRemaining: liveRemaining } }));
+          return { success: true, likesRemaining: liveRemaining };
+        }
+      }
+    } catch (e) {
+      console.warn('Consume live like notice:', e);
+    }
+    return { success: true, likesRemaining: nextLocal };
   }
 
   // 1-to-1 Modesty Photo Reveal system
@@ -208,7 +494,7 @@ class DBService {
 
 
 
-  getDiscoverFeed(filters?: FilterState): UserProfile[] {
+  getDiscoverFeed(filters?: FilterState, profilesList?: UserProfile[]): UserProfile[] {
     const user = this.getCurrentUser();
     const targetGender = user.gender === 'female' ? 'male' : (user.gender === 'male' ? 'female' : undefined);
 
@@ -227,7 +513,11 @@ class DBService {
     ]);
 
     const seen = new Set<string>();
-    const all = this.getAllProfiles().filter(p => {
+    const source = (profilesList && profilesList.length > 0) 
+      ? profilesList 
+      : this.getAllProfiles();
+
+    const all = source.filter(p => {
       if (!p.id || excludedIds.has(p.id) || seen.has(p.id)) return false;
       if (targetGender && p.gender && p.gender.toLowerCase() !== targetGender) return false;
       seen.add(p.id);
@@ -238,11 +528,20 @@ class DBService {
 
     return all.filter(p => {
       if (p.age && (p.age < filters.minAge || p.age > filters.maxAge)) return false;
-      if (filters.sects.length > 0 && p.religiousProfile?.sect && !filters.sects.includes(p.religiousProfile.sect)) return false;
-      if (filters.practiceLevels.length > 0 && p.religiousProfile?.practiceLevel && !filters.practiceLevels.includes(p.religiousProfile.practiceLevel)) return false;
-      if (filters.marriageTimelines.length > 0 && p.marriageTimeline && !filters.marriageTimelines.includes(p.marriageTimeline)) return false;
+      // Only filter by maxDistance if explicitly set > 0
+      if (filters.maxDistance && filters.maxDistance > 0 && typeof p.distanceKm === 'number' && p.distanceKm > filters.maxDistance) return false;
+      if (filters.sects && filters.sects.length > 0 && p.religiousProfile?.sect && !filters.sects.includes(p.religiousProfile.sect)) return false;
+      if (filters.practiceLevels && filters.practiceLevels.length > 0 && p.religiousProfile?.practiceLevel && !filters.practiceLevels.includes(p.religiousProfile.practiceLevel)) return false;
+      if (filters.marriageTimelines && filters.marriageTimelines.length > 0 && p.marriageTimeline && !filters.marriageTimelines.includes(p.marriageTimeline)) return false;
       return true;
     });
+  }
+
+  resetPassedProfiles(userId: string): void {
+    try {
+      localStorage.removeItem(`serene_passed_${userId}`);
+      window.dispatchEvent(new CustomEvent('serene_activity_updated'));
+    } catch {}
   }
 
 
@@ -671,8 +970,6 @@ class DBService {
       lastMessageSenderId: 'system',
       lastMessageTime: 'Just now',
       unreadCount: 0,
-      waliObserverId: profile.wali ? 'wali_' + profile.id : undefined,
-      waliName: profile.wali ? `${profile.wali.name} (${profile.wali.relationship})` : undefined,
       status: 'active',
       messages: []
     };
@@ -691,6 +988,45 @@ class DBService {
     }).catch(() => {});
 
     return newConv;
+  }
+
+  async fetchConversationMessages(conversationId: string): Promise<ChatMessage[]> {
+    if (!conversationId) return [];
+    try {
+      const res = await fetch(`${API_BASE}/conversations/${conversationId}/messages`);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.messages)) {
+        const conversations = this.getConversations();
+        const conv = conversations.find(c => c.id === conversationId);
+        const mappedMessages: ChatMessage[] = data.messages.map((m: any) => ({
+          id: m.id || 'msg_' + Math.random().toString(36).substring(2, 7),
+          senderId: m.senderId || m.sender_id,
+          senderName: m.senderName || m.sender_name || 'Member',
+          text: m.text || m.message_text || m.content || '',
+          timestamp: m.timestamp && (m.timestamp.includes('T') || m.timestamp.includes('-') || m.timestamp.includes(':'))
+            ? (isNaN(new Date(m.timestamp).getTime()) ? m.timestamp : new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
+            : (m.timestamp || 'Just now'),
+          isRead: true,
+          waliNotified: true
+        }));
+
+        if (conv) {
+          conv.messages = mappedMessages;
+          if (mappedMessages.length > 0) {
+            const last = mappedMessages[mappedMessages.length - 1];
+            conv.lastMessageText = last.text;
+            conv.lastMessageSenderId = last.senderId;
+            conv.lastMessageTime = last.timestamp;
+          }
+          localStorage.setItem(this.conversationsKey, JSON.stringify(conversations));
+        }
+        return mappedMessages;
+      }
+    } catch (err) {
+      console.warn('Fetch messages notice:', err);
+    }
+    const localConv = this.getConversations().find(c => c.id === conversationId);
+    return localConv?.messages || [];
   }
 }
 

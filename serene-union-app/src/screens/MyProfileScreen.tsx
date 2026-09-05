@@ -5,7 +5,11 @@ import {
   EyeOff, 
 
   MapPin, 
-  Sparkles, 
+  User,
+  Heart,
+  Globe2,
+  Compass,
+  Infinity,
   PlayCircle, 
   BookOpen, 
   Home, 
@@ -73,12 +77,28 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
   });
 
   useEffect(() => {
+    dbService.fetchLikesRemaining(user.id).then(({ likesRemaining: liveRem, isVip: liveVip }) => {
+      setLikesRemaining(liveRem);
+      setIsVip(liveVip);
+    });
+
     const handleActivity = () => {
       const saved = localStorage.getItem(getTodayLikeKey());
       setLikesRemaining(saved !== null ? parseInt(saved, 10) : 50);
     };
+    const handleLikes = (e: any) => {
+      if (!e.detail?.userId || e.detail.userId === user.id) {
+        if (typeof e.detail?.likesRemaining === 'number') {
+          setLikesRemaining(e.detail.likesRemaining);
+        }
+      }
+    };
     window.addEventListener('serene_activity_updated', handleActivity);
-    return () => window.removeEventListener('serene_activity_updated', handleActivity);
+    window.addEventListener('serene_likes_updated', handleLikes);
+    return () => {
+      window.removeEventListener('serene_activity_updated', handleActivity);
+      window.removeEventListener('serene_likes_updated', handleLikes);
+    };
   }, [user.id]);
 
 
@@ -333,7 +353,7 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
             <div className="grid grid-cols-2 gap-2 pt-2.5 border-t border-pastel-amber-border/70 text-xs">
               <div className="p-2.5 rounded-2xl bg-white border border-pastel-amber-border/80 flex items-center gap-2.5 shadow-xs">
                 <div className="w-7 h-7 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center shrink-0">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                  <Infinity className="w-3.5 h-3.5 text-amber-600" />
                 </div>
                 <div className="min-w-0">
                   <strong className="block text-[10px] text-on-surface font-bold truncate">Unlimited Likes</strong>
@@ -620,7 +640,7 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
             {/* 1. Personal Background & Biodata (Pastel Rose) */}
             <div className="bg-pastel-rose rounded-2xl p-3.5 border border-pastel-rose-border space-y-2.5 shadow-subtle">
               <h3 className="font-serif text-xs font-bold text-primary flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-primary" />
+                <User className="w-3.5 h-3.5 text-primary" />
                 <span>Personal Background & Biodata</span>
               </h3>
               <div className="grid grid-cols-2 gap-2 text-xs">
@@ -636,7 +656,7 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
 
                 <div className="bg-white p-2.5 rounded-xl border border-pastel-rose-border shadow-2xs flex items-center gap-2.5">
                   <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 border border-purple-200 flex items-center justify-center shrink-0">
-                    <Sparkles className="w-3.5 h-3.5" />
+                    <Globe2 className="w-3.5 h-3.5" />
                   </div>
                   <div className="min-w-0">
                     <span className="text-[10px] text-secondary font-medium block">Ethnicity</span>
@@ -707,7 +727,7 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
 
                 <div className="bg-white p-2.5 rounded-xl border border-pastel-mint-border shadow-2xs flex items-center gap-2.5">
                   <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center shrink-0">
-                    <Sparkles className="w-3.5 h-3.5" />
+                    <Compass className="w-3.5 h-3.5" />
                   </div>
                   <div className="min-w-0">
                     <span className="text-[10px] text-pastel-mint-text font-medium block">Hajj / Umrah</span>
@@ -862,12 +882,60 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
             {/* 5. About My Deen & Character (Pastel Lavender) */}
             <div className="bg-pastel-lavender rounded-2xl p-3.5 border border-pastel-lavender-border space-y-1.5 shadow-subtle">
               <h3 className="text-xs font-bold text-pastel-lavender-text uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-pastel-lavender-text" />
+                <BookOpen className="w-3.5 h-3.5 text-pastel-lavender-text" />
                 <span>About My Deen & Character</span>
               </h3>
               <p className="text-xs text-on-surface leading-relaxed italic bg-white/60 p-3 rounded-xl border border-pastel-lavender-border">
                 "{user.bio || rel?.deenRelationshipBio || "Seeking a righteous spouse to complete half our deen in harmony and mutual respect."}"
               </p>
+            </div>
+
+            {/* 6. My Partner Requirements & Expectations */}
+            <div className="bg-pastel-amber/60 rounded-2xl p-3.5 border border-pastel-amber-border space-y-2.5 shadow-subtle">
+              <h3 className="text-xs font-bold text-pastel-amber-text uppercase tracking-wider flex items-center gap-1.5">
+                <Heart className="w-3.5 h-3.5 text-pastel-amber-text fill-pastel-amber-text/30" />
+                <span>My Partner Requirements & Expectations</span>
+              </h3>
+              
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="bg-white p-2.5 rounded-xl border border-pastel-amber-border shadow-2xs">
+                  <span className="text-[10px] text-pastel-amber-text font-medium block">Preferred Age</span>
+                  <strong className="text-on-surface text-[11px] block truncate">
+                    {user.partnerRequirements?.minAge && user.partnerRequirements?.maxAge
+                      ? `${user.partnerRequirements.minAge} - ${user.partnerRequirements.maxAge} years`
+                      : '20 - 35 years'}
+                  </strong>
+                </div>
+
+                <div className="bg-white p-2.5 rounded-xl border border-pastel-amber-border shadow-2xs">
+                  <span className="text-[10px] text-pastel-amber-text font-medium block">Marital Status</span>
+                  <strong className="text-on-surface text-[11px] block truncate capitalize">
+                    {user.partnerRequirements?.maritalStatus ? user.partnerRequirements.maritalStatus.replace(/_/g, ' ') : 'Open to All'}
+                  </strong>
+                </div>
+
+                <div className="bg-white p-2.5 rounded-xl border border-pastel-amber-border shadow-2xs">
+                  <span className="text-[10px] text-pastel-amber-text font-medium block">Deen & Practice</span>
+                  <strong className="text-on-surface text-[11px] block truncate capitalize">
+                    {user.partnerRequirements?.practiceLevel ? user.partnerRequirements.practiceLevel.replace(/_/g, ' ') : 'Practicing'}
+                  </strong>
+                </div>
+
+                <div className="bg-white p-2.5 rounded-xl border border-pastel-amber-border shadow-2xs">
+                  <span className="text-[10px] text-pastel-amber-text font-medium block">Relocation</span>
+                  <strong className="text-on-surface text-[11px] block truncate capitalize">
+                    {user.partnerRequirements?.relocation ? user.partnerRequirements.relocation.replace(/_/g, ' ') : 'Flexible / Open'}
+                  </strong>
+                </div>
+              </div>
+
+              {/* Expectations Note */}
+              <div className="bg-white/80 p-2.5 rounded-xl border border-pastel-amber-border text-xs leading-relaxed text-on-surface">
+                <span className="text-[10px] text-pastel-amber-text font-bold uppercase tracking-wider block mb-0.5">What I am looking for:</span>
+                <p className="italic text-[11px] text-on-surface">
+                  "{user.partnerRequirements?.description || 'Seeking a practicing, kind-hearted spouse with good Islamic manners.'}"
+                </p>
+              </div>
             </div>
 
           </div>

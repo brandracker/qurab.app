@@ -10,7 +10,7 @@ import com.unity3d.ads.IUnityAdsShowListener;
 import com.unity3d.ads.UnityAds;
 import com.unity3d.ads.UnityAdsShowOptions;
 
-public class MainActivity extends BridgeActivity {
+public class MainActivity extends BridgeActivity implements IUnityAdsInitializationListener {
     private static final String GAME_ID = "800368124";
     private static final String REWARDED_PLACEMENT_ID = "Rewarded_Android";
     private static final boolean TEST_MODE = false;
@@ -20,16 +20,7 @@ public class MainActivity extends BridgeActivity {
         super.onCreate(savedInstanceState);
 
         // Initialize Unity Ads SDK with live credentials
-        UnityAds.initialize(getApplicationContext(), GAME_ID, TEST_MODE, new IUnityAdsInitializationListener() {
-            @Override
-            public void onInitializationComplete() {
-                loadRewardedAd();
-            }
-
-            @Override
-            public void onInitializationFailed(UnityAds.UnityAdsInitializationError error, String message) {
-            }
-        });
+        UnityAds.initialize(getApplicationContext(), GAME_ID, TEST_MODE, this);
 
         // Add Javascript Bridge for WebView to trigger Unity Ads
         if (bridge != null && bridge.getWebView() != null) {
@@ -37,13 +28,24 @@ public class MainActivity extends BridgeActivity {
         }
     }
 
+    @Override
+    public void onInitializationComplete() {
+        loadRewardedAd();
+    }
+
+    @Override
+    public void onInitializationFailed(UnityAds.UnityAdsInitializationError error, String message) {
+    }
+
     private void loadRewardedAd() {
         UnityAds.load(REWARDED_PLACEMENT_ID, new IUnityAdsLoadListener() {
             @Override
-            public void onComplete(String placementId) {}
+            public void onUnityAdsAdLoaded(String placementId) {
+            }
 
             @Override
-            public void onFailed(String placementId, UnityAds.UnityAdsLoadError error, String message) {}
+            public void onUnityAdsFailedToLoad(String placementId, UnityAds.UnityAdsLoadError error, String message) {
+            }
         });
     }
 
@@ -55,7 +57,7 @@ public class MainActivity extends BridgeActivity {
                 public void run() {
                     UnityAds.show(MainActivity.this, REWARDED_PLACEMENT_ID, new UnityAdsShowOptions(), new IUnityAdsShowListener() {
                         @Override
-                        public void onComplete(String placementId, UnityAds.UnityAdsShowCompletionState state) {
+                        public void onUnityAdsShowComplete(String placementId, UnityAds.UnityAdsShowCompletionState state) {
                             if (state == UnityAds.UnityAdsShowCompletionState.COMPLETED) {
                                 notifyRewardClaimed(userId, rewardType);
                             }
@@ -63,15 +65,15 @@ public class MainActivity extends BridgeActivity {
                         }
 
                         @Override
-                        public void onFailed(String placementId, UnityAds.UnityAdsShowError error, String message) {
+                        public void onUnityAdsShowFailure(String placementId, UnityAds.UnityAdsShowError error, String message) {
                             loadRewardedAd();
                         }
 
                         @Override
-                        public void onStart(String placementId) {}
+                        public void onUnityAdsShowStart(String placementId) {}
 
                         @Override
-                        public void onClick(String placementId) {}
+                        public void onUnityAdsShowClick(String placementId) {}
                     });
                 }
             });

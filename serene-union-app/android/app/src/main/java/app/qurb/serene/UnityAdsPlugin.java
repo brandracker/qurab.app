@@ -70,14 +70,6 @@ public class UnityAdsPlugin extends Plugin implements IUnityAdsInitializationLis
             public void onUnityAdsFailedToLoad(String placementId, UnityAds.UnityAdsLoadError error, String message) {
                 isAdLoaded = false;
                 Log.e(TAG, "Unity Ad Failed To Load: " + error + " - " + message);
-                if (getActivity() != null) {
-                    getActivity().runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            Toast.makeText(getContext(), "Unity Ad Buffering: " + message, Toast.LENGTH_SHORT).show();
-                        }
-                    });
-                }
                 if (onFailed != null) {
                     onFailed.run();
                 }
@@ -138,7 +130,6 @@ public class UnityAdsPlugin extends Plugin implements IUnityAdsInitializationLis
                     @Override
                     public void onUnityAdsShowFailure(String placementId, UnityAds.UnityAdsShowError error, String message) {
                         Log.e(TAG, "Unity Ad Show Failure: " + error + " - " + message);
-                        Toast.makeText(getContext(), "Unity Ad Notice: " + message, Toast.LENGTH_LONG).show();
                         call.reject("Unity Ad show error: " + message);
                         isAdLoaded = false;
                         loadRewardedAd(null);

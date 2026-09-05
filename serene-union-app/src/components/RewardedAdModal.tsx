@@ -11,31 +11,42 @@ interface Props {
 }
 
 export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes', isOpen, onClose, onRewardClaimed }) => {
-  const [timeLeft, setTimeLeft] = useState<number>(15);
+  const [timeLeft, setTimeLeft] = useState<number>(5);
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
+  const [showNativeFallback, setShowNativeFallback] = useState<boolean>(false);
+  const [isWaitingNative, setIsWaitingNative] = useState<boolean>(false);
 
   useEffect(() => {
     if (!isOpen) {
-      setTimeLeft(15);
+      setTimeLeft(5);
       setIsCompleted(false);
+      setShowNativeFallback(false);
+      setIsWaitingNative(false);
       return;
     }
 
-    // If running in Native Android App with Unity Ads SDK, trigger real full-screen ad
-    if (unityAdsService.isNativeBridgeAvailable()) {
+    // If running on Native mobile, first attempt real Unity full-screen video
+    if (unityAdsService.isNativeBridgeAvailable() && !showNativeFallback) {
+      setIsWaitingNative(true);
       unityAdsService.showNativeRewardedAd(userId, rewardType).then((rewarded) => {
+        setIsWaitingNative(false);
         if (rewarded) {
           onRewardClaimed();
+          onClose();
+        } else {
+          // Native ad failed or is buffering (e.g. ad markup missing / no-fill)
+          // Gracefully fall back to the 5-second sponsor screen so user gets their reward!
+          setShowNativeFallback(true);
         }
-        onClose();
+      }).catch(() => {
+        setIsWaitingNative(false);
+        setShowNativeFallback(true);
       });
       return;
     }
 
-    // Try initializing native Unity Ads SDK if available
-    unityAdsService.initialize().catch(() => {});
-
+    // Web browser or native fallback mode: run quick 5-second sponsor countdown
     const timer = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
@@ -48,12 +59,12 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes',
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isOpen]);
+  }, [isOpen, showNativeFallback]);
 
   if (!isOpen) return null;
 
-  // On Native Mobile, Unity Ads runs in native full-screen; do not render web fallback dialog
-  if (unityAdsService.isNativeBridgeAvailable()) {
+  // On Native Mobile, hide dialog while waiting for native Unity Ads full-screen player
+  if (unityAdsService.isNativeBridgeAvailable() && isWaitingNative && !showNativeFallback) {
     return null;
   }
 
@@ -125,7 +136,7 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes',
           <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-white/20">
             <div
               className="h-full bg-primary transition-all duration-1000 ease-linear"
-              style={{ width: `${((15 - timeLeft) / 15) * 100}%` }}
+              style={{ width: `${Math.min(100, Math.max(0, ((5 - timeLeft) / 5) * 100))}%` }}
             />
           </div>
         </div>

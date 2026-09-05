@@ -1,0 +1,3 @@
+# app-ads.txt for Qurb Islamic Matrimony (qurb.app)
+# Unity Ads authorized seller specification
+unityads.unity3d.com, 18968494911978, DIRECT, f518e1081682705a

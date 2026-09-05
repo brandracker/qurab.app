@@ -87,26 +87,8 @@ public class UnityAdsPlugin extends Plugin implements IUnityAdsInitializationLis
         if (isAdLoaded) {
             displayAd(call, userId, rewardType);
         } else {
-            if (getActivity() != null) {
-                getActivity().runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Toast.makeText(getContext(), "Loading sponsor video, please wait...", Toast.LENGTH_SHORT).show();
-                    }
-                });
-            }
-
-            loadRewardedAd(new Runnable() {
-                @Override
-                public void run() {
-                    displayAd(call, userId, rewardType);
-                }
-            }, new Runnable() {
-                @Override
-                public void run() {
-                    call.reject("Unity ad is still buffering. Please try again in a few moments.");
-                }
-            });
+            // Reject immediately if not cached so app never hangs on a black screen
+            call.reject("Unity ad is not ready yet.");
         }
     }
 

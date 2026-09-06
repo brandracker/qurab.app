@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Crown, TrendingUp, ShieldCheck, PlayCircle, Wallet, CheckCircle2, ArrowRight, X, Check } from 'lucide-react';
+import { Crown, TrendingUp, ShieldCheck, PlayCircle, Wallet, CheckCircle2, X, Check, CreditCard } from 'lucide-react';
 import { API_BASE, dbService } from '../services/dbService';
 
 interface Props {
@@ -57,6 +57,33 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
   ];
 
   const currentItem = products.find(p => p.id === selectedProduct)!;
+
+  const handleStartStripeCheckout = async () => {
+    setIsProcessing(true);
+    try {
+      const currentOrigin = window.location.origin;
+      const res = await fetch(`${API_BASE}/wallet/stripe/create-checkout-session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          productId: currentItem.id,
+          successUrl: `${currentOrigin}/?stripe_status=success&session_id={CHECKOUT_SESSION_ID}`,
+          cancelUrl: `${currentOrigin}/?stripe_status=cancelled`
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.url) {
+        window.location.href = data.url;
+      } else {
+        alert(data.error || 'Failed to initialize Stripe checkout. Please try again.');
+        setIsProcessing(false);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Payment network error. Please try again.');
+      setIsProcessing(false);
+    }
+  };
 
   const handleStartGooglePlayPurchase = () => {
     setPurchaseStep('google_play_sheet');
@@ -243,15 +270,31 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
         )}
 
         {/* Bottom Actions */}
-        <div className="pt-2.5 border-t border-outline">
+        <div className="pt-2.5 border-t border-outline space-y-2">
           {purchaseStep === 'selection' && (
-            <button
-              onClick={handleStartGooglePlayPurchase}
-              className="w-full py-3 rounded-full bg-primary text-white font-sans text-xs font-bold shadow-brand hover:bg-primary-dark active:scale-98 transition-all flex items-center justify-center gap-1.5"
-            >
-              <span>Continue to Google Play ({currentItem.price})</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
+            <>
+              <button
+                onClick={handleStartStripeCheckout}
+                disabled={isProcessing}
+                className="w-full py-3 rounded-full bg-[#635BFF] text-white font-sans text-xs font-bold shadow hover:bg-[#5349e0] active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <CreditCard className="w-4 h-4" />
+                <span>{isProcessing ? 'Connecting to Stripe...' : `Pay with Card / Stripe (${currentItem.price})`}</span>
+              </button>
+
+              <button
+                onClick={handleStartGooglePlayPurchase}
+                disabled={isProcessing}
+                className="w-full py-2.5 rounded-full bg-surface-variant border border-outline text-on-surface font-sans text-xs font-semibold hover:bg-outline/50 active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <img
+                  src="https://upload.wikimedia.org/wikipedia/commons/d/d0/Google_Play_Arrow_logo.svg"
+                  alt="Google Play"
+                  className="w-3.5 h-3.5 object-contain"
+                />
+                <span>Google Play 1-Tap Billing</span>
+              </button>
+            </>
           )}
 
           {purchaseStep === 'google_play_sheet' && (

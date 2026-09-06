@@ -229,6 +229,32 @@ describe('Wallet, In-App Purchases & Rewarded Ads API Integration Tests', () => 
     const text = await res.text();
     expect(text).toContain('Missing');
   });
+
+  it('13. POST /api/wallet/stripe/create-checkout-session validates required params', async () => {
+    const res = await app.request('/api/wallet/stripe/create-checkout-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: 'usr_test_stripe' })
+    }, env);
+
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.success).toBe(false);
+    expect(data.error).toContain('required');
+  });
+
+  it('14. POST /api/wallet/stripe/verify-session validates required sessionId', async () => {
+    const res = await app.request('/api/wallet/stripe/verify-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    }, env);
+
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.success).toBe(false);
+    expect(data.error).toContain('sessionId is required');
+  });
 });
 
 

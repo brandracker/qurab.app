@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Compass, Heart, MessageCircle, User, Settings } from 'lucide-react';
+import { Compass, Heart, MessageCircle, User, Settings, CheckCircle2, X } from 'lucide-react';
 import type { UserProfile } from './types';
 
 import { WelcomeScreen } from './screens/WelcomeScreen';
@@ -117,6 +117,51 @@ export const App: React.FC = () => {
       window.removeEventListener('serene_vip_updated', handleVipUpdate);
       window.removeEventListener('serene_user_profile_updated', handleProfileUpdate);
     };
+  }, [currentUser.id]);
+
+  // Stripe Checkout Post-Payment Verification
+  const [stripeSuccessNotice, setStripeSuccessNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const stripeStatus = params.get('stripe_status');
+    const sessionId = params.get('session_id');
+
+    if (stripeStatus === 'success' && sessionId) {
+      fetch(`${API_BASE}/wallet/stripe/verify-session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId })
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.fulfilled) {
+            setStripeSuccessNotice('Barakah VIP Activated! Unlimited likes & VIP features are now active.');
+            const uid = data.userId || currentUser.id;
+            if (uid) {
+              localStorage.setItem(`serene_vip_${uid}`, 'true');
+              dbService.fetchLikesRemaining(uid).then(({ isVip }) => {
+                if (isVip) {
+                  setCurrentUser(prev => ({ ...prev, isVip: true }));
+                }
+              });
+              window.dispatchEvent(new CustomEvent('serene_vip_updated', { detail: { userId: uid, isVip: true } }));
+            }
+          }
+        })
+        .catch(console.error)
+        .finally(() => {
+          const url = new URL(window.location.href);
+          url.searchParams.delete('stripe_status');
+          url.searchParams.delete('session_id');
+          window.history.replaceState({}, document.title, url.pathname + (url.search ? url.search : ''));
+          setTimeout(() => setStripeSuccessNotice(null), 6000);
+        });
+    } else if (stripeStatus === 'cancelled') {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('stripe_status');
+      window.history.replaceState({}, document.title, url.pathname + (url.search ? url.search : ''));
+    }
   }, [currentUser.id]);
 
 
@@ -332,6 +377,19 @@ export const App: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Stripe Success Notification Banner */}
+        {stripeSuccessNotice && (
+          <div className="absolute top-12 left-4 right-4 z-50 p-3 rounded-2xl bg-[#01875f] text-white shadow-xl flex items-center justify-between gap-3 animate-fade-in">
+            <div className="flex items-center gap-2.5">
+              <CheckCircle2 className="w-5 h-5 flex-shrink-0 text-white" />
+              <p className="text-xs font-semibold leading-snug">{stripeSuccessNotice}</p>
+            </div>
+            <button onClick={() => setStripeSuccessNotice(null)} className="p-1 hover:bg-white/20 rounded-full transition-colors cursor-pointer">
+              <X className="w-4 h-4 text-white" />
+            </button>
+          </div>
+        )}
 
         {/* STEP 0: WELCOME & HALAL TRUST VALUE PROP */}
         {currentStep === 'welcome' && (

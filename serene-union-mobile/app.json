@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Qurb",
-    "slug": "qurab-app",
+    "slug": "qurb-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -13,13 +13,13 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.qurab.app"
+      "bundleIdentifier": "com.qurb.app"
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#154212"
       },
-      "package": "com.qurab.app"
+      "package": "com.qurb.app"
     },
 
     "web": {

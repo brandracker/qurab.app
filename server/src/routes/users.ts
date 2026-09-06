@@ -45,7 +45,8 @@ async function saveUserProfileRecord(c: any, data: any) {
     citizenship, workArrangement, incomeBracket, hobbies, personalityTraits,
     maritalStatus, dualIncomePreference, partnerRequirements,
     religiousProfile, practiceLevel, sect, madhhab, prayerFrequency, halalDiet,
-    quranRecitation, modestyPractice, hajjUmrahStatus, photos
+    quranRecitation, modestyPractice, hajjUmrahStatus, photos,
+    voiceGreetingUrl, voiceGreetingDuration, accountStatus
   } = data;
 
   const latNum = typeof latitude === 'number' ? latitude : (latitude ? parseFloat(latitude) : null);
@@ -68,8 +69,9 @@ async function saveUserProfileRecord(c: any, data: any) {
       mahr_philosophy, children_desire, blur_photos_by_default, marriage_timeline,
       citizenship, work_arrangement, income_bracket, hobbies, personality_traits,
       marital_status, dual_income_preference, partner_requirements,
+      voice_greeting_url, voice_greeting_duration, account_status,
       is_profile_completed
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
     ON CONFLICT(id) DO UPDATE SET
       full_name = excluded.full_name,
       dob = excluded.dob,
@@ -102,6 +104,9 @@ async function saveUserProfileRecord(c: any, data: any) {
       marital_status = excluded.marital_status,
       dual_income_preference = excluded.dual_income_preference,
       partner_requirements = excluded.partner_requirements,
+      voice_greeting_url = COALESCE(excluded.voice_greeting_url, users.voice_greeting_url),
+      voice_greeting_duration = COALESCE(excluded.voice_greeting_duration, users.voice_greeting_duration),
+      account_status = COALESCE(excluded.account_status, users.account_status),
       is_profile_completed = 1,
       updated_at = CURRENT_TIMESTAMP
   `).bind(
@@ -138,7 +143,10 @@ async function saveUserProfileRecord(c: any, data: any) {
     personalityJson,
     maritalStatus || 'never_married',
     dualIncomePreference || 'career_supportive',
-    partnerReqJson
+    partnerReqJson,
+    voiceGreetingUrl || null,
+    voiceGreetingDuration || 0,
+    accountStatus || 'active'
   ).run();
 
   // Religious Profile
@@ -267,6 +275,7 @@ usersRouter.get('/:id', async (c) => {
         profileVisibility: user.profile_visibility || 'all_users',
         isVip: Boolean(user.is_vip),
         isProfileCompleted: Boolean(user.is_profile_completed),
+        accountStatus: user.account_status || 'active',
         voiceGreetingUrl: user.voice_greeting_url || undefined,
         voiceGreetingDuration: user.voice_greeting_duration || 0,
         religiousProfile: {
@@ -398,7 +407,188 @@ usersRouter.post('/privacy', async (c) => {
   }
 });
 
+// 3.1 Deactivate User Profile (Pause Account & Hide from Discover)
+usersRouter.post('/:id/deactivate', async (c) => {
+  try {
+    const userId = c.req.param('id');
+    if (!userId) {
+      return c.json({ success: false, error: 'User ID is required' }, 400);
+    }
+    await c.env.DB.prepare(`
+      UPDATE users 
+      SET account_status = 'deactivated',
+          profile_visibility = 'hidden',
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).bind(userId).run();
+
+    return c.json({
+      success: true,
+      message: 'Account successfully deactivated. Profile is paused and hidden from Discover.',
+      userId,
+      accountStatus: 'deactivated',
+      profileVisibility: 'hidden'
+    });
+  } catch (err: any) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+// 3.2 Reactivate User Profile (Resume Active Status & Discover Visibility)
+usersRouter.post('/:id/reactivate', async (c) => {
+  try {
+    const userId = c.req.param('id');
+    if (!userId) {
+      return c.json({ success: false, error: 'User ID is required' }, 400);
+    }
+    await c.env.DB.prepare(`
+      UPDATE users 
+      SET account_status = 'active',
+          profile_visibility = 'all_users',
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).bind(userId).run();
+
+    return c.json({
+      success: true,
+      message: 'Account successfully reactivated. Profile is now visible on Discover.',
+      userId,
+      accountStatus: 'active',
+      profileVisibility: 'all_users'
+    });
+  } catch (err: any) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+// 3.3 Permanent Account Deletion with Complete Cascading D1 Wipe
+usersRouter.delete('/:id', async (c) => {
+  try {
+    const userId = c.req.param('id');
+    if (!userId) {
+      return c.json({ success: false, error: 'User ID is required' }, 400);
+    }
+
+    const deleteQueries = [
+      { sql: `DELETE FROM user_photos WHERE user_id = ?`, params: [userId] },
+      { sql: `DELETE FROM religious_profiles WHERE user_id = ?`, params: [userId] },
+      { sql: `DELETE FROM wali_details WHERE user_id = ?`, params: [userId] },
+      { sql: `DELETE FROM user_wallets WHERE user_id = ?`, params: [userId] },
+      { sql: `DELETE FROM photo_reveals WHERE requester_id = ? OR target_id = ?`, params: [userId, userId] },
+      { sql: `DELETE FROM photo_reveals WHERE owner_id = ? OR viewer_id = ?`, params: [userId, userId] },
+      { sql: `DELETE FROM matches WHERE user1_id = ? OR user2_id = ?`, params: [userId, userId] },
+      { sql: `DELETE FROM matches_and_likes WHERE sender_id = ? OR receiver_id = ?`, params: [userId, userId] },
+      { sql: `DELETE FROM blocked_users WHERE blocker_id = ? OR blocked_id = ?`, params: [userId, userId] },
+      { sql: `DELETE FROM messages WHERE sender_id = ?`, params: [userId] },
+      { sql: `DELETE FROM chat_messages WHERE sender_id = ?`, params: [userId] },
+      { sql: `DELETE FROM conversations WHERE participant1_id = ? OR participant2_id = ?`, params: [userId, userId] },
+      { sql: `DELETE FROM conversations WHERE participant_one = ? OR participant_two = ?`, params: [userId, userId] },
+      { sql: `DELETE FROM users WHERE id = ?`, params: [userId] },
+    ];
+
+    for (const item of deleteQueries) {
+      try {
+        await c.env.DB.prepare(item.sql).bind(...item.params).run();
+      } catch (tableErr) {
+        // Tolerant to table or column differences between schemas
+      }
+    }
+
+    return c.json({
+      success: true,
+      message: 'Account and matrimonial data have been permanently deleted from Cloudflare D1.',
+      userId
+    });
+  } catch (err: any) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
 export const profilesRouter = new Hono<AppContext>();
+
+profilesRouter.post('/:id/deactivate', async (c) => {
+  try {
+    const userId = c.req.param('id');
+    await c.env.DB.prepare(`
+      UPDATE users 
+      SET account_status = 'deactivated',
+          profile_visibility = 'hidden',
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).bind(userId).run();
+
+    return c.json({
+      success: true,
+      message: 'Account successfully deactivated.',
+      userId,
+      accountStatus: 'deactivated',
+      profileVisibility: 'hidden'
+    });
+  } catch (err: any) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+profilesRouter.post('/:id/reactivate', async (c) => {
+  try {
+    const userId = c.req.param('id');
+    await c.env.DB.prepare(`
+      UPDATE users 
+      SET account_status = 'active',
+          profile_visibility = 'all_users',
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).bind(userId).run();
+
+    return c.json({
+      success: true,
+      message: 'Account successfully reactivated.',
+      userId,
+      accountStatus: 'active',
+      profileVisibility: 'all_users'
+    });
+  } catch (err: any) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+profilesRouter.delete('/:id', async (c) => {
+  try {
+    const userId = c.req.param('id');
+    const deleteQueries = [
+      { sql: `DELETE FROM user_photos WHERE user_id = ?`, params: [userId] },
+      { sql: `DELETE FROM religious_profiles WHERE user_id = ?`, params: [userId] },
+      { sql: `DELETE FROM wali_details WHERE user_id = ?`, params: [userId] },
+      { sql: `DELETE FROM user_wallets WHERE user_id = ?`, params: [userId] },
+      { sql: `DELETE FROM photo_reveals WHERE requester_id = ? OR target_id = ?`, params: [userId, userId] },
+      { sql: `DELETE FROM photo_reveals WHERE owner_id = ? OR viewer_id = ?`, params: [userId, userId] },
+      { sql: `DELETE FROM matches WHERE user1_id = ? OR user2_id = ?`, params: [userId, userId] },
+      { sql: `DELETE FROM matches_and_likes WHERE sender_id = ? OR receiver_id = ?`, params: [userId, userId] },
+      { sql: `DELETE FROM blocked_users WHERE blocker_id = ? OR blocked_id = ?`, params: [userId, userId] },
+      { sql: `DELETE FROM messages WHERE sender_id = ?`, params: [userId] },
+      { sql: `DELETE FROM chat_messages WHERE sender_id = ?`, params: [userId] },
+      { sql: `DELETE FROM conversations WHERE participant1_id = ? OR participant2_id = ?`, params: [userId, userId] },
+      { sql: `DELETE FROM conversations WHERE participant_one = ? OR participant_two = ?`, params: [userId, userId] },
+      { sql: `DELETE FROM users WHERE id = ?`, params: [userId] },
+    ];
+
+    for (const item of deleteQueries) {
+      try {
+        await c.env.DB.prepare(item.sql).bind(...item.params).run();
+      } catch (tableErr) {
+        // Tolerant to table or column differences between schemas
+      }
+    }
+
+    return c.json({
+      success: true,
+      message: 'Account permanently deleted.',
+      userId
+    });
+  } catch (err: any) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
 
 profilesRouter.post('/privacy', async (c) => {
   try {
@@ -487,6 +677,7 @@ profilesRouter.get('/discover', async (c) => {
         u.hobbies, u.personality_traits as personalityTraits, u.marital_status as maritalStatus,
         u.dual_income_preference as dualIncomePreference, u.partner_requirements as partnerRequirements,
         u.is_vip as isVip,
+        u.account_status as accountStatus,
         u.voice_greeting_url as voiceGreetingUrl,
         u.voice_greeting_duration as voiceGreetingDuration,
         rp.practice_level as practiceLevel, rp.sect, rp.madhhab, rp.prayer_frequency as prayerFrequency, 
@@ -503,9 +694,11 @@ profilesRouter.get('/discover', async (c) => {
         AND (u.full_name != 'New Member' OR u.full_name IS NULL)
         AND (u.is_profile_completed != 0 OR u.is_profile_completed IS NULL)
         AND (u.is_profile_completed = 1 OR (u.location != 'Global' AND u.location IS NOT NULL))
+        AND (u.account_status != 'deactivated' OR u.account_status IS NULL)
+        AND (u.profile_visibility != 'hidden' OR u.profile_visibility IS NULL)
         ${genderFilter}
       ${geoFilter}
-      ORDER BY (CASE WHEN uw.spotlight_expires_at IS NOT NULL AND datetime(uw.spotlight_expires_at) > datetime('now') THEN 1 ELSE 0 END) DESC, u.is_vip DESC, u.created_at DESC
+      ORDER BY (CASE WHEN uw.spotlight_expires_at IS NOT NULL AND datetime(uw.spotlight_expires_at) > datetime('now') THEN 1 ELSE 0 END) DESC, (CASE WHEN u.voice_greeting_url IS NOT NULL AND u.voice_greeting_url != '' THEN 1 ELSE 0 END) DESC, u.is_vip DESC, u.created_at DESC
     `;
 
     const bindParams: any[] = [currentUserId];
@@ -602,6 +795,7 @@ profilesRouter.get('/discover', async (c) => {
         profileVisibility: row.profileVisibility || 'all_users',
         isVip: Boolean(row.isVip),
         isSpotlightActive: Boolean(row.isSpotlightActive),
+        accountStatus: row.accountStatus || 'active',
         voiceGreetingUrl: row.voiceGreetingUrl || undefined,
         voiceGreetingDuration: row.voiceGreetingDuration || undefined,
         photos: userPhotos.length > 0 ? userPhotos : ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80'],
@@ -625,9 +819,12 @@ profilesRouter.get('/discover', async (c) => {
       };
     }).filter(Boolean) as any[];
 
-    // Sort: Spotlight first, then VIP, then by closest distance if distance is known
+    // Sort: Spotlight first, then Voice Greeting, then VIP, then by closest distance if distance is known
     formatted.sort((a, b) => {
       if (b.isSpotlightActive !== a.isSpotlightActive) return (b.isSpotlightActive ? 1 : 0) - (a.isSpotlightActive ? 1 : 0);
+      const aVoice = Boolean(a.voiceGreetingUrl && a.voiceGreetingUrl.length > 0);
+      const bVoice = Boolean(b.voiceGreetingUrl && b.voiceGreetingUrl.length > 0);
+      if (aVoice !== bVoice) return (bVoice ? 1 : 0) - (aVoice ? 1 : 0);
       if (b.isVip !== a.isVip) return (b.isVip ? 1 : 0) - (a.isVip ? 1 : 0);
       if (a.distanceKm !== null && b.distanceKm !== null) return a.distanceKm - b.distanceKm;
       if (a.distanceKm !== null) return -1;

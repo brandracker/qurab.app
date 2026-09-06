@@ -65,6 +65,7 @@ export class MockD1Database {
         marital_status TEXT DEFAULT 'never_married',
         dual_income_preference TEXT DEFAULT 'career_supportive',
         partner_requirements TEXT DEFAULT '{}',
+        account_status TEXT DEFAULT 'active',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );

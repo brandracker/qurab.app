@@ -76,6 +76,10 @@ photosRouter.post('/upload-voice', async (c) => {
     // Save to Cloudflare D1
     try {
       await c.env.DB.prepare(`
+        INSERT OR IGNORE INTO users (id, created_at) VALUES (?, CURRENT_TIMESTAMP)
+      `).bind(userId).run();
+
+      await c.env.DB.prepare(`
         UPDATE users 
         SET voice_greeting_url = ?, voice_greeting_duration = ? 
         WHERE id = ?

@@ -22,6 +22,9 @@ export const FALLBACK_PROFILES: UserProfile[] = [
     bio: 'Family-oriented, love weekend nature walks, reading, and Quran circles. Seeking a practicing companion with kindness and good humor.',
     blurPhotosByDefault: true,
     profileVisibility: 'all_users',
+    accountStatus: 'active',
+    voiceGreetingUrl: 'https://serene-union-api.brandracker.workers.dev/api/photos/media/voice_usr_1788698668775_1788715872303.webm',
+    voiceGreetingDuration: 40,
     photos: ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&q=80'],
     religiousProfile: {
       practiceLevel: 'practicing',
@@ -49,6 +52,9 @@ export const FALLBACK_PROFILES: UserProfile[] = [
     bio: 'Creative soul passionate about Islamic architecture, art, and family gatherings. Seeking a pious life partner.',
     blurPhotosByDefault: true,
     profileVisibility: 'all_users',
+    accountStatus: 'active',
+    voiceGreetingUrl: 'https://serene-union-api.brandracker.workers.dev/api/photos/media/voice_usr_1788698668775_1788715872303.webm',
+    voiceGreetingDuration: 35,
     photos: ['https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=600&q=80'],
     religiousProfile: {
       practiceLevel: 'practicing',
@@ -76,6 +82,7 @@ export const FALLBACK_PROFILES: UserProfile[] = [
     bio: 'Calm and patient temperament. Love baking, charity projects, and striving to learn classical Arabic.',
     blurPhotosByDefault: true,
     profileVisibility: 'all_users',
+    accountStatus: 'active',
     photos: ['https://images.unsplash.com/photo-1517841905240-472988babdf9?w=600&q=80'],
     religiousProfile: {
       practiceLevel: 'practicing',
@@ -103,6 +110,9 @@ export const FALLBACK_PROFILES: UserProfile[] = [
     bio: 'Tech enthusiast, love specialty coffee and mosque community work. Striving for 5 daily prayers.',
     blurPhotosByDefault: false,
     profileVisibility: 'all_users',
+    accountStatus: 'active',
+    voiceGreetingUrl: 'https://serene-union-api.brandracker.workers.dev/api/photos/media/voice_usr_1787950367460_1788715719148.webm',
+    voiceGreetingDuration: 45,
     photos: ['https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&q=80'],
     religiousProfile: {
       practiceLevel: 'practicing',
@@ -130,6 +140,9 @@ export const FALLBACK_PROFILES: UserProfile[] = [
     bio: 'Grounded in sunnah. Passionate about community health, youth mentorship, and Quran memorization.',
     blurPhotosByDefault: false,
     profileVisibility: 'all_users',
+    accountStatus: 'active',
+    voiceGreetingUrl: 'https://serene-union-api.brandracker.workers.dev/api/photos/media/voice_usr_1788374673089_1788375079217.webm',
+    voiceGreetingDuration: 50,
     photos: ['https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=600&q=80'],
     religiousProfile: {
       practiceLevel: 'practicing',
@@ -157,6 +170,9 @@ export const FALLBACK_PROFILES: UserProfile[] = [
     bio: 'Creative designer, outdoor photographer, and mosque volunteer. Seeking a pious life partner.',
     blurPhotosByDefault: false,
     profileVisibility: 'all_users',
+    accountStatus: 'active',
+    voiceGreetingUrl: 'https://serene-union-api.brandracker.workers.dev/api/photos/media/voice_usr_1787950367460_1788715719148.webm',
+    voiceGreetingDuration: 42,
     photos: ['https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=600&q=80'],
     religiousProfile: {
       practiceLevel: 'practicing',
@@ -209,13 +225,14 @@ class DBService {
           if (!res.ok) continue;
           const data = await res.json();
           if (data.success && Array.isArray(data.profiles) && data.profiles.length > 0) {
-            this.memoryProfiles = data.profiles;
+            const activeProfiles = data.profiles.filter((p: UserProfile) => p.accountStatus !== 'deactivated' && p.profileVisibility !== 'hidden');
+            this.memoryProfiles = activeProfiles;
             try {
-              localStorage.setItem(this.profilesKey, JSON.stringify(data.profiles));
+              localStorage.setItem(this.profilesKey, JSON.stringify(activeProfiles));
             } catch (storageErr) {
               console.warn('Storage quota limit reached on mobile, keeping profiles in memory:', storageErr);
             }
-            return data.profiles;
+            return activeProfiles;
           }
         } catch {
           // try next endpoint
@@ -832,9 +849,20 @@ class DBService {
 
     const all = source.filter(p => {
       if (!p.id || excludedIds.has(p.id) || seen.has(p.id)) return false;
+      if (p.accountStatus === 'deactivated' || p.profileVisibility === 'hidden') return false;
       if (targetGender && p.gender && p.gender.toLowerCase() !== targetGender) return false;
       seen.add(p.id);
       return true;
+    });
+
+    // Prioritize candidates with active spotlight and recorded voice greetings
+    all.sort((a, b) => {
+      if (b.isSpotlightActive !== a.isSpotlightActive) return (b.isSpotlightActive ? 1 : 0) - (a.isSpotlightActive ? 1 : 0);
+      const aVoice = Boolean(a.voiceGreetingUrl && a.voiceGreetingUrl.length > 0);
+      const bVoice = Boolean(b.voiceGreetingUrl && b.voiceGreetingUrl.length > 0);
+      if (aVoice !== bVoice) return (bVoice ? 1 : 0) - (aVoice ? 1 : 0);
+      if (b.isVip !== a.isVip) return (b.isVip ? 1 : 0) - (a.isVip ? 1 : 0);
+      return 0;
     });
 
     if (!filters) return all;
@@ -1003,6 +1031,112 @@ class DBService {
         profileVisibility: visibility
       })
     }).catch(() => {});
+  }
+
+  async deactivateAccount(userId: string): Promise<boolean> {
+    if (!userId || userId === 'usr_guest') return false;
+    try {
+      const endpoints = [
+        `${API_BASE}/users/${userId}/deactivate`,
+        `/api/users/${userId}/deactivate`,
+        `${WORKER_API_BASE}/users/${userId}/deactivate`
+      ];
+      for (const ep of endpoints) {
+        try {
+          const res = await fetch(ep, { method: 'POST' });
+          if (res.ok) break;
+        } catch {}
+      }
+    } catch (e) {
+      console.warn('deactivateAccount API warning:', e);
+    }
+    const current = this.getCurrentUser();
+    const updated: UserProfile = {
+      ...current,
+      accountStatus: 'deactivated',
+      profileVisibility: 'hidden'
+    };
+    this.setCurrentUser(updated);
+    this.memoryProfiles = this.memoryProfiles.filter(p => p.id !== userId);
+    try {
+      const savedProfiles = JSON.parse(localStorage.getItem(this.profilesKey) || '[]');
+      const filtered = savedProfiles.filter((p: any) => p.id !== userId);
+      localStorage.setItem(this.profilesKey, JSON.stringify(filtered));
+    } catch {}
+    window.dispatchEvent(new CustomEvent('serene_user_profile_updated', { detail: { user: updated } }));
+    window.dispatchEvent(new CustomEvent('serene_activity_updated'));
+    return true;
+  }
+
+  async reactivateAccount(userId: string): Promise<boolean> {
+    if (!userId || userId === 'usr_guest') return false;
+    try {
+      const endpoints = [
+        `${API_BASE}/users/${userId}/reactivate`,
+        `/api/users/${userId}/reactivate`,
+        `${WORKER_API_BASE}/users/${userId}/reactivate`
+      ];
+      for (const ep of endpoints) {
+        try {
+          const res = await fetch(ep, { method: 'POST' });
+          if (res.ok) break;
+        } catch {}
+      }
+    } catch (e) {
+      console.warn('reactivateAccount API warning:', e);
+    }
+    const current = this.getCurrentUser();
+    const updated: UserProfile = {
+      ...current,
+      accountStatus: 'active',
+      profileVisibility: 'all_users'
+    };
+    this.setCurrentUser(updated);
+    window.dispatchEvent(new CustomEvent('serene_user_profile_updated', { detail: { user: updated } }));
+    window.dispatchEvent(new CustomEvent('serene_activity_updated'));
+    return true;
+  }
+
+  async deleteAccount(userId: string): Promise<boolean> {
+    if (!userId || userId === 'usr_guest') return false;
+    try {
+      const endpoints = [
+        `${API_BASE}/users/${userId}`,
+        `/api/users/${userId}`,
+        `${WORKER_API_BASE}/users/${userId}`
+      ];
+      for (const ep of endpoints) {
+        try {
+          const res = await fetch(ep, { method: 'DELETE' });
+          if (res.ok) break;
+        } catch {}
+      }
+    } catch (e) {
+      console.warn('deleteAccount API warning:', e);
+    }
+
+    const keysToPurge = [
+      'serene_current_user_v1',
+      'serene_auth_token_v1',
+      `serene_likes_sent_${userId}`,
+      `serene_passed_${userId}`,
+      `serene_blocked_${userId}`,
+      `serene_vip_${userId}`,
+      `serene_spotlight_active_${userId}`,
+      `serene_spotlight_expires_${userId}`,
+      `serene_salams_left_${userId}`,
+      `serene_salam_ads_${userId}`,
+      'serene_real_conversations_v3',
+      'serene_real_profiles_v3'
+    ];
+    keysToPurge.forEach(k => {
+      try { localStorage.removeItem(k); } catch {}
+    });
+
+    this.currentUserId = '';
+    this.memoryProfiles = [];
+    window.dispatchEvent(new CustomEvent('serene_account_deleted'));
+    return true;
   }
 
   async sendMatchAction(targetUserId: string, action: 'liked' | 'passed'): Promise<{ isMutual: boolean; conversationId?: string; message?: string }> {

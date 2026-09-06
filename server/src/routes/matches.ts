@@ -456,17 +456,29 @@ matchesRouter.post('/unblock', async (c) => {
       return c.json({ success: false, error: 'userId and targetId are required' }, 400);
     }
 
+    // A. Delete block entry
     await c.env.DB.prepare(`
       DELETE FROM blocked_users 
       WHERE blocker_id = ? AND blocked_id = ?
     `).bind(userId, targetId).run();
 
+    // B. Wipe matches_and_likes records in both directions so candidates become fresh
     await c.env.DB.prepare(`
       DELETE FROM matches_and_likes 
-      WHERE sender_id = ? AND receiver_id = ? AND action = 'blocked'
-    `).bind(userId, targetId).run();
+      WHERE (sender_id = ? AND receiver_id = ?)
+         OR (sender_id = ? AND receiver_id = ?)
+    `).bind(userId, targetId, targetId, userId).run();
 
-    return c.json({ success: true, message: 'Profile unblocked successfully.' });
+    // C. Clean up any stale conversation row in D1
+    const convId = `conv_${[userId, targetId].sort().join('_')}`;
+    await c.env.DB.prepare(`
+      DELETE FROM conversations 
+      WHERE id = ? 
+         OR (participant_one = ? AND participant_two = ?) 
+         OR (participant_one = ? AND participant_two = ?)
+    `).bind(convId, userId, targetId, targetId, userId).run();
+
+    return c.json({ success: true, message: 'Profile unblocked successfully and reset as fresh candidate.' });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   }

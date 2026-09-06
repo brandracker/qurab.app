@@ -137,7 +137,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
     const ok = await dbService.unblockProfile(targetId);
     if (ok) {
       setBlockedProfiles(prev => prev.filter(p => p.id !== targetId));
-      setToastMessage(`Unblocked ${name}.`);
+      setToastMessage(`Unblocked ${name}. They will reappear in your Discover feed!`);
       setTimeout(() => setToastMessage(null), 3500);
     }
   };

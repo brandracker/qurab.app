@@ -1349,13 +1349,51 @@ class DBService {
 
   async unblockProfile(targetId: string): Promise<boolean> {
     const user = this.getCurrentUser();
-    const localKey = `serene_blocked_${user.id}`;
+
+    // 1. Remove from local blocked list
+    const localBlockedKey = `serene_blocked_${user.id}`;
     try {
-      const localBlocked = JSON.parse(localStorage.getItem(localKey) || '[]');
+      const localBlocked = JSON.parse(localStorage.getItem(localBlockedKey) || '[]');
       const updated = localBlocked.filter((b: any) => b.id !== targetId);
-      localStorage.setItem(localKey, JSON.stringify(updated));
+      localStorage.setItem(localBlockedKey, JSON.stringify(updated));
     } catch {}
 
+    // 2. Wipe from sent likes history so Discover treats them as fresh candidate
+    const likesKey = `serene_likes_sent_${user.id}`;
+    try {
+      const localLikes = JSON.parse(localStorage.getItem(likesKey) || '[]');
+      const updatedLikes = localLikes.filter((l: any) => l.id !== targetId);
+      localStorage.setItem(likesKey, JSON.stringify(updatedLikes));
+    } catch {}
+
+    // 3. Wipe from passed history
+    const passedKey = `serene_passed_${user.id}`;
+    try {
+      const localPassed = JSON.parse(localStorage.getItem(passedKey) || '[]');
+      const updatedPassed = localPassed.filter((p: any) => p.id !== targetId);
+      localStorage.setItem(passedKey, JSON.stringify(updatedPassed));
+    } catch {}
+
+    // 4. Wipe from received likes cache
+    const receivedKey = `serene_liked_you_${user.id}`;
+    try {
+      const localReceived = JSON.parse(localStorage.getItem(receivedKey) || '[]');
+      const updatedReceived = localReceived.filter((p: any) => p.id !== targetId);
+      localStorage.setItem(receivedKey, JSON.stringify(updatedReceived));
+    } catch {}
+
+    // 5. Clean any residual conversation from active conversations list
+    try {
+      const convs = this.getConversations().filter(c => c.otherUser?.id !== targetId);
+      localStorage.setItem(this.conversationsKey, JSON.stringify(convs));
+    } catch {}
+
+    // 6. Notify Discover feed and Activity hub immediately
+    window.dispatchEvent(new CustomEvent('serene_activity_updated'));
+    window.dispatchEvent(new CustomEvent('serene_block_updated', { detail: { targetId, unblocked: true } }));
+    window.dispatchEvent(new CustomEvent('serene_conversations_updated'));
+
+    // 7. Sync with Cloudflare D1 Backend
     try {
       const res = await fetch(`${API_BASE}/matches/unblock`, {
         method: 'POST',

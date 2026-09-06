@@ -333,9 +333,9 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack, initialTab 
           <ArrowLeft className="w-4 h-4" />
         </button>
         <div className="flex items-center gap-1.5">
-          <img src="/icon.svg" alt="Qurab" className="w-5 h-5 object-contain" />
+          <img src="/icon.svg" alt="Qurb" className="w-5 h-5 object-contain" />
           <span className="font-serif text-sm font-bold text-on-surface">
-            Qurab
+            Qurb
           </span>
         </div>
         <div className="w-9" />
@@ -347,7 +347,7 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack, initialTab 
           
           {/* Logo Badge */}
           <div className="w-12 h-12 rounded-2xl bg-pastel-rose border border-pastel-rose-border flex items-center justify-center mb-3 shadow-subtle p-2">
-            <img src="/icon.svg" alt="Qurab" className="w-full h-full object-contain" />
+            <img src="/icon.svg" alt="Qurb" className="w-full h-full object-contain" />
           </div>
 
           <h1 className="font-serif text-2xl font-bold text-on-surface mb-1">
@@ -560,7 +560,7 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack, initialTab 
 
       {/* Footer */}
       <footer className="w-full text-center py-1 text-[10px] text-secondary">
-        By continuing, you agree to Qurab's{' '}
+        By continuing, you agree to Qurb's{' '}
         <a href="/terms" className="underline font-medium hover:text-primary transition-colors">Terms of Service</a>
         {' '}&{' '}
         <a href="/privacy-policy" className="underline font-medium hover:text-primary transition-colors">Privacy Policy</a>.

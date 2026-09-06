@@ -281,7 +281,7 @@ authRouter.post('/google-login', async (c) => {
 
     return c.json({
       success: true,
-      message: isNewUser ? 'Welcome to Qurab! Profile initialized.' : 'Welcome back!',
+      message: isNewUser ? 'Welcome to Qurb! Profile initialized.' : 'Welcome back!',
       token: sessionToken,
       user: {
         id: user.id,

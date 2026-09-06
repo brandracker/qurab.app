@@ -32,7 +32,7 @@ describe('UI & Button Interactions: Rewarded Ad Modal', () => {
 
     // Verify Ad Sponsor and Brand text
     expect(screen.getByText(/Rewarded Sponsor/i)).toBeDefined();
-    expect(screen.getByText(/Qurab Islamic Matrimony/i)).toBeDefined();
+    expect(screen.getByText(/Qurb Islamic Matrimony/i)).toBeDefined();
     expect(screen.getByText(/Reward: \+10 Extra Discover Likes/i)).toBeDefined();
 
     // Verify video watching prompt

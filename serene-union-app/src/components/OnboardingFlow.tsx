@@ -46,8 +46,8 @@ export const OnboardingFlow: React.FC<Props> = ({ onComplete }) => {
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div className="flex items-center gap-1.5 font-serif font-bold text-sm text-on-surface">
-            <img src="/icon.svg" alt="Qurab" className="w-4 h-4 object-contain" />
-            <span>Qurab</span>
+            <img src="/icon.svg" alt="Qurb" className="w-4 h-4 object-contain" />
+            <span>Qurb</span>
           </div>
           <div className="text-xs font-semibold text-secondary">Step {step} of 5</div>
         </header>
@@ -69,7 +69,7 @@ export const OnboardingFlow: React.FC<Props> = ({ onComplete }) => {
           <div className="flex-1 flex flex-col items-center justify-center">
             {/* Logo Badge */}
             <div className="w-22 h-22 rounded-3xl bg-pastel-rose border border-pastel-rose-border flex items-center justify-center shadow-subtle mb-5 p-4 transform hover:scale-105 transition-transform">
-              <img src="/icon.svg" alt="Qurab" className="w-14 h-14 object-contain" />
+              <img src="/icon.svg" alt="Qurb" className="w-14 h-14 object-contain" />
             </div>
 
             <span className="text-xs uppercase tracking-widest font-semibold text-primary mb-1.5">
@@ -77,7 +77,7 @@ export const OnboardingFlow: React.FC<Props> = ({ onComplete }) => {
             </span>
             <div className="flex items-center justify-center gap-2 mb-2">
               <h1 className="font-serif text-3xl sm:text-4xl font-bold text-on-surface">
-                Qurab
+                Qurb
               </h1>
             </div>
             <p className="text-secondary text-xs max-w-[280px] leading-relaxed">

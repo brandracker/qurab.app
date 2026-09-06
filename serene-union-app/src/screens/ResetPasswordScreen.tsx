@@ -102,9 +102,9 @@ export const ResetPasswordScreen: React.FC<Props> = ({ oobCode, onComplete }) =>
           <ArrowLeft className="w-4 h-4" />
         </button>
         <div className="flex items-center gap-1.5">
-          <img src="/icon.svg" alt="Qurab" className="w-5 h-5 object-contain" />
+          <img src="/icon.svg" alt="Qurb" className="w-5 h-5 object-contain" />
           <span className="font-serif text-sm font-bold text-on-surface">
-            Qurab
+            Qurb
           </span>
         </div>
         <div className="w-9" />
@@ -116,7 +116,7 @@ export const ResetPasswordScreen: React.FC<Props> = ({ oobCode, onComplete }) =>
           <div className="flex flex-col items-center justify-center py-12 text-center animate-fade-in">
             <Loader2 className="w-8 h-8 text-primary animate-spin mb-3" />
             <h2 className="font-serif text-lg font-bold text-on-surface mb-1">Verifying Reset Link</h2>
-            <p className="text-xs text-secondary">Securing your session with Qurab...</p>
+            <p className="text-xs text-secondary">Securing your session with Qurb...</p>
           </div>
         ) : validationError ? (
           <div className="flex flex-col items-center text-center animate-fade-in py-6">
@@ -227,7 +227,7 @@ export const ResetPasswordScreen: React.FC<Props> = ({ oobCode, onComplete }) =>
 
       {/* Footer */}
       <footer className="w-full text-center py-1 text-[10px] text-secondary">
-        Secured by Qurab Halal Matrimony Authentication
+        Secured by Qurb Halal Matrimony Authentication
       </footer>
     </div>
   );

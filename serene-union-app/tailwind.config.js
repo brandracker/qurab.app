@@ -8,7 +8,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Logo Brand Colors (#FF2560 Qurab Rose)
+        // Logo Brand Colors (#FF2560 Qurb Rose)
         "primary": "#FF2560",
         "primary-dark": "#D8134B",
         "primary-light": "#FF4D7D",

@@ -37,7 +37,7 @@ export const WelcomeScreen: React.FC<Props> = ({ onGetStarted, onLogin }) => {
         {/* Emblem Container with Subtle Glassmorphism Glow */}
         <div className="mb-2 p-3 rounded-2xl bg-black/35 backdrop-blur-md border border-white/20 shadow-2xl">
           <img
-            alt="Qurab Logo"
+            alt="Qurb Logo"
             className="w-12 h-12 object-contain drop-shadow-md"
             src="/white-icon.svg"
           />
@@ -53,7 +53,7 @@ export const WelcomeScreen: React.FC<Props> = ({ onGetStarted, onLogin }) => {
 
         {/* Title */}
         <h1 className="font-serif text-3xl sm:text-4xl font-bold tracking-tight text-white drop-shadow-lg mb-1">
-          Qurab
+          Qurb
         </h1>
 
         {/* Subtitle */}

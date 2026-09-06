@@ -33,7 +33,7 @@ export const TermsScreen: React.FC<Props> = ({ onBack }) => {
             Terms of Service
           </h1>
           <p className="text-xs text-secondary leading-relaxed">
-            Effective: September 4, 2026 · Qurab Halal Matrimony
+            Effective: September 4, 2026 · Qurb Halal Matrimony
           </p>
         </div>
 
@@ -44,7 +44,7 @@ export const TermsScreen: React.FC<Props> = ({ onBack }) => {
             <span className="font-serif font-bold text-xs">Halal Matrimony Agreement</span>
           </div>
           <p className="text-xs text-on-surface leading-relaxed">
-            Qurab is strictly dedicated to lawful Islamic marriage (Nikah). By registering, you confirm that you are seeking a righteous spouse upon the Quran & Sunnah with honest intentions.
+            Qurb is strictly dedicated to lawful Islamic marriage (Nikah). By registering, you confirm that you are seeking a righteous spouse upon the Quran & Sunnah with honest intentions.
           </p>
         </div>
 
@@ -52,7 +52,7 @@ export const TermsScreen: React.FC<Props> = ({ onBack }) => {
         <div className="space-y-4 text-xs text-secondary leading-relaxed">
           <div className="bg-white p-4 rounded-2xl border border-outline shadow-subtle space-y-1.5">
             <h2 className="font-serif font-bold text-sm text-on-surface">1. Eligibility</h2>
-            <p className="text-on-surface">To use Qurab, you must:</p>
+            <p className="text-on-surface">To use Qurb, you must:</p>
             <ul className="list-disc pl-4 space-y-1 text-secondary mt-1">
               <li>Be at least 18 years old.</li>
               <li>Be legally and Islamically eligible for marriage.</li>

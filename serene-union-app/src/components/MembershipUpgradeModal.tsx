@@ -247,7 +247,7 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
                   </div>
                   <div>
                     <h4 className="text-xs font-bold text-on-surface">Google Play In-App Billing</h4>
-                    <p className="text-[10px] text-secondary">Qurab Islamic Matrimony</p>
+                    <p className="text-[10px] text-secondary">Qurb Islamic Matrimony</p>
                   </div>
                 </div>
                 <span className="text-xs font-bold text-primary font-mono">{currentItem.price}</span>

@@ -133,7 +133,7 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes',
             </button>
 
             <h3 className="font-serif text-lg font-bold text-white mb-1 flex items-center gap-1.5">
-              Qurab Islamic Matrimony
+              Qurb Islamic Matrimony
               <Sparkles className="w-4 h-4 text-amber-300" />
             </h3>
 

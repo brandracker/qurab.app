@@ -33,7 +33,7 @@ export const PrivacyPolicyScreen: React.FC<Props> = ({ onBack }) => {
             Privacy Policy
           </h1>
           <p className="text-xs text-secondary leading-relaxed">
-            Effective: September 4, 2026 · Qurab Halal Matrimony
+            Effective: September 4, 2026 · Qurb Halal Matrimony
           </p>
         </div>
 
@@ -44,7 +44,7 @@ export const PrivacyPolicyScreen: React.FC<Props> = ({ onBack }) => {
             <span className="font-serif font-bold text-xs">Our Sacred Privacy Promise</span>
           </div>
           <p className="text-xs text-on-surface leading-relaxed">
-            At Qurab, we treat your personal biodata and photographs as a sacred trust (Amanah). We do not sell your personal data, nor do we monetize your information with third-party advertisers.
+            At Qurb, we treat your personal biodata and photographs as a sacred trust (Amanah). We do not sell your personal data, nor do we monetize your information with third-party advertisers.
           </p>
         </div>
 
@@ -64,7 +64,7 @@ export const PrivacyPolicyScreen: React.FC<Props> = ({ onBack }) => {
           <div className="bg-white p-4 rounded-2xl border border-outline shadow-subtle space-y-1.5">
             <h2 className="font-serif font-bold text-sm text-on-surface">2. Google User Data Compliance</h2>
             <p className="text-on-surface">
-              Qurab's use of information received from Google APIs adheres to the <strong>Google API Services User Data Policy</strong>, including the Limited Use requirements.
+              Qurb's use of information received from Google APIs adheres to the <strong>Google API Services User Data Policy</strong>, including the Limited Use requirements.
             </p>
             <ul className="list-disc pl-4 space-y-1 text-secondary mt-1">
               <li>We request only basic profile info (name, email) for verified account creation.</li>

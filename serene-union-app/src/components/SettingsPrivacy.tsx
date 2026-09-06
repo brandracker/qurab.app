@@ -341,7 +341,7 @@ export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpda
             <h4 className="font-serif font-bold text-xs">Halal Matrimony Code of Conduct</h4>
           </div>
           <p className="text-xs text-on-surface leading-relaxed">
-            Qurab is designed for sincere, faith-first marriage intentions. Inappropriate behavior, disrespect, or harassment will result in permanent account removal to protect our community.
+            Qurb is designed for sincere, faith-first marriage intentions. Inappropriate behavior, disrespect, or harassment will result in permanent account removal to protect our community.
           </p>
         </section>
 
@@ -359,7 +359,7 @@ export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpda
             className="w-full py-3 rounded-xl bg-pastel-rose text-error border border-pastel-rose-border hover:bg-error hover:text-white transition-all font-bold text-xs flex items-center justify-center gap-2 shadow-subtle active:scale-98"
           >
             <LogOut className="w-4 h-4" />
-            <span>Log Out of Qurab</span>
+            <span>Log Out of Qurb</span>
           </button>
         </section>
       </main>

@@ -153,6 +153,8 @@ export class MockD1Database {
         messages_sent_today INTEGER DEFAULT 0,
         subscription_tier TEXT DEFAULT 'free',
         is_spotlight_active BOOLEAN DEFAULT 0,
+        spotlight_expires_at TEXT DEFAULT NULL,
+        ads_watched_for_salam INTEGER DEFAULT 0,
         daily_likes_quota INTEGER DEFAULT 50,
         likes_used_today INTEGER DEFAULT 0,
         last_likes_reset_date TEXT DEFAULT '',

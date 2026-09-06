@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Volume2, VolumeX, X, PlayCircle, Gift, CheckCircle2, ShieldCheck, Sparkles } from 'lucide-react';
 import { admobService, ADMOB_CONFIG } from '../services/admobService';
+import { dbService } from '../services/dbService';
 
 interface Props {
   userId: string;
@@ -15,6 +16,9 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes',
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [isClaiming, setIsClaiming] = useState<boolean>(false);
+
+  const adsWatched = dbService.getAdsWatchedForSalam(userId);
+  const currentStep = (adsWatched % 3) + 1;
 
   useEffect(() => {
     if (!isOpen) {
@@ -61,7 +65,11 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes',
     if (isClaiming) return;
     setIsClaiming(true);
     try {
-      await admobService.claimReward(userId, rewardType);
+      if (admobService.isNativeBridgeAvailable()) {
+        await admobService.claimReward(userId, rewardType);
+      } else {
+        await dbService.claimAdReward(userId, rewardType);
+      }
     } catch {}
 
     onRewardClaimed();
@@ -163,6 +171,40 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes',
             <span>Reward: {getRewardTitle()}</span>
           </div>
 
+          {rewardType === 'salam' && (
+            <div className="w-full bg-pastel-amber/30 border border-pastel-amber-border rounded-2xl p-3 flex flex-col items-center gap-2">
+              <div className="flex items-center justify-between w-full text-[11px] font-bold text-pastel-amber-text">
+                <span>Pass Progress</span>
+                <span>Step {currentStep} of 3</span>
+              </div>
+              <div className="flex items-center justify-center gap-3 w-full">
+                {[1, 2, 3].map((step) => {
+                  const isDone = step < currentStep;
+                  const isCurrent = step === currentStep;
+                  return (
+                    <div
+                      key={step}
+                      className={`flex items-center justify-center text-xs font-bold rounded-full transition-all ${
+                        isDone
+                          ? 'w-7 h-7 bg-emerald-500 text-white shadow-2xs'
+                          : isCurrent
+                          ? 'w-7 h-7 bg-primary text-white ring-2 ring-primary/40 shadow-xs'
+                          : 'w-7 h-7 bg-white border border-outline text-secondary'
+                      }`}
+                    >
+                      {isDone ? '✓' : step === 3 ? '🎁' : step}
+                    </div>
+                  );
+                })}
+              </div>
+              <span className="text-[10px] text-secondary">
+                {currentStep === 3
+                  ? 'Complete this ad to claim +1 Direct Salam Pass!'
+                  : `Watch ${3 - currentStep} more ad${3 - currentStep === 1 ? '' : 's'} after this to unlock 1 Pass.`}
+              </span>
+            </div>
+          )}
+
           {isCompleted ? (
             <button
               onClick={handleClaim}
@@ -170,7 +212,15 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes',
               className="w-full py-3.5 rounded-full bg-primary text-white font-sans text-xs font-bold shadow-brand hover:bg-primary-dark active:scale-98 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-75"
             >
               <CheckCircle2 className="w-4 h-4 text-white" />
-              <span>{isClaiming ? 'Crediting Likes...' : `Claim ${getRewardTitle()} Now 🎉`}</span>
+              <span>
+                {isClaiming
+                  ? 'Recording Reward...'
+                  : rewardType === 'salam'
+                  ? currentStep === 3
+                    ? 'Claim +1 Direct Salam Pass Now 🎉'
+                    : `Step ${currentStep} of 3 Complete (Continue)`
+                  : `Claim ${getRewardTitle()} Now 🎉`}
+              </span>
             </button>
           ) : (
             <div className="w-full py-3 rounded-full bg-surface-variant text-secondary font-sans text-xs font-medium text-center border border-outline flex items-center justify-center gap-2">

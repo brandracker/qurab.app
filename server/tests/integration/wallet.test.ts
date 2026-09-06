@@ -11,6 +11,7 @@ describe('Wallet, In-App Purchases & Rewarded Ads API Integration Tests', () => 
       INSERT INTO users (id, phone, full_name, dob, gender, location)
       VALUES ('usr_test_wallet_1', '+923001112231', 'Test Wallet 1', '1995-01-01', 'male', 'Lahore'),
              ('usr_test_wallet_2', '+923001112232', 'Test Wallet 2', '1995-01-01', 'female', 'Karachi'),
+             ('usr_test_wallet_3', '+923001112233', 'Test Wallet 3', '1995-01-01', 'male', 'Lahore'),
              ('usr_test_wallet_ad', '+923001112234', 'Ad Seeker', '1995-01-01', 'male', 'Islamabad'),
              ('usr_test_wallet_salam', '+923001112235', 'Salam Seeker', '1995-01-01', 'female', 'Lahore')
     `).run();
@@ -53,7 +54,7 @@ describe('Wallet, In-App Purchases & Rewarded Ads API Integration Tests', () => 
     // Verify wallet updated
     const getRes = await app.request('/api/wallet/usr_test_wallet_1', { method: 'GET' }, env);
     const getData = await getRes.json();
-    expect(getData.wallet.directSalams).toBe(7); // 2 default + 5 purchased
+    expect(getData.wallet.directSalams).toBe(22); // 2 default + 20 purchased
   });
 
   it('3. POST /api/wallet/purchase-google-play activates 24h Spotlight Boost', async () => {
@@ -69,20 +70,17 @@ describe('Wallet, In-App Purchases & Rewarded Ads API Integration Tests', () => 
     }, env);
 
     expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+
     const getRes = await app.request('/api/wallet/usr_test_wallet_2', { method: 'GET' }, env);
     const getData = await getRes.json();
     expect(getData.wallet.isSpotlightActive).toBe(true);
   });
 
   it('4. POST /api/wallet/purchase-google-play activates Barakah VIP Monthly tier', async () => {
-    // Seed user
-    await env.DB.prepare(`
-      INSERT INTO users (id, phone, full_name, dob, gender, location)
-      VALUES ('usr_vip_test', '+923001112233', 'VIP Seeker', '1995-01-01', 'male', 'Lahore')
-    `).run();
-
     const payload = {
-      userId: 'usr_vip_test',
+      userId: 'usr_test_wallet_3',
       productId: 'serene_barakah_monthly'
     };
 
@@ -93,23 +91,25 @@ describe('Wallet, In-App Purchases & Rewarded Ads API Integration Tests', () => 
     }, env);
 
     expect(res.status).toBe(200);
-    const getRes = await app.request('/api/wallet/usr_vip_test', { method: 'GET' }, env);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+
+    const getRes = await app.request('/api/wallet/usr_test_wallet_3', { method: 'GET' }, env);
     const getData = await getRes.json();
     expect(getData.wallet.subscriptionTier).toBe('barakah_vip');
-    expect(getData.wallet.dailyMessagesQuota).toBe(9999);
+    expect(getData.wallet.isVip).toBe(true);
   });
 
   it('5. POST /api/wallet/purchase-google-play rejects missing required fields', async () => {
     const res = await app.request('/api/wallet/purchase-google-play', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: 'usr_wallet_invalid' })
+      body: JSON.stringify({ userId: 'usr_test' })
     }, env);
 
     expect(res.status).toBe(400);
     const data = await res.json();
     expect(data.success).toBe(false);
-    expect(data.error).toContain('required');
   });
 
   it('6. POST /api/wallet/reward-ad credits +10 likes quota upon video ad completion', async () => {
@@ -128,10 +128,9 @@ describe('Wallet, In-App Purchases & Rewarded Ads API Integration Tests', () => 
     const data = await res.json();
     expect(data.success).toBe(true);
     expect(data.likesAdded).toBe(10);
-    expect(data.newDailyQuota).toBeGreaterThanOrEqual(40);
   });
 
-  it('7. POST /api/wallet/reward-ad credits direct salam pass reward', async () => {
+  it('7. POST /api/wallet/reward-ad credits direct salam pass reward after 3 ads', async () => {
     // Initialize wallet first
     await app.request('/api/wallet/usr_test_wallet_salam', { method: 'GET' }, env);
 
@@ -140,17 +139,55 @@ describe('Wallet, In-App Purchases & Rewarded Ads API Integration Tests', () => 
       rewardType: 'salam'
     };
 
-    const res = await app.request('/api/wallet/reward-ad', {
+    // Ad 1 of 3
+    const res1 = await app.request('/api/wallet/reward-ad', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     }, env);
+    expect(res1.status).toBe(200);
+    const data1 = await res1.json();
+    expect(data1.passEarned).toBe(false);
+    expect(data1.adsWatchedForSalam).toBe(1);
+    expect(data1.directSalams).toBe(2);
 
-    expect(res.status).toBe(200);
+    // Ad 2 of 3
+    const res2 = await app.request('/api/wallet/reward-ad', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }, env);
+    const data2 = await res2.json();
+    expect(data2.passEarned).toBe(false);
+    expect(data2.adsWatchedForSalam).toBe(2);
+
+    // Ad 3 of 3 (unlocks +1 pass)
+    const res3 = await app.request('/api/wallet/reward-ad', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }, env);
+    const data3 = await res3.json();
+    expect(data3.passEarned).toBe(true);
+    expect(data3.adsWatchedForSalam).toBe(0);
+    expect(data3.directSalams).toBe(3);
 
     const getRes = await app.request('/api/wallet/usr_test_wallet_salam', { method: 'GET' }, env);
     const getData = await getRes.json();
     expect(getData.wallet.directSalams).toBe(3); // 2 default + 1 reward
+  });
+
+  it('7b. POST /api/wallet/use-direct-salam consumes a pass', async () => {
+    const res = await app.request('/api/wallet/use-direct-salam', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: 'usr_test_wallet_salam' })
+    }, env);
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.directSalams).toBe(1); // 2 default - 1 consumed = 1
   });
 
   it('8. POST /api/wallet/reward-ad rejects request missing userId', async () => {

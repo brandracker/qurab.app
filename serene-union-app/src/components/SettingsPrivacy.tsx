@@ -4,14 +4,14 @@ import {
   ArrowUpRight, 
   CheckCircle2, 
   Heart, 
-  MessageCircle, 
   Eye, 
   Shield, 
   TrendingUp, 
   Infinity, 
   ShieldCheck,
   LogOut,
-  PlayCircle
+  PlayCircle,
+  Hand
 } from 'lucide-react';
 import { dbService } from '../services/dbService';
 import { MembershipUpgradeModal } from './MembershipUpgradeModal';
@@ -43,12 +43,17 @@ export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpda
     return saved !== null ? parseInt(saved, 10) : 50;
   });
 
+  const [directSalams, setDirectSalams] = useState<number>(() => {
+    return dbService.getDirectSalams(currentUser.id);
+  });
+
   useEffect(() => {
     setIsVip(Boolean(localStorage.getItem(`serene_vip_${currentUser.id}`) || currentUser.isVip));
     
-    dbService.fetchLikesRemaining(currentUser.id).then(({ likesRemaining: liveRem, isVip: liveVip }) => {
+    dbService.fetchLikesRemaining(currentUser.id).then(({ likesRemaining: liveRem, isVip: liveVip, directSalams: liveSalams }) => {
       setLikesRemaining(liveRem);
       setIsVip(liveVip);
+      if (typeof liveSalams === 'number') setDirectSalams(liveSalams);
     });
 
     const handleVipUpdate = (e: any) => {
@@ -70,13 +75,22 @@ export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpda
         }
       }
     };
+    const handleSalams = (e: any) => {
+      if (!e.detail?.userId || e.detail.userId === currentUser.id) {
+        if (typeof e.detail?.directSalams === 'number') {
+          setDirectSalams(e.detail.directSalams);
+        }
+      }
+    };
     window.addEventListener('serene_activity_updated', handleActivity);
     window.addEventListener('serene_likes_updated', handleLikes);
+    window.addEventListener('serene_salams_updated', handleSalams);
 
     return () => {
       window.removeEventListener('serene_vip_updated', handleVipUpdate);
       window.removeEventListener('serene_activity_updated', handleActivity);
       window.removeEventListener('serene_likes_updated', handleLikes);
+      window.removeEventListener('serene_salams_updated', handleSalams);
     };
   }, [currentUser.id, currentUser.isVip]);
 
@@ -273,10 +287,12 @@ export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpda
               </div>
 
               <div className="p-2.5 rounded-xl bg-white border border-pastel-amber-border flex items-center gap-2 shadow-subtle">
-                <MessageCircle className="w-4 h-4 text-primary shrink-0" />
+                <Hand className="w-4 h-4 text-primary shrink-0" />
                 <div>
-                  <span className="text-[10px] text-secondary block">Mutual Messaging</span>
-                  <strong className="text-[11px] text-primary font-bold">100% Free</strong>
+                  <span className="text-[10px] text-secondary block">Direct Salams</span>
+                  <strong className="text-[11px] text-primary font-bold">
+                    {isVip ? `${directSalams} VIP Passes` : `${directSalams} Passes Left`}
+                  </strong>
                 </div>
               </div>
             </div>

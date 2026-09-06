@@ -28,7 +28,8 @@ import {
   Briefcase,
   Building2,
   FileCheck2,
-  Plane
+  Plane,
+  Sparkles
 } from 'lucide-react';
 import type { UserProfile, FilterState } from '../types';
 import { FilterModal } from './FilterModal';
@@ -64,8 +65,14 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches, onOpe
     return saved !== null ? parseInt(saved, 10) : 50;
   });
 
+  const [directSalams, setDirectSalams] = useState<number>(() => {
+    return dbService.getDirectSalams(currentUser.id);
+  });
+
   const [showLikesLimitModal, setShowLikesLimitModal] = useState<boolean>(false);
+  const [showSalamRefillModal, setShowSalamRefillModal] = useState<boolean>(false);
   const [showRewardedAdModal, setShowRewardedAdModal] = useState<boolean>(false);
+  const [adRewardType, setAdRewardType] = useState<'likes' | 'salam'>('likes');
   const [showVipModal, setShowVipModal] = useState<boolean>(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState<boolean>(false);
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState<boolean>(() => notificationService.hasUnread());
@@ -170,9 +177,10 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches, onOpe
 
   // Live Cloudflare D1 Wallet & Likes Quota Sync
   useEffect(() => {
-    dbService.fetchLikesRemaining(currentUser.id).then(({ likesRemaining: liveRem, isVip: liveVip }) => {
+    dbService.fetchLikesRemaining(currentUser.id).then(({ likesRemaining: liveRem, isVip: liveVip, directSalams: liveSalams }) => {
       setLikesRemaining(liveRem);
       setIsVip(liveVip);
+      if (typeof liveSalams === 'number') setDirectSalams(liveSalams);
     });
 
     const handleLikesUpdate = (e: any) => {
@@ -182,8 +190,19 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches, onOpe
         }
       }
     };
+    const handleSalamsUpdate = (e: any) => {
+      if (!e.detail?.userId || e.detail.userId === currentUser.id) {
+        if (typeof e.detail?.directSalams === 'number') {
+          setDirectSalams(e.detail.directSalams);
+        }
+      }
+    };
     window.addEventListener('serene_likes_updated', handleLikesUpdate);
-    return () => window.removeEventListener('serene_likes_updated', handleLikesUpdate);
+    window.addEventListener('serene_salams_updated', handleSalamsUpdate);
+    return () => {
+      window.removeEventListener('serene_likes_updated', handleLikesUpdate);
+      window.removeEventListener('serene_salams_updated', handleSalamsUpdate);
+    };
   }, [currentUser.id]);
 
 
@@ -471,7 +490,9 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches, onOpe
         ) : (
           <div className="w-full flex flex-col flex-1 justify-between gap-2.5 hardware-accelerated">
             {/* Card Shell */}
-            <article className="w-full bg-white rounded-3xl overflow-hidden border border-outline shadow-card flex flex-col">
+            <article className={`w-full bg-white rounded-3xl overflow-hidden border shadow-card flex flex-col transition-all ${
+              currentProfile.isSpotlightActive ? 'border-amber-400 ring-2 ring-amber-300/60 shadow-lg' : 'border-outline'
+            }`}>
               {/* Top Photo Header (Enlarged & Prominent) */}
               <div className="relative w-full h-[390px] sm:h-[410px] bg-surface-variant overflow-hidden group">
 
@@ -545,8 +566,14 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches, onOpe
                     )}
                   </div>
 
-                  {/* Top Right: VIP Badge or Playful 94% Values Match Pill */}
+                  {/* Top Right: Spotlight Badge, VIP Badge or Playful 94% Values Match Pill */}
                   <div className="flex items-center gap-1.5">
+                    {currentProfile.isSpotlightActive && (
+                      <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-white border border-amber-300 text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shadow-brand animate-pulse">
+                        <Sparkles className="w-3 h-3 text-amber-200 fill-amber-200" />
+                        <span>Featured</span>
+                      </div>
+                    )}
                     {currentProfile.isVip ? (
                       <div className="bg-pastel-amber text-pastel-amber-text border border-pastel-amber-border text-[10px] font-bold px-3 py-1 rounded-full flex items-center gap-1 backdrop-blur-md shadow-subtle">
                         <Crown className="w-3.5 h-3.5 text-pastel-amber-text fill-pastel-amber-text/30" />
@@ -898,8 +925,13 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches, onOpe
                 {/* Direct Salam Instant Connect */}
                 <button
                   type="button"
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.stopPropagation();
+                    if (directSalams <= 0) {
+                      setShowSalamRefillModal(true);
+                      return;
+                    }
+                    await dbService.consumeDirectSalam(currentUser.id);
                     const conv = dbService.createMatchConversation(currentProfile);
                     notificationService.addNotification({
                       type: 'salam',
@@ -911,11 +943,15 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches, onOpe
                     });
                     onOpenChat(conv.id);
                   }}
-
                   className="flex-1 h-12 rounded-2xl bg-white text-primary border border-pastel-rose-border text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-pastel-rose active:scale-95 transition-all shadow-subtle"
                 >
                   <Hand className="w-4 h-4 text-primary" />
                   <span>Direct Salam</span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold ${
+                    directSalams > 0 ? 'bg-pastel-rose text-primary' : 'bg-surface-variant text-secondary'
+                  }`}>
+                    {directSalams}
+                  </span>
                 </button>
 
                 {/* Like / Express Interest Button (Solid #FF2560) */}
@@ -1025,14 +1061,73 @@ export const DiscoverFeed: React.FC<Props> = ({ onOpenChat, onOpenMatches, onOpe
       )}
 
 
+      {/* Out of Direct Salam Passes Modal */}
+      {showSalamRefillModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 font-sans animate-fade-in">
+          <div className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl border border-outline text-center flex flex-col items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-pastel-rose text-primary flex items-center justify-center">
+              <Hand className="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <h3 className="font-serif text-lg font-bold text-on-surface">
+                No Direct Salam Passes Left
+              </h3>
+              <p className="text-xs text-secondary mt-1 leading-relaxed">
+                Direct Salam lets you reach out directly to candidates without waiting for a mutual match. Watch 3 short ads to earn 1 free pass, or get 20 passes with Barakah VIP!
+              </p>
+            </div>
+
+            <div className="w-full space-y-2 pt-1">
+              <button
+                onClick={() => {
+                  setShowSalamRefillModal(false);
+                  setAdRewardType('salam');
+                  setShowRewardedAdModal(true);
+                }}
+                className="w-full py-3 rounded-full bg-primary text-white text-xs font-bold shadow-brand hover:bg-primary-dark active:scale-95 transition-all flex items-center justify-center gap-1.5"
+              >
+                <PlayCircle className="w-4 h-4" />
+                <span>Watch Ads (Earn Free Pass)</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowSalamRefillModal(false);
+                  setShowVipModal(true);
+                }}
+                className="w-full py-2.5 rounded-full bg-pastel-amber text-pastel-amber-text border border-pastel-amber-border hover:bg-pastel-amber/80 text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+              >
+                <Crown className="w-4 h-4 text-pastel-amber-text" />
+                <span>Get Barakah VIP (20 Salams Included)</span>
+              </button>
+
+              <button
+                onClick={() => setShowSalamRefillModal(false)}
+                className="text-[11px] text-secondary hover:text-on-surface pt-1"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Rewarded Ad Modal */}
       {showRewardedAdModal && (
         <RewardedAdModal
           userId={currentUser.id}
-          rewardType="likes"
+          rewardType={adRewardType}
           isOpen={showRewardedAdModal}
           onClose={() => setShowRewardedAdModal(false)}
-          onRewardClaimed={handleClaimAdLikes}
+          onRewardClaimed={() => {
+            if (adRewardType === 'likes') {
+              handleClaimAdLikes();
+            } else {
+              dbService.fetchLikesRemaining(currentUser.id).then(({ directSalams: s }) => {
+                if (typeof s === 'number') setDirectSalams(s);
+              });
+            }
+          }}
         />
       )}
 

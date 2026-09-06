@@ -346,14 +346,60 @@ class DBService {
     } catch { return []; }
   }
 
-  async fetchLikesRemaining(userId: string): Promise<{ likesRemaining: number; isVip: boolean }> {
+  getDirectSalams(userId: string): number {
+    try {
+      const saved = localStorage.getItem(`serene_salams_left_${userId}`);
+      return saved !== null ? parseInt(saved, 10) : 2;
+    } catch { return 2; }
+  }
+
+  getAdsWatchedForSalam(userId: string): number {
+    try {
+      const saved = localStorage.getItem(`serene_salam_ads_${userId}`);
+      return saved !== null ? parseInt(saved, 10) : 0;
+    } catch { return 0; }
+  }
+
+  getSpotlightInfo(userId: string): { isSpotlightActive: boolean; spotlightExpiresAt: string | null } {
+    try {
+      const active = localStorage.getItem(`serene_spotlight_active_${userId}`) === 'true';
+      const expiresAt = localStorage.getItem(`serene_spotlight_expires_${userId}`);
+      if (active && expiresAt && new Date(expiresAt).getTime() < Date.now()) {
+        localStorage.setItem(`serene_spotlight_active_${userId}`, 'false');
+        return { isSpotlightActive: false, spotlightExpiresAt: null };
+      }
+      return { isSpotlightActive: active, spotlightExpiresAt: expiresAt };
+    } catch {
+      return { isSpotlightActive: false, spotlightExpiresAt: null };
+    }
+  }
+
+  async fetchLikesRemaining(userId: string): Promise<{
+    likesRemaining: number;
+    isVip: boolean;
+    directSalams: number;
+    adsWatchedForSalam: number;
+    isSpotlightActive: boolean;
+    spotlightExpiresAt: string | null;
+  }> {
     const today = new Date().toISOString().slice(0, 10);
     const localKey = `serene_likes_left_${userId}_${today}`;
     const fallbackCount = parseInt(localStorage.getItem(localKey) || '50', 10);
     const fallbackVip = Boolean(localStorage.getItem(`serene_vip_${userId}`) === 'true');
+    const fallbackSalams = parseInt(localStorage.getItem(`serene_salams_left_${userId}`) || '2', 10);
+    const fallbackAdsWatched = parseInt(localStorage.getItem(`serene_salam_ads_${userId}`) || '0', 10);
+    const fallbackSpotlight = Boolean(localStorage.getItem(`serene_spotlight_active_${userId}`) === 'true');
+    const fallbackSpotlightExpires = localStorage.getItem(`serene_spotlight_expires_${userId}`) || null;
 
     if (!userId || userId === 'usr_guest') {
-      return { likesRemaining: fallbackCount, isVip: fallbackVip };
+      return {
+        likesRemaining: fallbackCount,
+        isVip: fallbackVip,
+        directSalams: fallbackSalams,
+        adsWatchedForSalam: fallbackAdsWatched,
+        isSpotlightActive: fallbackSpotlight,
+        spotlightExpiresAt: fallbackSpotlightExpires
+      };
     }
 
     try {
@@ -363,10 +409,20 @@ class DBService {
         if (data.success && data.wallet) {
           const liveRemaining = data.wallet.likesRemaining ?? fallbackCount;
           const liveVip = Boolean(data.wallet.isVip);
+          const liveSalams = data.wallet.directSalams ?? fallbackSalams;
+          const liveAdsWatched = data.wallet.adsWatchedForSalam ?? fallbackAdsWatched;
+          const liveSpotlight = Boolean(data.wallet.isSpotlightActive);
+          const liveSpotlightExpires = data.wallet.spotlightExpiresAt || null;
           
           try {
             localStorage.setItem(localKey, liveRemaining.toString());
             localStorage.setItem(`serene_vip_${userId}`, liveVip ? 'true' : 'false');
+            localStorage.setItem(`serene_salams_left_${userId}`, liveSalams.toString());
+            localStorage.setItem(`serene_salam_ads_${userId}`, liveAdsWatched.toString());
+            localStorage.setItem(`serene_spotlight_active_${userId}`, liveSpotlight ? 'true' : 'false');
+            if (liveSpotlightExpires) {
+              localStorage.setItem(`serene_spotlight_expires_${userId}`, liveSpotlightExpires);
+            }
           } catch {}
 
           const cur = this.getCurrentUser();
@@ -375,13 +431,30 @@ class DBService {
             window.dispatchEvent(new CustomEvent('serene_vip_updated', { detail: { userId, isVip: liveVip } }));
           }
 
-          return { likesRemaining: liveRemaining, isVip: liveVip };
+          window.dispatchEvent(new CustomEvent('serene_salams_updated', { detail: { userId, directSalams: liveSalams } }));
+          window.dispatchEvent(new CustomEvent('serene_spotlight_updated', { detail: { userId, isSpotlightActive: liveSpotlight, spotlightExpiresAt: liveSpotlightExpires } }));
+
+          return {
+            likesRemaining: liveRemaining,
+            isVip: liveVip,
+            directSalams: liveSalams,
+            adsWatchedForSalam: liveAdsWatched,
+            isSpotlightActive: liveSpotlight,
+            spotlightExpiresAt: liveSpotlightExpires
+          };
         }
       }
     } catch (e) {
       console.warn('Live wallet sync notice:', e);
     }
-    return { likesRemaining: fallbackCount, isVip: fallbackVip };
+    return {
+      likesRemaining: fallbackCount,
+      isVip: fallbackVip,
+      directSalams: fallbackSalams,
+      adsWatchedForSalam: fallbackAdsWatched,
+      isSpotlightActive: fallbackSpotlight,
+      spotlightExpiresAt: fallbackSpotlightExpires
+    };
   }
 
   async consumeDailyLike(userId: string): Promise<{ success: boolean; likesRemaining: number }> {
@@ -420,6 +493,74 @@ class DBService {
       console.warn('Consume live like notice:', e);
     }
     return { success: true, likesRemaining: nextLocal };
+  }
+
+  async consumeDirectSalam(userId: string): Promise<{ success: boolean; directSalams: number }> {
+    const localKey = `serene_salams_left_${userId}`;
+    const currentLocal = parseInt(localStorage.getItem(localKey) || '2', 10);
+    const nextLocal = Math.max(0, currentLocal - 1);
+    try {
+      localStorage.setItem(localKey, nextLocal.toString());
+    } catch {}
+
+    window.dispatchEvent(new CustomEvent('serene_salams_updated', { detail: { userId, directSalams: nextLocal } }));
+
+    if (!userId || userId === 'usr_guest') {
+      return { success: true, directSalams: nextLocal };
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/wallet/use-direct-salam`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && typeof data.directSalams === 'number') {
+          try {
+            localStorage.setItem(localKey, data.directSalams.toString());
+          } catch {}
+          window.dispatchEvent(new CustomEvent('serene_salams_updated', { detail: { userId, directSalams: data.directSalams } }));
+          return { success: true, directSalams: data.directSalams };
+        }
+      }
+    } catch (e) {
+      console.warn('Consume live Direct Salam notice:', e);
+    }
+    return { success: true, directSalams: nextLocal };
+  }
+
+  async claimAdReward(userId: string, rewardType: 'likes' | 'salam' | 'messages' | 'photo_unblur' = 'likes'): Promise<any> {
+    try {
+      const res = await fetch(`${API_BASE}/wallet/reward-ad`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, rewardType })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          if (typeof data.directSalams === 'number') {
+            localStorage.setItem(`serene_salams_left_${userId}`, data.directSalams.toString());
+            window.dispatchEvent(new CustomEvent('serene_salams_updated', { detail: { userId, directSalams: data.directSalams } }));
+          }
+          if (typeof data.adsWatchedForSalam === 'number') {
+            localStorage.setItem(`serene_salam_ads_${userId}`, data.adsWatchedForSalam.toString());
+            window.dispatchEvent(new CustomEvent('serene_salam_ads_updated', { detail: { userId, adsWatched: data.adsWatchedForSalam } }));
+          }
+          if (typeof data.likesRemaining === 'number') {
+            const today = new Date().toISOString().slice(0, 10);
+            localStorage.setItem(`serene_likes_left_${userId}_${today}`, data.likesRemaining.toString());
+            window.dispatchEvent(new CustomEvent('serene_likes_updated', { detail: { userId, likesRemaining: data.likesRemaining } }));
+          }
+          return data;
+        }
+      }
+    } catch (e) {
+      console.warn('Claim ad reward notice:', e);
+    }
+    return null;
   }
 
   // 1-to-1 Modesty Photo Reveal system

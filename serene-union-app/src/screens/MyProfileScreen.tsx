@@ -34,7 +34,9 @@ import {
   Pause,
   Trash2,
   Volume2,
-  Loader2
+  Loader2,
+  Hand,
+  Sparkles
 } from 'lucide-react';
 import type { UserProfile } from '../types';
 import { dbService } from '../services/dbService';
@@ -76,10 +78,19 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
     return saved !== null ? parseInt(saved, 10) : 50;
   });
 
+  const [directSalams, setDirectSalams] = useState<number>(() => {
+    return dbService.getDirectSalams(user.id);
+  });
+  const [spotlightInfo, setSpotlightInfo] = useState<{ isSpotlightActive: boolean; spotlightExpiresAt: string | null }>(() => {
+    return dbService.getSpotlightInfo(user.id);
+  });
+
   useEffect(() => {
-    dbService.fetchLikesRemaining(user.id).then(({ likesRemaining: liveRem, isVip: liveVip }) => {
+    dbService.fetchLikesRemaining(user.id).then(({ likesRemaining: liveRem, isVip: liveVip, directSalams: liveSalams, isSpotlightActive, spotlightExpiresAt }) => {
       setLikesRemaining(liveRem);
       setIsVip(liveVip);
+      if (typeof liveSalams === 'number') setDirectSalams(liveSalams);
+      setSpotlightInfo({ isSpotlightActive: Boolean(isSpotlightActive), spotlightExpiresAt: spotlightExpiresAt || null });
     });
 
     const handleActivity = () => {
@@ -93,13 +104,42 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
         }
       }
     };
+    const handleSalams = (e: any) => {
+      if (!e.detail?.userId || e.detail.userId === user.id) {
+        if (typeof e.detail?.directSalams === 'number') {
+          setDirectSalams(e.detail.directSalams);
+        }
+      }
+    };
+    const handleSpotlight = (e: any) => {
+      if (!e.detail?.userId || e.detail.userId === user.id) {
+        setSpotlightInfo({
+          isSpotlightActive: Boolean(e.detail?.isSpotlightActive),
+          spotlightExpiresAt: e.detail?.spotlightExpiresAt || null
+        });
+      }
+    };
     window.addEventListener('serene_activity_updated', handleActivity);
     window.addEventListener('serene_likes_updated', handleLikes);
+    window.addEventListener('serene_salams_updated', handleSalams);
+    window.addEventListener('serene_spotlight_updated', handleSpotlight);
     return () => {
       window.removeEventListener('serene_activity_updated', handleActivity);
       window.removeEventListener('serene_likes_updated', handleLikes);
+      window.removeEventListener('serene_salams_updated', handleSalams);
+      window.removeEventListener('serene_spotlight_updated', handleSpotlight);
     };
   }, [user.id]);
+
+  const formatSpotlightRemaining = (expiresAt: string | null): string => {
+    if (!expiresAt) return '';
+    const diff = new Date(expiresAt).getTime() - Date.now();
+    if (diff <= 0) return 'Expiring soon';
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    if (hours > 0) return `${hours}h ${mins}m left`;
+    return `${mins}m left`;
+  };
 
 
   const [hasCompletedQuiz, setHasCompletedQuiz] = useState<boolean>(() => {
@@ -350,53 +390,119 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
           </div>
 
           {isVip ? (
-            <div className="grid grid-cols-2 gap-2 pt-2.5 border-t border-pastel-amber-border/70 text-xs">
-              <div className="p-2.5 rounded-2xl bg-white border border-pastel-amber-border/80 flex items-center gap-2.5 shadow-xs">
-                <div className="w-7 h-7 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center shrink-0">
-                  <Infinity className="w-3.5 h-3.5 text-amber-600" />
+            <div className="space-y-2 pt-2.5 border-t border-pastel-amber-border/70 text-xs">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="p-2.5 rounded-2xl bg-white border border-pastel-amber-border/80 flex items-center gap-2.5 shadow-xs">
+                  <div className="w-7 h-7 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center shrink-0">
+                    <Infinity className="w-3.5 h-3.5 text-amber-600" />
+                  </div>
+                  <div className="min-w-0">
+                    <strong className="block text-[10px] text-on-surface font-bold truncate">Unlimited Likes</strong>
+                    <span className="text-[9px] text-secondary">Active Forever</span>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <strong className="block text-[10px] text-on-surface font-bold truncate">Unlimited Likes</strong>
-                  <span className="text-[9px] text-secondary">No daily limits</span>
+
+                <div className="p-2.5 rounded-2xl bg-white border border-pastel-amber-border/80 flex items-center gap-2.5 shadow-xs">
+                  <div className="w-7 h-7 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center shrink-0">
+                    <Hand className="w-3.5 h-3.5 text-amber-600" />
+                  </div>
+                  <div className="min-w-0">
+                    <strong className="block text-[10px] text-on-surface font-bold truncate">Direct Salams</strong>
+                    <span className="text-[9px] font-bold text-amber-700">{directSalams} Passes Available</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="p-2.5 rounded-2xl bg-white border border-pastel-amber-border/80 flex items-center gap-2.5 shadow-xs">
-                <div className="w-7 h-7 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center shrink-0">
-                  <Crown className="w-3.5 h-3.5 text-amber-600" />
+              {/* VIP Spotlight Boost Status */}
+              <div className="p-2.5 rounded-2xl bg-white border border-pastel-amber-border/80 flex items-center justify-between shadow-xs">
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 border ${
+                    spotlightInfo.isSpotlightActive ? 'bg-amber-500 text-white border-amber-600 animate-pulse' : 'bg-amber-50 text-amber-600 border-amber-200'
+                  }`}>
+                    <Sparkles className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <strong className="block text-[10px] text-on-surface font-bold">
+                      {spotlightInfo.isSpotlightActive ? '⚡ 24h Spotlight Boost Active' : 'City Spotlight Boost'}
+                    </strong>
+                    <span className="text-[9px] text-secondary">
+                      {spotlightInfo.isSpotlightActive
+                        ? `${formatSpotlightRemaining(spotlightInfo.spotlightExpiresAt)} · #1 Top Spot in City`
+                        : 'Feature your profile at #1 top spot in city Discover feed'}
+                    </span>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <strong className="block text-[10px] text-on-surface font-bold truncate">Direct Salams</strong>
-                  <span className="text-[9px] text-secondary">VIP Priority</span>
-                </div>
+
+                {!spotlightInfo.isSpotlightActive && (
+                  <button
+                    onClick={() => setShowUpgradeModal(true)}
+                    className="bg-pastel-amber text-pastel-amber-text border border-pastel-amber-border text-[10px] font-bold px-2.5 py-1 rounded-full hover:bg-pastel-amber/80 transition-all active:scale-95"
+                  >
+                    Boost ($0.99)
+                  </button>
+                )}
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-outline/50 text-xs">
-              <button
-                onClick={() => {
-                  setAdRewardType('likes');
-                  setShowAdModal(true);
-                }}
-                className="p-2 rounded-xl bg-white border border-outline hover:bg-surface-variant text-left flex items-center gap-2 transition-colors active:scale-95 shadow-subtle"
-              >
-                <PlayCircle className="text-primary w-4 h-4 shrink-0" />
-                <div>
-                  <strong className="block text-[10px] text-on-surface">+10 Extra Likes</strong>
-                  <span className="text-[9px] text-secondary">Watch 15s ad</span>
-                </div>
-              </button>
+            <div className="space-y-2 pt-2 border-t border-outline/50 text-xs">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => {
+                    setAdRewardType('likes');
+                    setShowAdModal(true);
+                  }}
+                  className="p-2 rounded-xl bg-white border border-outline hover:bg-surface-variant text-left flex items-center gap-2 transition-colors active:scale-95 shadow-subtle"
+                >
+                  <PlayCircle className="text-primary w-4 h-4 shrink-0" />
+                  <div>
+                    <strong className="block text-[10px] text-on-surface">+10 Extra Likes</strong>
+                    <span className="text-[9px] text-secondary">Watch 15s ad</span>
+                  </div>
+                </button>
 
-              <button
-                onClick={() => setShowUpgradeModal(true)}
-                className="p-2 rounded-xl bg-white border border-outline hover:bg-surface-variant text-left flex items-center gap-2 transition-colors active:scale-95 shadow-subtle"
-              >
-                <Crown className="text-pastel-amber-text w-4 h-4 shrink-0" />
-                <div>
-                  <strong className="block text-[10px] text-primary">Barakah VIP</strong>
-                  <span className="text-[9px] text-secondary">PKR 830 / mo</span>
-                </div>
-              </button>
+                <button
+                  onClick={() => {
+                    setAdRewardType('salam');
+                    setShowAdModal(true);
+                  }}
+                  className="p-2 rounded-xl bg-white border border-outline hover:bg-surface-variant text-left flex items-center gap-2 transition-colors active:scale-95 shadow-subtle"
+                >
+                  <Hand className="text-primary w-4 h-4 shrink-0" />
+                  <div>
+                    <strong className="block text-[10px] text-on-surface">Direct Salams: {directSalams}</strong>
+                    <span className="text-[9px] text-secondary">Watch 3 ads for +1</span>
+                  </div>
+                </button>
+              </div>
+
+              {/* Free Member Spotlight & VIP row */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setShowUpgradeModal(true)}
+                  className="p-2 rounded-xl bg-white border border-outline hover:bg-surface-variant text-left flex items-center gap-2 transition-colors active:scale-95 shadow-subtle"
+                >
+                  <Sparkles className="text-amber-500 w-4 h-4 shrink-0" />
+                  <div>
+                    <strong className="block text-[10px] text-on-surface">
+                      {spotlightInfo.isSpotlightActive ? '⚡ Boost Active' : 'City Spotlight'}
+                    </strong>
+                    <span className="text-[9px] text-secondary">
+                      {spotlightInfo.isSpotlightActive ? formatSpotlightRemaining(spotlightInfo.spotlightExpiresAt) : 'Rank #1 ($0.99)'}
+                    </span>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => setShowUpgradeModal(true)}
+                  className="p-2 rounded-xl bg-white border border-pastel-amber-border hover:bg-surface-variant text-left flex items-center gap-2 transition-colors active:scale-95 shadow-subtle"
+                >
+                  <Crown className="text-pastel-amber-text w-4 h-4 shrink-0" />
+                  <div>
+                    <strong className="block text-[10px] text-primary">Barakah VIP</strong>
+                    <span className="text-[9px] text-secondary">20 Passes · PKR 830</span>
+                  </div>
+                </button>
+              </div>
             </div>
           )}
         </div>

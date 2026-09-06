@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Crown, TrendingUp, ShieldCheck, PlayCircle, Wallet, CheckCircle2, X, Check, CreditCard } from 'lucide-react';
+import { Crown, TrendingUp, ShieldCheck, PlayCircle, Wallet, CheckCircle2, X, Check, CreditCard, Hand } from 'lucide-react';
 import { API_BASE, dbService } from '../services/dbService';
 
 interface Props {
@@ -23,7 +23,7 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
 
   useEffect(() => {
     const handleVipUpdated = () => {
-      setIsProcessing(false);
+      onPurchaseSuccess('serene_barakah_monthly');
       onClose();
     };
     window.addEventListener('serene_vip_updated', handleVipUpdated);
@@ -39,9 +39,19 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
       tag: 'Most Popular',
       price: '$2.99 / mo',
       localPrice: 'PKR 830 / month',
-      description: 'Unlimited likes, See Who Liked You, 100% Ad-Free & Priority discovery ranking.',
+      description: 'Unlimited likes, See Who Liked You, 20 Direct Salams, 100% Ad-Free & Priority discovery ranking.',
       Icon: Crown,
       isSubscription: true
+    },
+    {
+      id: 'serene_direct_salam_20',
+      title: '20 Direct Salam Passes',
+      tag: 'Instant Connect',
+      price: '$1.99',
+      localPrice: 'PKR 550 (20 Passes)',
+      description: 'Send 20 direct intro messages to candidates without waiting for a mutual match.',
+      Icon: Hand,
+      isSubscription: false
     },
     {
       id: 'serene_spotlight_boost_24h',
@@ -49,7 +59,7 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
       tag: '10x Views',
       price: '$0.99',
       localPrice: 'PKR 275 (24 Hours)',
-      description: 'Feature your profile at the #1 top spot in your city’s Discover stream.',
+      description: 'Feature your profile at the #1 top spot in your city’s Discover stream for 24 hours.',
       Icon: TrendingUp,
       isSubscription: false
     },

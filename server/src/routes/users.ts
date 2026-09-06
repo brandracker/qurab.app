@@ -302,17 +302,19 @@ profilesRouter.get('/discover', async (c) => {
         rp.halal_diet as halalDiet, rp.quran_recitation as quranRecitation,
         rp.modesty_practice as modestyPractice, rp.hajj_umrah_status as hajjUmrahStatus,
         rp.deen_relationship_bio as deenRelationshipBio,
-        w.wali_name as waliName, w.wali_relationship as waliRelationship, w.wali_phone as waliPhone, w.is_verified as waliVerified
+        w.wali_name as waliName, w.wali_relationship as waliRelationship, w.wali_phone as waliPhone, w.is_verified as waliVerified,
+        (CASE WHEN uw.spotlight_expires_at IS NOT NULL AND datetime(uw.spotlight_expires_at) > datetime('now') THEN 1 ELSE 0 END) as isSpotlightActive
       FROM users u
       LEFT JOIN religious_profiles rp ON u.id = rp.user_id
       LEFT JOIN wali_details w ON u.id = w.user_id
+      LEFT JOIN user_wallets uw ON u.id = uw.user_id
       WHERE u.id != ? 
         AND (u.full_name != 'New Member' OR u.full_name IS NULL)
         AND (u.is_profile_completed != 0 OR u.is_profile_completed IS NULL)
         AND (u.is_profile_completed = 1 OR (u.location != 'Global' AND u.location IS NOT NULL))
         ${genderFilter}
       ${geoFilter}
-      ORDER BY u.is_vip DESC, u.created_at DESC
+      ORDER BY (CASE WHEN uw.spotlight_expires_at IS NOT NULL AND datetime(uw.spotlight_expires_at) > datetime('now') THEN 1 ELSE 0 END) DESC, u.is_vip DESC, u.created_at DESC
     `;
 
     const bindParams: any[] = [currentUserId];
@@ -400,6 +402,7 @@ profilesRouter.get('/discover', async (c) => {
         blurPhotosByDefault: Boolean(row.blurPhotosByDefault),
         profileVisibility: row.profileVisibility || 'all_users',
         isVip: Boolean(row.isVip),
+        isSpotlightActive: Boolean(row.isSpotlightActive),
         voiceGreetingUrl: row.voiceGreetingUrl || undefined,
         voiceGreetingDuration: row.voiceGreetingDuration || undefined,
         photos: userPhotos.length > 0 ? userPhotos : ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80'],
@@ -423,8 +426,9 @@ profilesRouter.get('/discover', async (c) => {
       };
     }).filter(Boolean) as any[];
 
-    // Sort: VIP first, then by closest distance if distance is known
+    // Sort: Spotlight first, then VIP, then by closest distance if distance is known
     formatted.sort((a, b) => {
+      if (b.isSpotlightActive !== a.isSpotlightActive) return (b.isSpotlightActive ? 1 : 0) - (a.isSpotlightActive ? 1 : 0);
       if (b.isVip !== a.isVip) return (b.isVip ? 1 : 0) - (a.isVip ? 1 : 0);
       if (a.distanceKm !== null && b.distanceKm !== null) return a.distanceKm - b.distanceKm;
       if (a.distanceKm !== null) return -1;

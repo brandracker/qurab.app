@@ -50,6 +50,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
   useEffect(() => {
     if (initialConvId) {
       setActiveConvId(initialConvId);
+      dbService.markConversationAsRead(initialConvId);
     }
 
     // Sync latest from live server
@@ -58,7 +59,39 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
         setConversations([...liveList]);
       }
     });
+
+    const handleConversationsUpdate = () => {
+      setConversations([...dbService.getConversations()]);
+    };
+
+    window.addEventListener('serene_conversations_updated', handleConversationsUpdate);
+    window.addEventListener('serene_reveal_updated', handleConversationsUpdate);
+    return () => {
+      window.removeEventListener('serene_conversations_updated', handleConversationsUpdate);
+      window.removeEventListener('serene_reveal_updated', handleConversationsUpdate);
+    };
   }, [initialConvId]);
+
+  // Periodic background polling when viewing the conversations list
+  useEffect(() => {
+    if (activeConvId) return;
+
+    let isMounted = true;
+    const pollConversations = async () => {
+      try {
+        const liveList = await dbService.fetchLiveConversations();
+        if (isMounted && liveList) {
+          setConversations([...liveList]);
+        }
+      } catch {}
+    };
+
+    const interval = setInterval(pollConversations, 5000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [activeConvId]);
 
   let activeConv = conversations.find(c => 
     c.id === activeConvId || 
@@ -78,26 +111,32 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
     }
   }
 
-  // Fetch real messages from Cloudflare D1 and live poll every 4 seconds
+  // Live polling for messages & real-time photo reveal status from Cloudflare D1
   useEffect(() => {
-    const targetRoomId = activeConv?.id || activeConvId;
+    const targetRoomId = activeConv?.otherUser?.id 
+      ? (`conv_${[currentUser.id, activeConv.otherUser.id].sort().join('_')}`)
+      : (activeConv?.id || activeConvId);
+
     if (!targetRoomId) return;
 
     let isMounted = true;
     const syncD1Messages = async () => {
-      const liveMsgs = await dbService.fetchConversationMessages(targetRoomId);
-      if (isMounted && liveMsgs && liveMsgs.length > 0) {
-        setRoomMessages(liveMsgs);
-      }
+      try {
+        const liveMsgs = await dbService.fetchConversationMessages(targetRoomId, currentUser.id);
+        if (isMounted && liveMsgs && liveMsgs.length > 0) {
+          setRoomMessages(liveMsgs);
+          setConversations([...dbService.getConversations()]);
+        }
+      } catch {}
     };
 
     syncD1Messages();
-    const pollInterval = setInterval(syncD1Messages, 4000);
+    const pollInterval = setInterval(syncD1Messages, 3000);
     return () => {
       isMounted = false;
       clearInterval(pollInterval);
     };
-  }, [activeConvId, activeConv?.id]);
+  }, [activeConvId, activeConv?.id, activeConv?.otherUser?.id, currentUser.id]);
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -123,6 +162,20 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
       }
     }
   }, [activeConvId, activeConv?.otherUser?.id, activeConv?.hasRevealedToPartner, activeConv?.otherUser?.hasRevealedToPartner, currentUser.id]);
+
+  // Listen to live reveal updates dispatched from message polling
+  useEffect(() => {
+    const handleLiveReveal = (e: any) => {
+      const detail = e.detail;
+      if (!detail) return;
+      if (typeof detail.hasRevealedToPartner === 'boolean') {
+        setHasRevealedToPartner(detail.hasRevealedToPartner);
+      }
+      setConversations([...dbService.getConversations()]);
+    };
+    window.addEventListener('serene_reveal_updated', handleLiveReveal);
+    return () => window.removeEventListener('serene_reveal_updated', handleLiveReveal);
+  }, []);
 
   const handleToggleRevealPhotos = async () => {
     if (!activeConv?.otherUser) return;
@@ -162,6 +215,9 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
       curr.messages.push(sysMsg);
       curr.hasRevealedToPartner = isNowRevealed;
       if (curr.otherUser) curr.otherUser.hasRevealedToPartner = isNowRevealed;
+      curr.lastMessageText = statusMsg;
+      curr.lastMessageTime = 'Just now';
+      curr.lastMessageTimestamp = Date.now();
       localStorage.setItem('serene_real_conversations_v3', JSON.stringify(convs));
       setConversations([...convs]);
     }
@@ -172,36 +228,6 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
     );
     setTimeout(() => setToastMessage(null), 3000);
   };
-
-
-  // Live polling for real multi-device messages from Cloudflare D1
-  useEffect(() => {
-    if (!activeConvId && !activeConv?.id) return;
-
-    const targetRoomId = activeConv?.otherUser?.id 
-      ? (`conv_${[currentUser.id, activeConv.otherUser.id].sort().join('_')}`)
-      : (activeConv?.id || activeConvId);
-
-    if (!targetRoomId) return;
-
-    let isMounted = true;
-    const fetchLiveMessages = async () => {
-      try {
-        const liveMsgs = await dbService.fetchConversationMessages(targetRoomId);
-        if (isMounted && liveMsgs && liveMsgs.length > 0) {
-          setRoomMessages(liveMsgs);
-          setConversations([...dbService.getConversations()]);
-        }
-      } catch {}
-    };
-
-    fetchLiveMessages();
-    const interval = setInterval(fetchLiveMessages, 3000);
-    return () => {
-      isMounted = false;
-      clearInterval(interval);
-    };
-  }, [activeConvId, activeConv?.id, activeConv?.otherUser?.id]);
 
   // Real User-to-User Send Message
   const handleSendMessage = async () => {
@@ -297,7 +323,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
     const curr = convs.find(c => c.id === activeConv.id);
     if (curr) {
       curr.status = 'respectfully_closed';
-      localStorage.setItem('serene_conversations_v1', JSON.stringify(convs));
+      localStorage.setItem('serene_real_conversations_v3', JSON.stringify(convs));
       setConversations([...convs]);
     }
 
@@ -322,93 +348,134 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
 
 
         <div className="flex-1 overflow-y-auto p-3 space-y-2.5 pb-8">
-          {conversations.length > 0 ? (
-            conversations.map(conv => {
-              return (
-                <div
-                  key={conv.id}
-                  onClick={() => setActiveConvId(conv.id)}
-                  className="p-3.5 bg-white rounded-2xl border border-outline hover:border-primary flex items-center gap-3 cursor-pointer transition-all shadow-subtle group"
-                >
-                  {/* Clickable Profile Avatar */}
-                  <div 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedProfile(conv.otherUser);
+          {(() => {
+            const sortedConversations = [...conversations].sort((a, b) => {
+              const tA = a.lastMessageTimestamp || (a.lastMessageTime && !isNaN(new Date(a.lastMessageTime).getTime()) ? new Date(a.lastMessageTime).getTime() : 0);
+              const tB = b.lastMessageTimestamp || (b.lastMessageTime && !isNaN(new Date(b.lastMessageTime).getTime()) ? new Date(b.lastMessageTime).getTime() : 0);
+              return tB - tA;
+            });
+
+            return sortedConversations.length > 0 ? (
+              sortedConversations.map(conv => {
+                const isIncomingUnread = conv.lastMessageSenderId !== currentUser.id && Boolean(conv.unreadCount && conv.unreadCount > 0);
+                return (
+                  <div
+                    key={conv.id}
+                    onClick={() => {
+                      dbService.markConversationAsRead(conv.id);
+                      setActiveConvId(conv.id);
                     }}
-                    className="relative shrink-0 cursor-pointer group/avatar"
-                    title={`Click to view ${conv.otherUser.fullName}'s Biodata`}
+                    className={`p-3.5 bg-white rounded-2xl border transition-all shadow-subtle group flex items-center gap-3 cursor-pointer ${
+                      isIncomingUnread 
+                        ? 'border-primary/60 bg-pastel-rose/25 border-l-4 border-l-primary shadow-brand/10' 
+                        : 'border-outline hover:border-primary'
+                    }`}
                   >
-                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-primary/30 bg-surface-variant flex items-center justify-center group-hover/avatar:border-primary transition-all shadow-subtle">
-                      {conv.otherUser.photos && conv.otherUser.photos.length > 0 ? (
-                        <img
-                          src={conv.otherUser.photos[0]}
-                          alt={conv.otherUser.fullName}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <span className="font-serif text-sm font-bold text-primary">
-                          {conv.otherUser.fullName.charAt(0)}
-                        </span>
+                    {/* Clickable Profile Avatar */}
+                    <div 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedProfile(conv.otherUser);
+                      }}
+                      className="relative shrink-0 cursor-pointer group/avatar"
+                      title={`Click to view ${conv.otherUser.fullName}'s Biodata`}
+                    >
+                      <div className={`w-12 h-12 rounded-full overflow-hidden border-2 bg-surface-variant flex items-center justify-center group-hover/avatar:border-primary transition-all shadow-subtle ${
+                        isIncomingUnread ? 'border-primary ring-2 ring-primary/20' : 'border-primary/30'
+                      }`}>
+                        {conv.otherUser.photos && conv.otherUser.photos.length > 0 ? (
+                          <img
+                            src={conv.otherUser.photos[0]}
+                            alt={conv.otherUser.fullName}
+                            className={`w-full h-full object-cover ${
+                              conv.otherUser.blurPhotosByDefault && !conv.otherUser.isPhotoRevealed && !conv.isPhotoRevealed ? 'blur-xs' : ''
+                            }`}
+                          />
+                        ) : (
+                          <span className="font-serif text-sm font-bold text-primary">
+                            {conv.otherUser.fullName.charAt(0)}
+                          </span>
+                        )}
+                      </div>
+                      {isIncomingUnread && (
+                        <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-primary border-2 border-white rounded-full animate-pulse" />
                       )}
                     </div>
-                  </div>
 
-                  {/* Conversation Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-0.5">
-                      <h3 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedProfile(conv.otherUser);
-                        }}
-                        className="font-serif font-bold text-xs text-on-surface truncate group-hover:text-primary transition-colors cursor-pointer hover:underline"
-                        title="Click to view full biodata"
-                      >
-                        {conv.otherUser.fullName}
-                      </h3>
-                      <span className="text-[11px] text-secondary font-medium shrink-0">{formatChatTime(conv.lastMessageTime)}</span>
+                    {/* Conversation Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-0.5">
+                        <h3 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedProfile(conv.otherUser);
+                          }}
+                          className={`font-serif text-xs truncate group-hover:text-primary transition-colors cursor-pointer hover:underline ${
+                            isIncomingUnread ? 'font-black text-primary' : 'font-bold text-on-surface'
+                          }`}
+                          title="Click to view full biodata"
+                        >
+                          {conv.otherUser.fullName}
+                        </h3>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className={`text-[11px] font-medium ${isIncomingUnread ? 'text-primary font-bold' : 'text-secondary'}`}>
+                            {formatChatTime(conv.lastMessageTime)}
+                          </span>
+                          {isIncomingUnread && (
+                            <span className="px-1.5 py-0.2 rounded-full bg-primary text-white text-[10px] font-bold shadow-2xs">
+                              {conv.unreadCount || 1}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <p className={`text-xs truncate ${
+                        isIncomingUnread ? 'font-bold text-on-surface' : 'text-secondary'
+                      }`}>
+                        {conv.lastMessageText || 'Tap to start conversation...'}
+                      </p>
+
+                      <div className="flex items-center gap-2 mt-1.5">
+                        {isIncomingUnread && (
+                          <span className="text-[10px] font-semibold text-primary bg-pastel-rose px-2 py-0.5 rounded-full border border-pastel-rose-border">
+                            New Reply
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedProfile(conv.otherUser);
+                          }}
+                          className="text-[10px] text-primary hover:underline font-semibold flex items-center gap-0.5 ml-auto"
+                        >
+                          <FileText className="w-3 h-3" />
+                          <span>View Biodata</span>
+                        </button>
+                      </div>
                     </div>
 
-                    <p className="text-xs text-secondary truncate">{conv.lastMessageText || 'Tap to start conversation...'}</p>
-
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedProfile(conv.otherUser);
-                        }}
-                        className="text-[10px] text-primary hover:underline font-semibold flex items-center gap-0.5 ml-auto"
-                      >
-                        <FileText className="w-3 h-3" />
-                        <span>View Biodata</span>
-                      </button>
-                    </div>
                   </div>
-
+                );
+              })
+            ) : (
+              <div className="flex flex-col items-center justify-center py-20 text-center px-4 bg-white rounded-3xl border border-outline my-6 shadow-card">
+                <div className="w-12 h-12 rounded-full bg-pastel-rose text-primary flex items-center justify-center mb-3">
+                  <MessageCircle className="w-6 h-6 text-primary" />
                 </div>
-              );
-            })
-          ) : (
-
-
-            <div className="flex flex-col items-center justify-center py-20 text-center px-4 bg-white rounded-3xl border border-outline my-6 shadow-card">
-              <div className="w-12 h-12 rounded-full bg-pastel-rose text-primary flex items-center justify-center mb-3">
-                <MessageCircle className="w-6 h-6 text-primary" />
+                <h3 className="font-serif text-base font-bold text-on-surface">No Conversations Yet</h3>
+                <p className="text-xs text-secondary max-w-xs mt-1 leading-relaxed">
+                  Explore profiles in the Discover tab and express mutual interest or send a Direct Salam to start a blessed conversation.
+                </p>
+                <button
+                  onClick={onBackToDiscover}
+                  className="mt-4 px-5 py-2.5 rounded-full bg-primary text-white text-xs font-bold shadow-brand hover:bg-primary-dark active:scale-98 transition-all"
+                >
+                  Go to Discover
+                </button>
               </div>
-              <h3 className="font-serif text-base font-bold text-on-surface">No Conversations Yet</h3>
-              <p className="text-xs text-secondary max-w-xs mt-1 leading-relaxed">
-                Explore profiles in the Discover tab and express mutual interest or send a Direct Salam to start a blessed conversation.
-              </p>
-              <button
-                onClick={onBackToDiscover}
-                className="mt-4 px-5 py-2.5 rounded-full bg-primary text-white text-xs font-bold shadow-brand hover:bg-primary-dark active:scale-98 transition-all"
-              >
-                Go to Discover
-              </button>
-            </div>
-          )}
+            );
+          })()}
         </div>
       </div>
     );
@@ -536,9 +603,20 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
         <div className="flex items-center gap-1.5 min-w-0">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
           <span className="text-[11px] font-medium text-on-surface truncate">
-            {hasRevealedToPartner 
-              ? `Your photos are unblurred for ${activeConv.otherUser.fullName.split(' ')[0]}` 
-              : `Modesty Shield: Your photos are blurred`}
+            {(() => {
+              const partnerRevealedToMe = Boolean(activeConv.otherUser.isPhotoRevealed || activeConv.isPhotoRevealed);
+              const partnerFirstName = activeConv.otherUser.fullName.split(' ')[0];
+              if (hasRevealedToPartner && partnerRevealedToMe) {
+                return `Mutual reveal active: Photos unblurred for both`;
+              }
+              if (hasRevealedToPartner) {
+                return `Your photos are unblurred for ${partnerFirstName} (Waiting for theirs)`;
+              }
+              if (partnerRevealedToMe) {
+                return `${partnerFirstName} revealed their photos to you!`;
+              }
+              return `Modesty Shield: Your photos are blurred`;
+            })()}
           </span>
         </div>
         <button

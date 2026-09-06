@@ -116,6 +116,7 @@ export interface Conversation {
   isOnline?: boolean;
   hasRevealedToPartner?: boolean;
   isPhotoRevealed?: boolean;
+  lastMessageTimestamp?: number;
 }
 
 

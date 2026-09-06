@@ -53,9 +53,13 @@ class NotificationService {
 
       if (matchData.success && Array.isArray(matchData.matches)) {
         for (const match of matchData.matches) {
-          const notifId = `notif_match_${match.id}`;
+          const pairKey = [user.id, match.id].sort().join('_');
+          const notifId = `notif_match_${pairKey}`;
+          const targetId = `conv_${pairKey}`;
+
           const alreadyNotified = existingNotifs.some(
-            n => n.id === notifId || (n.type === 'match' && (n.targetId === match.id || n.targetId?.includes(match.id)))
+            n => n.id === notifId || 
+                 (n.type === 'match' && (n.targetId === targetId || n.targetId?.includes(match.id)))
           );
 
           if (!alreadyNotified) {
@@ -68,7 +72,7 @@ class NotificationService {
               timestamp: Date.now(),
               read: false,
               actionLabel: 'Open Chat',
-              targetId: `conv_${[user.id, match.id].sort().join('_')}`,
+              targetId,
               avatarUrl: match.photos && match.photos.length > 0 ? match.photos[0] : undefined
             });
             hasNew = true;
@@ -111,7 +115,7 @@ class NotificationService {
     if (hasNew) {
       this.save(existingNotifs);
     }
-    return existingNotifs;
+    return this.getNotifications();
   }
 
 
@@ -136,16 +140,17 @@ class NotificationService {
     const notifications: LiveNotification[] = [];
     const conversations = dbService.getConversations();
 
-    // Generate from real active conversations
+    // Generate from real active conversations with deterministic IDs
     conversations.forEach((conv, idx) => {
       const other = conv.otherUser;
       if (!other) return;
 
       const timeAgo = conv.lastMessageTime || `${(idx + 1) * 2}h ago`;
+      const pairKey = [user.id, other.id].sort().join('_');
 
       // Match notification
       notifications.push({
-        id: `notif_match_${conv.id}`,
+        id: `notif_match_${pairKey}`,
         type: 'match',
         title: `Connected with ${other.fullName.split(' ')[0]}`,
         message: conv.lastMessageText || 'Mutual matrimonial interest confirmed. Chat is active.',
@@ -165,9 +170,39 @@ class NotificationService {
 
   addNotification(notif: Omit<LiveNotification, 'id' | 'timestamp' | 'read' | 'time'>): LiveNotification {
     const notifications = this.getNotifications();
+    const user = dbService.getCurrentUser();
+
+    // Deterministic ID based on type and target
+    let deterministicId = `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    if (notif.type === 'match' && notif.targetId) {
+      const cleanTarget = notif.targetId.replace('conv_', '');
+      deterministicId = `notif_match_${cleanTarget}`;
+    } else if (notif.type === 'like' && notif.targetId) {
+      deterministicId = `notif_like_${notif.targetId}`;
+    }
+
+    // Check if already present to prevent duplicate display
+    const existingIndex = notifications.findIndex(n => 
+      n.id === deterministicId ||
+      (n.type === notif.type && n.targetId && n.targetId === notif.targetId) ||
+      (n.type === notif.type && n.title === notif.title)
+    );
+
+    if (existingIndex !== -1) {
+      notifications[existingIndex] = {
+        ...notifications[existingIndex],
+        ...notif,
+        timestamp: Date.now(),
+        time: 'Just now',
+        read: false
+      };
+      this.save(notifications);
+      return notifications[existingIndex];
+    }
+
     const newNotif: LiveNotification = {
       ...notif,
-      id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      id: deterministicId,
       timestamp: Date.now(),
       time: 'Just now',
       read: false
@@ -176,7 +211,6 @@ class NotificationService {
     notifications.unshift(newNotif);
     this.save(notifications);
 
-    const user = dbService.getCurrentUser();
     if (user?.id && user.id !== 'usr_guest') {
       fetch(`${API_BASE}/notifications/create`, {
         method: 'POST',
@@ -229,8 +263,21 @@ class NotificationService {
   }
 
   private save(items: LiveNotification[]): void {
+    // Robust semantic deduplication
+    const seen = new Set<string>();
+    const deduped: LiveNotification[] = [];
+
+    for (const item of items) {
+      const semanticKey = `${item.type}_${item.targetId || item.title}`;
+      if (!seen.has(item.id) && !seen.has(semanticKey)) {
+        seen.add(item.id);
+        seen.add(semanticKey);
+        deduped.push(item);
+      }
+    }
+
     const key = this.getStorageKey();
-    localStorage.setItem(key, JSON.stringify(items));
+    localStorage.setItem(key, JSON.stringify(deduped));
     window.dispatchEvent(new CustomEvent('serene_notifications_updated'));
   }
 }

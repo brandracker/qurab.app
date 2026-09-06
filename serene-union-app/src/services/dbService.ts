@@ -170,7 +170,7 @@ export const FALLBACK_PROFILES: UserProfile[] = [
 
 class DBService {
   private profilesKey = 'serene_real_profiles_v3';
-  private conversationsKey = 'serene_conversations_v1';
+  private conversationsKey = 'serene_real_conversations_v3';
   private userKey = 'serene_current_user_v1';
   private currentUserId = '';
   private memoryProfiles: UserProfile[] = [];
@@ -832,7 +832,9 @@ class DBService {
       conv.lastMessageText = text;
       conv.lastMessageSenderId = user.id;
       conv.lastMessageTime = msg.timestamp;
+      conv.lastMessageTimestamp = Date.now();
       localStorage.setItem(this.conversationsKey, JSON.stringify(conversations));
+      window.dispatchEvent(new CustomEvent('serene_conversations_updated'));
     }
 
     try {
@@ -850,6 +852,16 @@ class DBService {
     } catch {}
 
     return msg;
+  }
+
+  markConversationAsRead(conversationId: string): void {
+    const conversations = this.getConversations();
+    const conv = conversations.find(c => c.id === conversationId || (c.otherUser && conversationId.includes(c.otherUser.id)));
+    if (conv && conv.unreadCount && conv.unreadCount > 0) {
+      conv.unreadCount = 0;
+      localStorage.setItem(this.conversationsKey, JSON.stringify(conversations));
+      window.dispatchEvent(new CustomEvent('serene_conversations_updated'));
+    }
   }
 
   sendMessage(conversationId: string, text: string): ChatMessage {
@@ -1154,18 +1166,38 @@ class DBService {
           .filter((rc: any) => rc.participantOne === user.id || rc.participantTwo === user.id)
           .forEach((rc: any) => {
             const existing = convMap.get(rc.id);
+            const isPhotoRevealed = typeof rc.isPhotoRevealed === 'boolean' 
+              ? rc.isPhotoRevealed 
+              : (existing?.isPhotoRevealed ?? false);
+            const hasRevealedToPartner = typeof rc.hasRevealedToPartner === 'boolean'
+              ? rc.hasRevealedToPartner
+              : (existing?.hasRevealedToPartner ?? false);
+
+            const otherUserMerged = {
+              ...(rc.otherUser || existing?.otherUser),
+              isPhotoRevealed,
+              hasRevealedToPartner
+            };
+
+            const lastTimestamp = rc.lastMessageTime 
+              ? new Date(rc.lastMessageTime).getTime() 
+              : (existing?.lastMessageTimestamp || Date.now());
+
             convMap.set(rc.id, {
               id: rc.id,
               participantOne: rc.participantOne,
               participantTwo: rc.participantTwo,
-              otherUser: rc.otherUser || existing?.otherUser,
+              otherUser: otherUserMerged,
               lastMessageText: rc.lastMessageText || existing?.lastMessageText || 'You matched! Start with Bismillah.',
               lastMessageSenderId: rc.lastMessageSenderId || existing?.lastMessageSenderId || 'system',
               lastMessageTime: rc.lastMessageTime || existing?.lastMessageTime || 'Just now',
-              unreadCount: rc.unreadCount || 0,
+              lastMessageTimestamp: isNaN(lastTimestamp) ? Date.now() : lastTimestamp,
+              unreadCount: typeof rc.unreadCount === 'number' ? rc.unreadCount : (existing?.unreadCount || 0),
               waliName: rc.waliName || existing?.waliName,
               status: rc.status || existing?.status || 'active',
-              messages: existing?.messages && existing.messages.length > 0 ? existing.messages : (rc.messages || [])
+              messages: existing?.messages && existing.messages.length > 0 ? existing.messages : (rc.messages || []),
+              isPhotoRevealed,
+              hasRevealedToPartner
             });
           });
 
@@ -1193,6 +1225,7 @@ class DBService {
       lastMessageText: "You matched! Start with Bismillah.",
       lastMessageSenderId: 'system',
       lastMessageTime: 'Just now',
+      lastMessageTimestamp: Date.now(),
       unreadCount: 0,
       status: 'active',
       messages: []
@@ -1214,14 +1247,16 @@ class DBService {
     return newConv;
   }
 
-  async fetchConversationMessages(conversationId: string): Promise<ChatMessage[]> {
+  async fetchConversationMessages(conversationId: string, userId?: string): Promise<ChatMessage[]> {
     if (!conversationId) return [];
     try {
-      const res = await fetch(`${API_BASE}/conversations/${conversationId}/messages`);
+      const user = this.getCurrentUser();
+      const uId = userId || user.id;
+      const res = await fetch(`${API_BASE}/conversations/${conversationId}/messages?userId=${encodeURIComponent(uId)}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.messages)) {
         const conversations = this.getConversations();
-        const conv = conversations.find(c => c.id === conversationId);
+        const conv = conversations.find(c => c.id === conversationId || (c.otherUser && conversationId.includes(c.otherUser.id)));
         const mappedMessages: ChatMessage[] = data.messages.map((m: any) => ({
           id: m.id || 'msg_' + Math.random().toString(36).substring(2, 7),
           senderId: m.senderId || m.sender_id,
@@ -1236,20 +1271,41 @@ class DBService {
 
         if (conv) {
           conv.messages = mappedMessages;
+          let revealChanged = false;
+          if (typeof data.isPhotoRevealed === 'boolean' && conv.isPhotoRevealed !== data.isPhotoRevealed) {
+            conv.isPhotoRevealed = data.isPhotoRevealed;
+            if (conv.otherUser) conv.otherUser.isPhotoRevealed = data.isPhotoRevealed;
+            revealChanged = true;
+          }
+          if (typeof data.hasRevealedToPartner === 'boolean' && conv.hasRevealedToPartner !== data.hasRevealedToPartner) {
+            conv.hasRevealedToPartner = data.hasRevealedToPartner;
+            if (conv.otherUser) conv.otherUser.hasRevealedToPartner = data.hasRevealedToPartner;
+            revealChanged = true;
+          }
           if (mappedMessages.length > 0) {
             const last = mappedMessages[mappedMessages.length - 1];
             conv.lastMessageText = last.text;
             conv.lastMessageSenderId = last.senderId;
             conv.lastMessageTime = last.timestamp;
+            conv.lastMessageTimestamp = Date.now();
           }
           localStorage.setItem(this.conversationsKey, JSON.stringify(conversations));
+          if (revealChanged) {
+            window.dispatchEvent(new CustomEvent('serene_reveal_updated', {
+              detail: {
+                conversationId,
+                isPhotoRevealed: conv.isPhotoRevealed,
+                hasRevealedToPartner: conv.hasRevealedToPartner
+              }
+            }));
+          }
         }
         return mappedMessages;
       }
     } catch (err) {
       console.warn('Fetch messages notice:', err);
     }
-    const localConv = this.getConversations().find(c => c.id === conversationId);
+    const localConv = this.getConversations().find(c => c.id === conversationId || (c.otherUser && conversationId.includes(c.otherUser.id)));
     return localConv?.messages || [];
   }
 }

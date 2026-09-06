@@ -243,7 +243,51 @@ chatRouter.get('/:id/messages', async (c) => {
       ORDER BY created_at ASC
     `).bind(rawConvId, targetConvId).all();
 
-    return c.json({ success: true, messages: results || [] });
+    // Check 1-to-1 photo reveals if userId query param is provided
+    const userId = c.req.query('userId');
+    let isPhotoRevealed = false;
+    let hasRevealedToPartner = false;
+
+    if (userId) {
+      let p1 = existingConv?.participant_one;
+      let p2 = existingConv?.participant_two;
+
+      if (!p1 || !p2) {
+        if (rawConvId.startsWith('conv_')) {
+          const parts = rawConvId.replace('conv_', '').split('_');
+          p1 = parts[0];
+          p2 = parts[1];
+        }
+      }
+
+      const partnerId = p1 === userId ? p2 : (p2 === userId ? p1 : (p1 || p2));
+
+      if (partnerId && partnerId !== userId) {
+        try {
+          const { results: reveals } = await c.env.DB.prepare(`
+            SELECT owner_id, viewer_id FROM photo_reveals
+            WHERE (owner_id = ? AND viewer_id = ?)
+               OR (owner_id = ? AND viewer_id = ?)
+          `).bind(partnerId, userId, userId, partnerId).all();
+
+          (reveals || []).forEach((r: any) => {
+            if (r.owner_id === partnerId && r.viewer_id === userId) {
+              isPhotoRevealed = true;
+            }
+            if (r.owner_id === userId && r.viewer_id === partnerId) {
+              hasRevealedToPartner = true;
+            }
+          });
+        } catch {}
+      }
+    }
+
+    return c.json({ 
+      success: true, 
+      messages: results || [],
+      isPhotoRevealed,
+      hasRevealedToPartner
+    });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   }

@@ -123,10 +123,17 @@ export class MockD1Database {
       CREATE TABLE IF NOT EXISTS chat_messages (
         id TEXT PRIMARY KEY,
         conversation_id TEXT REFERENCES conversations(id) ON DELETE CASCADE,
-        sender_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+        sender_id TEXT,
         sender_name TEXT,
         text TEXT NOT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS photo_reveals (
+        owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        viewer_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY(owner_id, viewer_id)
       );
 
       CREATE TABLE IF NOT EXISTS phone_otps (

@@ -98,6 +98,13 @@ export const App: React.FC = () => {
           setCurrentUser(prev => ({ ...prev, isVip }));
         }
       });
+
+      // Hydrate live user profile from Cloudflare D1 (Single Source of Truth)
+      dbService.fetchUserProfile(currentUser.id).then(liveUser => {
+        if (liveUser) {
+          setCurrentUser(prev => ({ ...prev, ...liveUser }));
+        }
+      });
     }
 
     const handleVipUpdate = (e: any) => {
@@ -466,8 +473,8 @@ export const App: React.FC = () => {
         {/* ONBOARDING STEP 1: BASIC BIODATA */}
         {currentStep === 'basic_info' && (
           <BasicInfoScreen
-            data={onboardingData as any}
-            onBack={() => setCurrentStep('auth')}
+            data={(onboardingData && Object.keys(onboardingData).length > 0 ? onboardingData : currentUser) as any}
+            onBack={() => setCurrentStep(currentUser?.id && currentUser.id !== 'usr_guest' && currentUser.isProfileCompleted ? 'main_app' : 'auth')}
             onContinue={(basicData: any) => {
               goToStep('practice', { ...onboardingData, ...basicData });
             }}
@@ -477,7 +484,7 @@ export const App: React.FC = () => {
         {/* ONBOARDING STEP 2: DEEN & SUNNAH ROUTINE */}
         {currentStep === 'practice' && (
           <ReligiousPracticeScreen
-            data={onboardingData as any}
+            data={(onboardingData && Object.keys(onboardingData).length > 0 ? onboardingData : currentUser) as any}
             onBack={() => goToStep('basic_info')}
             onContinue={(relData) => {
               goToStep('family_lifestyle', { ...onboardingData, ...relData });
@@ -488,7 +495,7 @@ export const App: React.FC = () => {
         {/* ONBOARDING STEP 3: FAMILY & LIVING PREFERENCES */}
         {currentStep === 'family_lifestyle' && (
           <FamilyLifestyleScreen
-            data={onboardingData as any}
+            data={(onboardingData && Object.keys(onboardingData).length > 0 ? onboardingData : currentUser) as any}
             onBack={() => goToStep('practice')}
             onNext={(famData) => {
               goToStep('career_intent', { ...onboardingData, ...famData });
@@ -499,7 +506,7 @@ export const App: React.FC = () => {
         {/* ONBOARDING STEP 4: CAREER, MAHR & INTENT */}
         {currentStep === 'career_intent' && (
           <YourIntentScreen
-            data={onboardingData as any}
+            data={(onboardingData && Object.keys(onboardingData).length > 0 ? onboardingData : currentUser) as any}
             onBack={() => goToStep('family_lifestyle')}
             onContinue={(careerData) => {
               goToStep('photos_modesty', { ...onboardingData, ...careerData });
@@ -511,8 +518,8 @@ export const App: React.FC = () => {
         {currentStep === 'photos_modesty' && (
           <CreateProfileScreen
             userId={onboardingData.userId || currentUser.id}
-            initialPhotos={onboardingData.photos || []}
-            initialBlurPhotos={true}
+            initialPhotos={onboardingData.photos?.length > 0 ? onboardingData.photos : (currentUser.photos || [])}
+            initialBlurPhotos={currentUser.blurPhotosByDefault ?? true}
             onBack={() => goToStep('career_intent')}
             onComplete={handleFinishOnboarding}
           />
@@ -550,7 +557,27 @@ export const App: React.FC = () => {
               {activeTab === 'my_profile' && (
                 <MyProfileScreen 
                   user={currentUser}
-                  onEditProfile={() => setCurrentStep('basic_info')}
+                  onEditProfile={() => {
+                    const current = dbService.getCurrentUser();
+                    const prefill = {
+                      ...current,
+                      userId: current.id,
+                      timeline: current.marriageTimeline,
+                      practiceLevel: current.religiousProfile?.practiceLevel,
+                      sect: current.religiousProfile?.sect,
+                      madhhab: current.religiousProfile?.madhhab,
+                      prayerFrequency: current.religiousProfile?.prayerFrequency,
+                      halalDiet: current.religiousProfile?.halalDiet,
+                      quranRecitation: current.religiousProfile?.quranRecitation,
+                      modestyPractice: current.religiousProfile?.modestyPractice,
+                      hajjUmrahStatus: current.religiousProfile?.hajjUmrahStatus,
+                      bio: current.bio || current.religiousProfile?.deenRelationshipBio,
+                      photos: current.photos || []
+                    };
+                    setOnboardingData(prefill);
+                    localStorage.setItem('serene_onboarding_draft_v1', JSON.stringify({ step: 'basic_info', data: prefill }));
+                    setCurrentStep('basic_info');
+                  }}
                   onLogout={handleLogout}
                 />
               )}

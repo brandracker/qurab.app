@@ -87,7 +87,15 @@ CREATE TABLE IF NOT EXISTS conversations (
     status TEXT CHECK(status IN ('active', 'respectfully_closed', 'blocked')) DEFAULT 'active'
 );
 
--- 7. PERFORMANCE INDEXES FOR HORIZONTAL SCALABILITY
+-- 7. 1-TO-1 MODESTY PHOTO REVEAL SYSTEM
+CREATE TABLE IF NOT EXISTS photo_reveals (
+    owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    viewer_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY(owner_id, viewer_id)
+);
+
+-- 8. PERFORMANCE INDEXES FOR HORIZONTAL SCALABILITY
 CREATE INDEX IF NOT EXISTS idx_users_gender_created ON users(gender, created_at);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_user_photos_user_id ON user_photos(user_id, sort_order);

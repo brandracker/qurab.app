@@ -51,7 +51,7 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const currentUser = dbService.getCurrentUser();
-  const isRevealedToMe = dbService.isPhotoRevealedTo(profile.id, currentUser.id);
+  const isRevealedToMe = Boolean(profile.isPhotoRevealed) || dbService.isPhotoRevealedTo(profile.id, currentUser.id);
   const isUnblurred = !profile.blurPhotosByDefault || isRevealedToMe || Boolean(profile.photoRevealApproved);
   const [showCompatibilityModal, setShowCompatibilityModal] = useState<boolean>(false);
 

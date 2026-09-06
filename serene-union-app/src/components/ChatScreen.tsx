@@ -105,39 +105,63 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
   }, [roomMessages.length, activeConv?.messages?.length]);
 
   // 1-to-1 Modesty Photo Reveal State
-  const [hasRevealedToPartner, setHasRevealedToPartner] = useState<boolean>(false);
+  const [hasRevealedToPartner, setHasRevealedToPartner] = useState<boolean>(() => {
+    return Boolean(
+      activeConv?.hasRevealedToPartner || 
+      activeConv?.otherUser?.hasRevealedToPartner || 
+      (activeConv?.otherUser && dbService.isPhotoRevealedTo(currentUser.id, activeConv.otherUser.id))
+    );
+  });
 
   useEffect(() => {
     if (activeConv?.otherUser) {
-      setHasRevealedToPartner(dbService.isPhotoRevealedTo(currentUser.id, activeConv.otherUser.id));
+      const fromConv = activeConv.hasRevealedToPartner ?? activeConv.otherUser.hasRevealedToPartner;
+      if (typeof fromConv === 'boolean') {
+        setHasRevealedToPartner(fromConv);
+      } else {
+        setHasRevealedToPartner(dbService.isPhotoRevealedTo(currentUser.id, activeConv.otherUser.id));
+      }
     }
-  }, [activeConvId, activeConv?.otherUser?.id, currentUser.id]);
+  }, [activeConvId, activeConv?.otherUser?.id, activeConv?.hasRevealedToPartner, activeConv?.otherUser?.hasRevealedToPartner, currentUser.id]);
 
-  const handleToggleRevealPhotos = () => {
+  const handleToggleRevealPhotos = async () => {
     if (!activeConv?.otherUser) return;
     const partnerId = activeConv.otherUser.id;
     const partnerFirstName = activeConv.otherUser.fullName.split(' ')[0];
-    const isNowRevealed = dbService.togglePhotoReveal(currentUser.id, partnerId);
+    const isNowRevealed = !hasRevealedToPartner;
     setHasRevealedToPartner(isNowRevealed);
+
+    const targetRoomId = activeConv?.otherUser?.id 
+      ? (`conv_${[currentUser.id, activeConv.otherUser.id].sort().join('_')}`)
+      : (activeConv?.id || activeConvId || '');
+
+    // Persist live to Cloudflare D1
+    dbService.togglePhotoRevealLive(targetRoomId, currentUser.id, partnerId, isNowRevealed);
 
     const statusMsg = isNowRevealed 
       ? `📸 ${currentUser.fullName.split(' ')[0]} revealed their unblurred photos for this conversation.` 
       : `🔒 ${currentUser.fullName.split(' ')[0]} restored photo blur for modesty.`;
 
-    // Local instant feedback
+    // Local instant feedback in room messages
+    const sysMsg: ChatMessage = {
+      id: 'sys_' + Date.now(),
+      senderId: 'system',
+      senderName: 'Modesty Shield',
+      text: statusMsg,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      isRead: true,
+      waliNotified: false
+    };
+
+    setRoomMessages(prev => [...prev, sysMsg]);
+
     const convs = dbService.getConversations();
     const curr = convs.find(c => c.id === activeConvId || (c.otherUser && c.otherUser.id === partnerId));
     if (curr) {
       if (!curr.messages) curr.messages = [];
-      curr.messages.push({
-        id: 'sys_' + Date.now(),
-        senderId: 'system',
-        senderName: 'Modesty Shield',
-        text: statusMsg,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        isRead: true,
-        waliNotified: false
-      });
+      curr.messages.push(sysMsg);
+      curr.hasRevealedToPartner = isNowRevealed;
+      if (curr.otherUser) curr.otherUser.hasRevealedToPartner = isNowRevealed;
       localStorage.setItem('serene_real_conversations_v3', JSON.stringify(convs));
       setConversations([...convs]);
     }
@@ -415,6 +439,8 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                   alt={activeConv.otherUser.fullName}
                   className={`w-full h-full object-cover transition-all ${
                     activeConv.otherUser.blurPhotosByDefault && 
+                    !activeConv.otherUser.isPhotoRevealed &&
+                    !activeConv.isPhotoRevealed &&
                     !dbService.isPhotoRevealedTo(activeConv.otherUser.id, currentUser.id) && 
                     !activeConv.otherUser.photoRevealApproved
                       ? 'filter blur-xs opacity-75 scale-105'

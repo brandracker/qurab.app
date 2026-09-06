@@ -50,7 +50,13 @@ interface Props {
   onLogout?: () => void;
 }
 
-export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout }) => {
+export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile, onLogout }) => {
+  const [currentUserProfile, setCurrentUserProfile] = useState<UserProfile>(() => {
+    const cur = dbService.getCurrentUser();
+    return (cur?.id && cur.id !== 'usr_guest') ? cur : propUser;
+  });
+  const user = (currentUserProfile?.id && currentUserProfile.id !== 'usr_guest') ? currentUserProfile : propUser;
+
   const [showQuizModal, setShowQuizModal] = useState<boolean>(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState<boolean>(false);
   const [showAdModal, setShowAdModal] = useState<boolean>(false);
@@ -86,12 +92,29 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
   });
 
   useEffect(() => {
+    // 1. Live Cloudflare D1 User Profile Hydration (Single Source of Truth)
+    if (propUser.id && propUser.id !== 'usr_guest') {
+      dbService.fetchUserProfile(propUser.id).then(live => {
+        if (live) {
+          setCurrentUserProfile({ ...live });
+          if (live.voiceGreetingUrl) setRecordedAudioUrl(live.voiceGreetingUrl);
+        }
+      });
+    }
+
     dbService.fetchLikesRemaining(user.id).then(({ likesRemaining: liveRem, isVip: liveVip, directSalams: liveSalams, isSpotlightActive, spotlightExpiresAt }) => {
       setLikesRemaining(liveRem);
       setIsVip(liveVip);
       if (typeof liveSalams === 'number') setDirectSalams(liveSalams);
       setSpotlightInfo({ isSpotlightActive: Boolean(isSpotlightActive), spotlightExpiresAt: spotlightExpiresAt || null });
     });
+
+    const handleProfileUpdate = (e: any) => {
+      if (e.detail?.user) {
+        setCurrentUserProfile({ ...e.detail.user });
+        if (e.detail.user.voiceGreetingUrl) setRecordedAudioUrl(e.detail.user.voiceGreetingUrl);
+      }
+    };
 
     const handleActivity = () => {
       const saved = localStorage.getItem(getTodayLikeKey());
@@ -119,17 +142,21 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
         });
       }
     };
+
+    window.addEventListener('serene_user_profile_updated', handleProfileUpdate);
     window.addEventListener('serene_activity_updated', handleActivity);
     window.addEventListener('serene_likes_updated', handleLikes);
     window.addEventListener('serene_salams_updated', handleSalams);
     window.addEventListener('serene_spotlight_updated', handleSpotlight);
+
     return () => {
+      window.removeEventListener('serene_user_profile_updated', handleProfileUpdate);
       window.removeEventListener('serene_activity_updated', handleActivity);
       window.removeEventListener('serene_likes_updated', handleLikes);
       window.removeEventListener('serene_salams_updated', handleSalams);
       window.removeEventListener('serene_spotlight_updated', handleSpotlight);
     };
-  }, [user.id]);
+  }, [user.id, propUser.id]);
 
   const formatSpotlightRemaining = (expiresAt: string | null): string => {
     if (!expiresAt) return '';
@@ -148,11 +175,10 @@ export const MyProfileScreen: React.FC<Props> = ({ user, onEditProfile, onLogout
   const rel = user.religiousProfile;
 
   // Voice Greeting Recorder State (Live Cloudflare R2 + D1)
-  const [currentUserProfile, setCurrentUserProfile] = useState<UserProfile>(() => dbService.getCurrentUser());
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [recordSeconds, setRecordSeconds] = useState<number>(0);
   const [recordedAudioBlob, setRecordedAudioBlob] = useState<Blob | null>(null);
-  const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(() => currentUserProfile.voiceGreetingUrl || null);
+  const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(() => user.voiceGreetingUrl || null);
   const [isPlayingVoice, setIsPlayingVoice] = useState<boolean>(false);
   const [isUploadingVoice, setIsUploadingVoice] = useState<boolean>(false);
   const [voiceToast, setVoiceToast] = useState<string | null>(null);

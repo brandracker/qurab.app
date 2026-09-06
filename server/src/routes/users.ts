@@ -131,13 +131,18 @@ usersRouter.get('/:id', async (c) => {
       SELECT photo_url FROM user_photos WHERE user_id = ? ORDER BY sort_order ASC
     `).bind(userId).all();
 
+    const birthYear = user.dob ? new Date(user.dob).getFullYear() : 1998;
+    const age = new Date().getFullYear() - (birthYear || 1998);
+
     return c.json({
       success: true,
       profile: {
         id: user.id,
+        phone: user.phone || '',
         email: user.email,
         fullName: user.full_name,
         dob: user.dob,
+        age: age || 28,
         gender: user.gender,
         location: user.location,
         city: user.city,
@@ -159,6 +164,11 @@ usersRouter.get('/:id', async (c) => {
         childrenDesire: user.children_desire || 'desires_children',
         marriageTimeline: user.marriage_timeline || 'within_1_year',
         blurPhotosByDefault: Boolean(user.blur_photos_by_default),
+        profileVisibility: user.profile_visibility || 'all_users',
+        isVip: Boolean(user.is_vip),
+        isProfileCompleted: Boolean(user.is_profile_completed),
+        voiceGreetingUrl: user.voice_greeting_url || undefined,
+        voiceGreetingDuration: user.voice_greeting_duration || 0,
         religiousProfile: {
           practiceLevel: user.practiceLevel || 'practicing',
           sect: user.sect || 'Sunni',

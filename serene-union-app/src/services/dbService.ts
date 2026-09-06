@@ -227,6 +227,42 @@ class DBService {
     return this.getAllProfiles();
   }
 
+  // Live Cloudflare D1 User Profile Hydration (Single Source of Truth)
+  async fetchUserProfile(userId: string): Promise<UserProfile | null> {
+    if (!userId || userId === 'usr_guest') return null;
+    try {
+      const endpoints = [
+        `${API_BASE}/users/${userId}`,
+        `/api/users/${userId}`,
+        `${API_BASE}/profiles/${userId}`,
+        `/api/profiles/${userId}`
+      ];
+
+      for (const ep of endpoints) {
+        try {
+          const res = await fetch(ep);
+          if (!res.ok) continue;
+          const data = await res.json();
+          if (data.success && data.profile) {
+            const current = this.getCurrentUser();
+            const merged: UserProfile = {
+              ...current,
+              ...data.profile,
+              isVip: (typeof data.profile.isVip === 'boolean') ? data.profile.isVip : current.isVip,
+              isProfileCompleted: (typeof data.profile.isProfileCompleted === 'boolean') ? data.profile.isProfileCompleted : current.isProfileCompleted
+            };
+            this.setCurrentUser(merged);
+            window.dispatchEvent(new CustomEvent('serene_user_profile_updated', { detail: { user: merged } }));
+            return merged;
+          }
+        } catch {}
+      }
+    } catch (e) {
+      console.warn('fetchUserProfile error:', e);
+    }
+    return null;
+  }
+
   getGuestUser(): UserProfile {
     return {
       id: 'usr_guest',
@@ -590,6 +626,53 @@ class DBService {
     } catch { return false; }
   }
 
+  // Live 1-to-1 Modesty Photo Reveal Sync to Cloudflare D1
+  async togglePhotoRevealLive(convId: string, ownerId: string, viewerId: string, isRevealed: boolean): Promise<boolean> {
+    // 1. Immediately update local fallback
+    try {
+      const key = `serene_revealed_${ownerId}`;
+      const list: string[] = JSON.parse(localStorage.getItem(key) || '[]');
+      const idx = list.indexOf(viewerId);
+      if (isRevealed) {
+        if (idx === -1) list.push(viewerId);
+      } else {
+        if (idx > -1) list.splice(idx, 1);
+      }
+      localStorage.setItem(key, JSON.stringify(list));
+      window.dispatchEvent(new CustomEvent('serene_activity_updated'));
+      window.dispatchEvent(new CustomEvent('serene_photo_reveal_updated', { detail: { ownerId, viewerId, isRevealed } }));
+    } catch {}
+
+    // 2. Persist to Cloudflare D1 backend
+    try {
+      const targetId = convId || `conv_${[ownerId, viewerId].sort().join('_')}`;
+      const endpoints = [
+        `${API_BASE}/conversations/${targetId}/photo-reveal`,
+        `/api/conversations/${targetId}/photo-reveal`
+      ];
+
+      for (const ep of endpoints) {
+        try {
+          const res = await fetch(ep, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ownerId, viewerId, isRevealed })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success) {
+              return Boolean(data.isRevealed);
+            }
+          }
+        } catch {}
+      }
+    } catch (e) {
+      console.warn('togglePhotoRevealLive notice:', e);
+    }
+
+    return isRevealed;
+  }
+
   // Live Cloudflare R2 + D1 Voice Greeting upload
   async uploadVoiceGreeting(userId: string, audioBase64: string, duration: number): Promise<{ success: boolean; voiceUrl?: string }> {
     try {
@@ -713,7 +796,7 @@ class DBService {
     const user = this.getCurrentUser();
     if (!user?.id || user.id === 'usr_guest') return [];
 
-    const data = localStorage.getItem(this.conversationsKey);
+    const data = localStorage.getItem(this.conversationsKey) || localStorage.getItem('serene_real_conversations_v3');
     if (data) {
       try {
         const parsed = JSON.parse(data);

@@ -89,6 +89,26 @@ chatRouter.get('/', async (c) => {
       });
     }
 
+    // Fetch 1-to-1 photo reveals between currentUser and conversation partners from Cloudflare D1
+    const partnerRevealedSet = new Set<string>();
+    const myRevealedSet = new Set<string>();
+
+    if (partnerIds.length > 0) {
+      try {
+        const placeholders = partnerIds.map(() => '?').join(',');
+        const { results: reveals } = await c.env.DB.prepare(`
+          SELECT owner_id, viewer_id FROM photo_reveals
+          WHERE (owner_id IN (${placeholders}) AND viewer_id = ?)
+             OR (owner_id = ? AND viewer_id IN (${placeholders}))
+        `).bind(...partnerIds, userId, userId, ...partnerIds).all();
+
+        (reveals || []).forEach((r: any) => {
+          if (r.viewer_id === userId) partnerRevealedSet.add(r.owner_id);
+          if (r.owner_id === userId) myRevealedSet.add(r.viewer_id);
+        });
+      } catch {}
+    }
+
     // Map to rich user-friendly payload
     const formatted = (results || []).map((row: any) => {
       const isUserP1 = row.participant_one === userId;
@@ -116,6 +136,8 @@ chatRouter.get('/', async (c) => {
       const birthYear = otherDob ? new Date(otherDob).getFullYear() : 1998;
       const age = new Date().getFullYear() - (birthYear || 1998);
       const userPhotos = photoMap[otherId] || [];
+      const isPhotoRevealed = partnerRevealedSet.has(otherId);
+      const hasRevealedToPartner = myRevealedSet.has(otherId);
 
       return {
         id: row.id,
@@ -125,6 +147,7 @@ chatRouter.get('/', async (c) => {
         lastMessageSenderId: row.last_message_sender_id,
         lastMessageTime: row.last_message_time,
         status: row.status || 'active',
+        hasRevealedToPartner,
         otherUser: {
           id: otherId,
           fullName: otherName || 'Muslim Seeker',
@@ -140,6 +163,8 @@ chatRouter.get('/', async (c) => {
           marriageTimeline: otherTimeline || 'within_1_year',
           bio: otherBio || 'Seeking half my deen.',
           blurPhotosByDefault: otherBlur,
+          isPhotoRevealed,
+          hasRevealedToPartner,
           photos: userPhotos.length > 0 ? userPhotos : ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80'],
           religiousProfile: {
             sect: otherSect || 'Sunni',
@@ -293,6 +318,81 @@ chatRouter.post('/:id/messages', async (c) => {
         isRead: true,
         waliNotified: true
       }
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// 5. 1-to-1 Modesty Photo Reveal Live Toggle (Cloudflare D1 Single Source of Truth)
+chatRouter.post('/:id/photo-reveal', async (c) => {
+  try {
+    const rawConvId = c.req.param('id');
+    const { ownerId, viewerId, isRevealed } = await c.req.json();
+
+    if (!ownerId || !viewerId) {
+      return c.json({ success: false, error: 'ownerId and viewerId are required' }, 400);
+    }
+
+    // 1. Ensure table exists & update D1 photo_reveals
+    await c.env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS photo_reveals (
+        owner_id TEXT NOT NULL,
+        viewer_id TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY(owner_id, viewer_id)
+      )
+    `).run();
+
+    if (isRevealed) {
+      await c.env.DB.prepare(`
+        INSERT OR REPLACE INTO photo_reveals (owner_id, viewer_id, created_at)
+        VALUES (?, ?, CURRENT_TIMESTAMP)
+      `).bind(ownerId, viewerId).run();
+    } else {
+      await c.env.DB.prepare(`
+        DELETE FROM photo_reveals WHERE owner_id = ? AND viewer_id = ?
+      `).bind(ownerId, viewerId).run();
+    }
+
+    // 2. Fetch owner name to craft real system message
+    const owner: any = await c.env.DB.prepare(`SELECT full_name FROM users WHERE id = ?`).bind(ownerId).first();
+    const ownerFirstName = owner?.full_name ? owner.full_name.split(' ')[0] : 'Member';
+
+    const statusMsg = isRevealed 
+      ? `📸 ${ownerFirstName} revealed their unblurred photos for this conversation.` 
+      : `🔒 ${ownerFirstName} restored photo blur for modesty.`;
+
+    // 3. Resolve targetConvId
+    let targetConvId = rawConvId;
+    const existingConv: any = await c.env.DB.prepare(`SELECT id FROM conversations WHERE id = ?`).bind(rawConvId).first();
+    if (!existingConv && rawConvId.startsWith('conv_')) {
+      targetConvId = `conv_${[ownerId, viewerId].sort().join('_')}`;
+    }
+
+    const msgId = `sys_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
+    // 4. Insert real system notification message in chat_messages in D1 so both parties see it
+    try {
+      await c.env.DB.prepare(`
+        INSERT INTO chat_messages (id, conversation_id, sender_id, sender_name, text)
+        VALUES (?, ?, 'system', 'Modesty Shield', ?)
+      `).bind(msgId, targetConvId, statusMsg).run();
+
+      await c.env.DB.prepare(`
+        UPDATE conversations 
+        SET last_message_text = ?, last_message_sender_id = 'system', last_message_time = CURRENT_TIMESTAMP
+        WHERE id = ? OR id = ?
+      `).bind(statusMsg, targetConvId, rawConvId).run();
+    } catch {}
+
+    return c.json({
+      success: true,
+      isRevealed: Boolean(isRevealed),
+      ownerId,
+      viewerId,
+      statusMsg,
+      messageId: msgId
     });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);

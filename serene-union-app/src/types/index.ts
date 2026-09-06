@@ -63,6 +63,8 @@ export interface UserProfile {
   };
   photoRevealRequested?: boolean;
   photoRevealApproved?: boolean;
+  isPhotoRevealed?: boolean;
+  hasRevealedToPartner?: boolean;
   revealedToUserIds?: string[];
   isVip?: boolean;
   isSpotlightActive?: boolean;
@@ -112,6 +114,8 @@ export interface Conversation {
   status: 'active' | 'respectfully_closed' | 'blocked';
   messages: ChatMessage[];
   isOnline?: boolean;
+  hasRevealedToPartner?: boolean;
+  isPhotoRevealed?: boolean;
 }
 
 

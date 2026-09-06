@@ -367,7 +367,13 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
                     key={candidate.id}
                     className="bg-white rounded-2xl border border-outline overflow-hidden flex flex-col shadow-subtle relative group"
                   >
-                    <div className="relative aspect-[3/4] bg-surface-variant overflow-hidden">
+                    <div 
+                      onClick={() => {
+                        if (isVip) setSelectedProfile(candidate);
+                        else setShowUpgradeModal(true);
+                      }}
+                      className="relative aspect-[3/4] bg-surface-variant overflow-hidden cursor-pointer"
+                    >
                       <img
                         src={photo}
                         alt={candidate.fullName}
@@ -459,8 +465,14 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
                 <div
                   key={item.id}
                   onClick={() => {
-                    const prof = dbService.getAllProfiles().find(p => p.id === item.id);
-                    if (prof) setSelectedProfile(prof);
+                    const prof = dbService.getAllProfiles().find(p => p.id === item.id) || {
+                      ...item,
+                      email: item.email || '',
+                      education: item.education || '',
+                      practiceLevel: item.practiceLevel || 'practicing',
+                      hobbies: item.hobbies || []
+                    };
+                    if (prof) setSelectedProfile(prof as UserProfile);
                   }}
                   className="bg-white p-3 rounded-2xl border border-outline shadow-subtle flex items-center justify-between gap-3 cursor-pointer hover:border-primary transition-all"
                 >
@@ -726,15 +738,75 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
           profile={selectedProfile}
           isOpen={Boolean(selectedProfile)}
           onClose={() => setSelectedProfile(null)}
-          onLike={(p) => {
+          onLike={activeTab === 'received' ? (p) => {
             handleInstantMatch(p);
             setSelectedProfile(null);
-          }}
-          onPass={(pid) => {
+          } : undefined}
+          onPass={activeTab === 'received' ? (pid) => {
             dbService.sendMatchAction(pid, 'passed');
             setSelectedProfile(null);
             loadAllData();
-          }}
+          } : undefined}
+          customAction={
+            activeTab === 'sent' ? (
+              <div className="w-full flex items-center justify-between gap-3">
+                {sentLikes.find(s => s.id === selectedProfile.id)?.action === 'mutual_match' ? (
+                  <>
+                    <button
+                      onClick={() => setSelectedProfile(null)}
+                      className="flex-1 py-2.5 rounded-full bg-surface-variant text-on-surface hover:bg-outline font-sans text-xs font-bold transition-all flex items-center justify-center shadow-subtle"
+                    >
+                      Close Biodata
+                    </button>
+                    <button
+                      onClick={() => {
+                        const newConv = dbService.createMatchConversation(selectedProfile);
+                        setSelectedProfile(null);
+                        onOpenChat(newConv.id);
+                      }}
+                      className="flex-1 py-2.5 rounded-full bg-primary text-white font-sans text-xs font-bold shadow-brand hover:bg-primary-dark active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      <span>Open Chat</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-surface-variant text-secondary text-xs font-semibold border border-outline">
+                      <Clock className="w-3.5 h-3.5 text-secondary" />
+                      <span>Interest Sent · Pending</span>
+                    </div>
+                    <button
+                      onClick={() => setSelectedProfile(null)}
+                      className="flex-1 py-2.5 rounded-full bg-primary text-white font-sans text-xs font-bold shadow-brand hover:bg-primary-dark active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                    >
+                      Close Biodata
+                    </button>
+                  </>
+                )}
+              </div>
+            ) : activeTab === 'mutual' ? (
+              <div className="w-full flex items-center justify-between gap-3">
+                <button
+                  onClick={() => setSelectedProfile(null)}
+                  className="flex-1 py-2.5 rounded-full bg-surface-variant text-on-surface hover:bg-outline font-sans text-xs font-bold transition-all flex items-center justify-center shadow-subtle"
+                >
+                  Close Biodata
+                </button>
+                <button
+                  onClick={() => {
+                    const newConv = dbService.createMatchConversation(selectedProfile);
+                    setSelectedProfile(null);
+                    onOpenChat(newConv.id);
+                  }}
+                  className="flex-1 py-2.5 rounded-full bg-primary text-white font-sans text-xs font-bold shadow-brand hover:bg-primary-dark active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>Open Chat</span>
+                </button>
+              </div>
+            ) : undefined
+          }
         />
       )}
     </div>

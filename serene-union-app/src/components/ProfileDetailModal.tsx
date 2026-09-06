@@ -42,9 +42,10 @@ interface Props {
   onClose: () => void;
   onLike?: (profile: UserProfile) => void;
   onPass?: (profileId: string) => void;
+  customAction?: React.ReactNode;
 }
 
-export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, onLike, onPass }) => {
+export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, onLike, onPass, customAction }) => {
 
   const [selectedPhotoIdx, setSelectedPhotoIdx] = useState<number>(0);
   const [isPlayingVoice, setIsPlayingVoice] = useState<boolean>(false);
@@ -651,37 +652,43 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
 
         {/* Bottom Actions */}
         <footer className="sticky bottom-0 bg-white p-4 border-t border-outline flex items-center justify-between z-20 shadow-lg">
-          {onPass && (
-            <button
-              onClick={() => {
-                onPass(profile.id);
-                onClose();
-              }}
-              className="flex-1 max-w-[110px] py-2.5 rounded-full border border-outline text-secondary hover:text-error hover:border-error hover:bg-pastel-rose font-sans text-xs font-bold active:scale-95 transition-all flex items-center justify-center gap-1 shadow-subtle"
-            >
-              <X className="w-4 h-4" />
-              <span>Pass</span>
-            </button>
-          )}
-
-          {onLike ? (
-            <button
-              onClick={() => {
-                onLike(profile);
-                onClose();
-              }}
-              className="flex-1 ml-2.5 py-2.5 rounded-full bg-primary text-white font-sans text-xs font-bold shadow-brand hover:bg-primary-dark active:scale-95 transition-all flex items-center justify-center gap-1.5"
-            >
-              <Heart className="w-4 h-4 fill-current" />
-              <span>Express Interest (Like)</span>
-            </button>
+          {customAction ? (
+            customAction
           ) : (
-            <button
-              onClick={onClose}
-              className="w-full py-2.5 rounded-full bg-surface-variant text-on-surface hover:bg-outline font-sans text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-subtle"
-            >
-              <span>Close Biodata</span>
-            </button>
+            <>
+              {onPass && (
+                <button
+                  onClick={() => {
+                    onPass(profile.id);
+                    onClose();
+                  }}
+                  className="flex-1 max-w-[110px] py-2.5 rounded-full border border-outline text-secondary hover:text-error hover:border-error hover:bg-pastel-rose font-sans text-xs font-bold active:scale-95 transition-all flex items-center justify-center gap-1 shadow-subtle"
+                >
+                  <X className="w-4 h-4" />
+                  <span>Pass</span>
+                </button>
+              )}
+
+              {onLike ? (
+                <button
+                  onClick={() => {
+                    onLike(profile);
+                    onClose();
+                  }}
+                  className="flex-1 ml-2.5 py-2.5 rounded-full bg-primary text-white font-sans text-xs font-bold shadow-brand hover:bg-primary-dark active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                >
+                  <Heart className="w-4 h-4 fill-current" />
+                  <span>Express Interest (Like)</span>
+                </button>
+              ) : (
+                <button
+                  onClick={onClose}
+                  className="w-full py-2.5 rounded-full bg-surface-variant text-on-surface hover:bg-outline font-sans text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-subtle"
+                >
+                  <span>Close Biodata</span>
+                </button>
+              )}
+            </>
           )}
         </footer>
 

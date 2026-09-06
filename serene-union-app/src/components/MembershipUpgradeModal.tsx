@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Crown, TrendingUp, ShieldCheck, PlayCircle, Wallet, CheckCircle2, X, Check, CreditCard } from 'lucide-react';
 import { API_BASE, dbService } from '../services/dbService';
 
@@ -20,6 +20,15 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
   const [selectedProduct, setSelectedProduct] = useState<string>('serene_barakah_monthly');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [purchaseStep, setPurchaseStep] = useState<'selection' | 'google_play_sheet' | 'success'>('selection');
+
+  useEffect(() => {
+    const handleVipUpdated = () => {
+      setIsProcessing(false);
+      onClose();
+    };
+    window.addEventListener('serene_vip_updated', handleVipUpdated);
+    return () => window.removeEventListener('serene_vip_updated', handleVipUpdated);
+  }, [onClose]);
 
   if (!isOpen) return null;
 
@@ -61,15 +70,26 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
   const handleStartStripeCheckout = async () => {
     setIsProcessing(true);
     try {
-      const currentOrigin = window.location.origin;
+      const isNative = (window as any).Capacitor?.isNativePlatform?.() ||
+                       window.location.origin.includes('localhost') ||
+                       window.location.protocol === 'capacitor:';
+
+      const successUrl = isNative
+        ? 'qurb://stripe-callback?stripe_status=success&session_id={CHECKOUT_SESSION_ID}'
+        : `${window.location.origin}/?stripe_status=success&session_id={CHECKOUT_SESSION_ID}`;
+
+      const cancelUrl = isNative
+        ? 'qurb://stripe-callback?stripe_status=cancelled'
+        : `${window.location.origin}/?stripe_status=cancelled`;
+
       const res = await fetch(`${API_BASE}/wallet/stripe/create-checkout-session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId,
           productId: currentItem.id,
-          successUrl: `${currentOrigin}/?stripe_status=success&session_id={CHECKOUT_SESSION_ID}`,
-          cancelUrl: `${currentOrigin}/?stripe_status=cancelled`
+          successUrl,
+          cancelUrl
         })
       });
       const data = await res.json();

@@ -119,15 +119,11 @@ export const App: React.FC = () => {
     };
   }, [currentUser.id]);
 
-  // Stripe Checkout Post-Payment Verification
+  // Stripe Checkout Post-Payment Verification (Web & Native Android Deep Link)
   const [stripeSuccessNotice, setStripeSuccessNotice] = useState<string | null>(null);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const stripeStatus = params.get('stripe_status');
-    const sessionId = params.get('session_id');
-
-    if (stripeStatus === 'success' && sessionId) {
+    const verifySession = (sessionId: string) => {
       fetch(`${API_BASE}/wallet/stripe/verify-session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -157,11 +153,33 @@ export const App: React.FC = () => {
           window.history.replaceState({}, document.title, url.pathname + (url.search ? url.search : ''));
           setTimeout(() => setStripeSuccessNotice(null), 6000);
         });
+    };
+
+    // 1. Web return check (query params)
+    const params = new URLSearchParams(window.location.search);
+    const stripeStatus = params.get('stripe_status');
+    const sessionId = params.get('session_id');
+    if (stripeStatus === 'success' && sessionId) {
+      verifySession(sessionId);
     } else if (stripeStatus === 'cancelled') {
       const url = new URL(window.location.href);
       url.searchParams.delete('stripe_status');
       window.history.replaceState({}, document.title, url.pathname + (url.search ? url.search : ''));
     }
+
+    // 2. Native Android deep link callback from MainActivity.java (qurb://stripe-callback)
+    const handleNativeStripeCallback = (e: any) => {
+      const status = e.detail?.stripe_status;
+      const sId = e.detail?.session_id;
+      if (status === 'success' && sId) {
+        verifySession(sId);
+      }
+    };
+
+    window.addEventListener('app_stripe_callback', handleNativeStripeCallback);
+    return () => {
+      window.removeEventListener('app_stripe_callback', handleNativeStripeCallback);
+    };
   }, [currentUser.id]);
 
 

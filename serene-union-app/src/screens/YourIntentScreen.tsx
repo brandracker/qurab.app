@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, ArrowRight, HeartHandshake } from 'lucide-react';
+import { ArrowLeft, ArrowRight, HeartHandshake, AlertCircle } from 'lucide-react';
 import type { PartnerRequirements } from '../types';
 
 interface Props {
@@ -37,7 +37,7 @@ interface Props {
 export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) => {
   const [education, setEducation] = useState<string>(data?.education || 'Bachelors Degree');
   const [university, setUniversity] = useState<string>(data?.university || '');
-  const [profession, setProfession] = useState<string>(data?.profession || 'Software Engineer');
+  const [profession, setProfession] = useState<string>(data?.profession || '');
   const [workArrangement, setWorkArrangement] = useState<'remote' | 'hybrid' | 'onsite' | 'entrepreneur'>(data?.workArrangement || 'remote');
   const [incomeBracket, setIncomeBracket] = useState<'under_40k' | '40k_80k' | '80k_150k' | '150k_plus' | 'undisclosed'>(data?.incomeBracket || '40k_80k');
   const [hobbies, setHobbies] = useState<string[]>(data?.hobbies || ['📚 Books & Islamic History', '✈️ Travel & Umrah', '☕ Specialty Coffee']);
@@ -55,12 +55,40 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
   const [partnerRelocation, setPartnerRelocation] = useState<string>(data?.partnerRequirements?.relocation || 'open');
   const [partnerDescription, setPartnerDescription] = useState<string>(data?.partnerRequirements?.description || '');
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const handleSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const newErrors: Record<string, string> = {};
+
+    if (!profession.trim()) {
+      newErrors.profession = 'Current profession or job title is required.';
+    } else if (profession.trim().length < 2) {
+      newErrors.profession = 'Please enter a valid job title (at least 2 letters).';
+    }
+
+    if (!bio.trim()) {
+      newErrors.bio = 'Please share your reflections or bio for prospective matches.';
+    } else if (bio.trim().length < 15) {
+      newErrors.bio = 'Your bio must be at least 15 characters so matches can understand your character.';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      const firstKey = Object.keys(newErrors)[0];
+      const targetId = firstKey === 'profession' ? 'field-profession' : 'field-bio';
+      const el = document.getElementById(targetId);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return;
+    }
+
+    setErrors({});
     onContinue({
       education,
       university,
-      profession,
+      profession: profession.trim(),
       workArrangement,
       incomeBracket,
       hobbies,
@@ -68,7 +96,7 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
       mahrPhilosophy,
       timeline,
       childrenDesire,
-      bio: bio.trim() || 'Striving on the path of deen and seeking a pious partner.',
+      bio: bio.trim(),
       partnerRequirements: {
         minAge: partnerMinAge,
         maxAge: partnerMaxAge,
@@ -114,6 +142,14 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
           Define your educational background, financial outlook, and matrimonial timeline.
         </p>
 
+        {/* Top Validation Warning Banner */}
+        {Object.keys(errors).length > 0 && (
+          <div className="p-3 rounded-2xl bg-rose-50 border border-rose-300 text-rose-800 text-xs font-semibold flex items-center gap-2 mb-4 shadow-subtle animate-shake">
+            <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+            <span>Please complete all highlighted required fields before continuing.</span>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-3.5">
           {/* Education & University */}
           <div className="grid grid-cols-2 gap-2.5">
@@ -142,16 +178,31 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
           </div>
 
           {/* Profession */}
-          <div>
-            <label className="block text-xs font-bold text-on-surface mb-1">Current Profession / Job Title</label>
+          <div id="field-profession">
+            <label className="block text-xs font-bold text-on-surface mb-1">
+              Current Profession / Job Title <span className="text-primary">*</span>
+            </label>
             <input
               type="text"
               required
               value={profession}
-              onChange={(e) => setProfession(e.target.value)}
+              onChange={(e) => {
+                setProfession(e.target.value);
+                if (errors.profession) setErrors(prev => { const cp = { ...prev }; delete cp.profession; return cp; });
+              }}
               placeholder="e.g. Senior Software Architect, Doctor, Entrepreneur"
-              className="w-full bg-white border border-outline rounded-2xl px-3.5 py-2.5 text-xs text-on-surface outline-none focus:border-primary shadow-subtle"
+              className={`w-full bg-white rounded-2xl px-3.5 py-2.5 text-xs text-on-surface outline-none shadow-subtle transition-all border-2 ${
+                errors.profession
+                  ? 'border-rose-500 bg-rose-50/50 ring-2 ring-rose-200'
+                  : 'border-outline focus:border-primary'
+              }`}
             />
+            {errors.profession && (
+              <p className="text-[11px] text-rose-600 font-semibold mt-1.5 flex items-center gap-1 animate-fade-in">
+                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                <span>{errors.profession}</span>
+              </p>
+            )}
           </div>
 
           {/* Work Setup & Income Bracket */}
@@ -339,17 +390,34 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
           </div>
 
           {/* About My Deen & Bio Essay */}
-          <div>
+          <div id="field-bio">
             <label className="block text-xs font-bold text-on-surface mb-1">
-              About My Deen & Personal Reflections
+              About My Deen & Personal Reflections <span className="text-primary">*</span>
             </label>
             <textarea
               rows={3}
               value={bio}
-              onChange={(e) => setBio(e.target.value)}
+              onChange={(e) => {
+                setBio(e.target.value);
+                if (errors.bio) setErrors(prev => { const cp = { ...prev }; delete cp.bio; return cp; });
+              }}
               placeholder="Share what practicing Islam means in your daily life, your character values, and what kind of partner you hope to build a home with..."
-              className="w-full bg-white border border-outline rounded-2xl p-3 text-xs text-on-surface outline-none focus:border-primary leading-relaxed shadow-subtle"
+              className={`w-full bg-white rounded-2xl p-3 text-xs text-on-surface outline-none leading-relaxed shadow-subtle transition-all border-2 ${
+                errors.bio
+                  ? 'border-rose-500 bg-rose-50/50 ring-2 ring-rose-200'
+                  : 'border-outline focus:border-primary'
+              }`}
             />
+            {errors.bio ? (
+              <p className="text-[11px] text-rose-600 font-semibold mt-1.5 flex items-center gap-1 animate-fade-in">
+                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                <span>{errors.bio}</span>
+              </p>
+            ) : (
+              <span className="text-[10px] text-secondary block mt-0.5 text-right font-medium">
+                {bio.length} characters (min 15)
+              </span>
+            )}
           </div>
 
           {/* Partner Requirements & Expectations (شریکِ حیات کے تقاضے) */}

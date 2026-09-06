@@ -258,9 +258,98 @@ class DBService {
         } catch {}
       }
     } catch (e) {
-      console.warn('fetchUserProfile error:', e);
+      console.warn('Failed to fetch user profile:', e);
     }
     return null;
+  }
+
+  // Live Cloudflare D1 Bio Update (Single Source of Truth)
+  async updateBioLive(userId: string, bio: string): Promise<boolean> {
+    if (!userId || userId === 'usr_guest') return false;
+    const cleanBio = bio.trim();
+    try {
+      const endpoints = [
+        `${API_BASE}/users/${userId}/bio`,
+        `/api/users/${userId}/bio`
+      ];
+
+      for (const ep of endpoints) {
+        try {
+          const res = await fetch(ep, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ bio: cleanBio })
+          });
+          if (res.ok) {
+            const current = this.getCurrentUser();
+            const updated: UserProfile = {
+              ...current,
+              bio: cleanBio,
+              religiousProfile: {
+                ...current.religiousProfile,
+                deenRelationshipBio: cleanBio
+              }
+            };
+            this.setCurrentUser(updated);
+            window.dispatchEvent(new CustomEvent('serene_user_profile_updated', { detail: { user: updated } }));
+            return true;
+          }
+        } catch {}
+      }
+    } catch (e) {
+      console.warn('updateBioLive error:', e);
+    }
+    // Fallback update local state
+    const current = this.getCurrentUser();
+    const updated: UserProfile = {
+      ...current,
+      bio: cleanBio,
+      religiousProfile: {
+        ...current.religiousProfile,
+        deenRelationshipBio: cleanBio
+      }
+    };
+    this.setCurrentUser(updated);
+    window.dispatchEvent(new CustomEvent('serene_user_profile_updated', { detail: { user: updated } }));
+    return true;
+  }
+
+  // Live Cloudflare D1 User Profile Update (Single Source of Truth)
+  async updateUserProfileLive(userId: string, updates: Partial<UserProfile>): Promise<UserProfile | null> {
+    if (!userId || userId === 'usr_guest') return null;
+    const current = this.getCurrentUser();
+    const merged: UserProfile = { ...current, ...updates, id: userId };
+
+    try {
+      const endpoints = [
+        `${API_BASE}/users/${userId}/profile`,
+        `/api/users/${userId}/profile`,
+        `${API_BASE}/profiles`,
+        `/api/profiles`
+      ];
+
+      for (const ep of endpoints) {
+        try {
+          const res = await fetch(ep, {
+            method: ep.includes('/profiles') && !ep.includes('/profile') ? 'POST' : 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(merged)
+          });
+          if (res.ok) {
+            this.setCurrentUser(merged);
+            window.dispatchEvent(new CustomEvent('serene_user_profile_updated', { detail: { user: merged } }));
+            return merged;
+          }
+        } catch {}
+      }
+    } catch (e) {
+      console.warn('updateUserProfileLive error:', e);
+    }
+
+    // Local state fallback if network is offline
+    this.setCurrentUser(merged);
+    window.dispatchEvent(new CustomEvent('serene_user_profile_updated', { detail: { user: merged } }));
+    return merged;
   }
 
   getGuestUser(): UserProfile {

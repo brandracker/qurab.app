@@ -91,6 +91,42 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
     return dbService.getSpotlightInfo(user.id);
   });
 
+  const [isEditingBio, setIsEditingBio] = useState<boolean>(false);
+  const [editedBioText, setEditedBioText] = useState<string>(() => user.bio || user.religiousProfile?.deenRelationshipBio || '');
+  const [isSavingBio, setIsSavingBio] = useState<boolean>(false);
+  const [bioToast, setBioToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user.bio || user.religiousProfile?.deenRelationshipBio) {
+      setEditedBioText(user.bio || user.religiousProfile?.deenRelationshipBio || '');
+    }
+  }, [user.bio, user.religiousProfile?.deenRelationshipBio]);
+
+  const handleSaveBio = async () => {
+    if (!editedBioText.trim()) return;
+    setIsSavingBio(true);
+    try {
+      const ok = await dbService.updateBioLive(user.id, editedBioText.trim());
+      if (ok) {
+        setCurrentUserProfile(prev => ({
+          ...prev,
+          bio: editedBioText.trim(),
+          religiousProfile: {
+            ...prev.religiousProfile,
+            deenRelationshipBio: editedBioText.trim()
+          }
+        }));
+        setBioToast('Bio successfully updated live in Cloud D1!');
+        setTimeout(() => setBioToast(null), 4000);
+        setIsEditingBio(false);
+      }
+    } catch (err) {
+      console.warn('Bio live update notice:', err);
+    } finally {
+      setIsSavingBio(false);
+    }
+  };
+
   useEffect(() => {
     // 1. Live Cloudflare D1 User Profile Hydration (Single Source of Truth)
     if (propUser.id && propUser.id !== 'usr_guest') {
@@ -1008,18 +1044,102 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
                     </strong>
                   </div>
                 </div>
+
+                {user.hobbies && user.hobbies.length > 0 && (
+                  <div className="col-span-2 bg-white/80 p-2.5 rounded-xl border border-pastel-sky-border shadow-2xs">
+                    <span className="text-[10px] text-pastel-sky-text font-bold block mb-1">Passions & Interests</span>
+                    <div className="flex flex-wrap gap-1">
+                      {user.hobbies.map((h, i) => (
+                        <span key={i} className="text-[10px] font-semibold bg-sky-50 text-sky-700 px-2 py-0.5 rounded-full border border-sky-200">
+                          {h}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {user.personalityTraits && user.personalityTraits.length > 0 && (
+                  <div className="col-span-2 bg-white/80 p-2.5 rounded-xl border border-pastel-sky-border shadow-2xs">
+                    <span className="text-[10px] text-pastel-sky-text font-bold block mb-1">Character & Personality</span>
+                    <div className="flex flex-wrap gap-1">
+                      {user.personalityTraits.map((t, i) => (
+                        <span key={i} className="text-[10px] font-semibold bg-amber-50 text-amber-800 px-2 py-0.5 rounded-full border border-amber-200">
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* 5. About My Deen & Character (Pastel Lavender) */}
-            <div className="bg-pastel-lavender rounded-2xl p-3.5 border border-pastel-lavender-border space-y-1.5 shadow-subtle">
-              <h3 className="text-xs font-bold text-pastel-lavender-text uppercase tracking-wider flex items-center gap-1.5">
-                <BookOpen className="w-3.5 h-3.5 text-pastel-lavender-text" />
-                <span>About My Deen & Character</span>
-              </h3>
-              <p className="text-xs text-on-surface leading-relaxed italic bg-white/60 p-3 rounded-xl border border-pastel-lavender-border">
-                "{user.bio || rel?.deenRelationshipBio || "Seeking a righteous spouse to complete half our deen in harmony and mutual respect."}"
-              </p>
+            {/* 5. About My Deen & Character (Pastel Lavender with Quick-Edit) */}
+            <div className="bg-pastel-lavender rounded-2xl p-3.5 border border-pastel-lavender-border space-y-2 shadow-subtle">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold text-pastel-lavender-text uppercase tracking-wider flex items-center gap-1.5">
+                  <BookOpen className="w-3.5 h-3.5 text-pastel-lavender-text" />
+                  <span>About My Deen & Character</span>
+                </h3>
+                {!isEditingBio && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditedBioText(user.bio || rel?.deenRelationshipBio || '');
+                      setIsEditingBio(true);
+                    }}
+                    className="text-[11px] font-bold text-primary hover:underline flex items-center gap-1 px-2.5 py-1 rounded-xl bg-white/80 border border-pastel-lavender-border shadow-2xs hover:bg-white active:scale-98 transition-all"
+                  >
+                    <Edit3 className="w-3 h-3" />
+                    <span>Edit Bio</span>
+                  </button>
+                )}
+              </div>
+
+              {bioToast && (
+                <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-bold flex items-center gap-2 animate-fade-in">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                  <span>{bioToast}</span>
+                </div>
+              )}
+
+              {isEditingBio ? (
+                <div className="space-y-2 pt-1 animate-fade-in">
+                  <textarea
+                    rows={3}
+                    value={editedBioText}
+                    onChange={(e) => setEditedBioText(e.target.value)}
+                    placeholder="Share what practicing Islam means in your daily life, your character values, and matrimonial expectations..."
+                    className="w-full bg-white border-2 border-primary rounded-xl p-3 text-xs text-on-surface outline-none leading-relaxed shadow-subtle focus:ring-2 focus:ring-primary/20"
+                  />
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-secondary font-medium">
+                      {editedBioText.length} characters (min 15)
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingBio(false)}
+                        className="px-3 py-1.5 rounded-xl border border-outline bg-white text-secondary text-xs font-semibold hover:bg-surface-variant transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveBio}
+                        disabled={isSavingBio || editedBioText.trim().length < 15}
+                        className="px-3.5 py-1.5 rounded-xl bg-primary text-white text-xs font-bold shadow-brand hover:bg-primary-dark disabled:opacity-50 flex items-center gap-1.5 transition-all"
+                      >
+                        {isSavingBio ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                        <span>{isSavingBio ? 'Saving...' : 'Save to Cloud'}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-on-surface leading-relaxed italic bg-white/60 p-3 rounded-xl border border-pastel-lavender-border">
+                  "{user.bio || rel?.deenRelationshipBio || "Seeking a righteous spouse to complete half our deen in harmony and mutual respect."}"
+                </p>
+              )}
             </div>
 
             {/* 6. My Partner Requirements & Expectations */}

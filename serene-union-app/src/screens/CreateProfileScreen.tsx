@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { ArrowLeft, Camera, Plus, X, EyeOff, Eye, Check } from 'lucide-react';
+import { ArrowLeft, Camera, Plus, X, EyeOff, Eye, Check, AlertCircle } from 'lucide-react';
 import { API_BASE } from '../services/dbService';
 import { optimizeImage } from '../utils/imageOptimizer';
 
@@ -19,6 +19,7 @@ export const CreateProfileScreen: React.FC<Props> = ({
   onComplete 
 }) => {
   const [blurPhotos, setBlurPhotos] = useState<boolean>(initialBlurPhotos);
+  const [photoError, setPhotoError] = useState<string | null>(null);
   
   // Fill 6 slots with initial photos or empty strings
   const [photos, setPhotos] = useState<string[]>(() => {
@@ -45,6 +46,7 @@ export const CreateProfileScreen: React.FC<Props> = ({
     if (!file) return;
 
     setIsUploading(true);
+    setPhotoError(null);
     try {
       // Hardware-accelerated client-side compression (1200px Retina HD, ~150KB)
       const optimized = await optimizeImage(file, { maxWidth: 1200, maxHeight: 1200, quality: 0.82 });
@@ -91,6 +93,13 @@ export const CreateProfileScreen: React.FC<Props> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (activePhotos.length === 0) {
+      setPhotoError('Photo Required: Please upload at least 1 clear profile photo before completing your profile.');
+      const el = document.getElementById('photo-grid');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    setPhotoError(null);
     onComplete({
       blurPhotos,
       photos: activePhotos
@@ -140,8 +149,16 @@ export const CreateProfileScreen: React.FC<Props> = ({
           Upload up to 6 clear, modest photos. Enable modesty blur to protect your pictures until you mutually approve reveal.
         </p>
 
+        {/* Photo Required Error Banner */}
+        {photoError && (
+          <div className="p-3 rounded-2xl bg-rose-50 border border-rose-300 text-rose-800 text-xs font-semibold flex items-center gap-2 mb-4 shadow-subtle animate-shake">
+            <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+            <span>{photoError}</span>
+          </div>
+        )}
+
         {/* 6 Photo Grid */}
-        <div className="grid grid-cols-3 gap-2.5 mb-4">
+        <div id="photo-grid" className="grid grid-cols-3 gap-2.5 mb-4">
           {photos.map((p, idx) => (
             <div
               key={idx}
@@ -149,6 +166,8 @@ export const CreateProfileScreen: React.FC<Props> = ({
               className={`aspect-[3/4] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all relative overflow-hidden group shadow-subtle ${
                 p
                   ? 'border-primary bg-white'
+                  : photoError
+                  ? 'border-rose-500 bg-rose-50/40 ring-2 ring-rose-200 animate-pulse'
                   : 'border-outline bg-white hover:border-primary'
               }`}
             >
@@ -177,7 +196,7 @@ export const CreateProfileScreen: React.FC<Props> = ({
                 </>
               ) : (
                 <div className="flex flex-col items-center gap-1 text-secondary group-hover:text-primary transition-colors">
-                  <div className="w-7 h-7 rounded-full bg-pastel-rose flex items-center justify-center text-primary">
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center ${photoError ? 'bg-rose-100 text-rose-600' : 'bg-pastel-rose text-primary'}`}>
                     {idx === 0 ? <Camera className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
                   </div>
                   <span className="text-[10px] font-semibold">{idx === 0 ? 'Main Photo' : `Slot ${idx + 1}`}</span>
@@ -222,8 +241,8 @@ export const CreateProfileScreen: React.FC<Props> = ({
       <div className="pt-4">
         <button
           onClick={handleSubmit}
-          disabled={isUploading || activePhotos.length === 0}
-          className="w-full py-3 rounded-full bg-primary text-white font-sans text-xs font-bold shadow-brand hover:bg-primary-dark active:scale-98 disabled:opacity-40 transition-all flex items-center justify-center gap-1.5"
+          disabled={isUploading}
+          className="w-full py-3 rounded-full bg-primary text-white font-sans text-xs font-bold shadow-brand hover:bg-primary-dark active:scale-98 transition-all flex items-center justify-center gap-1.5"
         >
           <span>{isUploading ? 'Saving Profile...' : 'Complete Matrimonial Profile 🎉'}</span>
           <Check className="w-4 h-4" />

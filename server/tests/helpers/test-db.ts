@@ -57,6 +57,14 @@ export class MockD1Database {
         is_profile_completed BOOLEAN DEFAULT 1,
         voice_greeting_url TEXT,
         voice_greeting_duration INTEGER DEFAULT 0,
+        citizenship TEXT DEFAULT 'Citizen',
+        work_arrangement TEXT DEFAULT 'remote',
+        income_bracket TEXT DEFAULT '40k_80k',
+        hobbies TEXT DEFAULT '[]',
+        personality_traits TEXT DEFAULT '[]',
+        marital_status TEXT DEFAULT 'never_married',
+        dual_income_preference TEXT DEFAULT 'career_supportive',
+        partner_requirements TEXT DEFAULT '{}',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );

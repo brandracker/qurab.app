@@ -306,16 +306,16 @@ export const App: React.FC = () => {
       university: onboardingData.university || '',
       height: onboardingData.height || currentUser.height || "5'10\" (178 cm)",
       ethnicity: onboardingData.ethnicity || 'South Asian',
-      citizenship: onboardingData.citizenship || 'Citizen',
-      workArrangement: onboardingData.workArrangement || 'remote',
-      incomeBracket: onboardingData.incomeBracket || '40k_80k',
-      hobbies: onboardingData.hobbies || ['📚 Books & Islamic History', '✈️ Travel & Umrah', '☕ Specialty Coffee'],
-      personalityTraits: onboardingData.personalityTraits || ['🤍 Family-Oriented', '🌿 Calm & Patient'],
-      maritalStatus: onboardingData.maritalStatus || 'never_married',
-      dualIncomePreference: onboardingData.dualIncomePreference || 'career_supportive',
-      familyStructure: onboardingData.familyStructure || 'nuclear',
-      livingPreference: onboardingData.livingPreference || 'independent',
-      siblingsCount: onboardingData.siblingsCount ?? 2,
+      citizenship: onboardingData.citizenship || currentUser.citizenship || 'Citizen',
+      workArrangement: onboardingData.workArrangement || currentUser.workArrangement || 'remote',
+      incomeBracket: onboardingData.incomeBracket || currentUser.incomeBracket || '40k_80k',
+      hobbies: onboardingData.hobbies || currentUser.hobbies || ['📚 Books & Islamic History', '✈️ Travel & Umrah', '☕ Specialty Coffee'],
+      personalityTraits: onboardingData.personalityTraits || currentUser.personalityTraits || ['🤍 Family-Oriented', '🌿 Calm & Patient'],
+      maritalStatus: onboardingData.maritalStatus || currentUser.maritalStatus || 'never_married',
+      dualIncomePreference: onboardingData.dualIncomePreference || currentUser.dualIncomePreference || 'career_supportive',
+      familyStructure: onboardingData.familyStructure || currentUser.familyStructure || 'nuclear',
+      livingPreference: onboardingData.livingPreference || currentUser.livingPreference || 'independent',
+      siblingsCount: onboardingData.siblingsCount ?? currentUser.siblingsCount ?? 2,
       willingnessToRelocate: onboardingData.willingnessToRelocate || 'open',
       smokingStatus: onboardingData.smokingStatus || 'non_smoker',
       languagesSpoken: onboardingData.languagesSpoken || 'English, Urdu',
@@ -355,13 +355,9 @@ export const App: React.FC = () => {
       console.warn('Local session state notice:', err);
     }
 
-    // Save permanently to Cloudflare D1
+    // Save permanently to Cloudflare D1 (Single Source of Truth)
     try {
-      await fetch(`${API_BASE}/profiles`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(merged)
-      });
+      await dbService.updateUserProfileLive(merged.id, merged);
       await dbService.fetchLiveProfiles();
     } catch (err) {
       console.warn('Remote profile save notice:', err);
@@ -572,7 +568,15 @@ export const App: React.FC = () => {
                       modestyPractice: current.religiousProfile?.modestyPractice,
                       hajjUmrahStatus: current.religiousProfile?.hajjUmrahStatus,
                       bio: current.bio || current.religiousProfile?.deenRelationshipBio,
-                      photos: current.photos || []
+                      photos: current.photos || [],
+                      citizenship: current.citizenship,
+                      workArrangement: current.workArrangement,
+                      incomeBracket: current.incomeBracket,
+                      hobbies: current.hobbies || [],
+                      personalityTraits: current.personalityTraits || [],
+                      maritalStatus: current.maritalStatus,
+                      dualIncomePreference: current.dualIncomePreference,
+                      partnerRequirements: current.partnerRequirements
                     };
                     setOnboardingData(prefill);
                     localStorage.setItem('serene_onboarding_draft_v1', JSON.stringify({ step: 'basic_info', data: prefill }));

@@ -13,7 +13,8 @@ import {
   ChevronDown,
   ShieldCheck,
   Loader2,
-  Navigation
+  Navigation,
+  AlertCircle
 } from 'lucide-react';
 import { Country, State, type ICountry, type IState } from 'country-state-city';
 
@@ -325,10 +326,39 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
     );
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!fullName.trim()) return;
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const handleSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const newErrors: Record<string, string> = {};
+
+    if (!fullName.trim()) {
+      newErrors.fullName = 'Full Name is required to build your verified profile.';
+    } else if (fullName.trim().length < 2) {
+      newErrors.fullName = 'Please enter your real full name (at least 2 letters).';
+    }
+
+    if (calculatedAge < 18) {
+      newErrors.dob = 'You must be at least 18 years old for matrimonial registration.';
+    }
+
+    if (isCustomCity && !customCityText.trim()) {
+      newErrors.city = 'Please enter your city name.';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      // Auto-scroll to first invalid element
+      const firstKey = Object.keys(newErrors)[0];
+      const targetId = firstKey === 'fullName' ? 'field-fullName' : (firstKey === 'city' ? 'field-city' : 'field-dob');
+      const el = document.getElementById(targetId);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return;
+    }
+
+    setErrors({});
     const dobFormatted = `${birthYear}-${String(birthMonth).padStart(2, '0')}-${String(birthDay).padStart(2, '0')}`;
     const cityName = isCustomCity ? (customCityText.trim() || 'City') : (selectedCityName || 'City');
     const countryName = selectedCountryObj?.name || 'Global';
@@ -399,9 +429,17 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
           Provide your biodata accurately to help prospective matches understand your profile.
         </p>
 
+        {/* Top Validation Warning Banner */}
+        {Object.keys(errors).length > 0 && (
+          <div className="p-3 rounded-2xl bg-rose-50 border border-rose-300 text-rose-800 text-xs font-semibold flex items-center gap-2 mb-4 shadow-subtle animate-shake">
+            <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+            <span>Please fill in all highlighted required fields before continuing.</span>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Full Name */}
-          <div>
+          <div id="field-fullName">
             <label className="block text-xs font-bold text-on-surface mb-1">
               Full Name <span className="text-primary">*</span>
             </label>
@@ -409,10 +447,23 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
               type="text"
               required
               value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
+              onChange={(e) => {
+                setFullName(e.target.value);
+                if (errors.fullName) setErrors(prev => { const cp = { ...prev }; delete cp.fullName; return cp; });
+              }}
               placeholder="e.g. Fatima Tariq or Bilal Ahmad"
-              className="w-full bg-white border border-outline rounded-2xl px-3.5 py-2.5 text-xs text-on-surface outline-none focus:border-primary shadow-subtle transition-all"
+              className={`w-full bg-white rounded-2xl px-3.5 py-2.5 text-xs text-on-surface outline-none shadow-subtle transition-all border-2 ${
+                errors.fullName
+                  ? 'border-rose-500 bg-rose-50/50 ring-2 ring-rose-200'
+                  : 'border-outline focus:border-primary'
+              }`}
             />
+            {errors.fullName && (
+              <p className="text-[11px] text-rose-600 font-semibold mt-1.5 flex items-center gap-1 animate-fade-in">
+                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                <span>{errors.fullName}</span>
+              </p>
+            )}
           </div>
 
           {/* Gender */}
@@ -691,15 +742,31 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
                 )}
               </div>
 
-              {isCustomCity || availableCities.length === 0 ? (
-                <input
-                  type="text"
-                  value={customCityText}
-                  onChange={(e) => setCustomCityText(e.target.value)}
-                  placeholder="e.g. London, Lahore, Dallas, or your town"
-                  className="w-full bg-surface-variant border border-outline rounded-xl px-3 py-2 text-xs text-on-surface font-semibold outline-none focus:border-primary"
-                />
-              ) : (
+              <div id="field-city">
+                {isCustomCity || availableCities.length === 0 ? (
+                  <>
+                    <input
+                      type="text"
+                      value={customCityText}
+                      onChange={(e) => {
+                        setCustomCityText(e.target.value);
+                        if (errors.city) setErrors(prev => { const cp = { ...prev }; delete cp.city; return cp; });
+                      }}
+                      placeholder="e.g. London, Lahore, Dallas, or your town"
+                      className={`w-full rounded-xl px-3 py-2 text-xs text-on-surface font-semibold outline-none transition-all border-2 ${
+                        errors.city
+                          ? 'border-rose-500 bg-rose-50/50 ring-2 ring-rose-200'
+                          : 'bg-surface-variant border-outline focus:border-primary'
+                      }`}
+                    />
+                    {errors.city && (
+                      <p className="text-[11px] text-rose-600 font-semibold mt-1 flex items-center gap-1 animate-fade-in">
+                        <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                        <span>{errors.city}</span>
+                      </p>
+                    )}
+                  </>
+                ) : (
                 <div className="relative flex items-center bg-surface-variant border border-outline rounded-xl p-1 shadow-2xs hover:border-primary transition-all focus-within:border-primary focus-within:bg-white">
                   <div className="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center shrink-0">
                     <MapPin className="w-3 h-3" />
@@ -716,6 +783,7 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
                   <ChevronDown className="w-3 h-3 text-secondary absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
               )}
+              </div>
 
               {/* GPS Auto-Detect Location Button */}
               <div className="pt-2">

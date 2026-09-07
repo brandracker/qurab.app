@@ -111,7 +111,7 @@ async function saveUserProfileRecord(c: any, data: any) {
       updated_at = CURRENT_TIMESTAMP
   `).bind(
     targetUserId,
-    data.phone || `+1${Date.now().toString().slice(-10)}`,
+    data.phone || `+1${Date.now().toString().slice(-6)}${Math.floor(1000 + Math.random() * 9000)}`,
     data.email || `${targetUserId}@sereneunion.app`,
     fullName || 'Member',
     dob || '1998-01-01',
@@ -315,10 +315,10 @@ usersRouter.put('/:id/bio', async (c) => {
     `).bind(cleanBio, userId).run();
 
     await c.env.DB.prepare(`
-      UPDATE religious_profiles 
-      SET deen_relationship_bio = ? 
-      WHERE user_id = ?
-    `).bind(cleanBio, userId).run();
+      INSERT INTO religious_profiles (user_id, practice_level, sect, deen_relationship_bio)
+      VALUES (?, 'practicing', 'Sunni', ?)
+      ON CONFLICT(user_id) DO UPDATE SET deen_relationship_bio = excluded.deen_relationship_bio
+    `).bind(userId, cleanBio).run();
 
     return c.json({
       success: true,
@@ -347,10 +347,10 @@ usersRouter.patch('/:id/bio', async (c) => {
     `).bind(cleanBio, userId).run();
 
     await c.env.DB.prepare(`
-      UPDATE religious_profiles 
-      SET deen_relationship_bio = ? 
-      WHERE user_id = ?
-    `).bind(cleanBio, userId).run();
+      INSERT INTO religious_profiles (user_id, practice_level, sect, deen_relationship_bio)
+      VALUES (?, 'practicing', 'Sunni', ?)
+      ON CONFLICT(user_id) DO UPDATE SET deen_relationship_bio = excluded.deen_relationship_bio
+    `).bind(userId, cleanBio).run();
 
     return c.json({
       success: true,

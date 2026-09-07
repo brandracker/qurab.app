@@ -86,9 +86,46 @@ export const App: React.FC = () => {
   const [authInitialTab, setAuthInitialTab] = useState<'signup' | 'login'>('signup');
   const [showNotifications, setShowNotifications] = useState<boolean>(false);
   const [hasUnreadNotifs, setHasUnreadNotifs] = useState<boolean>(() => notificationService.hasUnread());
+  const [unreadChatCount, setUnreadChatCount] = useState<number>(() => {
+    const convs = dbService.getConversations();
+    return convs.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+  });
 
   // Active User Profile State
   const [currentUser, setCurrentUser] = useState<UserProfile>(() => dbService.getCurrentUser());
+
+  // Global Real-time Chat Background Sync & Unread Tracking
+  useEffect(() => {
+    if (!currentUser.id || currentUser.id === 'usr_guest') return;
+
+    const updateChatUnread = () => {
+      const convs = dbService.getConversations();
+      const count = convs.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+      setUnreadChatCount(count);
+    };
+
+    const syncLiveChats = async () => {
+      try {
+        const liveConvs = await dbService.fetchLiveConversations();
+        if (liveConvs) {
+          const count = liveConvs.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+          setUnreadChatCount(count);
+        }
+      } catch {}
+    };
+
+    syncLiveChats();
+    const chatPollInterval = setInterval(syncLiveChats, 15000);
+
+    window.addEventListener('serene_conversations_updated', updateChatUnread);
+    window.addEventListener('focus', syncLiveChats);
+
+    return () => {
+      clearInterval(chatPollInterval);
+      window.removeEventListener('serene_conversations_updated', updateChatUnread);
+      window.removeEventListener('focus', syncLiveChats);
+    };
+  }, [currentUser.id]);
 
   useEffect(() => {
     // Live Cloudflare D1 Wallet & VIP status sync on app boot
@@ -217,13 +254,22 @@ export const App: React.FC = () => {
     const needsOnboarding = session.isNewUser || !isProfileCompleted;
 
     if (needsOnboarding) {
-      setCurrentUser(dbService.getGuestUser());
-      const initialDraft = {
-        userId: user?.id,
-        email: user?.email,
-        fullName: user?.fullName,
-        gender: user?.gender,
+      const initialUser: UserProfile = {
+        ...dbService.getGuestUser(),
+        ...(user || {}),
+        id: user?.id || `usr_${Date.now()}`,
+        email: user?.email || '',
+        fullName: user?.fullName || 'Member',
+        gender: user?.gender || 'male',
         photos: user?.photos || [],
+        isProfileCompleted: false
+      };
+      setCurrentUser(initialUser);
+      dbService.setCurrentUser(initialUser);
+
+      const initialDraft = {
+        ...initialUser,
+        userId: initialUser.id,
         sessionToken: session.token
       };
       setOnboardingData(initialDraft);
@@ -288,13 +334,16 @@ export const App: React.FC = () => {
   };
 
   const handleFinishOnboarding = async (photoData: { blurPhotos: boolean; photos: string[] }) => {
+    const isEditingExisting = Boolean(onboardingData._isEditingExisting || (currentUser?.id && currentUser.id !== 'usr_guest' && currentUser.isProfileCompleted));
+    const finalUserId = onboardingData.userId || (currentUser.id !== 'usr_guest' ? currentUser.id : null) || ('usr_' + Date.now());
+
     const merged: UserProfile = {
-      id: onboardingData.userId || currentUser.id || 'usr_' + Date.now(),
+      id: finalUserId,
       phone: onboardingData.email || currentUser.email || '',
       email: onboardingData.email || currentUser.email || 'user@sereneunion.com',
       fullName: onboardingData.fullName || currentUser.fullName || 'Member',
       dob: onboardingData.dob || currentUser.dob || '1998-01-01',
-      age: onboardingData.dob ? (new Date().getFullYear() - new Date(onboardingData.dob).getFullYear()) : 28,
+      age: onboardingData.dob ? (new Date().getFullYear() - new Date(onboardingData.dob).getFullYear()) : (currentUser.age || 28),
       gender: onboardingData.gender || currentUser.gender || 'male',
       location: onboardingData.location || currentUser.location || 'London, UK',
       city: onboardingData.city || currentUser.city,
@@ -303,9 +352,9 @@ export const App: React.FC = () => {
       longitude: onboardingData.longitude ?? currentUser.longitude,
       profession: onboardingData.profession || currentUser.profession || 'Professional',
       education: onboardingData.education || currentUser.education || 'Graduate Degree',
-      university: onboardingData.university || '',
+      university: onboardingData.university || currentUser.university || '',
       height: onboardingData.height || currentUser.height || "5'10\" (178 cm)",
-      ethnicity: onboardingData.ethnicity || 'South Asian',
+      ethnicity: onboardingData.ethnicity || currentUser.ethnicity || 'South Asian',
       citizenship: onboardingData.citizenship || currentUser.citizenship || 'Citizen',
       workArrangement: onboardingData.workArrangement || currentUser.workArrangement || 'remote',
       incomeBracket: onboardingData.incomeBracket || currentUser.incomeBracket || '40k_80k',
@@ -316,14 +365,14 @@ export const App: React.FC = () => {
       familyStructure: onboardingData.familyStructure || currentUser.familyStructure || 'nuclear',
       livingPreference: onboardingData.livingPreference || currentUser.livingPreference || 'independent',
       siblingsCount: onboardingData.siblingsCount ?? currentUser.siblingsCount ?? 2,
-      willingnessToRelocate: onboardingData.willingnessToRelocate || 'open',
-      smokingStatus: onboardingData.smokingStatus || 'non_smoker',
-      languagesSpoken: onboardingData.languagesSpoken || 'English, Urdu',
-      mahrPhilosophy: onboardingData.mahrPhilosophy || 'mutual_agreement',
-      childrenDesire: onboardingData.childrenDesire || 'desires_children',
-      marriageTimeline: onboardingData.timeline || 'within_1_year',
-      bio: onboardingData.bio || 'Seeking a practicing partner on the Sunnah.',
-      partnerRequirements: onboardingData.partnerRequirements || {
+      willingnessToRelocate: onboardingData.willingnessToRelocate || currentUser.willingnessToRelocate || 'open',
+      smokingStatus: onboardingData.smokingStatus || currentUser.smokingStatus || 'non_smoker',
+      languagesSpoken: onboardingData.languagesSpoken || currentUser.languagesSpoken || 'English, Urdu',
+      mahrPhilosophy: onboardingData.mahrPhilosophy || currentUser.mahrPhilosophy || 'mutual_agreement',
+      childrenDesire: onboardingData.childrenDesire || currentUser.childrenDesire || 'desires_children',
+      marriageTimeline: onboardingData.timeline || currentUser.marriageTimeline || 'within_1_year',
+      bio: onboardingData.bio || currentUser.bio || 'Seeking a practicing partner on the Sunnah.',
+      partnerRequirements: onboardingData.partnerRequirements || currentUser.partnerRequirements || {
         minAge: 20,
         maxAge: 35,
         maritalStatus: 'any',
@@ -332,19 +381,22 @@ export const App: React.FC = () => {
         description: 'Seeking a pious, practicing spouse with good character.'
       },
       blurPhotosByDefault: photoData.blurPhotos,
-      profileVisibility: 'all_users',
-      photos: photoData.photos,
+      profileVisibility: currentUser.profileVisibility || 'all_users',
+      photos: (photoData.photos && photoData.photos.length > 0) ? photoData.photos : (currentUser.photos || []),
+      voiceGreetingUrl: currentUser.voiceGreetingUrl,
+      voiceGreetingDuration: currentUser.voiceGreetingDuration,
       religiousProfile: {
-        practiceLevel: onboardingData.practiceLevel || 'practicing',
-        sect: onboardingData.sect || 'Sunni',
-        madhhab: onboardingData.madhhab || 'Hanafi',
-        prayerFrequency: onboardingData.prayerFrequency || '5 times daily',
-        halalDiet: onboardingData.halalDiet || 'Strictly Halal',
-        quranRecitation: onboardingData.quranRecitation || 'daily',
-        modestyPractice: onboardingData.modestyPractice || 'modest',
-        hajjUmrahStatus: onboardingData.hajjUmrahStatus || 'planning',
-        deenRelationshipBio: onboardingData.bio
+        practiceLevel: onboardingData.practiceLevel || currentUser.religiousProfile?.practiceLevel || 'practicing',
+        sect: onboardingData.sect || currentUser.religiousProfile?.sect || 'Sunni',
+        madhhab: onboardingData.madhhab || currentUser.religiousProfile?.madhhab || 'Hanafi',
+        prayerFrequency: onboardingData.prayerFrequency || currentUser.religiousProfile?.prayerFrequency || '5 times daily',
+        halalDiet: onboardingData.halalDiet || currentUser.religiousProfile?.halalDiet || 'Strictly Halal',
+        quranRecitation: onboardingData.quranRecitation || currentUser.religiousProfile?.quranRecitation || 'daily',
+        modestyPractice: onboardingData.modestyPractice || currentUser.religiousProfile?.modestyPractice || 'modest',
+        hajjUmrahStatus: onboardingData.hajjUmrahStatus || currentUser.religiousProfile?.hajjUmrahStatus || 'planning',
+        deenRelationshipBio: onboardingData.bio || currentUser.religiousProfile?.deenRelationshipBio || currentUser.bio
       },
+      wali: currentUser.wali || undefined,
       isProfileCompleted: true
     };
 
@@ -365,7 +417,7 @@ export const App: React.FC = () => {
 
     localStorage.removeItem('serene_onboarding_draft_v1');
     setCurrentStep('main_app');
-    setActiveTab('discover');
+    setActiveTab(isEditingExisting ? 'my_profile' : 'discover');
   };
 
   const handleLogout = () => {
@@ -516,6 +568,7 @@ export const App: React.FC = () => {
             userId={onboardingData.userId || currentUser.id}
             initialPhotos={onboardingData.photos?.length > 0 ? onboardingData.photos : (currentUser.photos || [])}
             initialBlurPhotos={currentUser.blurPhotosByDefault ?? true}
+            isEditMode={Boolean(onboardingData._isEditingExisting || (currentUser?.id && currentUser.id !== 'usr_guest' && currentUser.isProfileCompleted))}
             onBack={() => goToStep('career_intent')}
             onComplete={handleFinishOnboarding}
           />
@@ -553,35 +606,7 @@ export const App: React.FC = () => {
               {activeTab === 'my_profile' && (
                 <MyProfileScreen 
                   user={currentUser}
-                  onEditProfile={() => {
-                    const current = dbService.getCurrentUser();
-                    const prefill = {
-                      ...current,
-                      userId: current.id,
-                      timeline: current.marriageTimeline,
-                      practiceLevel: current.religiousProfile?.practiceLevel,
-                      sect: current.religiousProfile?.sect,
-                      madhhab: current.religiousProfile?.madhhab,
-                      prayerFrequency: current.religiousProfile?.prayerFrequency,
-                      halalDiet: current.religiousProfile?.halalDiet,
-                      quranRecitation: current.religiousProfile?.quranRecitation,
-                      modestyPractice: current.religiousProfile?.modestyPractice,
-                      hajjUmrahStatus: current.religiousProfile?.hajjUmrahStatus,
-                      bio: current.bio || current.religiousProfile?.deenRelationshipBio,
-                      photos: current.photos || [],
-                      citizenship: current.citizenship,
-                      workArrangement: current.workArrangement,
-                      incomeBracket: current.incomeBracket,
-                      hobbies: current.hobbies || [],
-                      personalityTraits: current.personalityTraits || [],
-                      maritalStatus: current.maritalStatus,
-                      dualIncomePreference: current.dualIncomePreference,
-                      partnerRequirements: current.partnerRequirements
-                    };
-                    setOnboardingData(prefill);
-                    localStorage.setItem('serene_onboarding_draft_v1', JSON.stringify({ step: 'basic_info', data: prefill }));
-                    setCurrentStep('basic_info');
-                  }}
+                  onProfileUpdated={(updated) => setCurrentUser(updated)}
                   onLogout={handleLogout}
                 />
               )}
@@ -637,8 +662,13 @@ export const App: React.FC = () => {
                     }`}
                   >
                     <Icon className={`w-5 h-5 transition-transform ${isActive ? 'stroke-[2.5px] scale-105' : 'stroke-[1.75px]'}`} />
-                    {(id === 'matches' || id === 'chat') && hasUnreadNotifs && (
+                    {id === 'matches' && hasUnreadNotifs && (
                       <span className="w-2 h-2 bg-primary rounded-full absolute top-1 right-3 ring-2 ring-white" />
+                    )}
+                    {id === 'chat' && unreadChatCount > 0 && (
+                      <span className="min-w-[16px] h-4 px-1 bg-emerald-600 text-white text-[9px] font-bold rounded-full absolute top-0.5 right-2 ring-2 ring-white flex items-center justify-center">
+                        {unreadChatCount > 9 ? '9+' : unreadChatCount}
+                      </span>
                     )}
                     <span className={`text-[10px] tracking-tight ${isActive ? 'font-bold text-primary' : 'font-medium'}`}>
                       {label}

@@ -61,4 +61,27 @@ describe('UI & Button Interactions: My Profile Screen', () => {
     expect(screen.getByText(/Free Member/i)).toBeDefined();
     expect(screen.getByRole('button', { name: /Upgrade/i })).toBeDefined();
   });
+
+  it('4. Dispatches onEditProfile callback when provided and button is clicked', () => {
+    const handleEditProfile = vi.fn();
+    render(<MyProfileScreen user={mockUser} onEditProfile={handleEditProfile} />);
+
+    const editBtn = screen.getByRole('button', { name: /Edit Profile Details/i });
+    expect(editBtn).toBeDefined();
+
+    fireEvent.click(editBtn);
+    expect(handleEditProfile).toHaveBeenCalledTimes(1);
+  });
+
+  it('5. Opens EditProfileModal in-place when onEditProfile is omitted', () => {
+    render(<MyProfileScreen user={mockUser} />);
+
+    const editBtn = screen.getByRole('button', { name: /Edit Profile Details/i });
+    expect(editBtn).toBeDefined();
+
+    fireEvent.click(editBtn);
+    expect(screen.getByText(/Edit Matrimonial Biodata/i)).toBeDefined();
+    expect(screen.getByDisplayValue('Hamza Farooq')).toBeDefined();
+  });
 });
+

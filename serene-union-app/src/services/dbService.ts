@@ -1,7 +1,12 @@
 import type { UserProfile, Conversation, ChatMessage, FilterState } from '../types';
 
-export const WORKER_API_BASE = 'https://serene-union-api.brandracker.workers.dev/api';
-export const API_BASE = (import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:8787/api' : WORKER_API_BASE));
+import { API_BASE, WORKER_API_BASE, LOCAL_API_BASE } from './apiConfig';
+export { API_BASE, WORKER_API_BASE, LOCAL_API_BASE };
+
+export { profileService } from './profileService';
+export { matchService } from './matchService';
+export { chatService } from './chatService';
+export { walletService } from './walletService';
 
 export const FALLBACK_PROFILES: UserProfile[] = [
   {
@@ -361,6 +366,7 @@ class DBService {
       }
     } catch (e) {
       console.warn('updateUserProfileLive error:', e);
+      window.dispatchEvent(new CustomEvent('serene_sync_notice', { detail: { status: 'offline', message: 'Saved locally' } }));
     }
 
     // Local state fallback if network is offline
@@ -440,9 +446,6 @@ class DBService {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed?.fullName && (parsed.fullName.toLowerCase().includes('maryam') || parsed.fullName.toLowerCase().includes('sarah') || parsed.fullName.toLowerCase().includes('aisha')) && parsed.gender !== 'female') {
-          parsed.gender = 'female';
-        }
         if (localStorage.getItem(`serene_vip_${parsed.id}`) === 'true') {
           parsed.isVip = true;
         }
@@ -745,8 +748,18 @@ class DBService {
         if (idx > -1) list.splice(idx, 1);
       }
       localStorage.setItem(key, JSON.stringify(list));
+
+      // Object key compatibility
+      const objKey = `serene_photo_reveals_${ownerId}`;
+      const saved = JSON.parse(localStorage.getItem(objKey) || '{}');
+      saved[viewerId] = isRevealed;
+      localStorage.setItem(objKey, JSON.stringify(saved));
+
       window.dispatchEvent(new CustomEvent('serene_activity_updated'));
       window.dispatchEvent(new CustomEvent('serene_photo_reveal_updated', { detail: { ownerId, viewerId, isRevealed } }));
+      window.dispatchEvent(new CustomEvent('serene_reveal_updated', {
+        detail: { conversationId: convId, targetUserId: viewerId, hasRevealedToPartner: isRevealed, isRevealed }
+      }));
     } catch {}
 
     // 2. Persist to Cloudflare D1 backend

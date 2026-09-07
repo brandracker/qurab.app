@@ -7,6 +7,7 @@ interface Props {
   userId?: string;
   initialPhotos?: string[];
   initialBlurPhotos?: boolean;
+  isEditMode?: boolean;
   onBack: () => void;
   onComplete: (data: { blurPhotos: boolean; photos: string[] }) => void;
 }
@@ -15,6 +16,7 @@ export const CreateProfileScreen: React.FC<Props> = ({
   userId = '',
   initialPhotos = [],
   initialBlurPhotos = true,
+  isEditMode = false,
   onBack, 
   onComplete 
 }) => {
@@ -93,8 +95,8 @@ export const CreateProfileScreen: React.FC<Props> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (activePhotos.length === 0) {
-      setPhotoError('Photo Required: Please upload at least 1 clear profile photo before completing your profile.');
+    if (activePhotos.length === 0 && !isEditMode) {
+      setPhotoError('Photo Required: Please upload at least 1 clear profile photo, or click "Skip photo for now" below.');
       const el = document.getElementById('photo-grid');
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
@@ -238,15 +240,31 @@ export const CreateProfileScreen: React.FC<Props> = ({
       </div>
 
       {/* Submit Button */}
-      <div className="pt-4">
+      <div className="pt-4 space-y-2">
         <button
           onClick={handleSubmit}
           disabled={isUploading}
           className="w-full py-3 rounded-full bg-primary text-white font-sans text-xs font-bold shadow-brand hover:bg-primary-dark active:scale-98 transition-all flex items-center justify-center gap-1.5"
         >
-          <span>{isUploading ? 'Saving Profile...' : 'Complete Matrimonial Profile 🎉'}</span>
+          <span>{isUploading ? 'Saving Profile...' : (isEditMode ? 'Update Matrimonial Profile 🎉' : 'Complete Matrimonial Profile 🎉')}</span>
           <Check className="w-4 h-4" />
         </button>
+
+        {activePhotos.length === 0 && (
+          <button
+            type="button"
+            onClick={() => {
+              setPhotoError(null);
+              onComplete({
+                blurPhotos,
+                photos: []
+              });
+            }}
+            className="w-full py-2 text-[11px] font-semibold text-secondary hover:text-primary transition-colors text-center"
+          >
+            Skip photo for now (Upload later from My Profile)
+          </button>
+        )}
       </div>
     </div>
   );

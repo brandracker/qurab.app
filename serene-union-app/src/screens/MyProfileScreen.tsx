@@ -43,20 +43,23 @@ import { dbService } from '../services/dbService';
 import { CompatibilityQuizModal } from '../components/CompatibilityQuizModal';
 import { MembershipUpgradeModal } from '../components/MembershipUpgradeModal';
 import { RewardedAdModal } from '../components/RewardedAdModal';
+import { EditProfileModal } from '../components/EditProfileModal';
 
 interface Props {
   user: UserProfile;
   onEditProfile?: () => void;
+  onProfileUpdated?: (updatedUser: UserProfile) => void;
   onLogout?: () => void;
 }
 
-export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile, onLogout }) => {
+export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile, onProfileUpdated, onLogout }) => {
   const [currentUserProfile, setCurrentUserProfile] = useState<UserProfile>(() => {
     const cur = dbService.getCurrentUser();
     return (cur?.id && cur.id !== 'usr_guest') ? cur : propUser;
   });
   const user = (currentUserProfile?.id && currentUserProfile.id !== 'usr_guest') ? currentUserProfile : propUser;
 
+  const [showEditModal, setShowEditModal] = useState<boolean>(false);
   const [showQuizModal, setShowQuizModal] = useState<boolean>(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState<boolean>(false);
   const [showAdModal, setShowAdModal] = useState<boolean>(false);
@@ -118,6 +121,14 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
         }));
         setBioToast('Bio successfully updated live in Cloud D1!');
         setTimeout(() => setBioToast(null), 4000);
+        setIsEditingBio(false);
+      } else {
+        setCurrentUserProfile(prev => ({
+          ...prev,
+          bio: editedBioText.trim()
+        }));
+        setBioToast('Bio updated successfully!');
+        setTimeout(() => setBioToast(null), 3000);
         setIsEditingBio(false);
       }
     } catch (err) {
@@ -1214,15 +1225,19 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
         </div>
 
         {/* Action Button */}
-        {onEditProfile && (
-          <button
-            onClick={onEditProfile}
-            className="w-full py-3 rounded-full bg-white border border-primary text-primary font-sans text-xs font-bold hover:bg-pastel-rose active:scale-98 transition-all flex items-center justify-center gap-1.5 shadow-subtle"
-          >
-            <Edit3 className="w-3.5 h-3.5" />
-            <span>Edit Profile Details</span>
-          </button>
-        )}
+        <button
+          onClick={() => {
+            if (onEditProfile) {
+              onEditProfile();
+            } else {
+              setShowEditModal(true);
+            }
+          }}
+          className="w-full py-3 rounded-full bg-white border border-primary text-primary font-sans text-xs font-bold hover:bg-pastel-rose active:scale-98 transition-all flex items-center justify-center gap-1.5 shadow-subtle"
+        >
+          <Edit3 className="w-3.5 h-3.5" />
+          <span>Edit Profile Details</span>
+        </button>
       </main>
 
       {/* Google Play Membership Upgrade Modal */}
@@ -1269,6 +1284,21 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
           isOpen={showQuizModal}
           onClose={() => setShowQuizModal(false)}
           onCompleted={() => setHasCompletedQuiz(true)}
+        />
+      )}
+
+      {/* Dedicated In-Place Edit Profile Modal */}
+      {showEditModal && (
+        <EditProfileModal
+          isOpen={showEditModal}
+          user={user}
+          onClose={() => setShowEditModal(false)}
+          onSaved={(updated) => {
+            setCurrentUserProfile(updated);
+            if (onProfileUpdated) {
+              onProfileUpdated(updated);
+            }
+          }}
         />
       )}
     </div>

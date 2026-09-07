@@ -107,6 +107,44 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
       const candidate = allProfiles.find(p => p.id === partnerId);
       if (candidate) {
         activeConv = dbService.createMatchConversation(candidate);
+      } else {
+        activeConv = {
+          id: activeConvId,
+          participantOne: currentUser.id,
+          participantTwo: partnerId,
+          otherUser: {
+            id: partnerId,
+            phone: '',
+            fullName: 'Match Candidate',
+            dob: '1998-01-01',
+            age: 26,
+            gender: currentUser.gender === 'male' ? 'female' : 'male',
+            location: 'Global',
+            profession: 'Member',
+            education: 'Graduate',
+            height: "5'10\"",
+            ethnicity: 'Global / Other',
+            marriageTimeline: 'within_1_year',
+            bio: 'Seeking half my deen.',
+            blurPhotosByDefault: true,
+            profileVisibility: 'all_users',
+            photos: ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80'],
+            religiousProfile: {
+              practiceLevel: 'practicing',
+              sect: 'Sunni',
+              madhhab: 'Hanafi',
+              prayerFrequency: '5 times daily',
+              halalDiet: 'Strictly Halal'
+            }
+          },
+          lastMessageText: "You matched! Start with Bismillah.",
+          lastMessageSenderId: 'system',
+          lastMessageTime: 'Just now',
+          lastMessageTimestamp: Date.now(),
+          unreadCount: 0,
+          status: 'active',
+          messages: []
+        };
       }
     }
   }
@@ -357,6 +395,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
 
             return sortedConversations.length > 0 ? (
               sortedConversations.map(conv => {
+                const partner = conv.otherUser || { id: conv.participantTwo, fullName: 'Match Candidate', photos: [] } as any;
                 const isIncomingUnread = conv.lastMessageSenderId !== currentUser.id && Boolean(conv.unreadCount && conv.unreadCount > 0);
                 return (
                   <div
@@ -375,25 +414,25 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                     <div 
                       onClick={(e) => {
                         e.stopPropagation();
-                        setSelectedProfile(conv.otherUser);
+                        setSelectedProfile(partner);
                       }}
                       className="relative shrink-0 cursor-pointer group/avatar"
-                      title={`Click to view ${conv.otherUser.fullName}'s Biodata`}
+                      title={`Click to view ${partner.fullName}'s Biodata`}
                     >
                       <div className={`w-12 h-12 rounded-full overflow-hidden border-2 bg-surface-variant flex items-center justify-center group-hover/avatar:border-primary transition-all shadow-subtle ${
                         isIncomingUnread ? 'border-primary ring-2 ring-primary/20' : 'border-primary/30'
                       }`}>
-                        {conv.otherUser.photos && conv.otherUser.photos.length > 0 ? (
+                        {partner.photos && partner.photos.length > 0 ? (
                           <img
-                            src={conv.otherUser.photos[0]}
-                            alt={conv.otherUser.fullName}
+                            src={partner.photos[0]}
+                            alt={partner.fullName}
                             className={`w-full h-full object-cover ${
-                              conv.otherUser.blurPhotosByDefault && !conv.otherUser.isPhotoRevealed && !conv.isPhotoRevealed ? 'blur-xs' : ''
+                              partner.blurPhotosByDefault && !partner.isPhotoRevealed && !conv.isPhotoRevealed ? 'blur-xs' : ''
                             }`}
                           />
                         ) : (
                           <span className="font-serif text-sm font-bold text-primary">
-                            {conv.otherUser.fullName.charAt(0)}
+                            {(partner.fullName || 'M').charAt(0)}
                           </span>
                         )}
                       </div>
@@ -408,14 +447,14 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                         <h3 
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedProfile(conv.otherUser);
+                            setSelectedProfile(partner);
                           }}
                           className={`font-serif text-xs truncate group-hover:text-primary transition-colors cursor-pointer hover:underline ${
                             isIncomingUnread ? 'font-black text-primary' : 'font-bold text-on-surface'
                           }`}
                           title="Click to view full biodata"
                         >
-                          {conv.otherUser.fullName}
+                          {partner.fullName}
                         </h3>
                         <div className="flex items-center gap-1.5 shrink-0">
                           <span className={`text-[11px] font-medium ${isIncomingUnread ? 'text-primary font-bold' : 'text-secondary'}`}>
@@ -445,7 +484,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedProfile(conv.otherUser);
+                            setSelectedProfile(partner);
                           }}
                           className="text-[10px] text-primary hover:underline font-semibold flex items-center gap-0.5 ml-auto"
                         >

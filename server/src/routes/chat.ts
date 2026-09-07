@@ -138,6 +138,7 @@ chatRouter.get('/', async (c) => {
       const userPhotos = photoMap[otherId] || [];
       const isPhotoRevealed = partnerRevealedSet.has(otherId);
       const hasRevealedToPartner = myRevealedSet.has(otherId);
+      const unreadCount = isUserP1 ? (row.unread_count_p1 || 0) : (row.unread_count_p2 || 0);
 
       return {
         id: row.id,
@@ -146,6 +147,7 @@ chatRouter.get('/', async (c) => {
         lastMessageText: row.last_message_text || 'You matched! Start with Bismillah.',
         lastMessageSenderId: row.last_message_sender_id,
         lastMessageTime: row.last_message_time,
+        unreadCount,
         status: row.status || 'active',
         hasRevealedToPartner,
         otherUser: {
@@ -279,6 +281,14 @@ chatRouter.get('/:id/messages', async (c) => {
             }
           });
         } catch {}
+        try {
+          await c.env.DB.prepare(`
+            UPDATE conversations 
+            SET unread_count_p1 = CASE WHEN participant_one = ? THEN 0 ELSE unread_count_p1 END,
+                unread_count_p2 = CASE WHEN participant_two = ? THEN 0 ELSE unread_count_p2 END
+            WHERE id = ? OR id = ?
+          `).bind(userId, userId, targetConvId, rawConvId).run();
+        } catch {}
       }
     }
 
@@ -344,12 +354,30 @@ chatRouter.post('/:id/messages', async (c) => {
       VALUES (?, ?, ?, ?, ?)
     `).bind(msgId, targetConvId, senderId, senderName || 'Member', text.trim()).run();
 
-    // 3. Update conversation last message on both potential IDs
+    // 3. Update conversation last message & increment recipient unread count
     await c.env.DB.prepare(`
       UPDATE conversations 
-      SET last_message_text = ?, last_message_sender_id = ?, last_message_time = CURRENT_TIMESTAMP
+      SET last_message_text = ?, 
+          last_message_sender_id = ?, 
+          last_message_time = CURRENT_TIMESTAMP,
+          unread_count_p1 = CASE WHEN participant_one != ? THEN unread_count_p1 + 1 ELSE unread_count_p1 END,
+          unread_count_p2 = CASE WHEN participant_two != ? THEN unread_count_p2 + 1 ELSE unread_count_p2 END
       WHERE id = ? OR id = ?
-    `).bind(text.trim(), senderId, targetConvId, rawConvId).run();
+    `).bind(text.trim(), senderId, senderId, senderId, targetConvId, rawConvId).run();
+
+    // 4. Centralized notification in D1 for recipient
+    const recipientId = p1 === senderId ? p2 : p1;
+    if (recipientId) {
+      try {
+        const notifId = `notif_msg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+        const senderFirstName = (senderName || 'Member').split(' ')[0];
+        const preview = text.trim().length > 60 ? `${text.trim().slice(0, 57)}...` : text.trim();
+        await c.env.DB.prepare(`
+          INSERT INTO notifications (id, user_id, type, title, message, target_id, action_label, is_read, created_at)
+          VALUES (?, ?, 'message', ?, ?, ?, 'Open Chat', 0, CURRENT_TIMESTAMP)
+        `).bind(notifId, recipientId, `New Message from ${senderFirstName}`, preview, targetConvId).run();
+      } catch {}
+    }
 
     return c.json({
       success: true,

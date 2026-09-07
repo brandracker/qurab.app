@@ -407,33 +407,23 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
                       </div>
 
                       <div className="pt-1.5 border-t border-outline">
-                        {isVip ? (
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              onClick={() => handleInstantMatch(candidate)}
-                              className="flex-1 py-1.5 rounded-xl bg-primary text-white text-[10px] font-bold shadow-brand hover:bg-primary-dark active:scale-95 transition-all flex items-center justify-center gap-1"
-                            >
-                              <Heart className="w-3 h-3 fill-current" />
-                              <span>Match & Chat</span>
-                            </button>
-
-                            <button
-                              onClick={() => handlePassCandidate(candidate)}
-                              className="px-2.5 py-1.5 rounded-xl bg-surface-variant hover:bg-outline text-secondary text-[10px] font-semibold transition-all"
-                              title="Pass"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
-                          </div>
-                        ) : (
+                        <div className="flex items-center gap-1.5">
                           <button
-                            onClick={() => setShowUpgradeModal(true)}
-                            className="w-full py-2 rounded-xl bg-pastel-rose hover:bg-primary text-primary hover:text-white border border-pastel-rose-border text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 shadow-2xs group active:scale-98"
+                            onClick={() => handleInstantMatch(candidate)}
+                            className="flex-1 py-1.5 rounded-xl bg-primary text-white text-[10px] font-bold shadow-brand hover:bg-primary-dark active:scale-95 transition-all flex items-center justify-center gap-1"
                           >
-                            <Crown className="w-3.5 h-3.5 text-amber-500 fill-amber-400 group-hover:text-white group-hover:fill-white transition-colors" />
-                            <span>Unlock with VIP</span>
+                            <Heart className="w-3 h-3 fill-current" />
+                            <span>Match & Chat</span>
                           </button>
-                        )}
+
+                          <button
+                            onClick={() => handlePassCandidate(candidate)}
+                            className="px-2.5 py-1.5 rounded-xl bg-surface-variant hover:bg-outline text-secondary text-[10px] font-semibold transition-all"
+                            title="Pass"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
                       </div>
 
                     </div>

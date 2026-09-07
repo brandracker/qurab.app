@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   ArrowLeft, 
   ArrowRight, 
@@ -113,6 +113,24 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
 
   const [heightCm, setHeightCm] = useState<number>(() => parseInitialCm(data?.height));
 
+  // Re-synchronize local state when incoming data changes (e.g. Edit Profile prefill)
+  useEffect(() => {
+    if (data?.fullName) setFullName(data.fullName);
+    if (data?.gender === 'male' || data?.gender === 'female') setGender(data.gender);
+    if (data?.height) setHeightCm(parseInitialCm(data.height));
+    if (data?.ethnicity) setEthnicity(data.ethnicity);
+    if (data?.citizenship) setCitizenship(data.citizenship);
+    if (data?.willingnessToRelocate) setWillingnessToRelocate(data.willingnessToRelocate);
+    if (data?.dob) {
+      const parts = data.dob.split('-');
+      if (parts.length === 3) {
+        setBirthYear(parseInt(parts[0], 10));
+        setBirthMonth(parseInt(parts[1], 10));
+        setBirthDay(parseInt(parts[2], 10));
+      }
+    }
+  }, [data]);
+
   const formatCmToFeet = (cm: number): string => {
     const totalInches = Math.round(cm / 2.54);
     const feet = Math.floor(totalInches / 12);
@@ -150,9 +168,20 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
   const [isCustomState, setIsCustomState] = useState<boolean>(false);
   const [customStateText, setCustomStateText] = useState<string>('');
 
-  const [selectedCityName, setSelectedCityName] = useState<string>(data?.city || '');
-  const [isCustomCity, setIsCustomCity] = useState<boolean>(Boolean(data?.city));
-  const [customCityText, setCustomCityText] = useState<string>(data?.city || '');
+  const initialCity = useMemo(() => {
+    if (data?.city) return data.city;
+    if (data?.location && data.location !== 'Global') {
+      const parts = data.location.split(',');
+      if (parts.length > 0 && parts[0].trim() && parts[0].trim().toLowerCase() !== 'city') {
+        return parts[0].trim();
+      }
+    }
+    return '';
+  }, [data?.city, data?.location]);
+
+  const [selectedCityName, setSelectedCityName] = useState<string>(initialCity);
+  const [isCustomCity, setIsCustomCity] = useState<boolean>(Boolean(initialCity));
+  const [customCityText, setCustomCityText] = useState<string>(initialCity);
 
   // Available states for chosen country
   const availableStates = useMemo<IState[]>(() => {
@@ -268,9 +297,12 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
     return State.getStateByCodeAndCountry(selectedStateCode, selectedCountryCode);
   }, [selectedCountryCode, selectedStateCode]);
 
+  // Determine if custom city text mode is active (manual toggle or when no preset cities available)
+  const isCustomCityActive = isCustomCity || availableCities.length === 0;
+
   // Build final location string
   const finalLocationString = useMemo(() => {
-    const cityName = isCustomCity ? (customCityText.trim() || 'City') : (selectedCityName || 'City');
+    const cityName = isCustomCityActive ? (customCityText.trim() || 'City') : (selectedCityName || 'City');
     const stateName = isCustomState ? (customStateText.trim() || '') : (selectedStateObj?.name || '');
     const countryCodeOrName = selectedCountryObj?.isoCode || 'Global';
 
@@ -278,7 +310,7 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
       return `${cityName}, ${stateName}, ${countryCodeOrName}`;
     }
     return `${cityName}, ${countryCodeOrName}`;
-  }, [isCustomCity, customCityText, selectedCityName, isCustomState, customStateText, selectedStateObj, selectedCountryObj]);
+  }, [isCustomCityActive, customCityText, selectedCityName, isCustomState, customStateText, selectedStateObj, selectedCountryObj]);
 
   // --- Ethnicity & Citizenship ---
   const [ethnicity, setEthnicity] = useState(data?.ethnicity || 'South Asian');
@@ -342,7 +374,7 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
       newErrors.dob = 'You must be at least 18 years old for matrimonial registration.';
     }
 
-    if (isCustomCity && !customCityText.trim()) {
+    if (isCustomCityActive && !customCityText.trim() && !selectedCityName.trim()) {
       newErrors.city = 'Please enter your city name.';
     }
 
@@ -360,7 +392,9 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
 
     setErrors({});
     const dobFormatted = `${birthYear}-${String(birthMonth).padStart(2, '0')}-${String(birthDay).padStart(2, '0')}`;
-    const cityName = isCustomCity ? (customCityText.trim() || 'City') : (selectedCityName || 'City');
+    const cityName = isCustomCityActive 
+      ? (customCityText.trim() || selectedCityName.trim() || 'City') 
+      : (selectedCityName.trim() || customCityText.trim() || 'City');
     const countryName = selectedCountryObj?.name || 'Global';
 
     onContinue({
@@ -743,13 +777,14 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
               </div>
 
               <div id="field-city">
-                {isCustomCity || availableCities.length === 0 ? (
+                {isCustomCityActive ? (
                   <>
                     <input
                       type="text"
                       value={customCityText}
                       onChange={(e) => {
                         setCustomCityText(e.target.value);
+                        setIsCustomCity(true);
                         if (errors.city) setErrors(prev => { const cp = { ...prev }; delete cp.city; return cp; });
                       }}
                       placeholder="e.g. London, Lahore, Dallas, or your town"

@@ -219,7 +219,7 @@ authRouter.post('/verify-phone-otp', async (c) => {
 // 5. Google Social Login Sync
 authRouter.post('/google-login', async (c) => {
   try {
-    const { email, fullName, photoUrl, googleUid } = await c.req.json();
+    const { email, fullName, photoUrl, googleUid, gender } = await c.req.json();
     if (!email) {
       return c.json({ success: false, error: 'Email is required from Google profile' }, 400);
     }
@@ -246,11 +246,12 @@ authRouter.post('/google-login', async (c) => {
       isNewUser = true;
       const userId = `usr_${Date.now()}`;
       const name = fullName?.trim() || cleanEmail.split('@')[0];
+      const userGender = (gender === 'female' || gender === 'male') ? gender : 'male';
 
       await c.env.DB.prepare(`
         INSERT INTO users (id, phone, email, full_name, dob, gender, location, marriage_timeline, blur_photos_by_default, is_profile_completed)
-        VALUES (?, ?, ?, ?, '1998-01-01', 'male', 'Global', 'within_1_year', 1, 0)
-      `).bind(userId, cleanEmail, cleanEmail, name).run();
+        VALUES (?, ?, ?, ?, '1998-01-01', ?, 'Global', 'within_1_year', 1, 0)
+      `).bind(userId, cleanEmail, cleanEmail, name, userGender).run();
 
       if (photoUrl) {
         await c.env.DB.prepare(`
@@ -264,7 +265,7 @@ authRouter.post('/google-login', async (c) => {
         email: cleanEmail,
         full_name: name,
         dob: '1998-01-01',
-        gender: 'male',
+        gender: userGender,
         location: 'Global',
         isNewUser: true,
         is_profile_completed: 0

@@ -15,7 +15,9 @@ describe('UI & Functional Testing: EditProfileModal (In-Place Matrimonial Biodat
     age: 31,
     location: 'Manchester, UK',
     city: 'Manchester',
-    country: 'UK',
+    country: 'United Kingdom',
+    latitude: 53.4808,
+    longitude: -2.2426,
     profession: 'Clinical Pharmacist',
     education: 'MPharm, Manchester University',
     university: 'University of Manchester',
@@ -51,7 +53,7 @@ describe('UI & Functional Testing: EditProfileModal (In-Place Matrimonial Biodat
     vi.restoreAllMocks();
   });
 
-  it('1. Renders EditProfileModal with prefilled personal data when isOpen is true', () => {
+  it('1. Renders EditProfileModal with prefilled personal data and location dropdowns when isOpen is true', () => {
     render(
       <EditProfileModal
         isOpen={true}
@@ -61,17 +63,21 @@ describe('UI & Functional Testing: EditProfileModal (In-Place Matrimonial Biodat
     );
 
     expect(screen.getByText(/Edit Matrimonial Biodata/i)).toBeDefined();
-    expect(screen.getByText(/Update personal, career, and Islamic values in-place/i)).toBeDefined();
+    expect(screen.getByText(/Update personal, verified location/i)).toBeDefined();
 
     // Verify prefilled personal inputs
     const nameInput = screen.getByDisplayValue('Hamza Farooq') as HTMLInputElement;
     expect(nameInput).toBeDefined();
 
-    const cityInput = screen.getByDisplayValue('Manchester') as HTMLInputElement;
-    expect(cityInput).toBeDefined();
+    // Country dropdown should be selected to United Kingdom
+    const countrySelect = screen.getByLabelText(/country/i) as HTMLSelectElement;
+    expect(countrySelect.value).toBe('GB');
 
-    const countryInput = screen.getByDisplayValue('UK') as HTMLInputElement;
-    expect(countryInput).toBeDefined();
+    // City should be selected or displayed
+    expect(screen.getByDisplayValue('Manchester')).toBeDefined();
+
+    // GPS Status badge should indicate active coordinates
+    expect(screen.getByText(/Accurate coordinates active/i)).toBeDefined();
   });
 
   it('2. Switches tabs and accurately renders Career, Deen, and Lifestyle sections', () => {
@@ -102,14 +108,16 @@ describe('UI & Functional Testing: EditProfileModal (In-Place Matrimonial Biodat
     expect(screen.getByDisplayValue('English, Urdu')).toBeDefined();
   });
 
-  it('3. Updates user fields and commits live changes to dbService on Save', async () => {
+  it('3. Updates user fields and commits live changes with Haversine coordinates to dbService on Save', async () => {
     const handleSaved = vi.fn();
     const handleClose = vi.fn();
     
     const updateSpy = vi.spyOn(dbService, 'updateUserProfileLive').mockResolvedValue({
       ...mockUser,
       profession: 'Lead Clinical Pharmacist',
-      city: 'London'
+      city: 'London',
+      latitude: 51.5074,
+      longitude: -0.1278
     });
 
     render(
@@ -121,9 +129,9 @@ describe('UI & Functional Testing: EditProfileModal (In-Place Matrimonial Biodat
       />
     );
 
-    // Update City on Personal tab
-    const cityInput = screen.getByDisplayValue('Manchester') as HTMLInputElement;
-    fireEvent.change(cityInput, { target: { value: 'London' } });
+    // Switch to London in City dropdown
+    const citySelect = screen.getByLabelText(/city/i) as HTMLSelectElement;
+    fireEvent.change(citySelect, { target: { value: 'London' } });
 
     // Switch to Career tab and update Profession
     const careerTab = screen.getByRole('button', { name: /Career/i });
@@ -143,7 +151,9 @@ describe('UI & Functional Testing: EditProfileModal (In-Place Matrimonial Biodat
       'usr_edit_modal_test_1',
       expect.objectContaining({
         city: 'London',
-        profession: 'Lead Clinical Pharmacist'
+        profession: 'Lead Clinical Pharmacist',
+        latitude: 51.5074,
+        longitude: -0.1278
       })
     );
 
@@ -152,7 +162,53 @@ describe('UI & Functional Testing: EditProfileModal (In-Place Matrimonial Biodat
     });
   });
 
-  it('4. Closes modal without calling updateUserProfileLive when Cancel is clicked', () => {
+  it('4. GPS Auto-Detect button captures live navigator geolocation and updates coordinates', async () => {
+    const mockGeolocation = {
+      getCurrentPosition: vi.fn().mockImplementation((success) => {
+        success({
+          coords: {
+            latitude: 25.2048,
+            longitude: 55.2708,
+            accuracy: 5
+          }
+        });
+      })
+    };
+    // @ts-expect-error Mocking navigator.geolocation
+    global.navigator.geolocation = mockGeolocation;
+
+    const updateSpy = vi.spyOn(dbService, 'updateUserProfileLive').mockResolvedValue(mockUser);
+
+    render(
+      <EditProfileModal
+        isOpen={true}
+        user={mockUser}
+        onClose={vi.fn()}
+      />
+    );
+
+    const gpsBtn = screen.getByRole('button', { name: /auto-detect accurate gps location/i });
+    fireEvent.click(gpsBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Accurate coordinates captured \(25.20, 55.27\)/i)).toBeDefined();
+    });
+
+    const saveBtn = screen.getByRole('button', { name: /Save Changes/i });
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => {
+      expect(updateSpy).toHaveBeenCalledWith(
+        'usr_edit_modal_test_1',
+        expect.objectContaining({
+          latitude: 25.2048,
+          longitude: 55.2708
+        })
+      );
+    });
+  });
+
+  it('5. Closes modal without calling updateUserProfileLive when Cancel is clicked', () => {
     const handleClose = vi.fn();
     const updateSpy = vi.spyOn(dbService, 'updateUserProfileLive');
 
@@ -171,7 +227,7 @@ describe('UI & Functional Testing: EditProfileModal (In-Place Matrimonial Biodat
     expect(updateSpy).not.toHaveBeenCalled();
   });
 
-  it('5. Does not render modal content when isOpen is false', () => {
+  it('6. Does not render modal content when isOpen is false', () => {
     const { container } = render(
       <EditProfileModal
         isOpen={false}

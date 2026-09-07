@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   X, 
   User, 
@@ -9,8 +9,11 @@ import {
   Loader2, 
   Sparkles,
   MapPin,
-  GraduationCap
+  GraduationCap,
+  Navigation,
+  Globe2
 } from 'lucide-react';
+import { Country, State, type ICountry } from 'country-state-city';
 import type { UserProfile, Sect, PracticeLevel, MarriageTimeline } from '../types';
 import { dbService } from '../services/dbService';
 
@@ -23,6 +26,109 @@ interface Props {
 
 type TabType = 'personal' | 'career' | 'deen' | 'lifestyle';
 
+// Top priority country codes for quick Islamic & diaspora selection
+const TOP_COUNTRY_CODES = ['GB', 'PK', 'US', 'CA', 'AE', 'SA', 'TR', 'AU', 'DE', 'MY', 'IN', 'BD', 'QA', 'KW', 'OM', 'EG', 'FR', 'NL', 'ID'];
+
+// Curated major cities for popular regions
+const POPULAR_STATE_CITIES: Record<string, string[]> = {
+  // UK
+  'GB-ENG': ['London', 'Birmingham', 'Manchester', 'Leeds', 'Bradford', 'Luton', 'Leicester', 'Sheffield', 'Bristol', 'Coventry'],
+  'GB-SCT': ['Glasgow', 'Edinburgh', 'Aberdeen', 'Dundee'],
+  'GB-WLS': ['Cardiff', 'Swansea', 'Newport'],
+  'GB-NIR': ['Belfast', 'Derry'],
+  // Pakistan
+  'PK-PB': ['Lahore', 'Faisalabad', 'Rawalpindi', 'Multan', 'Gujranwala', 'Sialkot', 'Bahawalpur', 'Sargodha', 'Gujrat'],
+  'PK-SD': ['Karachi', 'Hyderabad', 'Sukkur', 'Larkana', 'Nawabshah', 'Mirpur Khas'],
+  'PK-KP': ['Peshawar', 'Mardan', 'Abbottabad', 'Swat', 'Dera Ismail Khan', 'Nowshera'],
+  'PK-BA': ['Quetta', 'Gwadar', 'Turbat', 'Khuzdar'],
+  'PK-IS': ['Islamabad'],
+  'PK-JK': ['Muzaffarabad', 'Mirpur', 'Kotli', 'Rawalakot'],
+  'PK-GB': ['Gilgit', 'Skardu', 'Hunza'],
+  // USA
+  'US-TX': ['Dallas', 'Houston', 'Austin', 'Fort Worth', 'Plano', 'Irving', 'Frisco', 'Arlington'],
+  'US-CA': ['Los Angeles', 'San Francisco', 'San Jose', 'San Diego', 'Irvine', 'Fremont', 'Sacramento'],
+  'US-NY': ['New York', 'Brooklyn', 'Queens', 'Buffalo', 'Albany', 'Rochester'],
+  'US-IL': ['Chicago', 'Naperville', 'Schaumburg', 'Oak Brook'],
+  'US-NJ': ['Jersey City', 'Edison', 'Paterson', 'Paramus', 'Princeton', 'Newark'],
+  'US-VA': ['Alexandria', 'Fairfax', 'Richmond', 'Arlington', 'McLean'],
+  'US-MI': ['Detroit', 'Dearborn', 'Canton', 'Troy', 'Ann Arbor'],
+  'US-FL': ['Miami', 'Orlando', 'Tampa', 'Fort Lauderdale', 'Jacksonville'],
+  'US-GA': ['Atlanta', 'Alpharetta', 'Duluth', 'Marietta', 'Norcross'],
+  // Canada
+  'CA-ON': ['Toronto', 'Mississauga', 'Brampton', 'Ottawa', 'Oakville', 'Milton', 'Markham', 'Scarborough'],
+  'CA-BC': ['Vancouver', 'Surrey', 'Burnaby', 'Richmond', 'Coquitlam'],
+  'CA-AB': ['Calgary', 'Edmonton', 'Fort McMurray'],
+  'CA-QC': ['Montreal', 'Laval', 'Quebec City'],
+  // UAE
+  'AE-DU': ['Dubai'],
+  'AE-AZ': ['Abu Dhabi', 'Al Ain'],
+  'AE-SH': ['Sharjah'],
+  'AE-AJ': ['Ajman'],
+  // Saudi Arabia
+  'SA-01': ['Riyadh', 'Al Kharj'],
+  'SA-02': ['Jeddah', 'Makkah', 'Taif'],
+  'SA-04': ['Dammam', 'Khobar', 'Dhahran', 'Jubail'],
+  'SA-03': ['Madinah', 'Yanbu'],
+  // Turkey
+  'TR-34': ['Istanbul'],
+  'TR-06': ['Ankara'],
+  // Australia
+  'AU-NSW': ['Sydney', 'Parramatta'],
+  'AU-VIC': ['Melbourne']
+};
+
+// Known city coordinates dictionary for automatic Haversine fallback
+const CITY_COORDINATES: Record<string, { lat: number; lon: number }> = {
+  // UK
+  'London': { lat: 51.5074, lon: -0.1278 },
+  'Manchester': { lat: 53.4808, lon: -2.2426 },
+  'Birmingham': { lat: 52.4862, lon: -1.8904 },
+  'Leeds': { lat: 53.8008, lon: -1.5491 },
+  'Bradford': { lat: 53.7960, lon: -1.7594 },
+  'Luton': { lat: 51.8787, lon: -0.4200 },
+  'Leicester': { lat: 52.6369, lon: -1.1398 },
+  'Sheffield': { lat: 53.3811, lon: -1.4701 },
+  'Glasgow': { lat: 55.8642, lon: -4.2518 },
+  'Edinburgh': { lat: 55.9533, lon: -3.1883 },
+  // Pakistan
+  'Karachi': { lat: 24.8607, lon: 67.0011 },
+  'Lahore': { lat: 31.5204, lon: 74.3587 },
+  'Islamabad': { lat: 33.6844, lon: 73.0479 },
+  'Rawalpindi': { lat: 33.5651, lon: 73.0169 },
+  'Faisalabad': { lat: 31.4504, lon: 73.1350 },
+  'Multan': { lat: 30.1575, lon: 71.5249 },
+  'Peshawar': { lat: 34.0151, lon: 71.5249 },
+  'Quetta': { lat: 30.1798, lon: 66.9750 },
+  'Sialkot': { lat: 32.4945, lon: 74.5229 },
+  'Gujranwala': { lat: 32.1877, lon: 74.1945 },
+  // USA
+  'New York': { lat: 40.7128, lon: -74.0060 },
+  'Chicago': { lat: 41.8781, lon: -87.6298 },
+  'Dallas': { lat: 32.7767, lon: -96.7970 },
+  'Houston': { lat: 29.7604, lon: -95.3698 },
+  'Los Angeles': { lat: 34.0522, lon: -118.2437 },
+  'San Francisco': { lat: 37.7749, lon: -122.4194 },
+  'San Jose': { lat: 37.3382, lon: -121.8863 },
+  // Canada
+  'Toronto': { lat: 43.6532, lon: -79.3832 },
+  'Vancouver': { lat: 49.2827, lon: -123.1207 },
+  'Calgary': { lat: 51.0447, lon: -114.0719 },
+  'Montreal': { lat: 45.5017, lon: -73.5673 },
+  'Mississauga': { lat: 43.5890, lon: -79.6441 },
+  // UAE & Gulf
+  'Dubai': { lat: 25.2048, lon: 55.2708 },
+  'Abu Dhabi': { lat: 24.4539, lon: 54.3773 },
+  'Sharjah': { lat: 25.3463, lon: 55.4209 },
+  'Riyadh': { lat: 24.7136, lon: 46.6753 },
+  'Jeddah': { lat: 21.4858, lon: 39.1925 },
+  'Makkah': { lat: 21.3891, lon: 39.8579 },
+  'Madinah': { lat: 24.5247, lon: 39.5692 },
+  'Doha': { lat: 25.2854, lon: 51.5310 },
+  // Australia
+  'Sydney': { lat: -33.8688, lon: 151.2093 },
+  'Melbourne': { lat: -37.8136, lon: 144.9631 }
+};
+
 export const EditProfileModal: React.FC<Props> = ({
   isOpen,
   user,
@@ -33,14 +139,35 @@ export const EditProfileModal: React.FC<Props> = ({
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Form State
+  // Form State: Personal
   const [fullName, setFullName] = useState<string>('');
   const [age, setAge] = useState<number>(25);
-  const [city, setCity] = useState<string>('');
-  const [country, setCountry] = useState<string>('');
   const [height, setHeight] = useState<string>('');
   const [ethnicity, setEthnicity] = useState<string>('');
   const [citizenship, setCitizenship] = useState<string>('');
+
+  // Location System State
+  const allCountries = useMemo<ICountry[]>(() => {
+    const countries = Country.getAllCountries();
+    const priority = countries.filter(c => TOP_COUNTRY_CODES.includes(c.isoCode));
+    const others = countries.filter(c => !TOP_COUNTRY_CODES.includes(c.isoCode));
+    priority.sort((a, b) => TOP_COUNTRY_CODES.indexOf(a.isoCode) - TOP_COUNTRY_CODES.indexOf(b.isoCode));
+    others.sort((a, b) => a.name.localeCompare(b.name));
+    return [...priority, ...others];
+  }, []);
+
+  const [selectedCountryCode, setSelectedCountryCode] = useState<string>('GB');
+  const [selectedStateCode, setSelectedStateCode] = useState<string>('');
+  const [isCustomState, setIsCustomState] = useState<boolean>(false);
+  const [customStateText, setCustomStateText] = useState<string>('');
+  const [selectedCityName, setSelectedCityName] = useState<string>('');
+  const [isCustomCity, setIsCustomCity] = useState<boolean>(false);
+  const [customCityText, setCustomCityText] = useState<string>('');
+
+  // GPS Coordinates & Status
+  const [coords, setCoords] = useState<{ latitude?: number; longitude?: number }>({});
+  const [isLocating, setIsLocating] = useState<boolean>(false);
+  const [locationStatus, setLocationStatus] = useState<string | null>(null);
 
   // Career & Education
   const [profession, setProfession] = useState<string>('');
@@ -72,18 +199,69 @@ export const EditProfileModal: React.FC<Props> = ({
     if (isOpen && user) {
       setFullName(user.fullName || '');
       setAge(user.age || 25);
-      setCity(user.city || user.location?.split(',')[0]?.trim() || '');
-      setCountry(user.country || user.location?.split(',')[1]?.trim() || '');
       setHeight(user.height || "5'8\" (173 cm)");
       setEthnicity(user.ethnicity || 'Global');
       setCitizenship(user.citizenship || '');
 
+      // Resolve Country
+      let cCode = 'GB';
+      if (user.country) {
+        const foundCountry = Country.getAllCountries().find(c => 
+          c.name.toLowerCase() === user.country?.toLowerCase() || 
+          c.isoCode.toLowerCase() === user.country?.toLowerCase()
+        );
+        if (foundCountry) cCode = foundCountry.isoCode;
+      }
+      setSelectedCountryCode(cCode);
+
+      // Resolve State & City
+      const userCity = user.city || (user.location && user.location !== 'Global' ? user.location.split(',')[0].trim() : '') || '';
+      const states = State.getStatesOfCountry(cCode);
+      if (states.length > 0) {
+        setSelectedStateCode(states[0].isoCode);
+        const presetCities = POPULAR_STATE_CITIES[`${cCode}-${states[0].isoCode}`] || [];
+        if (presetCities.includes(userCity)) {
+          setSelectedCityName(userCity);
+          setIsCustomCity(false);
+          setCustomCityText('');
+        } else if (userCity) {
+          setSelectedCityName('');
+          setIsCustomCity(true);
+          setCustomCityText(userCity);
+        } else if (presetCities.length > 0) {
+          setSelectedCityName(presetCities[0]);
+          setIsCustomCity(false);
+          setCustomCityText('');
+        }
+      } else {
+        setSelectedStateCode('');
+        setIsCustomState(true);
+        setSelectedCityName('');
+        setIsCustomCity(true);
+        setCustomCityText(userCity);
+      }
+
+      // Initial Coordinates
+      if (typeof user.latitude === 'number' && typeof user.longitude === 'number') {
+        setCoords({ latitude: user.latitude, longitude: user.longitude });
+        setLocationStatus(`📍 Accurate coordinates active (${user.latitude.toFixed(2)}, ${user.longitude.toFixed(2)})`);
+      } else if (userCity && CITY_COORDINATES[userCity]) {
+        const lookup = CITY_COORDINATES[userCity];
+        setCoords({ latitude: lookup.lat, longitude: lookup.lon });
+        setLocationStatus(`📍 City coordinates active (${lookup.lat.toFixed(2)}, ${lookup.lon.toFixed(2)})`);
+      } else {
+        setCoords({});
+        setLocationStatus(null);
+      }
+
+      // Career & Education
       setProfession(user.profession || '');
       setEducation(user.education || '');
       setUniversity(user.university || '');
       setWorkArrangement(user.workArrangement || 'onsite');
       setIncomeBracket(user.incomeBracket || 'undisclosed');
 
+      // Deen
       setPracticeLevel(user.religiousProfile?.practiceLevel || 'practicing');
       setSect(user.religiousProfile?.sect || 'Sunni');
       setMadhhab(user.religiousProfile?.madhhab || 'Hanafi');
@@ -91,6 +269,7 @@ export const EditProfileModal: React.FC<Props> = ({
       setHalalDiet(user.religiousProfile?.halalDiet || 'Strictly Halal');
       setModestyPractice(user.religiousProfile?.modestyPractice || '');
 
+      // Lifestyle
       setMarriageTimeline((user.marriageTimeline as MarriageTimeline) || 'within_1_year');
       setMaritalStatus(user.maritalStatus || 'never_married');
       setLivingPreference(user.livingPreference || 'independent');
@@ -105,19 +284,143 @@ export const EditProfileModal: React.FC<Props> = ({
 
   if (!isOpen) return null;
 
+  // Available states for chosen country
+  const availableStates = State.getStatesOfCountry(selectedCountryCode);
+  const currentRegionKey = `${selectedCountryCode}-${selectedStateCode}`;
+  const availableCities = (!isCustomState && selectedStateCode) ? (POPULAR_STATE_CITIES[currentRegionKey] || []) : [];
+  const isCustomCityActive = isCustomCity || availableCities.length === 0;
+
+  const selectedCountryObj = Country.getCountryByCode(selectedCountryCode);
+  const selectedStateObj = selectedCountryCode && selectedStateCode 
+    ? State.getStateByCodeAndCountry(selectedStateCode, selectedCountryCode) 
+    : null;
+
+  // Country Change Handler
+  const handleCountryChange = (cCode: string) => {
+    setSelectedCountryCode(cCode);
+    setIsCustomState(false);
+    setCustomStateText('');
+    setIsCustomCity(false);
+    setCustomCityText('');
+
+    const states = State.getStatesOfCountry(cCode);
+    if (states.length > 0) {
+      setSelectedStateCode(states[0].isoCode);
+      const cities = POPULAR_STATE_CITIES[`${cCode}-${states[0].isoCode}`];
+      if (cities && cities.length > 0) {
+        setSelectedCityName(cities[0]);
+        if (CITY_COORDINATES[cities[0]]) {
+          const l = CITY_COORDINATES[cities[0]];
+          setCoords({ latitude: l.lat, longitude: l.lon });
+          setLocationStatus(`📍 City coordinates active (${l.lat.toFixed(2)}, ${l.lon.toFixed(2)})`);
+        }
+      } else {
+        setSelectedCityName('');
+        setIsCustomCity(true);
+      }
+    } else {
+      setSelectedStateCode('');
+      setIsCustomState(true);
+      setSelectedCityName('');
+      setIsCustomCity(true);
+    }
+  };
+
+  // State Change Handler
+  const handleStateChange = (sCode: string) => {
+    setSelectedStateCode(sCode);
+    setIsCustomState(false);
+    setCustomStateText('');
+    setIsCustomCity(false);
+    setCustomCityText('');
+
+    const cities = POPULAR_STATE_CITIES[`${selectedCountryCode}-${sCode}`];
+    if (cities && cities.length > 0) {
+      setSelectedCityName(cities[0]);
+      if (CITY_COORDINATES[cities[0]]) {
+        const l = CITY_COORDINATES[cities[0]];
+        setCoords({ latitude: l.lat, longitude: l.lon });
+        setLocationStatus(`📍 City coordinates active (${l.lat.toFixed(2)}, ${l.lon.toFixed(2)})`);
+      }
+    } else {
+      setSelectedCityName('');
+      setIsCustomCity(true);
+    }
+  };
+
+  // City Change Handler
+  const handleCityChange = (cityName: string) => {
+    setSelectedCityName(cityName);
+    setIsCustomCity(false);
+    setCustomCityText('');
+    if (CITY_COORDINATES[cityName]) {
+      const l = CITY_COORDINATES[cityName];
+      setCoords({ latitude: l.lat, longitude: l.lon });
+      setLocationStatus(`📍 City coordinates active (${l.lat.toFixed(2)}, ${l.lon.toFixed(2)})`);
+    }
+  };
+
+  // GPS Auto-Detect Handler
+  const handleDetectLocation = () => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setLocationStatus('Geolocation is not supported by your browser.');
+      return;
+    }
+    setIsLocating(true);
+    setLocationStatus('Detecting accurate GPS location...');
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = Math.round(position.coords.latitude * 10000) / 10000;
+        const lon = Math.round(position.coords.longitude * 10000) / 10000;
+        setCoords({ latitude: lat, longitude: lon });
+        setIsLocating(false);
+        setLocationStatus(`📍 Accurate coordinates captured (${lat.toFixed(2)}, ${lon.toFixed(2)})`);
+      },
+      (error) => {
+        setIsLocating(false);
+        if (error.code === 1) {
+          setLocationStatus('Location permission not granted. Selected city coordinates will be used.');
+        } else {
+          setLocationStatus('GPS signal unavailable. Selected city coordinates will be used.');
+        }
+      },
+      { timeout: 8000, enableHighAccuracy: true }
+    );
+  };
+
   const handleSave = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setIsSaving(true);
     setSuccessMessage(null);
 
-    const locationString = city && country ? `${city}, ${country}` : (city || country || user.location || 'Global');
+    const cityName = isCustomCityActive 
+      ? (customCityText.trim() || selectedCityName.trim() || 'City') 
+      : (selectedCityName.trim() || customCityText.trim() || 'City');
+    const countryName = selectedCountryObj?.name || 'Global';
+    const stateName = isCustomState ? customStateText.trim() : (selectedStateObj?.name || '');
+    const locationString = stateName ? `${cityName}, ${stateName}, ${countryName}` : `${cityName}, ${countryName}`;
+
+    // Auto-resolve coordinates if GPS was not manually captured
+    let finalLat = coords.latitude;
+    let finalLon = coords.longitude;
+    if (finalLat === undefined || finalLon === undefined) {
+      if (CITY_COORDINATES[cityName]) {
+        finalLat = CITY_COORDINATES[cityName].lat;
+        finalLon = CITY_COORDINATES[cityName].lon;
+      } else if (selectedCountryObj?.latitude && selectedCountryObj?.longitude) {
+        finalLat = parseFloat(selectedCountryObj.latitude);
+        finalLon = parseFloat(selectedCountryObj.longitude);
+      }
+    }
 
     const updatedProfile: Partial<UserProfile> = {
       fullName: fullName.trim() || user.fullName,
       age: Number(age) || user.age,
-      city: city.trim(),
-      country: country.trim(),
+      city: cityName,
+      country: countryName,
       location: locationString,
+      latitude: finalLat,
+      longitude: finalLon,
       height,
       ethnicity: ethnicity.trim(),
       citizenship: citizenship.trim(),
@@ -155,7 +458,7 @@ export const EditProfileModal: React.FC<Props> = ({
       const savedUser = await dbService.updateUserProfileLive(user.id, updatedProfile);
       const mergedUser: UserProfile = savedUser || { ...user, ...updatedProfile } as UserProfile;
       
-      setSuccessMessage('Profile details updated successfully!');
+      setSuccessMessage('Profile & location details updated successfully!');
       if (onSaved) {
         onSaved(mergedUser);
       }
@@ -190,7 +493,7 @@ export const EditProfileModal: React.FC<Props> = ({
                 Edit Matrimonial Biodata
               </h2>
               <p className="text-[10px] text-secondary">
-                Update personal, career, and Islamic values in-place
+                Update personal, verified location, career, and Islamic values in-place
               </p>
             </div>
           </div>
@@ -311,31 +614,137 @@ export const EditProfileModal: React.FC<Props> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-bold text-on-surface mb-1 flex items-center gap-1">
-                    <MapPin className="w-3 h-3 text-primary" />
-                    <span>City</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    placeholder="e.g. Manchester"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-outline bg-surface/20 text-xs font-medium text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-                  />
+              {/* Enhanced Location Selection System */}
+              <div className="p-3.5 bg-pastel-rose/30 border border-primary/20 rounded-2xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-on-surface flex items-center gap-1.5">
+                    <Globe2 className="w-3.5 h-3.5 text-primary" />
+                    <span>Verified Location & Haversine Coordinates</span>
+                  </span>
+                  <span className="text-[10px] text-secondary font-medium">Worldwide</span>
                 </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Country Dropdown */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-secondary mb-1">
+                      Country
+                    </label>
+                    <select
+                      aria-label="Country"
+                      value={selectedCountryCode}
+                      onChange={(e) => handleCountryChange(e.target.value)}
+                      className="w-full px-2.5 py-2 rounded-xl border border-outline bg-white text-xs font-medium text-on-surface focus:outline-none focus:border-primary"
+                    >
+                      {allCountries.map((c) => (
+                        <option key={c.isoCode} value={c.isoCode}>
+                          {c.flag} {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* State Dropdown */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-secondary mb-1">
+                      State / Province
+                    </label>
+                    {availableStates.length > 0 && !isCustomState ? (
+                      <select
+                        aria-label="State or Province"
+                        value={selectedStateCode}
+                        onChange={(e) => handleStateChange(e.target.value)}
+                        className="w-full px-2.5 py-2 rounded-xl border border-outline bg-white text-xs font-medium text-on-surface focus:outline-none focus:border-primary"
+                      >
+                        {availableStates.map((s) => (
+                          <option key={s.isoCode} value={s.isoCode}>
+                            {s.name}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        value={customStateText}
+                        onChange={(e) => setCustomStateText(e.target.value)}
+                        placeholder="e.g. Greater London"
+                        className="w-full px-2.5 py-2 rounded-xl border border-outline bg-white text-xs font-medium text-on-surface focus:outline-none focus:border-primary"
+                      />
+                    )}
+                  </div>
+                </div>
+
+                {/* City Selection */}
                 <div>
-                  <label className="block text-[11px] font-bold text-on-surface mb-1">
-                    Country
-                  </label>
-                  <input
-                    type="text"
-                    value={country}
-                    onChange={(e) => setCountry(e.target.value)}
-                    placeholder="e.g. United Kingdom"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-outline bg-surface/20 text-xs font-medium text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-                  />
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[10px] font-bold text-secondary flex items-center gap-1">
+                      <MapPin className="w-3 h-3 text-primary" />
+                      <span>City</span>
+                    </label>
+                    {availableCities.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setIsCustomCity(!isCustomCity)}
+                        className="text-[10px] text-primary font-bold hover:underline"
+                      >
+                        {isCustomCity ? 'Choose from list' : 'Type custom city'}
+                      </button>
+                    )}
+                  </div>
+
+                  {availableCities.length > 0 && !isCustomCity ? (
+                    <select
+                      aria-label="City"
+                      value={selectedCityName}
+                      onChange={(e) => handleCityChange(e.target.value)}
+                      className="w-full px-2.5 py-2 rounded-xl border border-outline bg-white text-xs font-medium text-on-surface focus:outline-none focus:border-primary"
+                    >
+                      {availableCities.map((cityName) => (
+                        <option key={cityName} value={cityName}>
+                          {cityName}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      aria-label="City Name"
+                      value={customCityText}
+                      onChange={(e) => {
+                        setCustomCityText(e.target.value);
+                        if (CITY_COORDINATES[e.target.value.trim()]) {
+                          const l = CITY_COORDINATES[e.target.value.trim()];
+                          setCoords({ latitude: l.lat, longitude: l.lon });
+                          setLocationStatus(`📍 City coordinates active (${l.lat.toFixed(2)}, ${l.lon.toFixed(2)})`);
+                        }
+                      }}
+                      placeholder="e.g. Manchester, London, Karachi"
+                      className="w-full px-2.5 py-2 rounded-xl border border-outline bg-white text-xs font-medium text-on-surface focus:outline-none focus:border-primary"
+                    />
+                  )}
+                </div>
+
+                {/* GPS Auto-Detect Button for Pinpoint Haversine Distance */}
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={handleDetectLocation}
+                    disabled={isLocating}
+                    className="w-full py-2 px-3 rounded-xl bg-white hover:bg-white/80 border border-primary/30 text-primary text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-xs active:scale-98"
+                  >
+                    {isLocating ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+                    ) : (
+                      <Navigation className="w-3.5 h-3.5 text-primary" />
+                    )}
+                    <span>Auto-detect accurate GPS location</span>
+                  </button>
+
+                  {locationStatus && (
+                    <p className="text-[10px] text-emerald-800 font-semibold mt-1.5 px-1 flex items-center gap-1">
+                      <span>{locationStatus}</span>
+                    </p>
+                  )}
                 </div>
               </div>
 

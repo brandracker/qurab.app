@@ -14,6 +14,7 @@ import {
   Globe2
 } from 'lucide-react';
 import { Country, State, type ICountry } from 'country-state-city';
+import { reverseGeocodeOffline } from '../utils/offlineGeo';
 import type { UserProfile, Sect, PracticeLevel, MarriageTimeline } from '../types';
 import { dbService } from '../services/dbService';
 
@@ -360,7 +361,7 @@ export const EditProfileModal: React.FC<Props> = ({
     }
   };
 
-  // GPS Auto-Detect Handler
+  // GPS Auto-Detect Handler with 100% Offline Device Math Reverse Geocoding
   const handleDetectLocation = () => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
       setLocationStatus('Geolocation is not supported by your browser.');
@@ -373,8 +374,28 @@ export const EditProfileModal: React.FC<Props> = ({
         const lat = Math.round(position.coords.latitude * 10000) / 10000;
         const lon = Math.round(position.coords.longitude * 10000) / 10000;
         setCoords({ latitude: lat, longitude: lon });
-        setIsLocating(false);
-        setLocationStatus(`📍 Accurate coordinates captured (${lat.toFixed(2)}, ${lon.toFixed(2)})`);
+
+        // 100% Offline Device Math: Instantly resolve country, state, and city
+        try {
+          const geoResult = reverseGeocodeOffline(lat, lon);
+          if (geoResult.countryCode) {
+            setSelectedCountryCode(geoResult.countryCode);
+          }
+          if (geoResult.stateCode) {
+            setSelectedStateCode(geoResult.stateCode);
+            setIsCustomState(false);
+          }
+          if (geoResult.cityName) {
+            setSelectedCityName(geoResult.cityName);
+            setIsCustomCity(false);
+            setCustomCityText('');
+          }
+          setIsLocating(false);
+          setLocationStatus(`📍 Accurate coordinates captured: ${geoResult.cityName}, ${geoResult.countryName} (${lat.toFixed(2)}, ${lon.toFixed(2)})`);
+        } catch {
+          setIsLocating(false);
+          setLocationStatus(`📍 Accurate coordinates captured (${lat.toFixed(2)}, ${lon.toFixed(2)})`);
+        }
       },
       (error) => {
         setIsLocating(false);

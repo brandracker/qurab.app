@@ -17,6 +17,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { Country, State, type ICountry, type IState } from 'country-state-city';
+import { reverseGeocodeOffline } from '../utils/offlineGeo';
 
 interface Props {
   data?: {
@@ -343,8 +344,28 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
         const lat = Math.round(position.coords.latitude * 10000) / 10000;
         const lon = Math.round(position.coords.longitude * 10000) / 10000;
         setCoords({ latitude: lat, longitude: lon });
-        setIsLocating(false);
-        setLocationStatus(`📍 Accurate coordinates captured (${lat.toFixed(2)}, ${lon.toFixed(2)})`);
+
+        // 100% Offline Device Math: Instantly resolve country, state, and city
+        try {
+          const geoResult = reverseGeocodeOffline(lat, lon);
+          if (geoResult.countryCode) {
+            setSelectedCountryCode(geoResult.countryCode);
+          }
+          if (geoResult.stateCode) {
+            setSelectedStateCode(geoResult.stateCode);
+            setIsCustomState(false);
+          }
+          if (geoResult.cityName) {
+            setSelectedCityName(geoResult.cityName);
+            setIsCustomCity(false);
+            setCustomCityText('');
+          }
+          setIsLocating(false);
+          setLocationStatus(`📍 Accurate coordinates captured: ${geoResult.cityName}, ${geoResult.countryName} (${lat.toFixed(2)}, ${lon.toFixed(2)})`);
+        } catch {
+          setIsLocating(false);
+          setLocationStatus(`📍 Accurate coordinates captured (${lat.toFixed(2)}, ${lon.toFixed(2)})`);
+        }
       },
       (error) => {
         setIsLocating(false);

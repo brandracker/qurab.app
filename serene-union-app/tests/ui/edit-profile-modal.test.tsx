@@ -191,7 +191,7 @@ describe('UI & Functional Testing: EditProfileModal (In-Place Matrimonial Biodat
     fireEvent.click(gpsBtn);
 
     await waitFor(() => {
-      expect(screen.getByText(/Accurate coordinates captured \(25.20, 55.27\)/i)).toBeDefined();
+      expect(screen.getByText(/Accurate coordinates captured: Dubai, United Arab Emirates \(25.20, 55.27\)/i)).toBeDefined();
     });
 
     const saveBtn = screen.getByRole('button', { name: /Save Changes/i });
@@ -201,6 +201,8 @@ describe('UI & Functional Testing: EditProfileModal (In-Place Matrimonial Biodat
       expect(updateSpy).toHaveBeenCalledWith(
         'usr_edit_modal_test_1',
         expect.objectContaining({
+          city: 'Dubai',
+          country: 'United Arab Emirates',
           latitude: 25.2048,
           longitude: 55.2708
         })

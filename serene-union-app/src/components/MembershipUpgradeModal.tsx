@@ -20,13 +20,13 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
   onPurchaseSuccess,
   onWatchAdClicked
 }) => {
-  const [selectedProduct, setSelectedProduct] = useState<string>('serene_barakah_monthly');
+  const [selectedProduct, setSelectedProduct] = useState<string>('qurb_barakah_monthly');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [purchaseStep, setPurchaseStep] = useState<'selection' | 'google_play_sheet' | 'success'>('selection');
 
   useEffect(() => {
     const handleVipUpdated = () => {
-      onPurchaseSuccess('serene_barakah_monthly');
+      onPurchaseSuccess('qurb_barakah_monthly');
       onClose();
     };
     window.addEventListener('serene_vip_updated', handleVipUpdated);
@@ -37,7 +37,7 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
 
   const products = [
     {
-      id: 'serene_barakah_monthly',
+      id: 'qurb_barakah_monthly',
       title: 'Qurb Barakah VIP Club',
       tag: 'Most Popular',
       price: '$2.99 / mo',
@@ -47,7 +47,7 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
       isSubscription: true
     },
     {
-      id: 'serene_direct_salam_20',
+      id: 'qurb_direct_salam_20',
       title: '20 Direct Salam Passes',
       tag: 'Instant Connect',
       price: '$1.99',
@@ -57,7 +57,7 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
       isSubscription: false
     },
     {
-      id: 'serene_spotlight_boost_24h',
+      id: 'qurb_spotlight_boost_24h',
       title: '24-Hour City Spotlight Boost',
       tag: '10x Views',
       price: '$0.99',

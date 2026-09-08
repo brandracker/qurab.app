@@ -14,9 +14,17 @@ interface Props {
   onAuthSuccess: (session: { token: string; user: any; isNewUser: boolean }) => void;
   onBack: () => void;
   initialTab?: 'signup' | 'login';
+  onOpenPrivacyPolicy?: () => void;
+  onOpenTerms?: () => void;
 }
 
-export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack, initialTab = 'signup' }) => {
+export const AuthScreen: React.FC<Props> = ({ 
+  onAuthSuccess, 
+  onBack, 
+  initialTab = 'signup',
+  onOpenPrivacyPolicy,
+  onOpenTerms 
+}) => {
   const [tab, setTab] = useState<'signup' | 'login'>(initialTab);
   
   // Email Auth State
@@ -561,9 +569,21 @@ export const AuthScreen: React.FC<Props> = ({ onAuthSuccess, onBack, initialTab 
       {/* Footer */}
       <footer className="w-full text-center py-1 text-[10px] text-secondary">
         By continuing, you agree to Qurb's{' '}
-        <a href="/terms" className="underline font-medium hover:text-primary transition-colors">Terms of Service</a>
+        <button
+          type="button"
+          onClick={onOpenTerms || (() => { window.location.href = '/terms'; })}
+          className="underline font-medium hover:text-primary transition-colors cursor-pointer inline"
+        >
+          Terms of Service
+        </button>
         {' '}&{' '}
-        <a href="/privacy-policy" className="underline font-medium hover:text-primary transition-colors">Privacy Policy</a>.
+        <button
+          type="button"
+          onClick={onOpenPrivacyPolicy || (() => { window.location.href = '/privacy-policy'; })}
+          className="underline font-medium hover:text-primary transition-colors cursor-pointer inline"
+        >
+          Privacy Policy
+        </button>.
       </footer>
     </div>
   );

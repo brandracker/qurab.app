@@ -44,10 +44,12 @@ export const App: React.FC = () => {
 
   const [currentStep, setCurrentStep] = useState<OnboardingStep>(() => {
     const path = window.location.pathname.toLowerCase();
-    if (path.includes('privacy')) return 'privacy_policy';
-    if (path.includes('terms')) return 'terms';
-
     const params = new URLSearchParams(window.location.search);
+    const hash = window.location.hash.toLowerCase();
+
+    if (path.includes('privacy') || params.get('page') === 'privacy' || params.get('view') === 'privacy' || hash.includes('privacy')) return 'privacy_policy';
+    if (path.includes('terms') || params.get('page') === 'terms' || params.get('view') === 'terms' || hash.includes('terms')) return 'terms';
+
     if (params.get('mode') === 'resetPassword' || (params.get('oobCode') && params.get('mode') !== 'verifyEmail')) {
       return 'reset_password';
     }
@@ -475,6 +477,8 @@ export const App: React.FC = () => {
               setAuthInitialTab('login');
               setCurrentStep('auth');
             }}
+            onOpenPrivacyPolicy={() => setCurrentStep('privacy_policy')}
+            onOpenTerms={() => setCurrentStep('terms')}
           />
         )}
 
@@ -484,6 +488,8 @@ export const App: React.FC = () => {
             initialTab={authInitialTab}
             onBack={() => setCurrentStep('welcome')}
             onAuthSuccess={handleAuthSuccess}
+            onOpenPrivacyPolicy={() => setCurrentStep('privacy_policy')}
+            onOpenTerms={() => setCurrentStep('terms')}
           />
         )}
 
@@ -612,7 +618,12 @@ export const App: React.FC = () => {
               )}
 
               {activeTab === 'settings' && (
-                <SettingsPrivacy currentUser={currentUser} onLogout={handleLogout} />
+                <SettingsPrivacy 
+                  currentUser={currentUser} 
+                  onLogout={handleLogout}
+                  onOpenPrivacyPolicy={() => setCurrentStep('privacy_policy')}
+                  onOpenTerms={() => setCurrentStep('terms')}
+                />
               )}
 
             </div>

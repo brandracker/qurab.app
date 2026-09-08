@@ -28,9 +28,17 @@ interface Props {
   currentUser?: UserProfile;
   onUpdateUser?: (updated: UserProfile) => void;
   onLogout?: () => void;
+  onOpenPrivacyPolicy?: () => void;
+  onOpenTerms?: () => void;
 }
 
-export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpdateUser, onLogout }) => {
+export const SettingsPrivacy: React.FC<Props> = ({ 
+  currentUser: propUser, 
+  onUpdateUser, 
+  onLogout,
+  onOpenPrivacyPolicy,
+  onOpenTerms
+}) => {
   const [currentUser, setCurrentUser] = useState<UserProfile>(() => propUser || dbService.getCurrentUser());
   const [blurPhotos, setBlurPhotos] = useState<boolean>(currentUser.blurPhotosByDefault ?? true);
   const [profileVisibility, setProfileVisibility] = useState<string>(currentUser.profileVisibility || 'all_users');
@@ -508,6 +516,33 @@ export const SettingsPrivacy: React.FC<Props> = ({ currentUser: propUser, onUpda
               <Trash2 className="w-3.5 h-3.5" />
               <span>Delete</span>
             </button>
+          </div>
+
+          {/* Legal & Compliance Policies */}
+          <div className="p-3.5 rounded-2xl bg-white border border-outline shadow-subtle space-y-2">
+            <div className="flex items-center gap-1.5 text-on-surface">
+              <Shield className="w-3.5 h-3.5 text-primary" />
+              <h3 className="font-serif text-xs font-bold">Legal & Policies</h3>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={onOpenPrivacyPolicy}
+                className="py-2 px-3 rounded-xl bg-surface border border-outline hover:bg-surface-variant text-[11px] font-semibold text-secondary hover:text-on-surface text-center transition-all cursor-pointer"
+              >
+                Privacy Policy
+              </button>
+              <button
+                type="button"
+                onClick={onOpenTerms}
+                className="py-2 px-3 rounded-xl bg-surface border border-outline hover:bg-surface-variant text-[11px] font-semibold text-secondary hover:text-on-surface text-center transition-all cursor-pointer"
+              >
+                Terms of Service
+              </button>
+            </div>
+            <div className="text-[10px] text-muted text-center pt-0.5">
+              Qurb Matrimony · Version 1.0.0 · <a href="https://qurb.app" target="_blank" rel="noreferrer" className="underline hover:text-primary">qurb.app</a>
+            </div>
           </div>
 
           <button

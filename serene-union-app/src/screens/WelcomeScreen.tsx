@@ -4,9 +4,16 @@ import { HeartHandshake, ShieldCheck, EyeOff, ArrowRight } from 'lucide-react';
 interface Props {
   onGetStarted: () => void;
   onLogin?: () => void;
+  onOpenPrivacyPolicy?: () => void;
+  onOpenTerms?: () => void;
 }
 
-export const WelcomeScreen: React.FC<Props> = ({ onGetStarted, onLogin }) => {
+export const WelcomeScreen: React.FC<Props> = ({ 
+  onGetStarted, 
+  onLogin,
+  onOpenPrivacyPolicy,
+  onOpenTerms
+}) => {
   return (
     <main className="relative w-full h-full min-h-[600px] flex flex-col justify-between overflow-hidden font-sans select-none text-white">
       {/* 1. Cinematic Halal Couple Background Image */}
@@ -101,6 +108,25 @@ export const WelcomeScreen: React.FC<Props> = ({ onGetStarted, onLogin }) => {
             className="font-sans text-xs text-white/85 hover:text-white font-medium transition-colors py-1 cursor-pointer"
           >
             Already a member? <span className="text-[#FF8DA7] font-bold underline">Sign In</span>
+          </button>
+        </div>
+
+        <div className="text-center pt-1 text-[10.5px] text-white/60 space-x-1">
+          <span>By continuing, you agree to our</span>
+          <button
+            type="button"
+            onClick={onOpenTerms || (() => { window.location.href = '/terms'; })}
+            className="underline hover:text-white cursor-pointer inline"
+          >
+            Terms
+          </button>
+          <span>&</span>
+          <button
+            type="button"
+            onClick={onOpenPrivacyPolicy || (() => { window.location.href = '/privacy-policy'; })}
+            className="underline hover:text-white cursor-pointer inline"
+          >
+            Privacy Policy
           </button>
         </div>
       </div>

@@ -16,6 +16,7 @@ import com.android.billingclient.api.ProductDetails;
 import com.android.billingclient.api.Purchase;
 import com.android.billingclient.api.PurchasesUpdatedListener;
 import com.android.billingclient.api.QueryProductDetailsParams;
+import com.android.billingclient.api.QueryProductDetailsResult;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -124,8 +125,9 @@ public class GooglePlayBillingPlugin extends Plugin implements PurchasesUpdatedL
                 .setProductList(productList)
                 .build();
 
-        billingClient.queryProductDetailsAsync(params, (billingResult, queryProductDetailsList) -> {
-            if (billingResult.getResponseCode() != BillingClient.BillingResponseCode.OK || queryProductDetailsList.isEmpty()) {
+        billingClient.queryProductDetailsAsync(params, (billingResult, queryProductDetailsResult) -> {
+            List<ProductDetails> queryProductDetailsList = queryProductDetailsResult != null ? queryProductDetailsResult.getProductDetailsList() : null;
+            if (billingResult.getResponseCode() != BillingClient.BillingResponseCode.OK || queryProductDetailsList == null || queryProductDetailsList.isEmpty()) {
                 Log.e(TAG, "Failed to find product in Google Play: " + billingResult.getDebugMessage());
                 if (activePurchaseCall != null) {
                     activePurchaseCall.reject("Product not found on Google Play: " + productId);

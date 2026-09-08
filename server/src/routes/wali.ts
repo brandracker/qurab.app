@@ -18,13 +18,13 @@ waliRouter.post('/invite', async (c) => {
       VALUES (?, ?, ?, ?, ?, 1, 1)
     `).bind(waliId, userId, waliName, waliPhone, waliRelationship).run();
 
-    const inviteLink = `https://serene-union.pages.dev/?invite=${waliId}`;
+    const inviteLink = `https://qurb.app/?invite=${waliId}`;
 
     return c.json({
       success: true,
       waliId,
       inviteLink,
-      whatsappShareUrl: `https://wa.me/${waliPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Assalamu Alaikum ${waliName}, I have added you as my family contact on Serene Union: ${inviteLink}`)}`
+      whatsappShareUrl: `https://wa.me/${waliPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Assalamu Alaikum ${waliName}, I have added you as my family contact on Qurb (qurb.app): ${inviteLink}`)}`
     });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);

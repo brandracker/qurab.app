@@ -659,6 +659,10 @@ profilesRouter.get('/discover', async (c) => {
       ? getBoundingBox(viewerLat, viewerLon, maxDistanceKm)
       : null;
 
+    const excludeActioned = c.req.query('includeActioned') !== 'true';
+    const actionedFilter = (currentUserId && excludeActioned)
+      ? `AND u.id NOT IN (SELECT receiver_id FROM matches_and_likes WHERE sender_id = ?)`
+      : '';
     const genderFilter = targetGender ? `AND LOWER(u.gender) = ?` : '';
     const geoFilter = box ? `AND u.latitude BETWEEN ? AND ? AND u.longitude BETWEEN ? AND ?` : '';
 
@@ -696,12 +700,16 @@ profilesRouter.get('/discover', async (c) => {
         AND (u.is_profile_completed = 1 OR (u.location != 'Global' AND u.location IS NOT NULL))
         AND (u.account_status != 'deactivated' OR u.account_status IS NULL)
         AND (u.profile_visibility != 'hidden' OR u.profile_visibility IS NULL)
+        ${actionedFilter}
         ${genderFilter}
       ${geoFilter}
       ORDER BY (CASE WHEN uw.spotlight_expires_at IS NOT NULL AND datetime(uw.spotlight_expires_at) > datetime('now') THEN 1 ELSE 0 END) DESC, (CASE WHEN u.voice_greeting_url IS NOT NULL AND u.voice_greeting_url != '' THEN 1 ELSE 0 END) DESC, u.is_vip DESC, u.created_at DESC
     `;
 
     const bindParams: any[] = [currentUserId];
+    if (currentUserId && excludeActioned) {
+      bindParams.push(currentUserId);
+    }
     if (targetGender) bindParams.push(targetGender);
     if (box) {
       bindParams.push(box.minLat, box.maxLat, box.minLon, box.maxLon);

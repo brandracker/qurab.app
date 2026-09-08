@@ -6,12 +6,83 @@ export const matchesRouter = new Hono<AppContext>();
 // 1. Matches & Likes Action with True Mutual Match Detection & Conversation Creation
 matchesRouter.post('/action', async (c) => {
   try {
-    const { senderId, receiverId, action } = await c.req.json();
+    const { senderId, receiverId, action, messageText } = await c.req.json();
     if (!senderId || !receiverId || !action) {
       return c.json({ success: false, error: 'senderId, receiverId, and action are required' }, 400);
     }
 
+    // Ensure guest users exist in users table to prevent SQLITE_CONSTRAINT_FOREIGNKEY errors
+    if (senderId === 'usr_guest' || senderId.startsWith('usr_guest')) {
+      await c.env.DB.prepare(`
+        INSERT OR IGNORE INTO users (id, email, phone, full_name, dob, gender, location)
+        VALUES (?, 'guest@sereneunion.app', '+0000000000', 'Guest Member', '1998-01-01', 'other', 'Global')
+      `).bind(senderId).run();
+    }
+    if (receiverId === 'usr_guest' || receiverId.startsWith('usr_guest')) {
+      await c.env.DB.prepare(`
+        INSERT OR IGNORE INTO users (id, email, phone, full_name, dob, gender, location)
+        VALUES (?, 'guest@sereneunion.app', '+0000000000', 'Guest Member', '1998-01-01', 'other', 'Global')
+      `).bind(receiverId).run();
+    }
+
     const matchId = `mat_${senderId}_${receiverId}`;
+
+    // Direct Salam handling (Instant conversation with custom Islamic greeting note)
+    if (action === 'direct_salam') {
+      const convId = `conv_${[senderId, receiverId].sort().join('_')}`;
+      const introMessage = (messageText && typeof messageText === 'string' && messageText.trim().length > 0)
+        ? messageText.trim()
+        : 'Assalamu Alaikum! I would be honored to get to know your biodata for marriage.';
+
+      // 1. Record Direct Salam action
+      await c.env.DB.prepare(`
+        INSERT OR REPLACE INTO matches_and_likes (id, sender_id, receiver_id, action)
+        VALUES (?, ?, ?, 'direct_salam')
+      `).bind(matchId, senderId, receiverId).run();
+
+      // 2. Initialize Conversation in D1
+      await c.env.DB.prepare(`
+        INSERT OR IGNORE INTO conversations (id, participant_one, participant_two, jsonl_log_path, last_message_text, last_message_time)
+        VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      `).bind(convId, senderId, receiverId, `logs/${convId}.jsonl`, introMessage).run();
+
+      // 3. Insert initial message into messages table if present
+      try {
+        const msgId = `msg_salam_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+        await c.env.DB.prepare(`
+          INSERT INTO messages (id, conversation_id, sender_id, text, wali_notified, created_at)
+          VALUES (?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
+        `).bind(msgId, convId, senderId, introMessage).run();
+      } catch {}
+
+      // 4. Dispatch D1 notification to receiver
+      try {
+        const senderUser: any = await c.env.DB.prepare(`
+          SELECT full_name as fullName, (SELECT photo_url FROM user_photos WHERE user_id = id ORDER BY is_primary DESC LIMIT 1) as photoUrl 
+          FROM users WHERE id = ?
+        `).bind(senderId).first();
+
+        const notifId = `notif_salam_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+        await c.env.DB.prepare(`
+          INSERT INTO notifications (id, user_id, type, title, message, target_id, avatar_url, action_label, is_read)
+          VALUES (?, ?, 'salam', ?, ?, ?, ?, 'Open Conversation', 0)
+        `).bind(
+          notifId,
+          receiverId,
+          `Direct Salam from ${senderUser?.fullName?.split(' ')[0] || 'A Suitor'} ✨`,
+          `${senderUser?.fullName || 'Someone'} sent you a blessed Direct Salam: "${introMessage.length > 55 ? introMessage.substring(0, 55) + '...' : introMessage}"`,
+          convId,
+          senderUser?.photoUrl || null
+        ).run();
+      } catch {}
+
+      return c.json({
+        success: true,
+        isMutual: false,
+        conversationId: convId,
+        message: 'Direct Salam sent successfully.'
+      });
+    }
 
     if (action === 'liked') {
       // Check if receiver has already liked the sender for a true mutual match
@@ -108,6 +179,18 @@ matchesRouter.post('/action', async (c) => {
     return c.json({ success: true, isMutual: false });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// Reset passed profiles for user
+matchesRouter.post('/reset-passed', async (c) => {
+  try {
+    const { userId } = await c.req.json();
+    if (!userId) return c.json({ success: false, error: 'userId required' }, 400);
+    await c.env.DB.prepare(`DELETE FROM matches_and_likes WHERE sender_id = ? AND action = 'passed'`).bind(userId).run();
+    return c.json({ success: true, message: 'Passed profiles reset successfully.' });
+  } catch (err: any) {
+    return c.json({ success: false, error: err.message }, 500);
   }
 });
 

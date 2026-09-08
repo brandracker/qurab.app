@@ -895,6 +895,11 @@ class DBService {
     try {
       localStorage.removeItem(`serene_passed_${userId}`);
       window.dispatchEvent(new CustomEvent('serene_activity_updated'));
+      fetch(`${API_BASE}/matches/reset-passed`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      }).catch(() => {});
     } catch {}
   }
 
@@ -1152,7 +1157,11 @@ class DBService {
     return true;
   }
 
-  async sendMatchAction(targetUserId: string, action: 'liked' | 'passed'): Promise<{ isMutual: boolean; conversationId?: string; message?: string }> {
+  async sendMatchAction(
+    targetUserId: string, 
+    action: 'liked' | 'passed' | 'direct_salam', 
+    messageText?: string
+  ): Promise<{ isMutual: boolean; conversationId?: string; message?: string }> {
     const user = this.getCurrentUser();
     const allProf = this.getAllProfiles();
     const targetProf = allProf.find(p => p.id === targetUserId);
@@ -1171,7 +1180,7 @@ class DBService {
       actionTime: new Date().toISOString()
     };
 
-    if (action === 'liked') {
+    if (action === 'liked' || action === 'direct_salam') {
       const likesKey = `serene_likes_sent_${user.id}`;
       const localLikes = this.getUserLikesSent(user.id).filter(l => l.id !== targetUserId);
       localLikes.unshift(actionItem);
@@ -1201,7 +1210,8 @@ class DBService {
         body: JSON.stringify({
           senderId: user.id,
           receiverId: targetUserId,
-          action
+          action,
+          messageText
         })
       });
       const data = await res.json();
@@ -1213,6 +1223,15 @@ class DBService {
     } catch {
       return { isMutual: false };
     }
+  }
+
+  // Alias for backward and forward compatibility
+  async recordMatchAction(
+    targetUserId: string, 
+    action: 'liked' | 'passed' | 'direct_salam', 
+    messageText?: string
+  ): Promise<{ isMutual: boolean; conversationId?: string; message?: string }> {
+    return this.sendMatchAction(targetUserId, action, messageText);
   }
 
   async fetchLikedYouCandidates(): Promise<UserProfile[]> {
@@ -1483,26 +1502,55 @@ class DBService {
     return this.getConversations();
   }
 
-  createMatchConversation(profile: UserProfile): Conversation {
+  createMatchConversation(profile: UserProfile, openingMessage?: string): Conversation {
     const user = this.getCurrentUser();
     const convId = `conv_${[user.id, profile.id].sort().join('_')}`;
 
     const conversations = this.getConversations();
     const existing = conversations.find(c => c.id === convId || c.otherUser?.id === profile.id);
-    if (existing) return existing;
+    const initialText = openingMessage || "You matched! Start with Bismillah.";
+
+    if (existing) {
+      if (openingMessage) {
+        existing.lastMessageText = openingMessage;
+        existing.lastMessageSenderId = user.id;
+        existing.lastMessageTime = 'Just now';
+        existing.lastMessageTimestamp = Date.now();
+        if (!existing.messages) existing.messages = [];
+        existing.messages.push({
+          id: 'msg_' + Date.now(),
+          senderId: user.id,
+          senderName: user.fullName || 'Member',
+          text: openingMessage,
+          timestamp: 'Just now',
+          isRead: true,
+          waliNotified: true
+        });
+        localStorage.setItem(this.conversationsKey, JSON.stringify(conversations));
+      }
+      return existing;
+    }
 
     const newConv: Conversation = {
       id: convId,
       participantOne: user.id,
       participantTwo: profile.id,
       otherUser: profile,
-      lastMessageText: "You matched! Start with Bismillah.",
-      lastMessageSenderId: 'system',
+      lastMessageText: initialText,
+      lastMessageSenderId: openingMessage ? user.id : 'system',
       lastMessageTime: 'Just now',
       lastMessageTimestamp: Date.now(),
       unreadCount: 0,
       status: 'active',
-      messages: []
+      messages: openingMessage ? [{
+        id: 'msg_' + Date.now(),
+        senderId: user.id,
+        senderName: user.fullName || 'Member',
+        text: openingMessage,
+        timestamp: 'Just now',
+        isRead: true,
+        waliNotified: true
+      }] : []
     };
 
     conversations.unshift(newConv);

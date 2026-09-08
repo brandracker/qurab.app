@@ -437,10 +437,10 @@ export const App: React.FC = () => {
   return (
     <div className="w-full min-h-screen bg-[#121212] flex items-center justify-center font-sans antialiased text-on-surface">
       {/* Centered Mobile Screen Container */}
-      <div className="w-full max-w-[440px] h-[100dvh] sm:h-[90vh] sm:max-h-[900px] bg-white sm:rounded-[36px] overflow-hidden shadow-2xl flex flex-col relative border border-[#262626]">
+      <div className={`w-full max-w-[440px] h-[100dvh] sm:h-[90vh] sm:max-h-[900px] ${activeTab === 'discover' && currentStep === 'main_app' ? 'bg-black' : 'bg-white'} sm:rounded-[36px] overflow-hidden shadow-2xl flex flex-col relative border border-[#262626]`}>
         
         {/* Top Simulated Status Bar on Mobile View */}
-        <div className="hidden sm:flex w-full bg-white px-6 pt-3 pb-1 items-center justify-between z-40 select-none text-[11px] text-[#737373] font-medium border-b border-[#F4F4F5]">
+        <div className={`hidden sm:flex w-full ${activeTab === 'discover' && currentStep === 'main_app' ? 'bg-black text-white/70 border-white/5' : 'bg-white text-[#737373] border-[#F4F4F5]'} px-6 pt-3 pb-1 items-center justify-between z-40 select-none text-[11px] font-medium border-b`}>
           <span>9:41</span>
           <div className="w-20 h-4 bg-[#171717] rounded-full mx-auto" />
           <div className="flex items-center gap-1.5">
@@ -638,8 +638,12 @@ export const App: React.FC = () => {
               />
             )}
 
-            {/* CLEAN SOLID BOTTOM NAVIGATION BAR (No Gradients, Lucide Icons) */}
-            <nav className="w-full bg-white border-t border-outline px-2 py-2 flex items-center justify-around z-30 shadow-subtle">
+            {/* CLEAN SOLID BOTTOM NAVIGATION BAR (Adapts to Discover Dark vs Light Tabs) */}
+            <nav className={`w-full px-2 py-2 flex items-center justify-around z-30 transition-all duration-200 ${
+              activeTab === 'discover'
+                ? 'bg-black border-t border-white/10 shadow-2xl'
+                : 'bg-white border-t border-outline shadow-subtle'
+            }`}>
               {[
                 { id: 'discover', label: 'Discover', Icon: Compass },
                 { id: 'matches', label: 'Matches', Icon: Heart },
@@ -648,6 +652,7 @@ export const App: React.FC = () => {
                 { id: 'settings', label: 'Settings', Icon: Settings }
               ].map(({ id, label, Icon }) => {
                 const isActive = activeTab === id;
+                const isDiscoverMode = activeTab === 'discover';
                 return (
                   <button
                     key={id}
@@ -657,20 +662,24 @@ export const App: React.FC = () => {
                     }}
                     className={`relative flex flex-col items-center gap-1 py-1 px-3 rounded-2xl transition-all duration-150 ${
                       isActive 
-                        ? 'text-primary' 
-                        : 'text-secondary hover:text-on-surface'
+                        ? (isDiscoverMode ? 'text-rose-400' : 'text-primary')
+                        : (isDiscoverMode ? 'text-white/60 hover:text-white' : 'text-secondary hover:text-on-surface')
                     }`}
                   >
                     <Icon className={`w-5 h-5 transition-transform ${isActive ? 'stroke-[2.5px] scale-105' : 'stroke-[1.75px]'}`} />
                     {id === 'matches' && hasUnreadNotifs && (
-                      <span className="w-2 h-2 bg-primary rounded-full absolute top-1 right-3 ring-2 ring-white" />
+                      <span className={`w-2 h-2 bg-primary rounded-full absolute top-1 right-3 ring-2 ${isDiscoverMode ? 'ring-black' : 'ring-white'}`} />
                     )}
                     {id === 'chat' && unreadChatCount > 0 && (
-                      <span className="min-w-[16px] h-4 px-1 bg-emerald-600 text-white text-[9px] font-bold rounded-full absolute top-0.5 right-2 ring-2 ring-white flex items-center justify-center">
+                      <span className={`min-w-[16px] h-4 px-1 bg-emerald-600 text-white text-[9px] font-bold rounded-full absolute top-0.5 right-2 ring-2 ${isDiscoverMode ? 'ring-black' : 'ring-white'} flex items-center justify-center`}>
                         {unreadChatCount > 9 ? '9+' : unreadChatCount}
                       </span>
                     )}
-                    <span className={`text-[10px] tracking-tight ${isActive ? 'font-bold text-primary' : 'font-medium'}`}>
+                    <span className={`text-[10px] tracking-tight ${
+                      isActive 
+                        ? (isDiscoverMode ? 'font-bold text-rose-400' : 'font-bold text-primary')
+                        : 'font-medium'
+                    }`}>
                       {label}
                     </span>
                   </button>

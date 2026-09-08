@@ -140,4 +140,37 @@ describe('Story-Style Discover Feed Gestures & Country Flag Resolution', () => {
     expect(await screen.findByText(/Hiba, 27/i)).toBeDefined();
     expect(screen.getByText(/Dubai, UAE/i)).toBeDefined();
   });
+
+  it('4. Passing candidate (X button) advances to next candidate smoothly', async () => {
+    render(<DiscoverFeed onOpenChat={vi.fn()} />);
+
+    expect(await screen.findByText(/Zoya, 28/i)).toBeDefined();
+
+    // Click Pass (X) button
+    const passBtn = screen.getByRole('button', { name: /Pass/i });
+    fireEvent.click(passBtn);
+
+    // Should transition to candidate B (Hiba)
+    expect(await screen.findByText(/Hiba, 27/i)).toBeDefined();
+    expect(screen.getByText(/Dubai, UAE/i)).toBeDefined();
+  });
+
+  it('5. Direct Salam button initiates conversation and calls onOpenChat', async () => {
+    const handleOpenChat = vi.fn();
+    render(<DiscoverFeed onOpenChat={handleOpenChat} />);
+
+    expect(await screen.findByText(/Zoya, 28/i)).toBeDefined();
+
+    // Click Direct Salam button to open composition modal
+    const directSalamBtn = screen.getByRole('button', { name: /Direct Salam/i });
+    fireEvent.click(directSalamBtn);
+
+    // Confirm sending salam in modal
+    const sendBtn = await screen.findByRole('button', { name: /Send Blessed Salam/i });
+    fireEvent.click(sendBtn);
+
+    await waitFor(() => {
+      expect(handleOpenChat).toHaveBeenCalled();
+    });
+  });
 });

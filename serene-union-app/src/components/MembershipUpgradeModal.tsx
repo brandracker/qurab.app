@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Crown, TrendingUp, ShieldCheck, PlayCircle, Wallet, CheckCircle2, X, Check, CreditCard, Hand } from 'lucide-react';
+import { Crown, TrendingUp, PlayCircle, Wallet, CheckCircle2, X, Check, CreditCard, Hand } from 'lucide-react';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { API_BASE, dbService } from '../services/dbService';
+
+const GooglePlayBilling = registerPlugin<any>('GooglePlayBillingPlugin');
 
 interface Props {
   userId: string;
@@ -35,7 +38,7 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
   const products = [
     {
       id: 'serene_barakah_monthly',
-      title: 'Serene Barakah VIP Club',
+      title: 'Qurb Barakah VIP Club',
       tag: 'Most Popular',
       price: '$2.99 / mo',
       localPrice: 'PKR 830 / month',
@@ -61,16 +64,6 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
       localPrice: 'PKR 275 (24 Hours)',
       description: 'Feature your profile at the #1 top spot in your city’s Discover stream for 24 hours.',
       Icon: TrendingUp,
-      isSubscription: false
-    },
-    {
-      id: 'serene_id_verification',
-      title: 'Blue Checkmark ID Verification',
-      tag: '100% Trust',
-      price: '$0.99',
-      localPrice: 'PKR 275 (One-Time)',
-      description: 'Get the verified trust badge by submitting CNIC/Passport ID verification.',
-      Icon: ShieldCheck,
       isSubscription: false
     }
   ];
@@ -121,9 +114,42 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
 
   const handleConfirmGooglePlayBilling = async () => {
     setIsProcessing(true);
+    let purchaseToken = `gp_token_${Date.now()}`;
+    let orderId: string | null = null;
+
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const result = await GooglePlayBilling.launchBillingFlow({
+          productId: currentItem.id,
+          productType: currentItem.isSubscription ? 'subs' : 'inapp'
+        });
+
+        if (result?.userCancelled) {
+          setIsProcessing(false);
+          return;
+        }
+
+        if (result?.success) {
+          purchaseToken = result.purchaseToken || purchaseToken;
+          orderId = result.orderId || null;
+        } else {
+          alert('Google Play billing was not completed. Please try again.');
+          setIsProcessing(false);
+          return;
+        }
+      } catch (err: any) {
+        console.warn('Native Google Play billing error, fallback mode:', err);
+        // If testing on desktop / browser or developer environment without Play Store
+        if (Capacitor.isNativePlatform()) {
+          alert(err.message || 'Google Play payment failed. Please check your internet or Google account.');
+          setIsProcessing(false);
+          return;
+        }
+      }
+    }
     
     // 1. Immediately persist VIP locally and broadcast event
-    if (currentItem.id === 'serene_barakah_monthly') {
+    if (currentItem.id === 'serene_barakah_monthly' || currentItem.id === 'qurb_barakah_monthly') {
       localStorage.setItem(`serene_vip_${userId}`, 'true');
       const cur = dbService.getCurrentUser();
       if (cur.id === userId) {
@@ -139,8 +165,9 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
         body: JSON.stringify({
           userId,
           productId: currentItem.id,
-          purchaseToken: `gp_token_${Date.now()}`,
-          amountCents: currentItem.id === 'serene_barakah_monthly' ? 299 : 99,
+          purchaseToken,
+          orderId,
+          amountCents: currentItem.id === 'serene_barakah_monthly' || currentItem.id === 'qurb_barakah_monthly' ? 299 : 99,
           currency: 'USD'
         })
       });

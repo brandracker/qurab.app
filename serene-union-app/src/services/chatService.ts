@@ -86,26 +86,55 @@ export const chatService = {
     return this.getConversations();
   },
 
-  createMatchConversation(profile: UserProfile): Conversation {
+  createMatchConversation(profile: UserProfile, openingMessage?: string): Conversation {
     const user = profileService.getCurrentUser();
     const convId = `conv_${[user.id, profile.id].sort().join('_')}`;
 
     const conversations = this.getConversations();
     const existing = conversations.find(c => c.id === convId || c.otherUser?.id === profile.id);
-    if (existing) return existing;
+    const initialText = openingMessage || "You matched! Start with Bismillah.";
+
+    if (existing) {
+      if (openingMessage) {
+        existing.lastMessageText = openingMessage;
+        existing.lastMessageSenderId = user.id;
+        existing.lastMessageTime = 'Just now';
+        existing.lastMessageTimestamp = Date.now();
+        if (!existing.messages) existing.messages = [];
+        existing.messages.push({
+          id: 'msg_' + Date.now(),
+          senderId: user.id,
+          senderName: user.fullName || 'Member',
+          text: openingMessage,
+          timestamp: 'Just now',
+          isRead: true,
+          waliNotified: true
+        });
+        localStorage.setItem(CONVERSATIONS_KEY, JSON.stringify(conversations));
+      }
+      return existing;
+    }
 
     const newConv: Conversation = {
       id: convId,
       participantOne: user.id,
       participantTwo: profile.id,
       otherUser: profile,
-      lastMessageText: "You matched! Start with Bismillah.",
-      lastMessageSenderId: 'system',
+      lastMessageText: initialText,
+      lastMessageSenderId: openingMessage ? user.id : 'system',
       lastMessageTime: 'Just now',
       lastMessageTimestamp: Date.now(),
       unreadCount: 0,
       status: 'active',
-      messages: []
+      messages: openingMessage ? [{
+        id: 'msg_' + Date.now(),
+        senderId: user.id,
+        senderName: user.fullName || 'Member',
+        text: openingMessage,
+        timestamp: 'Just now',
+        isRead: true,
+        waliNotified: true
+      }] : []
     };
 
     conversations.unshift(newConv);

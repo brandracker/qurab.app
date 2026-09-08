@@ -250,20 +250,20 @@ walletRouter.post('/purchase-google-play', async (c) => {
       VALUES (?, ?, 'google_play', ?, ?, ?, ?, 'completed')
     `).bind(purchaseId, userId, productId, purchaseToken || `sim_token_${Date.now()}`, amountCents || 199, currency || 'USD').run();
 
-    if (productId === 'serene_direct_salam_20' || productId === 'serene_direct_salam_5') {
+    if (productId === 'qurb_direct_salam_20' || productId === 'serene_direct_salam_20' || productId === 'serene_direct_salam_5' || productId === 'qurb_direct_salam_5') {
       await c.env.DB.prepare(`
         INSERT INTO user_wallets (user_id, direct_salams_balance)
         VALUES (?, 20)
         ON CONFLICT(user_id) DO UPDATE SET direct_salams_balance = direct_salams_balance + 20
       `).bind(userId).run();
-    } else if (productId === 'serene_spotlight_boost_24h') {
+    } else if (productId === 'qurb_spotlight_boost_24h' || productId === 'serene_spotlight_boost_24h') {
       const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
       await c.env.DB.prepare(`
         INSERT INTO user_wallets (user_id, is_spotlight_active, spotlight_expires_at)
         VALUES (?, 1, ?)
         ON CONFLICT(user_id) DO UPDATE SET is_spotlight_active = 1, spotlight_expires_at = ?
       `).bind(userId, expiresAt, expiresAt).run();
-    } else if (productId === 'serene_barakah_monthly') {
+    } else if (productId === 'qurb_barakah_monthly' || productId === 'serene_barakah_monthly') {
       await c.env.DB.prepare(`
         UPDATE users SET is_vip = 1 WHERE id = ?
       `).bind(userId).run();
@@ -272,10 +272,6 @@ walletRouter.post('/purchase-google-play', async (c) => {
         INSERT INTO user_wallets (user_id, subscription_tier, direct_salams_balance, daily_messages_quota)
         VALUES (?, 'barakah_vip', 20, 9999)
         ON CONFLICT(user_id) DO UPDATE SET subscription_tier = 'barakah_vip', daily_messages_quota = 9999, direct_salams_balance = direct_salams_balance + 20
-      `).bind(userId).run();
-    } else if (productId === 'serene_id_verification') {
-      await c.env.DB.prepare(`
-        UPDATE users SET is_id_verified = 1 WHERE id = ?
       `).bind(userId).run();
     }
 
@@ -383,21 +379,16 @@ walletRouter.post('/stripe/create-checkout-session', async (c) => {
     }
 
     let unitAmount = 299; // $2.99
-    let productName = 'Serene Barakah VIP Club (Monthly)';
+    let productName = 'Qurb Barakah VIP Club (Monthly)';
     let productDesc = 'Unlimited likes, See Who Liked You, 20 Direct Salams, 100% Ad-Free & Priority discovery ranking.';
     let isSubscription = true;
 
-    if (productId === 'serene_spotlight_boost_24h') {
+    if (productId === 'qurb_spotlight_boost_24h' || productId === 'serene_spotlight_boost_24h') {
       unitAmount = 99; // $0.99
       productName = '24-Hour City Spotlight Boost';
       productDesc = 'Feature profile at #1 top spot in city Discover stream for 24 hours.';
       isSubscription = false;
-    } else if (productId === 'serene_id_verification') {
-      unitAmount = 99; // $0.99
-      productName = 'Blue Checkmark ID Verification';
-      productDesc = 'Verified trust badge for authentic profile verification.';
-      isSubscription = false;
-    } else if (productId === 'serene_direct_salam_20' || productId === 'serene_direct_salam_5') {
+    } else if (productId === 'qurb_direct_salam_20' || productId === 'serene_direct_salam_20' || productId === 'serene_direct_salam_5' || productId === 'qurb_direct_salam_5') {
       unitAmount = 199; // $1.99
       productName = '20 Direct Salam Passes';
       productDesc = 'Send 20 direct intro messages without waiting for mutual match.';
@@ -481,7 +472,7 @@ walletRouter.post('/stripe/verify-session', async (c) => {
         ON CONFLICT(id) DO NOTHING
       `).bind(purchaseId, userId, productId, session.id, session.amount_total || 299, session.currency || 'usd').run();
 
-      if (productId === 'serene_barakah_monthly') {
+      if (productId === 'qurb_barakah_monthly' || productId === 'serene_barakah_monthly') {
         await c.env.DB.prepare(`
           UPDATE users SET is_vip = 1 WHERE id = ?
         `).bind(userId).run();
@@ -491,18 +482,14 @@ walletRouter.post('/stripe/verify-session', async (c) => {
           VALUES (?, 'barakah_vip', 20, 9999)
           ON CONFLICT(user_id) DO UPDATE SET subscription_tier = 'barakah_vip', daily_messages_quota = 9999, direct_salams_balance = direct_salams_balance + 20
         `).bind(userId).run();
-      } else if (productId === 'serene_spotlight_boost_24h') {
+      } else if (productId === 'qurb_spotlight_boost_24h' || productId === 'serene_spotlight_boost_24h') {
         const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
         await c.env.DB.prepare(`
           INSERT INTO user_wallets (user_id, is_spotlight_active, spotlight_expires_at)
           VALUES (?, 1, ?)
           ON CONFLICT(user_id) DO UPDATE SET is_spotlight_active = 1, spotlight_expires_at = ?
         `).bind(userId, expiresAt, expiresAt).run();
-      } else if (productId === 'serene_id_verification') {
-        await c.env.DB.prepare(`
-          UPDATE users SET is_id_verified = 1 WHERE id = ?
-        `).bind(userId).run();
-      } else if (productId === 'serene_direct_salam_20' || productId === 'serene_direct_salam_5') {
+      } else if (productId === 'qurb_direct_salam_20' || productId === 'serene_direct_salam_20' || productId === 'serene_direct_salam_5' || productId === 'qurb_direct_salam_5') {
         await c.env.DB.prepare(`
           INSERT INTO user_wallets (user_id, direct_salams_balance)
           VALUES (?, 20)

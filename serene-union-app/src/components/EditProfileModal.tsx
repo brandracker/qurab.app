@@ -7,7 +7,7 @@ import {
   Heart, 
   Check, 
   Loader2, 
-  Sparkles,
+  UserCheck,
   MapPin,
   GraduationCap,
   Navigation,
@@ -507,7 +507,7 @@ export const EditProfileModal: React.FC<Props> = ({
         <header className="sticky top-0 bg-white px-5 py-3.5 border-b border-outline flex items-center justify-between z-10">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-2xl bg-pastel-rose text-primary flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-primary" />
+              <UserCheck className="w-4 h-4 text-primary" />
             </div>
             <div>
               <h2 id="edit-profile-modal-title" className="font-serif text-sm font-bold text-on-surface">

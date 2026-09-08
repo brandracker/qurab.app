@@ -52,4 +52,62 @@
   -webkit-backface-visibility: hidden;
 }
 
+/* Matchmaking Discovery Radar Animations */
+@keyframes radar-pulse-ring {
+  0% {
+    transform: scale(0.65);
+    opacity: 0.85;
+  }
+  50% {
+    opacity: 0.35;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
 
+@keyframes radar-sweep {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes float-drift-1 {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  50% {
+    transform: translate(-6px, -12px) scale(1.05);
+  }
+}
+
+@keyframes float-drift-2 {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  50% {
+    transform: translate(10px, -6px) scale(0.96);
+  }
+}
+
+@keyframes float-drift-3 {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  50% {
+    transform: translate(-8px, 10px) scale(1.04);
+  }
+}
+
+@keyframes float-drift-4 {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  50% {
+    transform: translate(8px, 8px) scale(1.02);
+  }
+}

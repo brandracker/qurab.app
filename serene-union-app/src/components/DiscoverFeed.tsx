@@ -16,7 +16,6 @@ import {
   FileText,
   Hand, 
   PlayCircle, 
-  Loader2, 
   Heart, 
   HeartHandshake, 
   Bookmark, 
@@ -28,18 +27,21 @@ import {
   Building2, 
   FileCheck2, 
   Plane, 
-  Sparkles
+  Star,
+  Lock,
+  MapPin
 } from 'lucide-react';
-import type { UserProfile, FilterState } from '../types';
+import type { UserProfile } from '../types';
 import { FilterModal } from './FilterModal';
 import { MutualMatchModal } from './MutualMatchModal';
 import { ProfileDetailModal } from './ProfileDetailModal';
 import { RewardedAdModal } from './RewardedAdModal';
 import { MembershipUpgradeModal } from './MembershipUpgradeModal';
 import { NotificationsScreen } from '../screens/NotificationsScreen';
-import { dbService, API_BASE } from '../services/dbService';
-import { notificationService } from '../services/notificationService';
 import { CountryFlag } from '../utils/countryFlags';
+import { useDiscoverFeed } from '../hooks/useDiscoverFeed';
+import { DirectSalamModal } from './DirectSalamModal';
+import { dbService } from '../services/dbService';
 
 interface Props {
   onOpenChat: (convId: string) => void;
@@ -47,7 +49,6 @@ interface Props {
   onOpenMatches?: () => void;
   onOpenProfile?: () => void;
   onOpenNotifications?: () => void;
-  // Backward compatibility callbacks
   onSelectProfile?: (profile: UserProfile) => void;
   onLikeProfile?: (profile: UserProfile) => void;
   onDirectSalam?: (profile: UserProfile) => void;
@@ -63,58 +64,60 @@ export const DiscoverFeed: React.FC<Props> = ({
   onLikeProfile,
   onDirectSalam 
 }) => {
-  const currentUser = dbService.getCurrentUser();
-  const [isVip, setIsVip] = useState<boolean>(() => {
-    return Boolean(localStorage.getItem(`serene_vip_${currentUser.id}`) || currentUser.isVip);
-  });
+  const {
+    currentUser,
+    isVip,
+    setIsVip,
+    likesRemaining,
+    directSalams,
+    setDirectSalams,
+    filters,
+    searchQuery,
+    setSearchQuery,
+    isLoading,
+    profiles,
+    currentProfile,
+    toastMessage,
+    setToastMessage,
+    matchedProfile,
+    setMatchedProfile,
+    showFilterModal,
+    setShowFilterModal,
+    showLikesLimitModal,
+    setShowLikesLimitModal,
+    showSalamRefillModal,
+    setShowSalamRefillModal,
+    salamModalProfile,
+    handleConfirmDirectSalam,
+    handleCloseDirectSalam,
+    showRewardedAdModal,
+    setShowRewardedAdModal,
+    adRewardType,
+    setAdRewardType,
+    showVipModal,
+    setShowVipModal,
+    showNotificationsModal,
+    setShowNotificationsModal,
+    hasUnreadNotifications,
+    setHasUnreadNotifications,
+    handleApplyFilters,
+    handleLike,
+    handlePass,
+    handleDirectSalam,
+    handleClaimAdLikes,
+    handleResetFilters
+  } = useDiscoverFeed({ onOpenChat, onLikeProfile, onDirectSalam });
 
-  const getTodayLikeKey = () => `serene_likes_left_${currentUser.id}_${new Date().toISOString().slice(0, 10)}`;
-
-  const [likesRemaining, setLikesRemaining] = useState<number>(() => {
-    const saved = localStorage.getItem(getTodayLikeKey());
-    return saved !== null ? parseInt(saved, 10) : 50;
-  });
-
-  const [directSalams, setDirectSalams] = useState<number>(() => {
-    return dbService.getDirectSalams(currentUser.id);
-  });
-
-  const [showLikesLimitModal, setShowLikesLimitModal] = useState<boolean>(false);
-  const [showSalamRefillModal, setShowSalamRefillModal] = useState<boolean>(false);
-  const [showRewardedAdModal, setShowRewardedAdModal] = useState<boolean>(false);
-  const [adRewardType, setAdRewardType] = useState<'likes' | 'salam'>('likes');
-  const [showVipModal, setShowVipModal] = useState<boolean>(false);
-  const [showNotificationsModal, setShowNotificationsModal] = useState<boolean>(false);
-  const [hasUnreadNotifications, setHasUnreadNotifications] = useState<boolean>(() => notificationService.hasUnread());
-
-  const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [currentPhotoIdx, setCurrentPhotoIdx] = useState<number>(0);
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<CardTab>('deen');
-  
-  const [filters, setFilters] = useState<FilterState>({
-    minAge: 18,
-    maxAge: 65,
-    maxDistance: 0,
-    sects: [],
-    practiceLevels: [],
-    marriageTimelines: [],
-    languages: []
-  });
-
-  const [profiles, setProfiles] = useState<UserProfile[]>(() => dbService.getDiscoverFeed(filters));
   const [selectedProfile, setSelectedProfile] = useState<UserProfile | null>(null);
-  const [showFilterModal, setShowFilterModal] = useState<boolean>(false);
-  const [matchedProfile, setMatchedProfile] = useState<UserProfile | null>(null);
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [isLoading] = useState<boolean>(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isPlayingVoice, setIsPlayingVoice] = useState<boolean>(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Touch gesture tracking for Swipe-Up Biodata Drawer
-  const touchStartY = useRef<number | null>(null);
+  // Touch gesture tracking (Horizontal + Vertical)
   const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
 
   const stopVoice = () => {
     if (audioRef.current) {
@@ -152,161 +155,11 @@ export const DiscoverFeed: React.FC<Props> = ({
     };
   }, []);
 
-  // Fetch live profiles from Cloudflare D1
+  // Reset photo index and stop voice on profile change
   useEffect(() => {
-    let isMounted = true;
-    dbService.fetchLiveProfiles(filters).then(live => {
-      if (!isMounted) return;
-      if (live && live.length > 0) {
-        setProfiles(dbService.getDiscoverFeed(filters, live));
-      }
-    }).catch(() => {
-      if (!isMounted) return;
-      setProfiles(dbService.getDiscoverFeed(filters));
-    });
-
-    dbService.fetchLikesRemaining(currentUser.id).then(({ directSalams: s, isVip: v }) => {
-      if (!isMounted) return;
-      if (typeof s === 'number') setDirectSalams(s);
-      if (typeof v === 'boolean') {
-        setIsVip(v);
-        localStorage.setItem(`serene_vip_${currentUser.id}`, String(v));
-      }
-    });
-
-    return () => { isMounted = false; };
-  }, [currentUser.id]);
-
-  useEffect(() => {
-    const handleLikesUpdate = (e: any) => {
-      if (e.detail?.likesRemaining !== undefined) {
-        setLikesRemaining(e.detail.likesRemaining);
-      }
-    };
-    const handleSalamsUpdate = (e: any) => {
-      if (e.detail?.directSalams !== undefined) {
-        setDirectSalams(e.detail.directSalams);
-      }
-    };
-    window.addEventListener('serene_likes_updated', handleLikesUpdate);
-    window.addEventListener('serene_salams_updated', handleSalamsUpdate);
-    return () => {
-      window.removeEventListener('serene_likes_updated', handleLikesUpdate);
-      window.removeEventListener('serene_salams_updated', handleSalamsUpdate);
-    };
-  }, [currentUser.id]);
-
-  const handleApplyFilters = (newFilters: FilterState) => {
-    setFilters(newFilters);
-    const updated = dbService.getDiscoverFeed(newFilters);
-    setProfiles(updated);
-    setCurrentIndex(0);
     setCurrentPhotoIdx(0);
     setIsDrawerOpen(false);
     stopVoice();
-    dbService.fetchLiveProfiles(newFilters).then(live => {
-      if (live && live.length > 0) {
-        setProfiles(dbService.getDiscoverFeed(newFilters));
-      }
-    });
-  };
-
-  const handleLike = async (profile: UserProfile, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    stopVoice();
-
-    // Check daily like limit for non-VIP users
-    if (!isVip && likesRemaining <= 0) {
-      setShowLikesLimitModal(true);
-      return;
-    }
-
-    if (!isVip) {
-      const nextLikes = Math.max(0, likesRemaining - 1);
-      setLikesRemaining(nextLikes);
-      dbService.consumeDailyLike(currentUser.id);
-      if (nextLikes === 0) {
-        setTimeout(() => setShowLikesLimitModal(true), 600);
-      }
-    }
-
-    if (onLikeProfile) {
-      onLikeProfile(profile);
-    }
-
-    setProfiles(prev => {
-      const nextRemaining = prev.filter(p => p.id !== profile.id);
-      setCurrentIndex(curr => Math.max(0, Math.min(curr, nextRemaining.length - 1)));
-      return nextRemaining;
-    });
-    setCurrentPhotoIdx(0);
-    setIsDrawerOpen(false);
-
-    const result = await dbService.sendMatchAction(profile.id, 'liked');
-    if (result.isMutual) {
-      setMatchedProfile(profile);
-      notificationService.addNotification({
-        type: 'match',
-        title: `Connected with ${profile.fullName.split(' ')[0]} 🎉`,
-        message: `You and ${profile.fullName} both expressed mutual interest. Chat is now unlocked!`,
-        actionLabel: 'Start Chat',
-        targetId: result.conversationId,
-        avatarUrl: profile.photos?.[0]
-      });
-    } else {
-      setToastMessage(`Interest expressed to ${profile.fullName.split(' ')[0]}. You will be notified when they connect!`);
-      setTimeout(() => setToastMessage(null), 3500);
-      notificationService.addNotification({
-        type: 'like',
-        title: 'Interest Expressed',
-        message: `You expressed matrimonial interest in ${profile.fullName}'s biodata.`,
-        actionLabel: 'View in Matches',
-        avatarUrl: profile.photos?.[0]
-      });
-    }
-  };
-
-  const handleClaimAdLikes = async () => {
-    const nextLikes = likesRemaining + 10;
-    setLikesRemaining(nextLikes);
-    localStorage.setItem(getTodayLikeKey(), nextLikes.toString());
-    setToastMessage('+10 Extra Discover Likes added! 🎉');
-    setTimeout(() => setToastMessage(null), 3500);
-
-    try {
-      await fetch(`${API_BASE}/wallet/reward-ad`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: currentUser.id, rewardType: 'likes' })
-      });
-    } catch {}
-  };
-
-  const handlePass = (profileId: string, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    stopVoice();
-    dbService.sendMatchAction(profileId, 'passed');
-    setProfiles(prev => {
-      const nextRemaining = prev.filter(p => p.id !== profileId);
-      setCurrentIndex(curr => Math.max(0, Math.min(curr, nextRemaining.length - 1)));
-      return nextRemaining;
-    });
-    setCurrentPhotoIdx(0);
-    setIsDrawerOpen(false);
-  };
-
-  // Search filtering
-  const filteredFeed = profiles.filter(p => {
-    return (
-      (p.fullName?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-      (p.location?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-      (p.profession?.toLowerCase() || '').includes(searchQuery.toLowerCase())
-    );
-  });
-
-  const currentProfile = filteredFeed[currentIndex] || null;
-
-  useEffect(() => {
     if (currentProfile && onSelectProfile) {
       onSelectProfile(currentProfile);
     }
@@ -334,27 +187,35 @@ export const DiscoverFeed: React.FC<Props> = ({
     }
   };
 
-  // Touch handlers for Vertical Swipe (Drawer Open/Close)
+  // True Touch Gesture Engine (Swipe Left/Right for photos, Swipe Up for Drawer)
   const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartY.current = e.touches[0].clientY;
     touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartY.current === null || touchStartX.current === null) return;
-    const deltaY = e.changedTouches[0].clientY - touchStartY.current;
+    if (touchStartX.current === null || touchStartY.current === null) return;
     const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+    const deltaY = e.changedTouches[0].clientY - touchStartY.current;
 
-    // Detect Vertical Swipe Up (to open Drawer)
-    if (Math.abs(deltaY) > Math.abs(deltaX)) {
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+      // Horizontal swipe
+      if (deltaX < -40) {
+        handleNextPhoto();
+      } else if (deltaX > 40) {
+        handlePrevPhoto();
+      }
+    } else {
+      // Vertical swipe
       if (deltaY < -40 && !isDrawerOpen) {
         setIsDrawerOpen(true);
       } else if (deltaY > 50 && isDrawerOpen) {
         setIsDrawerOpen(false);
       }
     }
-    touchStartY.current = null;
+
     touchStartX.current = null;
+    touchStartY.current = null;
   };
 
   return (
@@ -363,30 +224,22 @@ export const DiscoverFeed: React.FC<Props> = ({
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Top Header: Frosted Glass Search Bar + Live Likes + Notification Bell + Filter */}
-      <header className="w-full sticky top-0 z-40 bg-white/95 backdrop-blur-md px-3.5 py-2 border-b border-outline flex items-center gap-2 shadow-subtle">
-        {/* Left: Clean Search Input */}
+      {/* Floating Frosted Glass Header: Full-bleed edge-to-edge transparent overlay */}
+      <header className="w-full absolute top-0 inset-x-0 z-40 bg-gradient-to-b from-black/85 via-black/40 to-transparent px-3.5 pt-3 pb-6 flex items-center gap-2">
+        {/* Left: Clean Frosted Search Input */}
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary w-3.5 h-3.5" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/70 w-3.5 h-3.5" />
           <input
             value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setCurrentIndex(0);
-              setCurrentPhotoIdx(0);
-            }}
-            className="w-full bg-surface-variant border border-outline rounded-full py-1.5 pl-8 pr-7 text-xs text-on-surface focus:bg-white focus:border-primary outline-none transition-all placeholder:text-secondary/70 shadow-2xs"
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-white/20 backdrop-blur-md border border-white/25 rounded-full py-1.5 pl-8 pr-7 text-xs text-white placeholder:text-white/70 focus:bg-black/60 focus:border-white/50 outline-none transition-all shadow-xs"
             placeholder="Search candidates by city, profession..."
             type="text"
           />
           {searchQuery && (
             <button
-              onClick={() => {
-                setSearchQuery('');
-                setCurrentIndex(0);
-                setCurrentPhotoIdx(0);
-              }}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-secondary hover:text-on-surface"
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/70 hover:text-white"
             >
               <X className="w-3 h-3" />
             </button>
@@ -396,10 +249,10 @@ export const DiscoverFeed: React.FC<Props> = ({
         {/* Live Daily Likes Counter / VIP Unlimited Badge */}
         {isVip ? (
           <span 
-            className="px-2.5 py-1.5 rounded-full bg-pastel-amber text-pastel-amber-text border border-pastel-amber-border text-[10px] font-bold flex items-center gap-1 shrink-0 shadow-2xs cursor-default"
+            className="px-2.5 py-1.5 rounded-full bg-amber-500/90 text-white border border-amber-300/40 text-[10px] font-bold flex items-center gap-1 shrink-0 backdrop-blur-md shadow-xs cursor-default"
             title="Barakah VIP: Unlimited Likes Active"
           >
-            <Crown className="w-3.5 h-3.5 text-pastel-amber-text" />
+            <Crown className="w-3.5 h-3.5 text-amber-200 fill-amber-200" />
             <span className="hidden xs:inline">VIP</span>
             <span>Unlimited</span>
           </span>
@@ -408,14 +261,14 @@ export const DiscoverFeed: React.FC<Props> = ({
             onClick={() => {
               if (likesRemaining <= 10) setShowLikesLimitModal(true);
             }}
-            className={`px-2.5 py-1.5 rounded-full text-[10px] font-bold flex items-center gap-1 shrink-0 transition-all border shadow-2xs active:scale-95 ${
+            className={`px-2.5 py-1.5 rounded-full text-[10px] font-bold flex items-center gap-1 shrink-0 transition-all border backdrop-blur-md shadow-xs active:scale-95 ${
               likesRemaining <= 5
-                ? 'bg-rose-50 text-rose-600 border-rose-200 animate-pulse'
-                : 'bg-pastel-rose text-primary border-pastel-rose-border hover:bg-pastel-rose/80'
+                ? 'bg-rose-500/80 text-white border-rose-400 animate-pulse'
+                : 'bg-white/20 text-white border-white/25 hover:bg-white/30'
             }`}
             title={`${likesRemaining} daily free likes remaining. Tap to add more.`}
           >
-            <Heart className="w-3.5 h-3.5 fill-current text-primary" />
+            <Heart className="w-3.5 h-3.5 fill-current text-primary-light" />
             <span>{likesRemaining} Left</span>
           </button>
         )}
@@ -431,7 +284,7 @@ export const DiscoverFeed: React.FC<Props> = ({
             setHasUnreadNotifications(false);
           }}
           aria-label="Notifications"
-          className="w-8 h-8 flex items-center justify-center rounded-full bg-white border border-outline text-secondary hover:text-on-surface hover:bg-surface-variant transition-all shadow-subtle relative shrink-0"
+          className="w-8 h-8 flex items-center justify-center rounded-full bg-white/20 backdrop-blur-md border border-white/25 text-white hover:bg-white/30 transition-all shadow-xs relative shrink-0"
         >
           <Bell className="w-4 h-4" />
           {hasUnreadNotifications && (
@@ -443,9 +296,9 @@ export const DiscoverFeed: React.FC<Props> = ({
         <button
           onClick={() => setShowFilterModal(true)}
           aria-label="Filters"
-          className="w-8 h-8 flex items-center justify-center rounded-full bg-white border border-outline text-primary hover:bg-surface-variant transition-all shadow-subtle relative shrink-0"
+          className="w-8 h-8 flex items-center justify-center rounded-full bg-white/20 backdrop-blur-md border border-white/25 text-white hover:bg-white/30 transition-all shadow-xs relative shrink-0"
         >
-          <SlidersHorizontal className="w-4 h-4 text-primary" />
+          <SlidersHorizontal className="w-4 h-4 text-white" />
           {(filters.sects.length > 0 || filters.practiceLevels.length > 0) && (
             <span className="w-2 h-2 bg-primary rounded-full absolute top-1 right-1 ring-2 ring-white" />
           )}
@@ -454,7 +307,7 @@ export const DiscoverFeed: React.FC<Props> = ({
 
       {/* Action Toast Feedback */}
       {toastMessage && (
-        <div className="bg-primary text-white px-4 py-2 text-xs font-semibold flex items-center justify-between shadow-brand animate-fade-in z-50">
+        <div className="bg-primary text-white px-4 py-2 text-xs font-semibold flex items-center justify-between shadow-brand animate-fade-in z-50 fixed top-14 inset-x-4 max-w-md mx-auto rounded-xl">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
             <span>{toastMessage}</span>
@@ -465,36 +318,189 @@ export const DiscoverFeed: React.FC<Props> = ({
         </div>
       )}
 
-      {/* Main Content Area: Habitual Story Viewport */}
+      {/* Main Full-Bleed Content Area */}
       <main className="flex-1 relative w-full h-full overflow-hidden flex flex-col justify-between">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-24 text-center my-auto">
-            <Loader2 className="w-8 h-8 text-primary animate-spin" />
-            <p className="text-xs text-white/70 mt-2">Loading prospective matches...</p>
+          <div 
+            className="relative w-full h-full flex flex-col items-center justify-between overflow-hidden bg-stone-950 select-none py-12 px-4 animate-fade-in"
+            aria-label="Searching for matches"
+            role="status"
+          >
+            {/* Ambient Background Aura */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-rose-500/10 blur-[100px] pointer-events-none" />
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 rounded-full bg-emerald-500/10 blur-[80px] pointer-events-none" />
+            </div>
+
+            {/* Top Radar Status Chip */}
+            <div className="relative z-20 pt-12 flex items-center justify-center">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-[11px] text-white/90 shadow-md">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                </span>
+                <span className="font-semibold tracking-wide">Live Matchmaking Radar</span>
+              </div>
+            </div>
+
+            {/* Central Radar Arena */}
+            <div className="relative z-10 w-full max-w-xs aspect-square flex items-center justify-center my-auto">
+              {/* Radar Rings Expanding Outward */}
+              <div 
+                className="absolute inset-4 rounded-full border border-rose-500/30 pointer-events-none"
+                style={{ animation: 'radar-pulse-ring 3.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite' }} 
+              />
+              <div 
+                className="absolute inset-4 rounded-full border border-emerald-400/25 pointer-events-none"
+                style={{ animation: 'radar-pulse-ring 3.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite', animationDelay: '1.2s' }} 
+              />
+              <div 
+                className="absolute inset-4 rounded-full border border-rose-400/20 pointer-events-none"
+                style={{ animation: 'radar-pulse-ring 3.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite', animationDelay: '2.4s' }} 
+              />
+
+              {/* Static Concentric Grid Circles */}
+              <div className="absolute w-72 h-72 rounded-full border border-white/5 pointer-events-none" />
+              <div className="absolute w-52 h-52 rounded-full border border-white/10 pointer-events-none" />
+              <div className="absolute w-36 h-36 rounded-full border border-rose-500/15 pointer-events-none" />
+
+              {/* Conic Radar Scanner Sweep */}
+              <div 
+                className="absolute w-72 h-72 rounded-full pointer-events-none overflow-hidden opacity-35"
+                style={{ animation: 'radar-sweep 4s linear infinite' }}
+              >
+                <div className="w-full h-full rounded-full bg-[conic-gradient(from_0deg,transparent_0deg,transparent_270deg,rgba(244,63,94,0.4)_360deg)]" />
+              </div>
+
+              {/* Orbiting Candidate Blips ("aas paas move ho raha ho") */}
+              {/* Blip 1: Top Right - Floating candidate thumbnail */}
+              <div 
+                className="absolute -top-1 right-5 z-20 pointer-events-none"
+                style={{ animation: 'float-drift-1 4s ease-in-out infinite' }}
+              >
+                <div className="relative p-1 rounded-full bg-stone-900/90 border border-white/20 shadow-xl backdrop-blur-md">
+                  <div className="w-11 h-11 rounded-full overflow-hidden bg-neutral-800 flex items-center justify-center">
+                    {profiles && profiles[0]?.photos?.[0] ? (
+                      <img 
+                        src={profiles[0].photos[0]} 
+                        alt="Prospective Candidate" 
+                        className={`w-full h-full object-cover ${profiles[0].blurPhotosByDefault ? 'blur-xs scale-110' : ''}`}
+                      />
+                    ) : (
+                      <User className="w-5 h-5 text-white/40" />
+                    )}
+                  </div>
+                  <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-stone-950 flex items-center justify-center text-[7px] text-white font-bold">
+                    ✓
+                  </span>
+                </div>
+              </div>
+
+              {/* Blip 2: Top Left - Floating Heart / Compatibility Match */}
+              <div 
+                className="absolute top-8 -left-2 z-20 pointer-events-none"
+                style={{ animation: 'float-drift-2 4.5s ease-in-out infinite' }}
+              >
+                <div className="p-2 rounded-full bg-rose-500/20 border border-rose-400/30 backdrop-blur-md shadow-lg flex items-center justify-center text-rose-300">
+                  <Heart className="w-4 h-4 fill-current" />
+                </div>
+              </div>
+
+              {/* Blip 3: Bottom Left - Floating candidate thumbnail */}
+              <div 
+                className="absolute -bottom-1 left-4 z-20 pointer-events-none"
+                style={{ animation: 'float-drift-3 4.2s ease-in-out infinite' }}
+              >
+                <div className="relative p-1 rounded-full bg-stone-900/90 border border-white/20 shadow-xl backdrop-blur-md">
+                  <div className="w-10 h-10 rounded-full overflow-hidden bg-neutral-800 flex items-center justify-center">
+                    {profiles && profiles[1]?.photos?.[0] ? (
+                      <img 
+                        src={profiles[1].photos[0]} 
+                        alt="Prospective Candidate" 
+                        className={`w-full h-full object-cover ${profiles[1].blurPhotosByDefault ? 'blur-xs scale-110' : ''}`}
+                      />
+                    ) : (
+                      <User className="w-5 h-5 text-white/40" />
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Blip 4: Bottom Right - Floating Star Chip */}
+              <div 
+                className="absolute bottom-6 -right-1 z-20 pointer-events-none"
+                style={{ animation: 'float-drift-4 3.8s ease-in-out infinite' }}
+              >
+                <div className="p-2 rounded-full bg-amber-500/20 border border-amber-400/30 backdrop-blur-md shadow-lg flex items-center justify-center text-amber-300">
+                  <Star className="w-4 h-4 fill-amber-300/40" />
+                </div>
+              </div>
+
+              {/* Center User Profile Hero Avatar (Tinder / Muzz Core) */}
+              <div className="relative z-30 flex items-center justify-center">
+                {/* Glowing Avatar Border Ring */}
+                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full p-[3px] bg-gradient-to-tr from-primary via-rose-400 to-amber-300 shadow-2xl shadow-primary/30 ring-4 ring-primary/20">
+                  <div className="w-full h-full rounded-full overflow-hidden bg-stone-900 border-2 border-stone-950 flex items-center justify-center relative">
+                    {currentUser.photos && currentUser.photos.length > 0 ? (
+                      <img 
+                        src={currentUser.photos[0]} 
+                        alt={currentUser.fullName || 'My Profile'} 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-primary/30 to-stone-900 text-white font-serif font-bold text-2xl">
+                        {(currentUser.fullName || 'U').charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Active Radar Beacon Badge */}
+                <div className="absolute -bottom-1.5 px-2.5 py-0.5 rounded-full bg-stone-900/90 border border-emerald-400/40 backdrop-blur-md flex items-center gap-1 shadow-lg">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-[9px] font-bold text-emerald-300 tracking-wider uppercase">Radar</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Status Section */}
+            <div className="relative z-20 flex flex-col items-center text-center max-w-xs mx-auto pb-6">
+              <h3 className="text-base font-bold text-white font-serif flex items-center gap-1.5">
+                <span>{currentUser.fullName ? currentUser.fullName.split(' ')[0] : 'Finding Your Match'}</span>
+                {currentUser.age && <span className="text-white/60 font-sans font-normal text-sm">, {currentUser.age}</span>}
+              </h3>
+
+              <div className="flex items-center gap-1 text-xs text-white/60 mt-1 font-medium">
+                <MapPin className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                <span>Searching near {currentUser.city || currentUser.location || 'Your Region'}</span>
+              </div>
+
+              <p className="text-[11px] text-white/50 mt-2 leading-relaxed">
+                Scanning verified matrimonial biodatas matching your religious practice & preferences...
+              </p>
+
+              {/* Quick Filter button */}
+              <button
+                type="button"
+                onClick={() => setShowFilterModal(true)}
+                className="mt-4 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 border border-white/15 text-xs text-white/80 transition-all cursor-pointer shadow-xs"
+              >
+                <SlidersHorizontal className="w-3 h-3 text-white/70" />
+                <span>Adjust Search Filters</span>
+              </button>
+            </div>
           </div>
         ) : !currentProfile ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center px-6 bg-white rounded-3xl border border-outline m-4 shadow-card my-auto">
-            <div className="w-14 h-14 rounded-full bg-pastel-rose text-primary flex items-center justify-center mb-3">
-              <Heart className="w-7 h-7 text-primary" />
+          <div className="flex flex-col items-center justify-center py-20 text-center px-6 bg-neutral-900/90 backdrop-blur-xl rounded-3xl border border-white/10 m-4 shadow-2xl my-auto animate-fade-in">
+            <div className="w-14 h-14 rounded-full bg-primary/20 text-primary border border-primary/30 flex items-center justify-center mb-3">
+              <Heart className="w-7 h-7 text-primary fill-current" />
             </div>
-            <h3 className="font-serif text-lg font-bold text-on-surface">No Profiles Found</h3>
-            <p className="text-xs text-secondary max-w-xs mt-1.5 leading-relaxed">
+            <h3 className="font-serif text-lg font-bold text-white">No Profiles Found</h3>
+            <p className="text-xs text-neutral-300 max-w-xs mt-1.5 leading-relaxed">
               You have viewed all candidates or your filters are very specific. Reset your filters to explore more profiles.
             </p>
             <button
-              onClick={() => {
-                setSearchQuery('');
-                dbService.resetPassedProfiles(currentUser.id);
-                handleApplyFilters({
-                  minAge: 18,
-                  maxAge: 65,
-                  maxDistance: 0,
-                  sects: [],
-                  practiceLevels: [],
-                  marriageTimelines: [],
-                  languages: []
-                });
-              }}
+              onClick={handleResetFilters}
               className="mt-5 px-6 py-2.5 rounded-full bg-primary text-white text-xs font-bold shadow-brand hover:bg-primary-dark active:scale-98 transition-all"
             >
               Reset Filters
@@ -503,7 +509,7 @@ export const DiscoverFeed: React.FC<Props> = ({
         ) : (
           <div className="relative w-full h-full flex flex-col justify-between overflow-hidden bg-neutral-900 select-none">
             
-            {/* Story Background Visual */}
+            {/* Full-bleed Story Background Photo */}
             <div className="absolute inset-0 z-0 bg-neutral-900 overflow-hidden">
               {photos.length > 0 ? (
                 <img
@@ -511,7 +517,7 @@ export const DiscoverFeed: React.FC<Props> = ({
                   src={photos[currentPhotoIdx] || photos[0]}
                   className={`w-full h-full object-cover transition-all duration-300 select-none pointer-events-none ${
                     currentProfile.blurPhotosByDefault && !currentProfile.photoRevealApproved
-                      ? 'filter blur-2xl scale-110 opacity-75 brightness-90'
+                      ? 'filter blur-3xl scale-110 opacity-70 brightness-95'
                       : 'scale-100'
                   }`}
                 />
@@ -522,23 +528,20 @@ export const DiscoverFeed: React.FC<Props> = ({
                 </div>
               )}
 
-              {/* Modesty Photo Blur Indicator Overlay */}
+              {/* Clean Minimal Modesty Indicator (No ugly box, no duplicate voice button) */}
               {currentProfile.blurPhotosByDefault && !currentProfile.photoRevealApproved && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-xs p-6 text-center z-10 pointer-events-none">
-                  <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center mb-2.5 shadow-lg">
-                    <ShieldCheck className="w-6 h-6 text-white" />
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center z-10 pointer-events-none select-none">
+                  <div className="inline-flex items-center gap-2 bg-black/50 backdrop-blur-md px-4 py-2 rounded-full text-white/90 text-xs font-medium border border-white/20 shadow-lg">
+                    <Lock className="w-3.5 h-3.5 text-amber-300" />
+                    <span>Photos blurred for modesty · Unlocks on mutual interest</span>
                   </div>
-                  <h4 className="text-white font-bold text-sm drop-shadow-md">Modesty Photo Blur Active</h4>
-                  <p className="text-white/80 text-[11px] max-w-xs mt-1 leading-snug drop-shadow-sm">
-                    Photos are respectfully blurred. Full photos unlock once mutual matrimonial interest or permission is granted.
-                  </p>
                 </div>
               )}
             </div>
 
-            {/* Top Overlay: Story Segment Progress Bars */}
-            <div className="relative z-20 w-full pt-3 px-3">
-              <div className="flex items-center gap-1.5 w-full">
+            {/* Top Overlay: Story Segment Progress Bars (Positioned cleanly below header) */}
+            <div className="relative z-20 w-full pt-14 px-3">
+              <div className="flex items-center gap-1 w-full">
                 {(photos.length > 0 ? photos : ['placeholder']).map((_, pIdx) => {
                   const isActive = pIdx === currentPhotoIdx;
                   const isPast = pIdx < currentPhotoIdx;
@@ -549,11 +552,11 @@ export const DiscoverFeed: React.FC<Props> = ({
                         e.stopPropagation();
                         if (photos.length > 1) setCurrentPhotoIdx(pIdx);
                       }}
-                      className="h-1 flex-1 rounded-full bg-white/30 overflow-hidden cursor-pointer backdrop-blur-xs transition-all"
+                      className="h-[2.5px] flex-1 rounded-full bg-white/20 overflow-hidden cursor-pointer backdrop-blur-xs transition-all"
                     >
                       <div
-                        className={`h-full transition-all duration-200 ${
-                          isActive ? 'bg-white w-full shadow-xs' : (isPast ? 'bg-white w-full' : 'w-0')
+                        className={`h-full transition-all duration-200 rounded-full ${
+                          isActive ? 'bg-white/85 w-full shadow-xs' : (isPast ? 'bg-white/70 w-full' : 'w-0')
                         }`}
                       />
                     </div>
@@ -561,14 +564,20 @@ export const DiscoverFeed: React.FC<Props> = ({
                 })}
               </div>
 
-              {/* Story Top Info Chips: Photos count / Match score & VIP */}
-              <div className="flex items-center justify-between mt-2.5">
-                {/* Left: Values Match badge & Photo count */}
-                <div className="flex items-center gap-1.5">
+              {/* Story Top Info Chips: Photo count / Match score & VIP */}
+              <div className="flex items-center justify-between mt-2">
+                {/* Left: Values Match badge & Photo count & Modesty pill */}
+                <div className="flex items-center gap-1.5 flex-wrap">
                   <div className="bg-black/50 text-emerald-300 border border-emerald-400/40 text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 backdrop-blur-md shadow-md">
                     <HeartHandshake className="w-3 h-3 text-emerald-400" />
                     <span>94% Match</span>
                   </div>
+                  {currentProfile.blurPhotosByDefault && !currentProfile.photoRevealApproved && (
+                    <span className="bg-black/50 text-amber-300 border border-amber-400/30 text-[10px] font-medium px-2 py-0.5 rounded-full backdrop-blur-md flex items-center gap-1">
+                      <Lock className="w-2.5 h-2.5" />
+                      <span>Modest</span>
+                    </span>
+                  )}
                   {photos.length > 1 && (
                     <span className="bg-black/50 text-white/80 border border-white/20 text-[10px] font-medium px-2 py-0.5 rounded-full backdrop-blur-md">
                       {currentPhotoIdx + 1}/{photos.length}
@@ -580,7 +589,7 @@ export const DiscoverFeed: React.FC<Props> = ({
                 <div className="flex items-center gap-1.5">
                   {currentProfile.isSpotlightActive && (
                     <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-white border border-amber-300 text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shadow-brand animate-pulse">
-                      <Sparkles className="w-3 h-3 text-amber-200 fill-amber-200" />
+                      <Star className="w-3 h-3 text-amber-200 fill-amber-200" />
                       <span>Featured</span>
                     </div>
                   )}
@@ -594,8 +603,8 @@ export const DiscoverFeed: React.FC<Props> = ({
               </div>
             </div>
 
-            {/* Middle Tap Navigation Zones (Instagram / WhatsApp Story Muscle Memory) */}
-            <div className="absolute inset-0 z-10 flex">
+            {/* Middle Tap Navigation Zones (Constrained so they never overlap header or bottom controls) */}
+            <div className="absolute inset-x-0 top-24 bottom-48 z-10 flex pointer-events-auto">
               {/* Left 35% Tap Zone: Previous Photo */}
               <div 
                 onClick={handlePrevPhoto} 
@@ -624,7 +633,11 @@ export const DiscoverFeed: React.FC<Props> = ({
             </div>
 
             {/* Bottom Surface: Minimal Overlay Info + Swipe Up Peek Handle */}
-            <div className="relative z-20 w-full bg-gradient-to-t from-black/95 via-black/70 to-transparent pt-16 pb-3 px-4 flex flex-col gap-2.5">
+            <div 
+              className="relative z-30 w-full bg-gradient-to-t from-black/95 via-black/75 to-transparent pt-12 pb-3 px-4 flex flex-col gap-2.5 pointer-events-auto"
+              onTouchStart={(e) => e.stopPropagation()}
+              onTouchEnd={(e) => e.stopPropagation()}
+            >
               
               {/* Candidate Quick Headline: Name, Age, Location + Flag, Voice Greeting */}
               <div className="flex items-start justify-between gap-2">
@@ -737,8 +750,12 @@ export const DiscoverFeed: React.FC<Props> = ({
                 <button
                   type="button"
                   onClick={(e) => handlePass(currentProfile.id, e)}
+                  onTouchEnd={(e) => {
+                    e.stopPropagation();
+                    handlePass(currentProfile.id, e);
+                  }}
                   aria-label="Pass"
-                  className="w-13 h-13 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 text-white hover:bg-rose-500/80 hover:border-rose-400 active:scale-90 flex items-center justify-center transition-all shadow-lg"
+                  className="w-14 h-14 min-w-[56px] min-h-[56px] rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 text-white hover:bg-rose-500/80 hover:border-rose-400 active:scale-90 flex items-center justify-center transition-all shadow-lg cursor-pointer pointer-events-auto"
                   title="Pass"
                 >
                   <X className="w-6 h-6 stroke-[2.5]" />
@@ -747,29 +764,12 @@ export const DiscoverFeed: React.FC<Props> = ({
                 {/* Direct Salam Button */}
                 <button
                   type="button"
-                  onClick={async (e) => {
+                  onClick={(e) => handleDirectSalam(currentProfile, e)}
+                  onTouchEnd={(e) => {
                     e.stopPropagation();
-                    stopVoice();
-                    if (onDirectSalam) {
-                      onDirectSalam(currentProfile);
-                    }
-                    if (directSalams <= 0) {
-                      setShowSalamRefillModal(true);
-                      return;
-                    }
-                    await dbService.consumeDirectSalam(currentUser.id);
-                    const conv = dbService.createMatchConversation(currentProfile);
-                    notificationService.addNotification({
-                      type: 'salam',
-                      title: 'Direct Salam Sent',
-                      message: `Your Direct Salam pass was sent to ${currentProfile.fullName}.`,
-                      actionLabel: 'Open Conversation',
-                      targetId: conv.id,
-                      avatarUrl: currentProfile.photos?.[0]
-                    });
-                    onOpenChat(conv.id);
+                    handleDirectSalam(currentProfile, e);
                   }}
-                  className="flex-1 h-13 rounded-2xl bg-white/20 backdrop-blur-md text-white border border-white/30 text-xs font-bold flex items-center justify-center gap-2 hover:bg-white/30 active:scale-95 transition-all shadow-lg"
+                  className="flex-1 h-14 min-h-[56px] rounded-2xl bg-white/20 backdrop-blur-md text-white border border-white/30 text-xs font-bold flex items-center justify-center gap-2 hover:bg-white/30 active:scale-95 transition-all shadow-lg cursor-pointer pointer-events-auto"
                   title="Send Direct Salam (instant message without waiting for mutual like)"
                 >
                   <Hand className="w-4 h-4 text-emerald-300" />
@@ -785,8 +785,12 @@ export const DiscoverFeed: React.FC<Props> = ({
                 <button
                   type="button"
                   onClick={(e) => handleLike(currentProfile, e)}
+                  onTouchEnd={(e) => {
+                    e.stopPropagation();
+                    handleLike(currentProfile, e);
+                  }}
                   aria-label="Connect"
-                  className="w-13 h-13 rounded-2xl bg-primary text-white hover:bg-primary-dark active:scale-90 flex items-center justify-center transition-all shadow-brand border border-primary-light"
+                  className="w-14 h-14 min-w-[56px] min-h-[56px] rounded-2xl bg-primary text-white hover:bg-primary-dark active:scale-90 flex items-center justify-center transition-all shadow-brand border border-primary-light cursor-pointer pointer-events-auto"
                   title="Express Interest / Like"
                 >
                   <Heart className="w-6 h-6 fill-current" />
@@ -799,16 +803,21 @@ export const DiscoverFeed: React.FC<Props> = ({
             {/* ============================================================ */}
             {isDrawerOpen && (
               <div 
-                className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs flex flex-col justify-end animate-fade-in"
+                className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex flex-col justify-end animate-fade-in"
                 onClick={() => setIsDrawerOpen(false)}
               >
                 <div 
                   className="w-full max-w-md mx-auto bg-white rounded-t-3xl shadow-2xl border-t border-outline flex flex-col max-h-[85vh] overflow-hidden animate-slide-up"
                   onClick={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
+                  onTouchEnd={(e) => e.stopPropagation()}
                 >
                   {/* Drawer Drag Pill & Header */}
                   <div className="pt-2 px-4 pb-2 border-b border-outline flex flex-col items-center">
-                    <div className="w-12 h-1.5 bg-secondary/30 rounded-full mb-2 cursor-grab" onClick={() => setIsDrawerOpen(false)} />
+                    <div 
+                      className="w-12 h-1.5 bg-secondary/30 rounded-full mb-2 cursor-grab" 
+                      onClick={() => setIsDrawerOpen(false)} 
+                    />
                     
                     <div className="w-full flex items-center justify-between">
                       <div className="flex items-center gap-2 min-w-0">
@@ -838,30 +847,34 @@ export const DiscoverFeed: React.FC<Props> = ({
                   </div>
 
                   {/* Drawer Quick Navigation Tabs */}
-                  <div className="p-1.5 bg-surface-variant/70 border-b border-outline flex gap-1 overflow-x-auto">
-                    {[
-                      { id: 'deen', label: 'Deen & Taqwa', Icon: BookOpen, activeColor: 'bg-white text-emerald-700 border-emerald-300 shadow-2xs' },
-                      { id: 'career', label: 'Career', Icon: GraduationCap, activeColor: 'bg-white text-sky-700 border-sky-300 shadow-2xs' },
-                      { id: 'family', label: 'Family', Icon: Home, activeColor: 'bg-white text-amber-700 border-amber-300 shadow-2xs' },
-                      { id: 'bio', label: 'Bio & Values', Icon: User, activeColor: 'bg-white text-purple-700 border-purple-300 shadow-2xs' },
-                      { id: 'requirements', label: 'Seeking', Icon: Heart, activeColor: 'bg-white text-rose-700 border-rose-300 shadow-2xs' }
-                    ].map(({ id, label, Icon, activeColor }) => {
-                      const isActive = activeTab === id;
-                      return (
-                        <button
-                          key={id}
-                          onClick={() => setActiveTab(id as CardTab)}
-                          className={`flex-1 py-1.5 px-2 rounded-xl flex items-center justify-center gap-1 text-[10px] font-bold transition-all border shrink-0 ${
-                            isActive
-                              ? activeColor
-                              : 'border-transparent text-secondary hover:text-on-surface hover:bg-white/40'
-                          }`}
-                        >
-                          <Icon className="w-3.5 h-3.5 shrink-0" />
-                          <span>{label}</span>
-                        </button>
-                      );
-                    })}
+                  <div className="px-3 pt-2.5 pb-1">
+                    <div className="p-1 bg-surface-variant/80 rounded-2xl border border-outline/50 flex items-center justify-between gap-1 shadow-2xs">
+                      {[
+                        { id: 'deen', label: 'Deen', ariaLabel: 'Deen & Taqwa', Icon: BookOpen },
+                        { id: 'career', label: 'Career', ariaLabel: 'Career', Icon: GraduationCap },
+                        { id: 'family', label: 'Family', ariaLabel: 'Family', Icon: Home },
+                        { id: 'bio', label: 'Bio', ariaLabel: 'Bio & Values', Icon: User },
+                        { id: 'requirements', label: 'Seeking', ariaLabel: 'Seeking', Icon: Heart }
+                      ].map(({ id, label, ariaLabel, Icon }) => {
+                        const isActive = activeTab === id;
+                        return (
+                          <button
+                            key={id}
+                            type="button"
+                            aria-label={ariaLabel}
+                            onClick={() => setActiveTab(id as CardTab)}
+                            className={`flex-1 py-2 px-1 rounded-xl flex items-center justify-center gap-1 text-[11px] transition-all duration-150 whitespace-nowrap cursor-pointer ${
+                              isActive
+                                ? 'bg-primary text-white font-bold shadow-brand shadow-primary/20 scale-[1.02]'
+                                : 'text-secondary hover:text-on-surface font-medium hover:bg-white/50 active:scale-95'
+                            }`}
+                          >
+                            <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'stroke-[2.5px]' : 'stroke-[1.75px]'}`} />
+                            <span className="tracking-tight">{label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   {/* Drawer Scrollable Content Body */}
@@ -1177,6 +1190,16 @@ export const DiscoverFeed: React.FC<Props> = ({
         </div>
       )}
 
+      {/* Direct Salam Custom Message Modal */}
+      {salamModalProfile && (
+        <DirectSalamModal
+          candidate={salamModalProfile}
+          passesRemaining={directSalams}
+          onClose={handleCloseDirectSalam}
+          onSend={handleConfirmDirectSalam}
+        />
+      )}
+
       {/* Out of Direct Salam Passes Modal */}
       {showSalamRefillModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 font-sans animate-fade-in">
@@ -1239,8 +1262,8 @@ export const DiscoverFeed: React.FC<Props> = ({
             if (adRewardType === 'likes') {
               handleClaimAdLikes();
             } else {
-              dbService.fetchLikesRemaining(currentUser.id).then(({ directSalams: s }) => {
-                if (typeof s === 'number') setDirectSalams(s);
+              dbService.fetchLikesRemaining(currentUser.id).then((res: any) => {
+                if (typeof res?.directSalams === 'number') setDirectSalams(res.directSalams);
               });
             }
           }}

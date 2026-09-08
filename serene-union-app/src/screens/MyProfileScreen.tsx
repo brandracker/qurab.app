@@ -36,7 +36,7 @@ import {
   Volume2,
   Loader2,
   Hand,
-  Sparkles
+  TrendingUp
 } from 'lucide-react';
 import type { UserProfile } from '../types';
 import { dbService } from '../services/dbService';
@@ -492,11 +492,11 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
                   <div className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 border ${
                     spotlightInfo.isSpotlightActive ? 'bg-amber-500 text-white border-amber-600 animate-pulse' : 'bg-amber-50 text-amber-600 border-amber-200'
                   }`}>
-                    <Sparkles className="w-3.5 h-3.5" />
+                    <TrendingUp className="w-3.5 h-3.5" />
                   </div>
                   <div>
                     <strong className="block text-[10px] text-on-surface font-bold">
-                      {spotlightInfo.isSpotlightActive ? '⚡ 24h Spotlight Boost Active' : 'City Spotlight Boost'}
+                      {spotlightInfo.isSpotlightActive ? '24h Spotlight Boost Active' : 'City Spotlight Boost'}
                     </strong>
                     <span className="text-[9px] text-secondary">
                       {spotlightInfo.isSpotlightActive
@@ -554,10 +554,10 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
                   onClick={() => setShowUpgradeModal(true)}
                   className="p-2 rounded-xl bg-white border border-outline hover:bg-surface-variant text-left flex items-center gap-2 transition-colors active:scale-95 shadow-subtle"
                 >
-                  <Sparkles className="text-amber-500 w-4 h-4 shrink-0" />
+                  <TrendingUp className="text-amber-500 w-4 h-4 shrink-0" />
                   <div>
                     <strong className="block text-[10px] text-on-surface">
-                      {spotlightInfo.isSpotlightActive ? '⚡ Boost Active' : 'City Spotlight'}
+                      {spotlightInfo.isSpotlightActive ? 'Boost Active' : 'City Spotlight'}
                     </strong>
                     <span className="text-[9px] text-secondary">
                       {spotlightInfo.isSpotlightActive ? formatSpotlightRemaining(spotlightInfo.spotlightExpiresAt) : 'Rank #1 ($0.99)'}

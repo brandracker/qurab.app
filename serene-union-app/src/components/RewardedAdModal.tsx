@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Volume2, VolumeX, X, PlayCircle, Gift, CheckCircle2, ShieldCheck, Sparkles } from 'lucide-react';
+import { Volume2, VolumeX, X, PlayCircle, Gift, CheckCircle2, ShieldCheck, HeartHandshake } from 'lucide-react';
 import { admobService, ADMOB_CONFIG } from '../services/admobService';
 import { dbService } from '../services/dbService';
 
@@ -142,7 +142,7 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes',
 
             <h3 className="font-serif text-lg font-bold text-white mb-1 flex items-center gap-1.5">
               Qurb Islamic Matrimony
-              <Sparkles className="w-4 h-4 text-amber-300" />
+              <HeartHandshake className="w-4 h-4 text-amber-300" />
             </h3>
 
             <p className="text-xs text-white/85 max-w-xs leading-relaxed mb-3">

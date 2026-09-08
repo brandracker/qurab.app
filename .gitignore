@@ -36,6 +36,7 @@ Thumbs.db
 # Mobile (Expo / React Native)
 .expo/
 *.jks
+!serene-union-app/android/app/qurb-release-key.jks
 *.p8
 *.p12
 *.key

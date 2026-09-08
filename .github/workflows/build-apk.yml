@@ -1,4 +1,4 @@
-name: Build Android APK (Qurb)
+name: Build Android Release AAB & APK (Qurb)
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-apk:
-    name: Build Qurb Android APK
+    name: Build Qurb Android Release Bundle & APK
     runs-on: ubuntu-latest
 
     steps:
@@ -43,24 +43,50 @@ jobs:
         working-directory: serene-union-app
         run: npx cap sync android
 
-      - name: Build Debug APK & App Bundle (AAB) with Gradle
+      - name: Generate Release Signing Keystore
+        working-directory: serene-union-app/android/app
+        run: |
+          if [ ! -f "qurb-release-key.jks" ]; then
+            echo "Generating production release keystore..."
+            keytool -genkeypair -v \
+              -keystore qurb-release-key.jks \
+              -alias qurb-release-key \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass "QurbReleasePassword2026!" \
+              -keypass "QurbReleasePassword2026!" \
+              -dname "CN=Qurb Matrimony, OU=Engineering, O=Brandracker, L=London, ST=London, C=GB"
+          else
+            echo "Release keystore already exists."
+          fi
+
+      - name: Build Signed Release AAB & APK with Gradle
         working-directory: serene-union-app/android
         run: |
-          ./gradlew assembleDebug --no-daemon --stacktrace
-          ./gradlew bundleDebug --no-daemon --stacktrace
+          ./gradlew bundleRelease --no-daemon --stacktrace
+          ./gradlew assembleRelease --no-daemon --stacktrace
 
-      - name: Upload APK as Artifact
+      - name: Upload Play Store Signed Release AAB (Google Play Console)
         uses: actions/upload-artifact@v4
         with:
-          name: Qurb-Android-Debug-APK
-          path: serene-union-app/android/app/build/outputs/apk/debug/app-debug.apk
+          name: Qurb-Android-Release-AAB
+          path: serene-union-app/android/app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 30
 
-      - name: Upload Play Store App Bundle (AAB) as Artifact
+      - name: Upload Signed Release APK
         uses: actions/upload-artifact@v4
         with:
-          name: Qurb-Android-Bundle-AAB
-          path: serene-union-app/android/app/build/outputs/bundle/debug/app-debug.aab
+          name: Qurb-Android-Release-APK
+          path: serene-union-app/android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 30
+
+      - name: Backup Release Keystore
+        uses: actions/upload-artifact@v4
+        with:
+          name: Qurb-Signing-Keystore
+          path: serene-union-app/android/app/qurb-release-key.jks
+          if-no-files-found: error
+          retention-days: 90

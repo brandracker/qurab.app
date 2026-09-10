@@ -11,7 +11,6 @@ import {
   X, 
   Lock, 
   ZoomIn, 
-  Sparkles, 
   Heart, 
   ChevronLeft, 
   ChevronRight,
@@ -240,58 +239,58 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
     <div className="w-full min-h-screen bg-[#FAF9F6] text-slate-800 font-sans selection:bg-rose-500/20 selection:text-rose-600 overflow-x-hidden">
       
       {/* 1. TOP ANNOUNCEMENT BANNER */}
-      <aside aria-label="Announcement" className="w-full bg-[#05080E] border-b border-white/10 px-4 py-2 text-center text-xs font-medium text-slate-300 flex items-center justify-center gap-2">
+      <aside aria-label="Announcement" className="w-full bg-gradient-to-r from-rose-50 via-amber-50 to-emerald-50 border-b border-slate-200/80 px-4 py-2 text-center text-xs font-medium text-slate-700 flex items-center justify-center gap-2">
         <span className="inline-flex items-center gap-1 bg-rose-600 text-white px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider">
           Nikah Only
         </span>
         <span>Dedicated to lawful Islamic marriage upon the Quran &amp; Sunnah.</span>
         <button 
           onClick={onLaunchWebApp}
-          className="underline font-bold text-rose-400 hover:text-rose-300 ml-1 cursor-pointer transition-colors"
+          className="underline font-bold text-rose-700 hover:text-rose-800 ml-1 cursor-pointer transition-colors"
         >
           Open Web App →
         </button>
       </aside>
 
-      {/* 2. LUXURY NAVBAR */}
-      <header className="sticky top-0 z-40 w-full bg-[#080C14]/90 backdrop-blur-md border-b border-white/10 shadow-lg transition-all">
+      {/* 2. CLEAN LUXURY LIGHT NAVBAR */}
+      <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.02)] transition-all">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-18 flex items-center justify-between">
           
           {/* Brand Logo & Name */}
           <a href="/" className="flex items-center gap-2.5 group">
-            <div className="w-9 h-9 rounded-xl bg-white/10 backdrop-blur-md p-1.5 border border-white/20 flex items-center justify-center group-hover:scale-105 transition-transform">
+            <div className="w-9 h-9 rounded-xl bg-white p-1.5 shadow-xs border border-rose-100 flex items-center justify-center group-hover:scale-105 transition-transform">
               <img src="/icon.svg" alt="Qurb Logo" className="w-6 h-6 object-contain" />
             </div>
             <div className="flex items-center gap-2">
-              <span className="font-serif text-2xl font-bold tracking-tight text-white">
+              <span className="font-serif text-2xl font-bold tracking-tight text-slate-900">
                 Qurb
               </span>
-              <span className="text-[10px] font-sans font-bold uppercase px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+              <span className="text-[10px] font-sans font-bold uppercase px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
                 Halal
               </span>
             </div>
           </a>
 
           {/* Navigation Links */}
-          <nav className="hidden md:flex items-center gap-8 text-xs sm:text-sm font-medium text-slate-300">
-            <a href="#experience" className="hover:text-rose-400 transition-colors">App Tour</a>
-            <a href="#screens" className="hover:text-rose-400 transition-colors">All Screenshots</a>
-            <a href="#nikah" className="hover:text-rose-400 transition-colors">Nikah Covenant</a>
-            <a href="#family" className="hover:text-rose-400 transition-colors">Family Blessing</a>
-            <a href="#faq" className="hover:text-rose-400 transition-colors">FAQ</a>
+          <nav className="hidden md:flex items-center gap-8 text-xs sm:text-sm font-medium text-slate-600">
+            <a href="#experience" className="hover:text-rose-600 transition-colors">App Tour</a>
+            <a href="#screens" className="hover:text-rose-600 transition-colors">All Screenshots</a>
+            <a href="#nikah" className="hover:text-rose-600 transition-colors">Nikah Covenant</a>
+            <a href="#family" className="hover:text-rose-600 transition-colors">Family Blessing</a>
+            <a href="#faq" className="hover:text-rose-600 transition-colors">FAQ</a>
           </nav>
 
           {/* Right Action Buttons */}
           <div className="flex items-center gap-2.5 sm:gap-3">
             <button
               onClick={onLogin}
-              className="text-xs sm:text-sm font-semibold text-slate-300 hover:text-white px-3 py-2 transition-colors cursor-pointer"
+              className="text-xs sm:text-sm font-semibold text-slate-700 hover:text-slate-900 px-3 py-2 transition-colors cursor-pointer"
             >
               Sign In
             </button>
             <button
               onClick={onGetStarted}
-              className="bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white font-semibold text-xs sm:text-sm px-4 sm:px-5 py-2.5 rounded-full active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer shadow-md"
+              className="bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm px-4 sm:px-5 py-2.5 rounded-full active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
             >
               <span>Get Started</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -300,98 +299,95 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
         </div>
       </header>
 
-      {/* 3. CINEMATIC HERO: FULL-BLEED BACKGROUND IMAGE WITH COLOR CONTRAST & MINIMAL TEXT */}
-      <section className="relative min-h-[620px] sm:min-h-[700px] lg:min-h-[740px] flex items-center overflow-hidden bg-[#070A12]">
+      {/* 3. LIGHT THEME HERO: DAYLIGHT PALACE BACKGROUND WITH WHITE/IVORY GRADIENT & MINIMAL TEXT */}
+      <section className="relative min-h-[620px] sm:min-h-[680px] lg:min-h-[720px] flex items-center overflow-hidden bg-[#FAF9F6] border-b border-slate-200/80">
         
-        {/* Full-Bleed High-Contrast Wedding Palace Background Image */}
+        {/* Full-Bleed Daylight Palace & Wedding Background Image */}
         <div 
-          className="absolute inset-0 bg-cover bg-[position:75%_center] lg:bg-center transition-transform duration-1000 scale-100"
-          style={{ backgroundImage: "url('/hero_matrimony.jpg')" }}
+          className="absolute inset-0 bg-cover bg-[position:80%_center] lg:bg-center transition-transform duration-1000 scale-100"
+          style={{ backgroundImage: "url('/hero_sunset.jpg')" }}
         />
 
-        {/* Directional Luxury Contrast Gradient: Velvet dark on text side, crystal-clear on couple side */}
+        {/* Directional Soft Light/Ivory Gradient: Solid clean white/ivory on text side, sunny view on couple side */}
         <div 
           className="absolute inset-0 pointer-events-none"
           style={{
-            background: 'linear-gradient(90deg, rgba(6, 9, 17, 0.94) 0%, rgba(6, 9, 17, 0.85) 42%, rgba(6, 9, 17, 0.40) 70%, rgba(6, 9, 17, 0.20) 100%)'
+            background: 'linear-gradient(90deg, #FAF9F6 0%, #FAF9F6 34%, rgba(250, 249, 246, 0.90) 56%, rgba(250, 249, 246, 0.25) 100%)'
           }}
         />
 
-        {/* Mobile Vertical Contrast Vignette */}
+        {/* Mobile Light Contrast Vignette */}
         <div 
-          className="lg:hidden absolute inset-0 pointer-events-none bg-gradient-to-t from-[#060911] via-[#060911]/60 to-black/50" 
+          className="lg:hidden absolute inset-0 pointer-events-none bg-gradient-to-t from-[#FAF9F6] via-[#FAF9F6]/85 to-white/70" 
         />
 
-        {/* Smooth Bottom Blending into Light Content Section */}
-        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#FAF9F6] via-[#FAF9F6]/30 to-transparent pointer-events-none" />
-
-        {/* Hero Content with Impeccable Typography Contrast */}
+        {/* Hero Content with Clean Slate/Rose Typography on White Background */}
         <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 w-full py-16 sm:py-24">
           <div className="max-w-2xl space-y-6 text-left">
             
-            {/* Playful Glassmorphism Pill */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-amber-200 text-xs font-bold shadow-lg">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+            {/* Professional Clean Pill (No Sparkles, No Zap) */}
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold shadow-xs">
+              <HeartHandshake className="w-3.5 h-3.5 text-rose-600" />
               <span>Pure Halal Matrimony • 100% Nikah Only</span>
             </div>
 
-            {/* High-Contrast Luxury Headline */}
-            <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-[1.12] drop-shadow-md">
+            {/* High-Impact Clean Headline */}
+            <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-slate-900 leading-[1.12]">
               Where Halal Love <br />
-              <span className="bg-gradient-to-r from-rose-400 via-amber-200 to-amber-300 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-rose-600 via-rose-500 to-amber-600 bg-clip-text text-transparent">
                 Begins with Barakah.
               </span>
             </h1>
 
             {/* Subheading: Minimal, Exactly ONE Line */}
-            <p className="text-base sm:text-lg text-slate-200 font-normal leading-relaxed max-w-xl drop-shadow-sm">
+            <p className="text-base sm:text-lg text-slate-600 font-normal leading-relaxed max-w-xl">
               Modest, dignified, and intentional matchmaking crafted for practicing Muslims seeking lifelong Nikah.
             </p>
 
-            {/* Two Store Download Buttons */}
+            {/* Two Official Store Download Buttons (Google Play Native + App Store PWA) */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 pt-2">
               
-              {/* 1. Google Play Button */}
+              {/* 1. Google Play Store (Native Android App) */}
               <button
                 onClick={() => setShowAndroidModal(true)}
-                className="min-w-[200px] bg-[#0B0F19]/90 hover:bg-[#131B2E] text-white px-5 py-3.5 rounded-2xl shadow-xl hover:shadow-2xl hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-3 cursor-pointer border border-white/20 group backdrop-blur-md"
+                className="min-w-[210px] bg-[#0F172A] hover:bg-[#1E293B] text-white px-5 py-3.5 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-3 cursor-pointer border border-slate-800 group"
               >
                 <GooglePlayIcon className="w-6 h-6 text-white shrink-0 group-hover:scale-105 transition-transform" />
                 <div className="text-left leading-tight">
                   <div className="text-[9px] text-slate-300 font-medium tracking-wider uppercase">GET IT ON</div>
-                  <div className="text-base font-bold text-white tracking-tight">Google Play</div>
+                  <div className="text-base font-bold text-white tracking-tight">Google Play <span className="text-[10px] text-emerald-400 font-normal ml-1">Native App</span></div>
                 </div>
               </button>
 
-              {/* 2. Apple App Store (PWA) Button */}
+              {/* 2. Apple App Store (iOS PWA) */}
               <button
                 onClick={handlePwaClick}
-                className="min-w-[200px] bg-[#0B0F19]/90 hover:bg-[#131B2E] text-white px-5 py-3.5 rounded-2xl shadow-xl hover:shadow-2xl hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-3 cursor-pointer border border-white/20 group backdrop-blur-md"
+                className="min-w-[210px] bg-[#0F172A] hover:bg-[#1E293B] text-white px-5 py-3.5 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-3 cursor-pointer border border-slate-800 group"
               >
                 <AppStoreIcon className="w-6 h-6 text-white shrink-0 group-hover:scale-105 transition-transform" />
                 <div className="text-left leading-tight">
                   <div className="text-[9px] text-slate-300 font-medium tracking-wider uppercase">DOWNLOAD ON</div>
-                  <div className="text-base font-bold text-white tracking-tight">App Store <span className="text-[10px] text-rose-400 font-normal">(PWA)</span></div>
+                  <div className="text-base font-bold text-white tracking-tight">App Store <span className="text-[10px] text-rose-400 font-normal ml-1">(iOS PWA)</span></div>
                 </div>
               </button>
 
             </div>
 
-            {/* Trust Indicators with High Contrast */}
-            <div className="pt-2 flex flex-wrap items-center gap-4 text-xs font-semibold text-slate-300 drop-shadow-sm">
-              <div className="flex items-center gap-1.5 text-emerald-300">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            {/* Professional Trust Indicators with Clean Light Styling */}
+            <div className="pt-2 flex flex-wrap items-center gap-4 text-xs font-semibold text-slate-600">
+              <div className="flex items-center gap-1.5 text-emerald-700">
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
                 <span>Modesty Photo Shield</span>
               </div>
-              <span className="text-slate-500">•</span>
-              <div className="flex items-center gap-1.5 text-amber-300">
-                <Users className="w-4 h-4 text-amber-400" />
-                <span>Wali Chaperone</span>
+              <span className="text-slate-300">•</span>
+              <div className="flex items-center gap-1.5 text-amber-700">
+                <Users className="w-4 h-4 text-amber-600" />
+                <span>Wali Chaperone Supported</span>
               </div>
-              <span className="text-slate-500">•</span>
-              <div className="flex items-center gap-1.5 text-rose-300">
-                <Heart className="w-4 h-4 text-rose-400 fill-rose-400" />
-                <span>100% Nikah Intent</span>
+              <span className="text-slate-300">•</span>
+              <div className="flex items-center gap-1.5 text-rose-700">
+                <HeartHandshake className="w-4 h-4 text-rose-600" />
+                <span>100% Nikah Intent Only</span>
               </div>
             </div>
 
@@ -457,7 +453,7 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
                 <div className="space-y-3 pt-2">
                   <div className="flex items-center gap-3 p-3 rounded-2xl bg-white border border-slate-200/80 shadow-2xs">
                     <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
-                      <Sparkles className="w-4 h-4" />
+                      <HeartHandshake className="w-4 h-4" />
                     </div>
                     <div className="text-xs text-slate-700 font-medium">
                       <strong>Sacred Intent:</strong> Every candidate signs our marriage agreement upon registration.

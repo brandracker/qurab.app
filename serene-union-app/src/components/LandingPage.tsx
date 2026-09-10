@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   HeartHandshake, 
   Users, 
@@ -8,9 +8,14 @@ import {
   ShieldCheck, 
   Check, 
   Mic, 
-  X,
-  Lock,
-  ZoomIn
+  X, 
+  Lock, 
+  ZoomIn, 
+  Sparkles, 
+  Heart, 
+  ChevronLeft, 
+  ChevronRight,
+  Smartphone
 } from 'lucide-react';
 
 // Official Store Icons from D:\Marriage App\logos\icons
@@ -36,7 +41,7 @@ interface ScreenshotItem {
   id: string;
   src: string;
   title: string;
-  category: 'discovery' | 'modesty' | 'chat';
+  category: string;
   description: string;
 }
 
@@ -44,72 +49,163 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
   const [showIosModal, setShowIosModal] = useState<boolean>(false);
   const [showAndroidModal, setShowAndroidModal] = useState<boolean>(false);
-  const [activeScreenshotTab, setActiveScreenshotTab] = useState<'all' | 'discovery' | 'modesty' | 'chat'>('all');
   const [selectedScreenshot, setSelectedScreenshot] = useState<ScreenshotItem | null>(null);
+  const [activeStageIndex, setActiveStageIndex] = useState<number>(0);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const reelRef = useRef<HTMLDivElement>(null);
 
-  // App Screenshots from D:\Marriage App\logos\Screenshots
-  const screenshots: ScreenshotItem[] = [
+  // Capture beforeinstallprompt for 1-click PWA install on Android / Desktop
+  useEffect(() => {
+    const handlePrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handlePrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handlePrompt);
+  }, []);
+
+  const handlePwaClick = () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then(() => {
+        setDeferredPrompt(null);
+      });
+    } else {
+      setShowIosModal(true);
+    }
+  };
+
+  const scrollReel = (direction: 'left' | 'right') => {
+    if (reelRef.current) {
+      const scrollAmount = direction === 'left' ? -340 : 340;
+      reelRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
+
+  // Interactive 4-Stage Nikah Journey Screens
+  const journeyStages = [
+    {
+      id: 'discovery',
+      tabLabel: 'Halal Discovery',
+      badge: 'Intent-Aligned Matching',
+      title: 'Match Beyond the Basics',
+      tagline: 'Values, Deen, and sincere marriage timelines — never superficial swipe games.',
+      screen: '/screenshots/3.png',
+      calloutTop: { title: '💍 Looking for Nikah', subtitle: 'Timeline: Within 6 Months' },
+      calloutBottom: { title: '✨ 5 Daily Prayers', subtitle: 'Values & Modesty Verified' }
+    },
+    {
+      id: 'voice',
+      tabLabel: 'Voice Bios',
+      badge: 'Character & Adab',
+      title: 'Hear Tone, Maturity & Sincerity',
+      tagline: 'Listen to spoken audio greetings to evaluate character before appearance.',
+      screen: '/screenshots/2.png',
+      calloutTop: { title: '🎙️ Spoken Bio: 1m 24s', subtitle: 'Voice Bio with Modesty' },
+      calloutBottom: { title: '📖 Sunnah & Halal Goals', subtitle: 'Family-Oriented Values' }
+    },
+    {
+      id: 'modesty',
+      tabLabel: 'Modesty Shield',
+      badge: '1-to-1 Mutual Consent',
+      title: 'Photos Blurred Until Mutual Approval',
+      tagline: 'Protected against random browsing and screenshots. You decide when to unblur.',
+      screen: '/screenshots/7.png',
+      calloutTop: { title: '🛡️ Photo Blur Shield Active', subtitle: 'Feed Privacy Protected' },
+      calloutBottom: { title: '🔐 1-to-1 Mutual Reveal', subtitle: 'Consent Required from Both' }
+    },
+    {
+      id: 'wali',
+      tabLabel: 'Wali & Family',
+      badge: 'Sacred Guardianship',
+      title: 'Chaperoned Conversations with Dignity',
+      tagline: 'Sisters can invite their father or guardian to chaperone chats from day one.',
+      screen: '/screenshots/8.png',
+      calloutTop: { title: '👨‍👩‍👧 Wali Chaperone Added', subtitle: 'Guardian Notification Sent' },
+      calloutBottom: { title: '🕊️ Started with Bismillah', subtitle: 'Aiming for Family Meeting' }
+    }
+  ];
+
+  // All 11 Marketing Screenshots from D:\Marriage App\logos\Screenshots
+  const allScreenshots: ScreenshotItem[] = [
+    {
+      id: 'screen-1',
+      src: '/screenshots/1.png',
+      title: 'Find Your Righteous Spouse',
+      category: 'Welcome',
+      description: 'Welcome screen outlining Qurb’s sacred commitment to modesty and marriage upon the Sunnah.'
+    },
+    {
+      id: 'screen-2',
+      src: '/screenshots/2.png',
+      title: 'Values That Matter',
+      category: 'Biodata & Voice',
+      description: 'Detailed Islamic biodata, spoken audio greetings, and intentional relationship goals.'
+    },
     {
       id: 'screen-3',
       src: '/screenshots/3.png',
-      title: 'Values-Based Discovery',
-      category: 'discovery',
-      description: 'Review candidate prayer routines, family backgrounds, and Mahr expectations directly on the card.'
-    },
-    {
-      id: 'screen-7',
-      src: '/screenshots/7.png',
-      title: 'Modesty Shield in Chat',
-      category: 'modesty',
-      description: 'Photos remain blurred during respectful chat, with 1-to-1 unblurring granted only upon mutual consent.'
-    },
-    {
-      id: 'screen-6',
-      src: '/screenshots/6.png',
-      title: 'Deen & Practice Biodata',
-      category: 'discovery',
-      description: 'Transparent details on daily prayers, sect, dietary standards, and personal relationship with Deen.'
+      title: 'Match Beyond the Basics',
+      category: 'Discovery',
+      description: 'Smart candidate discovery showing religious practice, family plans, and personality.'
     },
     {
       id: 'screen-4',
       src: '/screenshots/4.png',
       title: 'Intentions Made Clear',
-      category: 'chat',
-      description: 'Track sent matrimonial interests, mutual matches, and privacy permissions cleanly.'
+      category: 'Matches',
+      description: 'View members who have shared direct Salams and align with your marital timeline.'
     },
     {
-      id: 'screen-2',
-      src: '/screenshots/2.png',
-      title: 'Voice Greeting & Profile',
-      category: 'modesty',
-      description: 'Authentic 1-to-2 minute halal voice greetings allow hearing natural tone and maturity with adab.'
+      id: 'screen-5',
+      src: '/screenshots/5.png',
+      title: 'Where Halal Love Begins',
+      category: 'Nikah',
+      description: 'Celebrating completed Nikahs and lawful unions founded on mutual faith and respect.'
     },
     {
-      id: 'screen-10',
-      src: '/screenshots/10.png',
-      title: 'Islamic Privacy Controls',
-      category: 'modesty',
-      description: 'Granular controls for photo blurring, profile visibility, and complete account deletion anytime.'
+      id: 'screen-6',
+      src: '/screenshots/6.png',
+      title: 'Discover with Purpose',
+      category: 'Deen & Practice',
+      description: 'Transparent details on daily Salah, Quran habits, dietary standards, and lifestyle.'
+    },
+    {
+      id: 'screen-7',
+      src: '/screenshots/7.png',
+      title: 'Conversations with Purpose',
+      category: 'Modesty Chat',
+      description: 'Respectful 1-on-1 conversations with mutual photo reveal request controls.'
     },
     {
       id: 'screen-8',
       src: '/screenshots/8.png',
-      title: 'Intentional Messages',
-      category: 'chat',
-      description: 'Conversations begin with Bismillah. Sisters can invite their Wali as a chaperone.'
+      title: 'Every Connection Starts Pure',
+      category: 'Chaperoned Chat',
+      description: 'Dignified messaging where sisters can include their Wali as a chaperone.'
     },
     {
       id: 'screen-9',
       src: '/screenshots/9.png',
-      title: 'Matrimonial Activity',
-      category: 'chat',
-      description: 'Real-time notifications for direct Salams, mutual match interests, and chaperone updates.'
+      title: 'Stay Connected to What Matters',
+      category: 'Notifications',
+      description: 'Real-time updates on mutual interests, Salams, and guardian approvals.'
+    },
+    {
+      id: 'screen-10',
+      src: '/screenshots/10.png',
+      title: 'Your Privacy, Always Protected',
+      category: 'Privacy Settings',
+      description: 'Granular controls to blur photos, disable discovery, or permanently erase your data.'
+    },
+    {
+      id: 'screen-11',
+      src: '/screenshots/11.png',
+      title: 'Account Dignity & Security',
+      category: 'Security',
+      description: 'Amanah privacy architecture with zero commercial ad trackers and strict anti-screenshot rules.'
     }
   ];
-
-  const filteredScreenshots = activeScreenshotTab === 'all'
-    ? screenshots
-    : screenshots.filter(s => s.category === activeScreenshotTab);
 
   const faqs = [
     {
@@ -138,15 +234,17 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
     }
   ];
 
+  const currentStage = journeyStages[activeStageIndex];
+
   return (
-    <div className="w-full min-h-screen bg-[#FCFBF9] text-slate-800 font-sans selection:bg-rose-500/20 selection:text-rose-600 overflow-x-hidden">
+    <div className="w-full min-h-screen bg-[#FAF9F6] text-slate-800 font-sans selection:bg-rose-500/20 selection:text-rose-600 overflow-x-hidden">
       
       {/* 1. TOP ANNOUNCEMENT BANNER */}
-      <aside aria-label="Announcement" className="w-full bg-gradient-to-r from-rose-50/80 via-amber-50/60 to-emerald-50/80 border-b border-slate-200/60 px-4 py-2 text-center text-xs font-medium text-slate-700 flex items-center justify-center gap-2">
+      <aside aria-label="Announcement" className="w-full bg-gradient-to-r from-rose-50 via-amber-50 to-emerald-50 border-b border-slate-200/70 px-4 py-2 text-center text-xs font-medium text-slate-700 flex items-center justify-center gap-2">
         <span className="inline-flex items-center gap-1 bg-rose-600 text-white px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider">
-          New
+          Nikah Only
         </span>
-        <span>Seeking righteous marriage upon the Quran &amp; Sunnah.</span>
+        <span>Dedicated to lawful Islamic marriage upon the Quran &amp; Sunnah.</span>
         <button 
           onClick={onLaunchWebApp}
           className="underline font-bold text-rose-700 hover:text-rose-800 ml-1 cursor-pointer transition-colors"
@@ -155,8 +253,8 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
         </button>
       </aside>
 
-      {/* 2. CLEAN LUXURY NAVBAR */}
-      <header className="sticky top-0 z-40 w-full bg-white/90 backdrop-blur-md border-b border-slate-200/70 shadow-[0_2px_10px_rgba(0,0,0,0.02)] transition-all">
+      {/* 2. LUXURY NAVBAR */}
+      <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.03)] transition-all">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-18 flex items-center justify-between">
           
           {/* Brand Logo & Name */}
@@ -169,17 +267,17 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
                 Qurb
               </span>
               <span className="text-[10px] font-sans font-bold uppercase px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
-                Nikah
+                Halal
               </span>
             </div>
           </a>
 
           {/* Navigation Links */}
           <nav className="hidden md:flex items-center gap-8 text-xs sm:text-sm font-medium text-slate-600">
-            <a href="#screens" className="hover:text-rose-600 transition-colors">App Screens</a>
-            <a href="#features" className="hover:text-rose-600 transition-colors">Halal Pillars</a>
+            <a href="#experience" className="hover:text-rose-600 transition-colors">App Tour</a>
+            <a href="#screens" className="hover:text-rose-600 transition-colors">All Screenshots</a>
+            <a href="#nikah" className="hover:text-rose-600 transition-colors">Nikah Covenant</a>
             <a href="#family" className="hover:text-rose-600 transition-colors">Family Blessing</a>
-            <a href="#how-it-works" className="hover:text-rose-600 transition-colors">The Journey</a>
             <a href="#faq" className="hover:text-rose-600 transition-colors">FAQ</a>
           </nav>
 
@@ -202,227 +300,440 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
         </div>
       </header>
 
-      {/* 3. HERO SECTION WITH CINEMATIC GENERATED BACKGROUND */}
-      <section className="relative min-h-[580px] sm:min-h-[660px] flex items-center justify-center overflow-hidden bg-white">
-        
-        {/* Background Matrimonial Image */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 scale-100"
-          style={{ backgroundImage: "url('/hero_matrimony.jpg')" }}
-        />
-
-        {/* Soft Warm Light Luxury Gradient Overlay */}
-        <div 
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background: 'linear-gradient(180deg, rgba(252, 251, 249, 0.90) 0%, rgba(252, 251, 249, 0.76) 45%, rgba(252, 251, 249, 0.98) 100%)'
-          }}
-        />
-
-        {/* Hero Content */}
-        <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 text-center space-y-6 py-16 sm:py-24">
-          
-          {/* Sacred Bismillah Calligraphy */}
-          <div 
-            className="text-xl sm:text-2xl text-amber-900/80 tracking-widest font-normal"
-            style={{ fontFamily: "'Amiri', serif" }}
-          >
-            بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ
-          </div>
-
-          {/* Halal Matrimony Badge */}
-          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white/90 backdrop-blur-md border border-rose-200/80 text-rose-900 text-xs font-semibold shadow-xs">
-            <HeartHandshake className="w-3.5 h-3.5 text-rose-600" />
-            <span>Pure Halal Matrimony • Guardian (Wali) Supported</span>
-          </div>
-
-          {/* Main Headline */}
-          <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-slate-900 leading-[1.14]">
-            Where Pure Intentions Meet <br />
-            <span className="bg-gradient-to-r from-rose-600 via-rose-500 to-amber-600 bg-clip-text text-transparent">
-              Sacred Unions
-            </span>
-          </h1>
-
-          {/* Subheading */}
-          <p className="text-base sm:text-lg text-slate-600 max-w-xl mx-auto font-normal leading-relaxed">
-            Finding your righteous spouse upon the Quran and Sunnah. Guard your modesty with 1-to-1 photo privacy, listen to authentic voice bios, and complete half your Deen with family blessing.
-          </p>
-
-          {/* TWO OFFICIAL STORE BADGE BUTTONS (Google Play & App Store) */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 pt-3">
+      {/* 3. HERO SECTION: VISIBLE JOYFUL WEDDING IMAGE + PLAYFUL BADGES + MINIMAL TEXT (NO BISMILLAH) */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-white via-[#FCFBF9] to-[#F8F7F3] pt-10 pb-16 sm:py-20 lg:py-24 border-b border-slate-200/70">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
             
-            {/* 1. Google Play Button */}
-            <button
-              onClick={() => setShowAndroidModal(true)}
-              className="w-full sm:w-auto min-w-[210px] bg-[#0F172A] hover:bg-[#1E293B] text-white px-5 py-3 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-3 cursor-pointer border border-slate-800 group"
-            >
-              <GooglePlayIcon className="w-6 h-6 text-white shrink-0 group-hover:scale-105 transition-transform" />
-              <div className="text-left leading-tight">
-                <div className="text-[9.5px] text-slate-300 font-medium tracking-wider uppercase">GET IT ON</div>
-                <div className="text-base font-bold text-white tracking-tight">Google Play</div>
+            {/* Left Column: Minimal Text + Badges + Store Buttons */}
+            <div className="lg:col-span-6 space-y-6 text-center lg:text-left">
+              
+              {/* Playful Pill Badge */}
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-rose-50 border border-rose-200/80 text-rose-700 text-xs font-bold shadow-xs">
+                <Sparkles className="w-3.5 h-3.5 text-rose-500 animate-pulse" />
+                <span>The Halal Matrimony App for Practicing Muslims</span>
               </div>
-            </button>
 
-            {/* 2. Apple App Store (PWA) Button */}
-            <button
-              onClick={() => setShowIosModal(true)}
-              className="w-full sm:w-auto min-w-[210px] bg-[#0F172A] hover:bg-[#1E293B] text-white px-5 py-3 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-3 cursor-pointer border border-slate-800 group"
-            >
-              <AppStoreIcon className="w-6 h-6 text-white shrink-0 group-hover:scale-105 transition-transform" />
-              <div className="text-left leading-tight">
-                <div className="text-[9.5px] text-slate-300 font-medium tracking-wider uppercase">DOWNLOAD ON</div>
-                <div className="text-base font-bold text-white tracking-tight">App Store <span className="text-[10.5px] text-rose-400 font-normal">(PWA)</span></div>
+              {/* High-Impact Minimal Headline */}
+              <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-slate-900 leading-[1.12]">
+                Where Halal Love <br />
+                <span className="bg-gradient-to-r from-rose-600 via-rose-500 to-amber-600 bg-clip-text text-transparent">
+                  Begins with Barakah.
+                </span>
+              </h1>
+
+              {/* Subheading: Exactly ONE punchy line as requested */}
+              <p className="text-base sm:text-lg text-slate-600 font-normal leading-relaxed max-w-lg mx-auto lg:mx-0">
+                Modest, dignified, and intentional matchmaking crafted for practicing Muslims seeking lifelong Nikah.
+              </p>
+
+              {/* Store Download Buttons (Google Play & App Store PWA) */}
+              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3.5 pt-2">
+                
+                {/* 1. Google Play Button */}
+                <button
+                  onClick={() => setShowAndroidModal(true)}
+                  className="w-full sm:w-auto min-w-[200px] bg-[#0F172A] hover:bg-[#1E293B] text-white px-5 py-3 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-3 cursor-pointer border border-slate-800 group"
+                >
+                  <GooglePlayIcon className="w-6 h-6 text-white shrink-0 group-hover:scale-105 transition-transform" />
+                  <div className="text-left leading-tight">
+                    <div className="text-[9px] text-slate-300 font-medium tracking-wider uppercase">GET IT ON</div>
+                    <div className="text-base font-bold text-white tracking-tight">Google Play</div>
+                  </div>
+                </button>
+
+                {/* 2. Apple App Store (PWA) Button */}
+                <button
+                  onClick={handlePwaClick}
+                  className="w-full sm:w-auto min-w-[200px] bg-[#0F172A] hover:bg-[#1E293B] text-white px-5 py-3 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-3 cursor-pointer border border-slate-800 group"
+                >
+                  <AppStoreIcon className="w-6 h-6 text-white shrink-0 group-hover:scale-105 transition-transform" />
+                  <div className="text-left leading-tight">
+                    <div className="text-[9px] text-slate-300 font-medium tracking-wider uppercase">DOWNLOAD ON</div>
+                    <div className="text-base font-bold text-white tracking-tight">App Store <span className="text-[10px] text-rose-400 font-normal">(PWA)</span></div>
+                  </div>
+                </button>
+
               </div>
-            </button>
+
+              {/* Trust Indicators */}
+              <div className="pt-2 flex flex-wrap items-center justify-center lg:justify-start gap-4 text-xs font-semibold text-slate-500">
+                <div className="flex items-center gap-1 text-emerald-700">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  <span>Modesty Photo Shield</span>
+                </div>
+                <span>•</span>
+                <div className="flex items-center gap-1 text-amber-700">
+                  <Users className="w-4 h-4 text-amber-600" />
+                  <span>Wali Chaperone</span>
+                </div>
+                <span>•</span>
+                <div className="flex items-center gap-1 text-rose-700">
+                  <Heart className="w-4 h-4 text-rose-600 fill-rose-600" />
+                  <span>100% Nikah Only</span>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Right Column: Prominent, Crisp, Visible Joyful Wedding Hero Image with Playful Floating Badges */}
+            <div className="lg:col-span-6 relative flex items-center justify-center">
+              
+              {/* Glowing Ambient Halo */}
+              <div className="absolute -inset-4 bg-gradient-to-tr from-rose-200/50 via-amber-100/40 to-emerald-100/40 rounded-[2.5rem] blur-2xl -z-10" />
+
+              {/* Main Photo Card Frame */}
+              <div className="relative w-full max-w-md rounded-3xl overflow-hidden shadow-2xl border-4 border-white bg-white">
+                <img 
+                  src="/hero_matrimony.jpg" 
+                  alt="Joyful Muslim Wedding Couple" 
+                  className="w-full h-auto object-cover object-center transform hover:scale-102 transition-transform duration-700"
+                />
+
+                {/* Subtle Bottom Card Overlay */}
+                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-slate-900/80 via-slate-900/40 to-transparent p-5 text-white">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-serif font-bold text-base text-white">Halal Love, Made for Forever</p>
+                      <p className="text-white/80 text-xs mt-0.5">Found through shared faith &amp; righteous intentions</p>
+                    </div>
+                    <span className="text-2xl">💍</span>
+                  </div>
+                </div>
+
+                {/* Playful Floating Badge 1 (Top Left): Voice Bio */}
+                <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-md px-3 py-2 rounded-2xl shadow-lg border border-slate-100 flex items-center gap-2 animate-bounce-subtle">
+                  <div className="w-7 h-7 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
+                    <Mic className="w-4 h-4" />
+                  </div>
+                  <div className="text-left">
+                    <div className="text-[10px] font-bold text-slate-800">Spoken Voice Bio</div>
+                    <div className="text-[9px] text-slate-500 font-medium">Hear tone &amp; adab</div>
+                  </div>
+                </div>
+
+                {/* Playful Floating Badge 2 (Top Right): Modesty Shield */}
+                <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-md px-3 py-2 rounded-2xl shadow-lg border border-slate-100 flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                    <ShieldCheck className="w-4 h-4" />
+                  </div>
+                  <div className="text-left">
+                    <div className="text-[10px] font-bold text-slate-800">Modesty Shield</div>
+                    <div className="text-[9px] text-emerald-700 font-semibold">1-to-1 Mutual Reveal</div>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
 
           </div>
-
-          {/* Subtle Direct Browser Link */}
-          <div className="pt-1">
-            <button
-              onClick={onLaunchWebApp}
-              className="text-xs text-slate-500 hover:text-slate-800 font-medium underline underline-offset-4 cursor-pointer transition-colors"
-            >
-              Or continue in browser on desktop →
-            </button>
-          </div>
-
         </div>
-
       </section>
 
-      {/* 4. VISUAL APP SCREENSHOTS GALLERY SECTION (AS REQUESTED) */}
-      <section id="screens" className="py-20 bg-white border-y border-slate-200/80">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* 4. PLAYFUL INTERACTIVE 4-STAGE EXPERIENCE: APP TOUR IN A 3D PHONE STAGE */}
+      <section id="experience" className="py-20 sm:py-28 bg-white border-b border-slate-200/80">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
           
-          <div className="text-center max-w-2xl mx-auto space-y-3 mb-10">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold">
-              <span>App Tour</span>
+          <div className="text-center max-w-2xl mx-auto space-y-3 mb-12">
+            <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold">
+              <Smartphone className="w-3.5 h-3.5" />
+              <span>Interactive App Experience</span>
             </div>
             <h2 className="font-serif text-3xl sm:text-4xl font-bold text-slate-900">
-              Inside Qurb: Real App Experience
+              How Qurb Works: The 4 Sacred Steps
             </h2>
             <p className="text-slate-600 text-sm sm:text-base">
-              Explore how each screen was crafted with purpose, modesty, and family involvement. Click any screenshot to inspect.
+              Click any stage below to see how each screen honors your modesty and speeds up the path to Nikah.
             </p>
 
-            {/* Category Filter Pills */}
+            {/* Playful Stage Switcher Tabs */}
             <div className="flex flex-wrap items-center justify-center gap-2 pt-4">
-              {[
-                { id: 'all', label: 'All Screens' },
-                { id: 'discovery', label: 'Matrimonial Discovery' },
-                { id: 'modesty', label: 'Modesty & Privacy' },
-                { id: 'chat', label: 'Chaperoned Chat' }
-              ].map(tab => (
+              {journeyStages.map((stage, idx) => (
                 <button
-                  key={tab.id}
-                  onClick={() => setActiveScreenshotTab(tab.id as any)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                    activeScreenshotTab === tab.id
-                      ? 'bg-rose-600 text-white shadow-xs'
+                  key={stage.id}
+                  onClick={() => setActiveStageIndex(idx)}
+                  className={`px-4 sm:px-5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                    activeStageIndex === idx
+                      ? 'bg-slate-900 text-white shadow-md scale-105'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
-                  {tab.label}
+                  <span className={`w-2 h-2 rounded-full ${activeStageIndex === idx ? 'bg-rose-500' : 'bg-slate-400'}`} />
+                  <span>{stage.tabLabel}</span>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Screenshots Grid Showcase */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 pt-4">
-            {filteredScreenshots.map((item) => (
-              <div 
-                key={item.id}
-                onClick={() => setSelectedScreenshot(item)}
-                className="group relative bg-[#FAF9F6] rounded-3xl p-3 border border-slate-200/90 shadow-sm hover:shadow-xl hover:border-rose-200 hover:-translate-y-1.5 transition-all duration-300 cursor-pointer flex flex-col justify-between"
-              >
-                {/* Screenshot Image Container */}
-                <div className="relative rounded-2xl overflow-hidden aspect-[9/19] bg-slate-100 border border-slate-200/80 shadow-inner">
-                  <img 
-                    src={item.src} 
-                    alt={item.title} 
-                    className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-500"
-                    loading="lazy"
-                  />
-                  <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                    <div className="bg-white/90 backdrop-blur-md p-2 rounded-full shadow-lg text-slate-900">
-                      <ZoomIn className="w-5 h-5 text-rose-600" />
+          {/* Active Stage Interactive Showcase Box */}
+          <div className="bg-[#FAF9F6] rounded-3xl p-6 sm:p-10 lg:p-12 border border-slate-200 shadow-sm">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+              
+              {/* Left Side: Stage Story & Features */}
+              <div className="lg:col-span-6 space-y-5 text-left">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-white border border-rose-200 text-rose-700 text-xs font-bold shadow-2xs">
+                  <span>{currentStage.badge}</span>
+                </div>
+                
+                <h3 className="font-serif text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">
+                  {currentStage.title}
+                </h3>
+                
+                <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
+                  {currentStage.tagline}
+                </p>
+
+                {/* Feature Bullets */}
+                <div className="space-y-3 pt-2">
+                  <div className="flex items-center gap-3 p-3 rounded-2xl bg-white border border-slate-200/80 shadow-2xs">
+                    <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                    <div className="text-xs text-slate-700 font-medium">
+                      <strong>Sacred Intent:</strong> Every candidate signs our marriage agreement upon registration.
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 rounded-2xl bg-white border border-slate-200/80 shadow-2xs">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                      <ShieldCheck className="w-4 h-4" />
+                    </div>
+                    <div className="text-xs text-slate-700 font-medium">
+                      <strong>Haya First:</strong> Visual privacy remains intact until serious mutual intent is established.
                     </div>
                   </div>
                 </div>
 
-                {/* Caption / Title */}
-                <div className="pt-3 px-1">
-                  <h3 className="font-bold text-xs sm:text-sm text-slate-900 leading-snug group-hover:text-rose-600 transition-colors">
-                    {item.title}
-                  </h3>
-                  <p className="text-[11px] text-slate-500 line-clamp-2 mt-0.5 leading-relaxed">
-                    {item.description}
-                  </p>
+                <div className="pt-3 flex items-center gap-3">
+                  <button
+                    onClick={onGetStarted}
+                    className="bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs sm:text-sm px-6 py-3 rounded-full shadow-md active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
+                  >
+                    <span>Experience This on Qurb</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      const found = allScreenshots.find(s => s.src === currentStage.screen);
+                      if (found) setSelectedScreenshot(found);
+                    }}
+                    className="px-4 py-3 rounded-full border border-slate-200 text-slate-700 hover:bg-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <ZoomIn className="w-3.5 h-3.5" />
+                    <span>Zoom Screen</span>
+                  </button>
                 </div>
               </div>
-            ))}
+
+              {/* Right Side: Realistic Phone Mockup with Dynamic Floating Cards */}
+              <div className="lg:col-span-6 flex items-center justify-center relative">
+                
+                {/* Floating Callout 1 (Top) */}
+                <div className="hidden sm:flex absolute -top-3 -left-4 z-20 bg-white/95 backdrop-blur-md px-4 py-2.5 rounded-2xl shadow-xl border border-slate-200 items-center gap-2.5 max-w-[200px] animate-fade-in">
+                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping shrink-0" />
+                  <div>
+                    <div className="text-xs font-bold text-slate-900">{currentStage.calloutTop.title}</div>
+                    <div className="text-[10px] text-slate-500">{currentStage.calloutTop.subtitle}</div>
+                  </div>
+                </div>
+
+                {/* Floating Callout 2 (Bottom) */}
+                <div className="hidden sm:flex absolute -bottom-3 -right-4 z-20 bg-white/95 backdrop-blur-md px-4 py-2.5 rounded-2xl shadow-xl border border-slate-200 items-center gap-2.5 max-w-[210px] animate-fade-in">
+                  <span className="text-lg">🕊️</span>
+                  <div>
+                    <div className="text-xs font-bold text-slate-900">{currentStage.calloutBottom.title}</div>
+                    <div className="text-[10px] text-slate-500">{currentStage.calloutBottom.subtitle}</div>
+                  </div>
+                </div>
+
+                {/* iPhone Frame */}
+                <div 
+                  onClick={() => {
+                    const found = allScreenshots.find(s => s.src === currentStage.screen);
+                    if (found) setSelectedScreenshot(found);
+                  }}
+                  className="w-[260px] sm:w-[290px] rounded-[42px] p-3 bg-slate-900 shadow-2xl border-4 border-slate-700 relative group cursor-pointer hover:scale-102 transition-transform duration-300"
+                >
+                  {/* Speaker Notch */}
+                  <div className="absolute top-5 left-1/2 -translate-x-1/2 w-20 h-4 bg-black rounded-full z-30 flex items-center justify-end px-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-slate-800" />
+                  </div>
+
+                  {/* Screen Content */}
+                  <div className="rounded-[32px] overflow-hidden aspect-[9/19] bg-white relative">
+                    <img 
+                      src={currentStage.screen} 
+                      alt={currentStage.title} 
+                      className="w-full h-full object-cover"
+                    />
+                    
+                    {/* Hover Hint */}
+                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <div className="bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-bold text-slate-900 flex items-center gap-1.5 shadow-lg">
+                        <ZoomIn className="w-3.5 h-3.5 text-rose-600" />
+                        <span>Tap to Zoom</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
           </div>
 
         </div>
       </section>
 
-      {/* 5. VISUAL STORY SPLIT 1: MODESTY & PRIVACY IN ACTION */}
-      <section className="py-20 sm:py-28 bg-[#FCFBF9]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* 5. PLAYFUL HORIZONTAL PERSPECTIVE MARQUEE: ALL 11 REAL SCREENSHOTS */}
+      <section id="screens" className="py-20 bg-[#FCFBF9] border-b border-slate-200/80 overflow-hidden">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold mb-2">
+                <span>The Complete Experience</span>
+              </div>
+              <h2 className="font-serif text-3xl font-bold text-slate-900">
+                Gallery of All 11 Marketing Screens
+              </h2>
+              <p className="text-slate-600 text-xs sm:text-sm mt-1">
+                Scroll horizontally or tap any screen for a high-resolution lightbox view.
+              </p>
+            </div>
+
+            {/* Scroll Navigation Buttons */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => scrollReel('left')}
+                className="w-10 h-10 rounded-full bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 flex items-center justify-center shadow-xs cursor-pointer active:scale-95 transition-all"
+                aria-label="Scroll left"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => scrollReel('right')}
+                className="w-10 h-10 rounded-full bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 flex items-center justify-center shadow-xs cursor-pointer active:scale-95 transition-all"
+                aria-label="Scroll right"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Dynamic Horizontal Scroll Reel */}
+        <div 
+          ref={reelRef}
+          className="flex items-center gap-5 overflow-x-auto px-6 sm:px-12 py-6 no-scrollbar scroll-smooth"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
+          {allScreenshots.map((item, index) => (
+            <div
+              key={item.id}
+              onClick={() => setSelectedScreenshot(item)}
+              className="shrink-0 w-[210px] sm:w-[240px] bg-white rounded-3xl p-3 border border-slate-200/90 shadow-sm hover:shadow-xl hover:border-rose-300 hover:-translate-y-2 transition-all duration-300 cursor-pointer group flex flex-col justify-between"
+            >
+              {/* Phone Device Frame */}
+              <div className="rounded-2xl overflow-hidden aspect-[9/19] bg-slate-100 border border-slate-200 relative shadow-inner">
+                <img 
+                  src={item.src} 
+                  alt={item.title} 
+                  className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-500"
+                  loading="lazy"
+                />
+                
+                {/* Badge Overlay */}
+                <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-md px-2 py-0.5 rounded-full text-[9px] font-bold text-slate-800 shadow-xs border border-slate-100">
+                  #{index + 1} • {item.category}
+                </div>
+
+                {/* Hover Zoom Icon */}
+                <div className="absolute inset-0 bg-slate-900/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <div className="bg-white/95 p-2 rounded-full shadow-md">
+                    <ZoomIn className="w-4 h-4 text-rose-600" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Title */}
+              <div className="pt-2.5 px-1">
+                <h3 className="font-bold text-xs text-slate-900 group-hover:text-rose-600 transition-colors line-clamp-1">
+                  {item.title}
+                </h3>
+                <p className="text-[10.5px] text-slate-500 line-clamp-1 mt-0.5">
+                  {item.description}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* 6. SACRED NIKAH COVENANT: FEATURING GENERATED WEDDING RINGS IMAGE & SURAH AR-RUM */}
+      <section id="nikah" className="py-20 sm:py-28 bg-white border-b border-slate-200/80">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             
-            {/* Visual Screenshot Display */}
-            <div className="lg:col-span-6 flex items-center justify-center gap-4">
-              <div className="w-1/2 max-w-[240px] rounded-3xl overflow-hidden shadow-2xl border-4 border-white transform -rotate-2 hover:rotate-0 transition-transform duration-300">
+            {/* Generated Wedding Rings Image */}
+            <div className="lg:col-span-6 flex justify-center">
+              <div className="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white max-w-lg group">
                 <img 
-                  src="/screenshots/7.png" 
-                  alt="Modesty Chat Screenshot" 
-                  className="w-full h-auto object-cover"
+                  src="/halal_rings.jpg" 
+                  alt="Sacred Halal Nikah Rings" 
+                  className="w-full h-auto object-cover group-hover:scale-102 transition-transform duration-700"
                 />
-              </div>
-              <div className="w-1/2 max-w-[240px] rounded-3xl overflow-hidden shadow-2xl border-4 border-white transform rotate-2 hover:rotate-0 transition-transform duration-300">
-                <img 
-                  src="/screenshots/10.png" 
-                  alt="Privacy Settings Screenshot" 
-                  className="w-full h-auto object-cover"
-                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
+                <div className="absolute bottom-4 left-4 right-4 text-white text-xs">
+                  <p className="font-serif text-sm font-bold">Mithaqan Ghalidha (A Sacred Covenant)</p>
+                  <p className="text-white/80 text-[11px] mt-0.5">Marriage built upon affection, mercy, and mutual trust.</p>
+                </div>
               </div>
             </div>
 
             {/* Content Side */}
             <div className="lg:col-span-6 space-y-6">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">
-                <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                <span>Modesty Shield Protection</span>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold">
+                <Heart className="w-3.5 h-3.5 text-amber-600 fill-amber-600" />
+                <span>Halal Principles</span>
               </div>
               
               <h2 className="font-serif text-3xl sm:text-4xl font-bold text-slate-900 leading-tight">
-                Character Evaluated First, <br />
-                Appearance Shared with Consent
+                Built Strictly for Nikah, <br />
+                Blessed by Pure Intention
               </h2>
-              
-              <p className="text-slate-600 text-base leading-relaxed">
-                In conventional dating apps, personal photos are commodified and shown indiscriminately. On Qurb, your facial likeness is protected by default. Candidates evaluate your Deen commitment and life values first.
-              </p>
 
-              <div className="space-y-3 pt-2">
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 mt-0.5">
-                    <Check className="w-4 h-4" />
-                  </div>
-                  <p className="text-xs sm:text-sm text-slate-700">
-                    <strong>1-to-1 Mutual Reveal:</strong> Both parties must grant mutual consent before photos unblur in conversation.
-                  </p>
+              {/* Quranic Verse */}
+              <div className="p-5 rounded-2xl bg-amber-50/70 border border-amber-200/80 space-y-2">
+                <div 
+                  className="text-base sm:text-xl text-amber-950 font-serif leading-relaxed"
+                  style={{ fontFamily: "'Amiri', serif" }}
+                >
+                  وَمِنْ آيَاتِهِ أَنْ خَلَقَ لَكُم مِّنْ أَنفُسِكُمْ أَزْوَاجًا لِّتَسْكُنُوا إِلَيْهَا وَجَعَلَ بَيْنَكُم مَّوَدَّةً وَرَحْمَةً
                 </div>
+                <p className="text-xs text-slate-700 italic font-serif leading-relaxed">
+                  "And of His signs is that He created for you from yourselves mates that you may find tranquility in them; and He placed between you affection and mercy."
+                </p>
+                <p className="text-[10px] text-amber-800 font-bold uppercase tracking-wider">
+                  Surah Ar-Rum (30:21)
+                </p>
+              </div>
+
+              {/* 3 Halal Commitments */}
+              <div className="space-y-3">
                 <div className="flex items-start gap-3">
                   <div className="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
                     <Check className="w-4 h-4" />
                   </div>
                   <p className="text-xs sm:text-sm text-slate-700">
-                    <strong>Anti-Screenshot Protection:</strong> Strict security safeguards ensure your private photos cannot be copied or shared.
+                    <strong>Transparent Mahr Discussions:</strong> State expectations openly without awkwardness.
+                  </p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 mt-0.5">
+                    <Check className="w-4 h-4" />
+                  </div>
+                  <p className="text-xs sm:text-sm text-slate-700">
+                    <strong>Zero Ghosting Culture:</strong> Prompt, respectful communication etiquette is enforced.
                   </p>
                 </div>
                 <div className="flex items-start gap-3">
@@ -430,35 +741,26 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
                     <Check className="w-4 h-4" />
                   </div>
                   <p className="text-xs sm:text-sm text-slate-700">
-                    <strong>Restore Blur Anytime:</strong> You can re-blur your likeness at any moment with a single tap.
+                    <strong>Sunnah Etiquette:</strong> Dignity, modesty, and family blessing prioritized at every step.
                   </p>
                 </div>
               </div>
 
-              <div className="pt-2">
-                <button
-                  onClick={onLaunchWebApp}
-                  className="bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm px-6 py-3 rounded-full shadow-md active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
-                >
-                  <span>Experience Modesty Shield</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
             </div>
 
           </div>
         </div>
       </section>
 
-      {/* 6. VISUAL STORY SPLIT 2: FAMILY BLESSING & WALI CHAPERONE (GENERATED IMAGE) */}
-      <section id="family" className="py-20 sm:py-28 bg-white border-y border-slate-200/80">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* 7. VISUAL STORY SPLIT: FAMILY BLESSING & WALI CHAPERONE */}
+      <section id="family" className="py-20 sm:py-28 bg-[#FCFBF9] border-b border-slate-200/80">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             
             {/* Content Side */}
             <div className="lg:col-span-6 space-y-6 order-2 lg:order-1">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold">
-                <Users className="w-4 h-4 text-amber-600" />
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">
+                <Users className="w-4 h-4 text-emerald-600" />
                 <span>Family-Centered Matrimony</span>
               </div>
               
@@ -467,13 +769,13 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
                 Wali Chaperone Support
               </h2>
               
-              <p className="text-slate-600 text-base leading-relaxed">
+              <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
                 Islam places immense honor on family involvement in marriage. Qurb empowers sisters to include their father or guardian directly in the process, ensuring adab, peace of mind, and barakah from the first interaction.
               </p>
 
               <div className="space-y-3 pt-2">
                 <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 mt-0.5">
+                  <div className="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
                     <Check className="w-4 h-4" />
                   </div>
                   <p className="text-xs sm:text-sm text-slate-700">
@@ -481,7 +783,7 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
                   </p>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 mt-0.5">
+                  <div className="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
                     <Check className="w-4 h-4" />
                   </div>
                   <p className="text-xs sm:text-sm text-slate-700">
@@ -489,7 +791,7 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
                   </p>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 mt-0.5">
+                  <div className="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
                     <Check className="w-4 h-4" />
                   </div>
                   <p className="text-xs sm:text-sm text-slate-700">
@@ -501,7 +803,7 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
               <div className="pt-2">
                 <button
                   onClick={onGetStarted}
-                  className="bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs sm:text-sm px-6 py-3 rounded-full shadow-md active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
+                  className="bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm px-6 py-3 rounded-full shadow-md active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
                 >
                   <span>Create Protected Profile</span>
                   <ArrowRight className="w-4 h-4" />
@@ -509,7 +811,7 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
               </div>
             </div>
 
-            {/* Generated Halal Family Image */}
+            {/* Halal Family Image */}
             <div className="lg:col-span-6 order-1 lg:order-2 flex justify-center">
               <div className="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white max-w-lg group">
                 <img 
@@ -529,8 +831,8 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
         </div>
       </section>
 
-      {/* 7. FOUR CORE HALAL PILLARS */}
-      <section id="features" className="py-20 sm:py-28 bg-[#FCFBF9]">
+      {/* 8. FOUR CORE HALAL PILLARS */}
+      <section className="py-20 sm:py-28 bg-white border-b border-slate-200/80">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           
           <div className="text-center max-w-2xl mx-auto space-y-3 mb-14">
@@ -545,7 +847,7 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             
             {/* Pillar 1 */}
-            <div className="bg-white rounded-2xl p-7 border border-slate-200/80 shadow-xs space-y-3 hover:border-rose-200 transition-colors">
+            <div className="bg-[#FAF9F6] rounded-2xl p-7 border border-slate-200/80 shadow-xs space-y-3 hover:border-rose-300 transition-colors">
               <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600">
                 <HeartHandshake className="w-5 h-5" />
               </div>
@@ -556,7 +858,7 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
             </div>
 
             {/* Pillar 2 */}
-            <div className="bg-white rounded-2xl p-7 border border-slate-200/80 shadow-xs space-y-3 hover:border-emerald-200 transition-colors">
+            <div className="bg-[#FAF9F6] rounded-2xl p-7 border border-slate-200/80 shadow-xs space-y-3 hover:border-emerald-300 transition-colors">
               <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
                 <Lock className="w-5 h-5" />
               </div>
@@ -567,7 +869,7 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
             </div>
 
             {/* Pillar 3 */}
-            <div className="bg-white rounded-2xl p-7 border border-slate-200/80 shadow-xs space-y-3 hover:border-amber-200 transition-colors">
+            <div className="bg-[#FAF9F6] rounded-2xl p-7 border border-slate-200/80 shadow-xs space-y-3 hover:border-amber-300 transition-colors">
               <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
                 <Users className="w-5 h-5" />
               </div>
@@ -578,11 +880,11 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
             </div>
 
             {/* Pillar 4 */}
-            <div className="bg-white rounded-2xl p-7 border border-slate-200/80 shadow-xs space-y-3 hover:border-indigo-200 transition-colors">
+            <div className="bg-[#FAF9F6] rounded-2xl p-7 border border-slate-200/80 shadow-xs space-y-3 hover:border-indigo-300 transition-colors">
               <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
                 <Mic className="w-5 h-5" />
               </div>
-              <h3 className="font-serif text-xl font-bold text-slate-900">Halal Voice Bios</h3>
+              <h3 className="font-serif text-xl font-bold text-slate-900">Spoken Voice Bios</h3>
               <p className="text-slate-600 text-sm leading-relaxed">
                 Hear authentic spoken voice introductions to evaluate a candidate's maturity, articulation, and demeanor respectfully.
               </p>
@@ -593,92 +895,8 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
         </div>
       </section>
 
-      {/* 8. THE 3-STEP JOURNEY WITH SCREENSHOT PREVIEWS */}
-      <section id="how-it-works" className="py-20 sm:py-28 bg-white border-y border-slate-200/80">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          
-          <div className="text-center max-w-2xl mx-auto space-y-3 mb-16">
-            <h2 className="font-serif text-3xl sm:text-4xl font-bold text-slate-900">
-              The Path to Nikah
-            </h2>
-            <p className="text-slate-600 text-sm sm:text-base">
-              A straightforward, transparent process adhering to Islamic principles.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            
-            {/* Step 1 */}
-            <div className="bg-[#FCFBF9] rounded-3xl p-6 border border-slate-200/80 space-y-4 shadow-sm flex flex-col justify-between">
-              <div className="space-y-3">
-                <div className="w-8 h-8 rounded-full bg-rose-600 text-white font-bold text-sm flex items-center justify-center">
-                  1
-                </div>
-                <h3 className="font-serif font-bold text-lg text-slate-900">Create Dignified Profile</h3>
-                <p className="text-slate-600 text-xs leading-relaxed">
-                  Specify your Deen commitment, prayer routine, education, and Mahr expectations. Sisters can optionally invite their Wali.
-                </p>
-              </div>
-              <div className="rounded-2xl overflow-hidden aspect-[9/10] bg-slate-100 shadow-xs border border-slate-200">
-                <img src="/screenshots/2.png" alt="Profile Creation" className="w-full h-full object-cover object-top" />
-              </div>
-            </div>
-
-            {/* Step 2 */}
-            <div className="bg-[#FCFBF9] rounded-3xl p-6 border border-slate-200/80 space-y-4 shadow-sm flex flex-col justify-between">
-              <div className="space-y-3">
-                <div className="w-8 h-8 rounded-full bg-amber-600 text-white font-bold text-sm flex items-center justify-center">
-                  2
-                </div>
-                <h3 className="font-serif font-bold text-lg text-slate-900">Connect with Adab</h3>
-                <p className="text-slate-600 text-xs leading-relaxed">
-                  Discover intent-matched candidates. Listen to spoken voice bios. Photos unblur only when mutual consent is granted.
-                </p>
-              </div>
-              <div className="rounded-2xl overflow-hidden aspect-[9/10] bg-slate-100 shadow-xs border border-slate-200">
-                <img src="/screenshots/6.png" alt="Values Matching" className="w-full h-full object-cover object-top" />
-              </div>
-            </div>
-
-            {/* Step 3 */}
-            <div className="bg-[#FCFBF9] rounded-3xl p-6 border border-slate-200/80 space-y-4 shadow-sm flex flex-col justify-between">
-              <div className="space-y-3">
-                <div className="w-8 h-8 rounded-full bg-emerald-600 text-white font-bold text-sm flex items-center justify-center">
-                  3
-                </div>
-                <h3 className="font-serif font-bold text-lg text-slate-900">Involve Families</h3>
-                <p className="text-slate-600 text-xs leading-relaxed">
-                  Communicate respectfully with Wali oversight, arrange a lawful family meeting, and complete half your Deen.
-                </p>
-              </div>
-              <div className="rounded-2xl overflow-hidden aspect-[9/10] bg-slate-100 shadow-xs border border-slate-200">
-                <img src="/screenshots/5.png" alt="Family Halal Union" className="w-full h-full object-cover object-top" />
-              </div>
-            </div>
-
-          </div>
-
-          {/* Quranic Verse Card */}
-          <div className="mt-14 p-6 sm:p-8 rounded-3xl bg-amber-50/60 border border-amber-200/70 text-center space-y-2 max-w-3xl mx-auto shadow-xs">
-            <div 
-              className="text-lg sm:text-2xl text-amber-900 font-serif leading-relaxed"
-              style={{ fontFamily: "'Amiri', serif" }}
-            >
-              وَمِنْ آيَاتِهِ أَنْ خَلَقَ لَكُم مِّنْ أَنفُسِكُمْ أَزْوَاجًا لِّتَسْكُنُوا إِلَيْهَا وَجَعَلَ بَيْنَكُم مَّوَدَّةً وَرَحْمَةً
-            </div>
-            <p className="text-xs sm:text-sm text-slate-700 italic font-serif">
-              "And among His signs is that He created for you spouses from among yourselves so that you may find tranquility in them; and He placed between you affection and mercy."
-            </p>
-            <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">
-              Surah Ar-Rum (30:21)
-            </p>
-          </div>
-
-        </div>
-      </section>
-
       {/* 9. FREQUENTLY ASKED QUESTIONS */}
-      <section id="faq" className="py-20 bg-[#FCFBF9]">
+      <section id="faq" className="py-20 bg-[#FAF9F6]">
         <div className="max-w-3xl mx-auto px-4 sm:px-6">
           
           <div className="text-center space-y-3 mb-12">
@@ -722,7 +940,7 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
       <section className="py-20 bg-gradient-to-r from-rose-600 via-rose-500 to-amber-600 text-white text-center relative overflow-hidden">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 space-y-6 relative z-10">
           <h2 className="font-serif text-3xl sm:text-4xl font-bold tracking-tight">
-            Complete Half Your Deen Today
+            Complete Half Your Deen with Qurb
           </h2>
           <p className="text-white/90 text-sm sm:text-base leading-relaxed max-w-xl mx-auto">
             Join thousands of practicing Muslims searching for marriage with Barakah, modesty, and family blessing.
@@ -745,7 +963,7 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
 
             {/* App Store (PWA) */}
             <button
-              onClick={() => setShowIosModal(true)}
+              onClick={handlePwaClick}
               className="w-full sm:w-auto min-w-[200px] bg-[#0F172A] hover:bg-[#1E293B] text-white px-5 py-3 rounded-xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-3 cursor-pointer border border-slate-800"
             >
               <AppStoreIcon className="w-5 h-5 text-white shrink-0" />
@@ -760,7 +978,7 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
       </section>
 
       {/* 11. LUXURY FOOTER */}
-      <footer className="w-full bg-[#F7F6F2] border-t border-slate-200/80 py-12 text-slate-600 text-xs">
+      <footer className="w-full bg-[#F5F4F0] border-t border-slate-200/80 py-12 text-slate-600 text-xs">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 pb-8 border-b border-slate-200">
             <div className="flex items-center gap-2.5">
@@ -813,7 +1031,12 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
             </div>
 
             <div className="pt-3 px-1">
-              <h3 className="font-bold text-sm text-slate-900">{selectedScreenshot.title}</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-sm text-slate-900">{selectedScreenshot.title}</h3>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700">
+                  {selectedScreenshot.category}
+                </span>
+              </div>
               <p className="text-xs text-slate-500 mt-1 leading-relaxed">{selectedScreenshot.description}</p>
             </div>
           </div>
@@ -845,7 +1068,7 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
               <div className="flex items-start gap-2.5">
                 <span className="w-5 h-5 rounded-full bg-rose-600 text-white font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">1</span>
                 <div>
-                  <strong className="text-slate-900">Open Safari:</strong> Visit <span className="text-rose-600 font-semibold">qurb.app</span> in Apple Safari on your iPhone.
+                  <strong className="text-slate-900">Open in Safari:</strong> Visit <span className="text-rose-600 font-semibold">qurb.app</span> in Apple Safari on your iPhone.
                 </div>
               </div>
               <div className="flex items-start gap-2.5">

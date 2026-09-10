@@ -1,0 +1,25 @@
+{
+  "short_name": "Qurb",
+  "name": "Qurb: Muslim Dating & Nikah",
+  "description": "Pure halal Islamic matrimony and Nikah platform. Finding your righteous spouse with Barakah, modesty & family involvement.",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/white-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "start_url": "/?source=pwa",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F8FAFC",
+  "theme_color": "#E11D48",
+  "categories": ["lifestyle", "social"]
+}

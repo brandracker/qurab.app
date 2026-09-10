@@ -6,13 +6,15 @@ interface Props {
   onLogin?: () => void;
   onOpenPrivacyPolicy?: () => void;
   onOpenTerms?: () => void;
+  onBackToLanding?: () => void;
 }
 
 export const WelcomeScreen: React.FC<Props> = ({ 
   onGetStarted, 
   onLogin,
   onOpenPrivacyPolicy,
-  onOpenTerms
+  onOpenTerms,
+  onBackToLanding
 }) => {
   return (
     <main className="relative w-full h-full min-h-[600px] flex flex-col justify-between overflow-hidden font-sans select-none text-white">
@@ -31,11 +33,21 @@ export const WelcomeScreen: React.FC<Props> = ({
       />
 
       {/* 3. Top Header: Pure Halal Matrimony Badge */}
-      <header className="relative z-10 w-full pt-5 px-6 flex flex-col items-center">
+      <header className={`relative z-10 w-full pt-5 px-6 flex ${onBackToLanding ? 'items-center justify-between' : 'flex-col items-center'}`}>
+        {onBackToLanding && (
+          <button
+            type="button"
+            onClick={onBackToLanding}
+            className="text-[11px] font-medium text-white/80 hover:text-white transition-colors flex items-center gap-1 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20 shadow"
+          >
+            ← Website
+          </button>
+        )}
         <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/20 shadow-lg text-white text-[11px] font-bold tracking-wider uppercase">
           <HeartHandshake className="w-3.5 h-3.5 text-[#FFD700]" />
           <span>Pure Halal Matrimony</span>
         </div>
+        {onBackToLanding && <div className="w-16" />}
       </header>
 
       {/* 4. Center-Bottom Hero Content */}

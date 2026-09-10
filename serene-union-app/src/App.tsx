@@ -20,6 +20,8 @@ import { TermsScreen } from './screens/TermsScreen';
 import { NotificationsScreen } from './screens/NotificationsScreen';
 import { dbService, API_BASE } from './services/dbService';
 import { notificationService } from './services/notificationService';
+import { Capacitor } from '@capacitor/core';
+import { LandingPage } from './components/LandingPage';
 
 type OnboardingStep = 
   | 'welcome' 
@@ -37,6 +39,43 @@ type OnboardingStep =
 type MainTab = 'discover' | 'matches' | 'chat' | 'my_profile' | 'settings';
 
 export const App: React.FC = () => {
+  const isNative = Capacitor.isNativePlatform();
+
+  const [showLanding, setShowLanding] = useState<boolean>(() => {
+    // STRICT ZERO-BREAKAGE GUARANTEE:
+    // Native Android APK/AAB must NEVER show the marketing landing page.
+    if (isNative) return false;
+
+    const path = window.location.pathname.toLowerCase();
+    const params = new URLSearchParams(window.location.search);
+    const hash = window.location.hash.toLowerCase();
+
+    // Explicit app flags or paths bypass the landing page
+    if (params.get('app') === 'true' || path.startsWith('/app')) return false;
+
+    // Policy and legal deep-links
+    if (path.includes('privacy') || params.get('page') === 'privacy' || params.get('view') === 'privacy' || hash.includes('privacy')) return false;
+    if (path.includes('terms') || params.get('page') === 'terms' || params.get('view') === 'terms' || hash.includes('terms')) return false;
+    if (params.get('mode') === 'resetPassword' || params.get('oobCode')) return false;
+
+    // If visitor already entered the web app during this session
+    if (sessionStorage.getItem('qurb_entered_app') === 'true') return false;
+
+    // If web user has an active completed profile saved
+    const saved = localStorage.getItem('serene_current_user_v1');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed?.id && parsed.id !== 'usr_guest' && (parsed.isProfileCompleted ?? (parsed.city || (parsed.location && parsed.location !== 'Global')))) {
+          return false;
+        }
+      } catch {}
+    }
+
+    // Default for web visitors: display the luxury landing page
+    return true;
+  });
+
   const [resetCode] = useState<string>(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get('oobCode') || '';
@@ -436,6 +475,30 @@ export const App: React.FC = () => {
     setActiveTab('chat');
   };
 
+  // FULL-SCREEN RESPONSIVE LUXURY MARKETING LANDING PAGE FOR WEB VISITORS
+  if (showLanding && !isNative) {
+    return (
+      <LandingPage
+        onLaunchWebApp={() => {
+          sessionStorage.setItem('qurb_entered_app', 'true');
+          setShowLanding(false);
+        }}
+        onGetStarted={() => {
+          sessionStorage.setItem('qurb_entered_app', 'true');
+          setShowLanding(false);
+          setAuthInitialTab('signup');
+          setCurrentStep('auth');
+        }}
+        onLogin={() => {
+          sessionStorage.setItem('qurb_entered_app', 'true');
+          setShowLanding(false);
+          setAuthInitialTab('login');
+          setCurrentStep('auth');
+        }}
+      />
+    );
+  }
+
   return (
     <div className="w-full min-h-screen bg-[#121212] flex items-center justify-center font-sans antialiased text-on-surface">
       {/* Centered Mobile Screen Container */}
@@ -479,6 +542,7 @@ export const App: React.FC = () => {
             }}
             onOpenPrivacyPolicy={() => setCurrentStep('privacy_policy')}
             onOpenTerms={() => setCurrentStep('terms')}
+            onBackToLanding={!isNative ? () => setShowLanding(true) : undefined}
           />
         )}
 
@@ -509,7 +573,11 @@ export const App: React.FC = () => {
           <PrivacyPolicyScreen
             onBack={() => {
               window.history.pushState({}, '', '/');
-              setCurrentStep(currentUser?.id && currentUser.id !== 'usr_guest' ? 'main_app' : 'welcome');
+              if (!isNative && (!currentUser?.id || currentUser.id === 'usr_guest')) {
+                setShowLanding(true);
+              } else {
+                setCurrentStep(currentUser?.id && currentUser.id !== 'usr_guest' ? 'main_app' : 'welcome');
+              }
             }}
           />
         )}
@@ -519,7 +587,11 @@ export const App: React.FC = () => {
           <TermsScreen
             onBack={() => {
               window.history.pushState({}, '', '/');
-              setCurrentStep(currentUser?.id && currentUser.id !== 'usr_guest' ? 'main_app' : 'welcome');
+              if (!isNative && (!currentUser?.id || currentUser.id === 'usr_guest')) {
+                setShowLanding(true);
+              } else {
+                setCurrentStep(currentUser?.id && currentUser.id !== 'usr_guest' ? 'main_app' : 'welcome');
+              }
             }}
           />
         )}

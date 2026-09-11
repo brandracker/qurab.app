@@ -1727,22 +1727,22 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
                 </div>
                 <div className="flex items-center gap-2">
                   <a 
-                    href="https://www.tiktok.com/@qurb.app" 
+                    href="https://www.tiktok.com/@qurb.love" 
                     target="_blank" 
                     rel="noopener noreferrer" 
                     className="w-8 h-8 rounded-xl bg-white hover:bg-slate-900 hover:text-white border border-slate-200 flex items-center justify-center text-slate-600 transition-all shadow-2xs"
-                    title="Follow Qurb on TikTok"
-                    aria-label="TikTok"
+                    title="Follow Qurb on TikTok (@qurb.love)"
+                    aria-label="TikTok @qurb.love"
                   >
                     <TikTokIcon className="w-3.5 h-3.5" />
                   </a>
                   <a 
-                    href="https://www.instagram.com/qurb.app" 
+                    href="https://www.instagram.com/qurb.love" 
                     target="_blank" 
                     rel="noopener noreferrer" 
                     className="w-8 h-8 rounded-xl bg-white hover:bg-rose-600 hover:text-white border border-slate-200 flex items-center justify-center text-slate-600 transition-all shadow-2xs"
-                    title="Follow Qurb on Instagram"
-                    aria-label="Instagram"
+                    title="Follow Qurb on Instagram (@qurb.love)"
+                    aria-label="Instagram @qurb.love"
                   >
                     <InstagramIcon className="w-3.5 h-3.5" />
                   </a>

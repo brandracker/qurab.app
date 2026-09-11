@@ -3,7 +3,6 @@ import {
   ArrowLeft, 
   HeartHandshake, 
   Users, 
-  Sparkles, 
   MapPin, 
   Calendar, 
   Clock, 
@@ -114,7 +113,7 @@ export const HalalStoriesPage: React.FC<Props> = ({
         <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center space-y-5">
           
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold">
-            <Sparkles className="w-3.5 h-3.5 text-rose-600" />
+            <HeartHandshake className="w-3.5 h-3.5 text-rose-600" />
             <span>Honoring Pure Intentions &amp; Sunnah</span>
           </div>
 
@@ -315,7 +314,7 @@ export const HalalStoriesPage: React.FC<Props> = ({
               {/* Section 1: The Match */}
               <div className="space-y-2 pt-2">
                 <h3 className="font-serif text-lg font-bold text-slate-900 flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-rose-600" />
+                  <HeartHandshake className="w-4 h-4 text-rose-600" />
                   <span>How They Connected</span>
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-700 leading-relaxed">

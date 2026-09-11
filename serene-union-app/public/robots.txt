@@ -1,0 +1,72 @@
+# ==============================================================================
+# Robots.txt for Qurb - Pure Halal Islamic Matrimony (https://qurb.app)
+# Designed for maximum SEO, Answer Engine (AEO) & Generative Engine (GEO) indexing
+# ==============================================================================
+
+# Global Rules for All Crawlers
+User-agent: *
+Allow: /
+Disallow: /api/
+
+# Primary Search Engine Crawlers
+User-agent: Googlebot
+Allow: /
+
+User-agent: Googlebot-Image
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /
+
+User-agent: YandexBot
+Allow: /
+
+User-agent: Baiduspider
+Allow: /
+
+# Generative AI & Answer Engine Bots (AEO / GEO)
+# OpenAI / ChatGPT Search
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+# Anthropic Claude
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+# Perplexity AI
+User-agent: PerplexityBot
+Allow: /
+
+# Google Gemini / SGE Extended
+User-agent: Google-Extended
+Allow: /
+
+# Cohere AI
+User-agent: cohere-ai
+Allow: /
+
+# Common Crawl & Other AI Indexers
+User-agent: CCBot
+Allow: /
+
+User-agent: Amazonbot
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+# XML Sitemap Location
+Sitemap: https://qurb.app/sitemap.xml
+Host: https://qurb.app

@@ -19,7 +19,6 @@ import {
   Star,
   Quote,
   BookOpen,
-  Sparkles,
   MapPin,
   Calendar,
   Clock,
@@ -96,6 +95,15 @@ interface ScreenshotItem {
 }
 
 export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onLogin }) => {
+  const [deepLinkSlug, setDeepLinkSlug] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash;
+      const parts = hash.split('/');
+      return parts.length > 1 ? parts[1] : null;
+    }
+    return null;
+  });
+
   const [currentView, setCurrentView] = useState<'home' | 'stories' | 'blog'>(() => {
     if (typeof window !== 'undefined') {
       const hash = window.location.hash.toLowerCase();
@@ -126,10 +134,15 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const reelRef = useRef<HTMLDivElement>(null);
 
-  // Deep-link Hash Sync for #stories and #blog
+  // Deep-link Hash Sync for #stories, #blog, and individual article/story slugs
   useEffect(() => {
     const handleHash = () => {
-      const hash = window.location.hash.toLowerCase();
+      const fullHash = window.location.hash;
+      const hash = fullHash.toLowerCase();
+      const parts = fullHash.split('/');
+      const slug = parts.length > 1 ? parts[1] : null;
+      setDeepLinkSlug(slug);
+
       if (hash.startsWith('#stories') || hash.startsWith('#halal-stories')) {
         setCurrentView('stories');
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -351,6 +364,10 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
       a: "Yes! Sisters have the option to add their Wali's name, relationship, and contact details during profile creation. The Wali can be included as a chaperone in conversations to maintain Islamic adab and family blessing from day one."
     },
     {
+      q: "How does Qurb differ from conventional Muslim dating apps like Muzz or Salams?",
+      a: "Unlike mainstream apps that replicate secular swipe culture, Qurb is engineered exclusively around Islamic jurisprudence and adab. We prioritize spoken voice bios, detailed Islamic practice indicators, strict anti-screenshot protection, default photo modesty shields, and explicit Wali involvement from the very beginning."
+    },
+    {
       q: "How do I install Qurb on iPhone / iPad?",
       a: "Tap 'Download on App Store (PWA)' above, open qurb.app in Safari on your iPhone, tap the Safari Share button 📤, and select 'Add to Home Screen 📱'. Qurb will install instantly on your iPhone and launch full-screen just like a native app."
     },
@@ -361,6 +378,10 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
     {
       q: "How is my personal data protected?",
       a: "Your data is treated as a sacred trust (Amanah). We do not sell your data or monetize your private details with third-party advertisers. All communications are TLS-encrypted and stored on secure Cloudflare infrastructure. You can permanently delete your profile anytime in 1 click."
+    },
+    {
+      q: "What steps does Qurb take against non-serious users and fake accounts?",
+      a: "Qurb requires comprehensive Islamic biodata completion, phone and email authentication, active automated moderation, and peer reporting. Inappropriate behavior or non-marital intent results in an instant, unappealable hardware and account ban."
     }
   ];
 
@@ -371,10 +392,12 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
       <HalalStoriesPage
         onBackToLanding={() => {
           window.location.hash = '';
+          setDeepLinkSlug(null);
           setCurrentView('home');
         }}
         onGetStarted={onGetStarted}
         onLogin={onLogin}
+        initialStoryId={deepLinkSlug}
       />
     );
   }
@@ -384,10 +407,12 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
       <BlogPage
         onBackToLanding={() => {
           window.location.hash = '';
+          setDeepLinkSlug(null);
           setCurrentView('home');
         }}
         onGetStarted={onGetStarted}
         onLogin={onLogin}
+        initialArticleId={deepLinkSlug}
       />
     );
   }
@@ -1033,7 +1058,7 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
                   <div className="bg-[#FAF9F6] p-4 rounded-2xl border border-slate-200/80 space-y-2">
                     <div className="flex items-center justify-between text-[11px] text-slate-500">
                       <span className="font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1">
-                        <Sparkles className="w-3 h-3 text-rose-600" />
+                        <HeartHandshake className="w-3 h-3 text-rose-600" />
                         Nikah Journey Note
                       </span>
                       <span className="text-emerald-700 font-semibold">{item.timeline}</span>
@@ -1120,7 +1145,7 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-12">
             <div className="max-w-2xl space-y-2">
               <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold">
-                <Sparkles className="w-3.5 h-3.5 text-rose-600" />
+                <HeartHandshake className="w-3.5 h-3.5 text-rose-600" />
                 <span>Real Nikah Journeys</span>
               </div>
               <h2 className="font-serif text-3xl sm:text-4xl font-bold text-slate-900">
@@ -1569,7 +1594,7 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
       </section>
 
       {/* 9. FREQUENTLY ASKED QUESTIONS */}
-      <section id="faq" className="py-20 bg-[#FAF9F6]">
+      <section id="faq" className="py-20 bg-[#FAF9F6]" itemScope itemType="https://schema.org/FAQPage">
         <div className="max-w-3xl mx-auto px-4 sm:px-6">
           
           <div className="text-center space-y-3 mb-12">
@@ -1587,18 +1612,26 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
               return (
                 <div 
                   key={idx}
+                  itemScope
+                  itemProp="mainEntity"
+                  itemType="https://schema.org/Question"
                   className="bg-white border border-slate-200/80 rounded-xl overflow-hidden shadow-2xs"
                 >
                   <button
                     onClick={() => setActiveFaq(isOpen ? null : idx)}
                     className="w-full px-5 py-3.5 text-left flex items-center justify-between gap-4 font-semibold text-sm text-slate-900 hover:text-rose-600 transition-colors cursor-pointer"
                   >
-                    <span>{faq.q}</span>
+                    <span itemProp="name">{faq.q}</span>
                     <ChevronDown className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180 text-rose-600' : ''}`} />
                   </button>
                   {isOpen && (
-                    <div className="px-5 pb-4 text-slate-600 text-xs sm:text-sm leading-relaxed border-t border-slate-100 pt-3">
-                      {faq.a}
+                    <div 
+                      itemScope
+                      itemProp="acceptedAnswer"
+                      itemType="https://schema.org/Answer"
+                      className="px-5 pb-4 text-slate-600 text-xs sm:text-sm leading-relaxed border-t border-slate-100 pt-3"
+                    >
+                      <div itemProp="text">{faq.a}</div>
                     </div>
                   )}
                 </div>
@@ -1650,130 +1683,126 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
         </div>
       </section>
 
-      {/* 11. LUXURY MODERN FOOTER */}
-      <footer className="w-full bg-[#0F172A] text-slate-300 border-t border-slate-800 pt-16 pb-12 text-xs">
+      {/* 11. LUXURY MODERN LIGHT FOOTER */}
+      <footer className="w-full bg-[#FAF9F6] text-slate-700 border-t border-slate-200/90 pt-16 pb-12 text-xs">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           
-          {/* Main Footer Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 pb-12 border-b border-slate-800">
+          {/* Main Footer Grid: 5 Balanced Columns on Desktop */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8 lg:gap-6 pb-12 border-b border-slate-200">
             
-            {/* Col 1 & 2: Brand Identity, Mission & Trust */}
-            <div className="lg:col-span-2 space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-white p-2 shadow-xs border border-rose-200/50 flex items-center justify-center shrink-0">
-                  <img src="/icon.svg" alt="Qurb Logo" className="w-8 h-8 object-contain" />
+            {/* Col 1: Brand Identity & Mission */}
+            <div className="space-y-3.5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-white p-1.5 shadow-xs border border-rose-200 flex items-center justify-center shrink-0">
+                  <img src="/icon.svg" alt="Qurb Logo" className="w-7 h-7 object-contain" />
                 </div>
                 <div>
-                  <span style={{ fontFamily: "'Raleway', sans-serif" }} className="text-3xl font-extrabold tracking-tight text-white">
+                  <span style={{ fontFamily: "'Raleway', sans-serif" }} className="text-2xl font-extrabold tracking-tight text-slate-900">
                     Qurb
                   </span>
-                  <div className="text-rose-400 text-xs font-semibold">Pure Islamic Matrimony &amp; Nikah</div>
+                  <div className="text-rose-600 text-[11px] font-semibold">Pure Halal Matrimony</div>
                 </div>
               </div>
 
-              <p className="text-slate-400 text-xs sm:text-sm leading-relaxed max-w-sm">
-                The dignified matrimonial platform built exclusively for practicing Muslims seeking lawful marriage with modesty (Haya), Wali chaperoning, and lifelong Barakah.
+              <p className="text-slate-500 text-xs leading-relaxed">
+                Dedicated to lawful Islamic marriage with modesty (Haya), guardian chaperoning, and lifelong Barakah.
               </p>
 
               {/* Trust & Safety Highlights */}
-              <div className="flex flex-wrap gap-2 pt-1">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700/60 text-slate-300 text-[11px] font-medium">
-                  <Lock className="w-3 h-3 text-emerald-400" />
+              <div className="flex flex-col gap-1.5 pt-1">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white border border-slate-200 text-slate-600 text-[10.5px] font-medium shadow-2xs w-fit">
+                  <Lock className="w-3 h-3 text-emerald-600 shrink-0" />
                   <span>256-bit TLS Encrypted</span>
                 </div>
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700/60 text-slate-300 text-[11px] font-medium">
-                  <ShieldCheck className="w-3 h-3 text-rose-400" />
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white border border-slate-200 text-slate-600 text-[10.5px] font-medium shadow-2xs w-fit">
+                  <ShieldCheck className="w-3 h-3 text-rose-600 shrink-0" />
                   <span>Modesty Photo Shield</span>
-                </div>
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700/60 text-slate-300 text-[11px] font-medium">
-                  <Users className="w-3 h-3 text-amber-400" />
-                  <span>Wali Chaperoned</span>
                 </div>
               </div>
 
               {/* Social Channels */}
-              <div className="pt-2">
-                <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2.5">
+              <div className="pt-1.5">
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
                   Follow Our Journey
                 </div>
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-2">
                   <a 
                     href="https://www.tiktok.com/@qurb.app" 
                     target="_blank" 
                     rel="noopener noreferrer" 
-                    className="w-9 h-9 rounded-xl bg-slate-800 hover:bg-black border border-slate-700 hover:border-slate-500 flex items-center justify-center text-slate-300 hover:text-white transition-all group"
+                    className="w-8 h-8 rounded-xl bg-white hover:bg-slate-900 hover:text-white border border-slate-200 flex items-center justify-center text-slate-600 transition-all shadow-2xs"
                     title="Follow Qurb on TikTok"
                     aria-label="TikTok"
                   >
-                    <TikTokIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                    <TikTokIcon className="w-3.5 h-3.5" />
                   </a>
                   <a 
                     href="https://www.instagram.com/qurb.app" 
                     target="_blank" 
                     rel="noopener noreferrer" 
-                    className="w-9 h-9 rounded-xl bg-slate-800 hover:bg-gradient-to-tr hover:from-amber-600 hover:via-rose-600 hover:to-purple-600 border border-slate-700 hover:border-transparent flex items-center justify-center text-slate-300 hover:text-white transition-all group"
+                    className="w-8 h-8 rounded-xl bg-white hover:bg-rose-600 hover:text-white border border-slate-200 flex items-center justify-center text-slate-600 transition-all shadow-2xs"
                     title="Follow Qurb on Instagram"
                     aria-label="Instagram"
                   >
-                    <InstagramIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                    <InstagramIcon className="w-3.5 h-3.5" />
                   </a>
                   <a 
                     href="mailto:support@qurb.app"
-                    className="w-9 h-9 rounded-xl bg-slate-800 hover:bg-rose-600 border border-slate-700 hover:border-rose-500 flex items-center justify-center text-slate-300 hover:text-white transition-all group"
+                    className="w-8 h-8 rounded-xl bg-white hover:bg-rose-600 hover:text-white border border-slate-200 flex items-center justify-center text-slate-600 transition-all shadow-2xs"
                     title="Email Support"
                     aria-label="Support Email"
                   >
-                    <Mail className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                    <Mail className="w-3.5 h-3.5" />
                   </a>
                 </div>
               </div>
             </div>
 
-            {/* Col 3: Product Tour & Features */}
+            {/* Col 2: Product Tour & Features */}
             <div className="space-y-3">
-              <h4 className="text-white font-bold text-xs uppercase tracking-wider">Product Tour</h4>
-              <ul className="space-y-2.5 text-xs text-slate-400">
+              <h4 className="text-slate-900 font-bold text-xs uppercase tracking-wider">Product Tour</h4>
+              <ul className="space-y-2.5 text-xs text-slate-600">
                 <li>
-                  <a href="#experience" className="hover:text-rose-400 transition-colors flex items-center gap-1.5">
-                    <span>How Qurb Works</span>
+                  <a href="#experience" className="hover:text-rose-600 transition-colors">
+                    How Qurb Works
                   </a>
                 </li>
                 <li>
-                  <a href="#screens" className="hover:text-rose-400 transition-colors flex items-center gap-1.5">
-                    <span>Live App Showcase</span>
+                  <a href="#screens" className="hover:text-rose-600 transition-colors">
+                    Live App Showcase
                   </a>
                 </li>
                 <li>
-                  <a href="#nikah" className="hover:text-rose-400 transition-colors flex items-center gap-1.5">
-                    <span>Nikah Covenant</span>
+                  <a href="#nikah" className="hover:text-rose-600 transition-colors">
+                    Nikah Covenant
                   </a>
                 </li>
                 <li>
-                  <a href="#family" className="hover:text-rose-400 transition-colors flex items-center gap-1.5">
-                    <span>Family &amp; Wali Support</span>
+                  <a href="#family" className="hover:text-rose-600 transition-colors">
+                    Family &amp; Wali Support
                   </a>
                 </li>
                 <li>
-                  <a href="#faq" className="hover:text-rose-400 transition-colors flex items-center gap-1.5">
-                    <span>Frequently Asked Questions</span>
+                  <a href="#faq" className="hover:text-rose-600 transition-colors">
+                    Frequently Asked Questions
                   </a>
                 </li>
               </ul>
             </div>
 
-            {/* Col 3.5: Stories & Blog */}
+            {/* Col 3: Stories & Blog */}
             <div className="space-y-3">
-              <h4 className="text-white font-bold text-xs uppercase tracking-wider">Stories &amp; Wisdom</h4>
-              <ul className="space-y-2.5 text-xs text-slate-400">
+              <h4 className="text-slate-900 font-bold text-xs uppercase tracking-wider">Stories &amp; Wisdom</h4>
+              <ul className="space-y-2.5 text-xs text-slate-600">
                 <li>
                   <button
                     onClick={() => {
                       window.location.hash = '#stories';
                       setCurrentView('stories');
                     }}
-                    className="hover:text-rose-400 transition-colors flex items-center gap-1.5 cursor-pointer text-left"
+                    className="hover:text-rose-600 transition-colors text-left cursor-pointer"
                   >
-                    <span>Halal Stories (6 Real Unions)</span>
+                    Halal Stories (Real Unions)
                   </button>
                 </li>
                 <li>
@@ -1782,14 +1811,14 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
                       window.location.hash = '#blog';
                       setCurrentView('blog');
                     }}
-                    className="hover:text-rose-400 transition-colors flex items-center gap-1.5 cursor-pointer text-left"
+                    className="hover:text-rose-600 transition-colors text-left cursor-pointer"
                   >
-                    <span>Matrimony Journal &amp; Blog</span>
+                    Matrimony Journal &amp; Blog
                   </button>
                 </li>
                 <li>
-                  <a href="#testimonials" className="hover:text-rose-400 transition-colors flex items-center gap-1.5">
-                    <span>Couple Testimonials</span>
+                  <a href="#testimonials" className="hover:text-rose-600 transition-colors">
+                    Couple Testimonials
                   </a>
                 </li>
                 <li>
@@ -1798,49 +1827,49 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
                       window.location.hash = '#blog';
                       setCurrentView('blog');
                     }}
-                    className="hover:text-rose-400 transition-colors flex items-center gap-1.5 cursor-pointer text-left"
+                    className="hover:text-rose-600 transition-colors text-left cursor-pointer"
                   >
-                    <span>Sunnah Courtship Guides</span>
+                    Sunnah Courtship Guides
                   </button>
                 </li>
               </ul>
             </div>
 
-            {/* Col 4: Platforms & Download */}
+            {/* Col 4: Get the App */}
             <div className="space-y-3">
-              <h4 className="text-white font-bold text-xs uppercase tracking-wider">Get the App</h4>
-              <ul className="space-y-2.5 text-xs text-slate-400">
+              <h4 className="text-slate-900 font-bold text-xs uppercase tracking-wider">Get the App</h4>
+              <ul className="space-y-2.5 text-xs text-slate-600">
                 <li>
                   <button 
                     onClick={() => setShowAndroidModal(true)} 
-                    className="hover:text-rose-400 transition-colors flex items-center gap-2 text-left cursor-pointer"
+                    className="hover:text-rose-600 transition-colors flex items-center gap-2 text-left cursor-pointer"
                   >
-                    <GooglePlayIcon className="w-3.5 h-3.5 shrink-0 text-rose-400" />
+                    <GooglePlayIcon className="w-3.5 h-3.5 shrink-0 text-slate-800" />
                     <span>Google Play (Android)</span>
                   </button>
                 </li>
                 <li>
                   <button 
                     onClick={handlePwaClick} 
-                    className="hover:text-rose-400 transition-colors flex items-center gap-2 text-left cursor-pointer"
+                    className="hover:text-rose-600 transition-colors flex items-center gap-2 text-left cursor-pointer"
                   >
-                    <AppStoreIcon className="w-3.5 h-3.5 shrink-0 text-rose-400" />
+                    <AppStoreIcon className="w-3.5 h-3.5 shrink-0 text-slate-800" />
                     <span>App Store (iOS PWA)</span>
                   </button>
                 </li>
                 <li>
                   <button 
                     onClick={onLaunchWebApp} 
-                    className="hover:text-rose-400 transition-colors flex items-center gap-2 text-left cursor-pointer font-medium text-slate-200"
+                    className="hover:text-rose-600 transition-colors flex items-center gap-2 text-left cursor-pointer font-semibold text-slate-900"
                   >
-                    <ArrowRight className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
+                    <ArrowRight className="w-3.5 h-3.5 shrink-0 text-emerald-600" />
                     <span>Launch Web App</span>
                   </button>
                 </li>
                 <li>
                   <button 
                     onClick={onLogin} 
-                    className="hover:text-rose-400 transition-colors flex items-center gap-2 text-left cursor-pointer"
+                    className="hover:text-rose-600 transition-colors flex items-center gap-2 text-left cursor-pointer"
                   >
                     <Users className="w-3.5 h-3.5 shrink-0 text-slate-400" />
                     <span>Sign In to Account</span>
@@ -1849,7 +1878,7 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
                 <li>
                   <button 
                     onClick={onGetStarted} 
-                    className="hover:text-rose-400 transition-colors flex items-center gap-2 text-left cursor-pointer text-rose-400 font-semibold"
+                    className="hover:text-rose-700 transition-colors flex items-center gap-2 text-left cursor-pointer text-rose-600 font-bold"
                   >
                     <HeartHandshake className="w-3.5 h-3.5 shrink-0" />
                     <span>Create Profile Free</span>
@@ -1860,30 +1889,30 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
 
             {/* Col 5: Trust, Safety & Legal */}
             <div className="space-y-3">
-              <h4 className="text-white font-bold text-xs uppercase tracking-wider">Trust &amp; Legal</h4>
-              <ul className="space-y-2.5 text-xs text-slate-400">
+              <h4 className="text-slate-900 font-bold text-xs uppercase tracking-wider">Trust &amp; Legal</h4>
+              <ul className="space-y-2.5 text-xs text-slate-600">
                 <li>
-                  <a href="/privacy-policy" className="hover:text-rose-400 transition-colors">
+                  <a href="/privacy-policy" className="hover:text-rose-600 transition-colors">
                     Privacy Policy
                   </a>
                 </li>
                 <li>
-                  <a href="/terms" className="hover:text-rose-400 transition-colors">
+                  <a href="/terms" className="hover:text-rose-600 transition-colors">
                     Terms of Service
                   </a>
                 </li>
                 <li>
-                  <a href="/child-safety" className="hover:text-rose-400 transition-colors">
+                  <a href="/child-safety" className="hover:text-rose-600 transition-colors">
                     Child Safety Standards
                   </a>
                 </li>
                 <li>
-                  <a href="#nikah" className="hover:text-rose-400 transition-colors">
+                  <a href="#nikah" className="hover:text-rose-600 transition-colors">
                     Matrimony Charter
                   </a>
                 </li>
                 <li>
-                  <a href="mailto:support@qurb.app" className="hover:text-rose-400 transition-colors flex items-center gap-1.5">
+                  <a href="mailto:support@qurb.app" className="hover:text-rose-600 transition-colors flex items-center gap-1.5">
                     <span>support@qurb.app</span>
                   </a>
                 </li>
@@ -1904,7 +1933,7 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
               Built with Barakah for practicing Muslims worldwide • Honoring Haya &amp; Modesty
             </div>
 
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-800/70 border border-slate-700/50 text-slate-400 text-[10px]">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-white border border-emerald-200 text-emerald-800 text-[10px] font-medium shadow-2xs">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <span>Amanah Protected &amp; Verified</span>
             </div>
@@ -2016,7 +2045,7 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
 
               <div className="space-y-2 pt-2">
                 <h3 className="font-serif text-lg font-bold text-slate-900 flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-rose-600" />
+                  <HeartHandshake className="w-4 h-4 text-rose-600" />
                   <span>How They Connected</span>
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-700 leading-relaxed">
@@ -2432,7 +2461,7 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
             {/* Full Story Journey */}
             <div className="space-y-2">
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-rose-600" />
+                <HeartHandshake className="w-3.5 h-3.5 text-rose-600" />
                 <span>The Sacred Journey to Marriage</span>
               </h4>
               <p className="text-xs sm:text-sm text-slate-700 leading-relaxed bg-[#FAF9F6] p-4 rounded-2xl border border-slate-200">

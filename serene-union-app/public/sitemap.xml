@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  
+  <!-- ========================================================== -->
+  <!-- 1. PRIMARY LANDING PAGE & KEY MEDIA ASSETS                -->
+  <!-- ========================================================== -->
+  <url>
+    <loc>https://qurb.app/</loc>
+    <lastmod>2026-09-11</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://qurb.app/hero_matrimony.jpg</image:loc>
+      <image:title>Qurb - Pure Halal Islamic Matrimony and Nikah Platform</image:title>
+      <image:caption>Finding your righteous spouse the pure halal way with Barakah, modesty, and family Wali involvement.</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://qurb.app/hero_joyful.jpg</image:loc>
+      <image:title>Joyful Muslim Wedding Couple with Sunnah Values</image:title>
+      <image:caption>Practicing Muslims celebrating their blessed Nikah through pure intentions on Qurb.</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://qurb.app/halal_family.jpg</image:loc>
+      <image:title>Wali and Family Blessing in Islamic Matrimony</image:title>
+      <image:caption>Fathers and guardians chaperoning conversations with Islamic adab and honor.</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://qurb.app/halal_rings.jpg</image:loc>
+      <image:title>Sacred Nikah Covenant in Islam</image:title>
+      <image:caption>The solemn covenant of Islamic marriage built upon mutual mercy and love (Mawaddah wa Rahmah).</image:caption>
+    </image:image>
+  </url>
+
+  <!-- ========================================================== -->
+  <!-- 2. HALAL STORIES: VERIFIED NIKAH JOURNEYS                 -->
+  <!-- ========================================================== -->
+  <url>
+    <loc>https://qurb.app/#stories</loc>
+    <lastmod>2026-09-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://qurb.app/stories/story_zaid_ayesha.jpg</image:loc>
+      <image:title>Zaid and Ayesha - Wali Guided Nikah Journey</image:title>
+      <image:caption>How Ayesha's father chaperoned communications, culminating in a blessed London Nikah.</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://qurb.app/stories/story_tariq_fatima.jpg</image:loc>
+      <image:title>Tariq and Fatima - Spoken Voice Bio Connection</image:title>
+      <image:caption>Discovering genuine character, sincerity, and Islamic values through spoken voice audio on Qurb.</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://qurb.app/stories/story_hamza_maryam.jpg</image:loc>
+      <image:title>Hamza and Maryam - 1-to-1 Modesty Photo Shield</image:title>
+      <image:caption>Honoring Haya with blurred photos until mutual consent, creating a marriage of deep respect.</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://qurb.app/stories/story_zainab_omar.jpg</image:loc>
+      <image:title>Zainab and Omar - Cross-Cultural Barakah</image:title>
+      <image:caption>Bridging cultures upon shared devotion to the Sunnah and family blessing.</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://qurb.app/stories/story_yusuf_aminah.jpg</image:loc>
+      <image:title>Yusuf and Aminah - Revert Journey to Sunnah Marriage</image:title>
+      <image:caption>A peaceful union guided by shared faith, transparent biodata, and community trust.</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://qurb.app/stories/story_bilal_sarah.jpg</image:loc>
+      <image:title>Bilal and Sarah - Sunnah Alignment and Early Family Meeting</image:title>
+      <image:caption>Honoring the Sunnah with direct intentions and swift family involvement.</image:caption>
+    </image:image>
+  </url>
+
+  <!-- Individual Halal Story Deep-Links for AEO & GEO Knowledge Extraction -->
+  <url>
+    <loc>https://qurb.app/#stories/zaid-and-ayesha-wali-guided-nikah</loc>
+    <lastmod>2026-09-11</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://qurb.app/#stories/tariq-and-fatima-spoken-voice-match</loc>
+    <lastmod>2026-09-11</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://qurb.app/#stories/hamza-and-maryam-modesty-shield</loc>
+    <lastmod>2026-09-11</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://qurb.app/#stories/zainab-and-omar-cross-cultural-barakah</loc>
+    <lastmod>2026-09-11</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://qurb.app/#stories/yusuf-and-aminah-revert-journey</loc>
+    <lastmod>2026-09-11</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://qurb.app/#stories/bilal-and-sarah-sunnah-alignment</loc>
+    <lastmod>2026-09-11</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- ========================================================== -->
+  <!-- 3. MATRIMONY JOURNAL & ISLAMIC COURTSHIP BLOG              -->
+  <!-- ========================================================== -->
+  <url>
+    <loc>https://qurb.app/#blog</loc>
+    <lastmod>2026-09-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://qurb.app/blog/blog_courtship_etiquette.jpg</image:loc>
+      <image:title>The Etiquette of Halal Courtship: From Salam to Nikah with Haya</image:title>
+      <image:caption>Islamic boundaries, avoiding aimless texting, and purposeful marital communication.</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://qurb.app/blog/blog_wali_role.jpg</image:loc>
+      <image:title>The Sacred Role of the Wali: Protecting the Sister and Family Blessing</image:title>
+      <image:caption>Understanding the wisdom behind guardianship in Islamic jurisprudence.</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://qurb.app/blog/blog_mahr_wisdom.jpg</image:loc>
+      <image:title>Understanding Mahr in Islam: Rights, Wisdom, and Moderation</image:title>
+      <image:caption>The bridal gift in Islam, financial dignity, and ease of marriage according to the Sunnah.</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://qurb.app/blog/blog_voice_values.jpg</image:loc>
+      <image:title>Beyond Appearance: Spoken Voice Bios and Evaluating Character First</image:title>
+      <image:caption>Why tone of voice, Islamic articulation, and religious practice matter before physical looks.</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://qurb.app/blog/blog_premarital_questions.jpg</image:loc>
+      <image:title>10 Essential Premarital Questions Practicing Muslims Should Discuss</image:title>
+      <image:caption>Key questions on prayer routine, finances, family boundaries, and Islamic child rearing.</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://qurb.app/blog/blog_istikhara_guidance.jpg</image:loc>
+      <image:title>Istikhara for Marriage: How to Seek Allah's Guidance with Clarity</image:title>
+      <image:caption>Authentic dua, conditions of Istikhara, and interpreting the signs with serenity.</image:caption>
+    </image:image>
+  </url>
+
+  <!-- Individual Matrimony Journal Articles for Answer Engines -->
+  <url>
+    <loc>https://qurb.app/#blog/etiquette-of-halal-courtship-haya-to-nikah</loc>
+    <lastmod>2026-09-11</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://qurb.app/#blog/sacred-role-of-the-wali-guardian-blessing</loc>
+    <lastmod>2026-09-11</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://qurb.app/#blog/understanding-mahr-in-islam-rights-wisdom</loc>
+    <lastmod>2026-09-11</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://qurb.app/#blog/beyond-appearance-voice-bios-and-values</loc>
+    <lastmod>2026-09-11</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://qurb.app/#blog/10-essential-questions-before-nikah</loc>
+    <lastmod>2026-09-11</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://qurb.app/#blog/istikhara-for-marriage-seeking-allahs-guidance</loc>
+    <lastmod>2026-09-11</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- ========================================================== -->
+  <!-- 4. TRUST, SAFETY & LEGAL CHARTERS                         -->
+  <!-- ========================================================== -->
+  <url>
+    <loc>https://qurb.app/privacy-policy</loc>
+    <lastmod>2026-09-11</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <url>
+    <loc>https://qurb.app/terms</loc>
+    <lastmod>2026-09-11</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <url>
+    <loc>https://qurb.app/child-safety</loc>
+    <lastmod>2026-09-11</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+</urlset>

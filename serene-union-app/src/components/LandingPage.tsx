@@ -365,7 +365,7 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
             </button>
             <button
               onClick={onGetStarted}
-              className="bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white font-semibold text-xs sm:text-sm px-5 py-2.5 rounded-full active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer shadow-md shadow-rose-500/20"
+              className="bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs sm:text-sm px-5 py-2.5 rounded-full active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer shadow-md shadow-rose-600/20"
             >
               <span>Get Started</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -374,9 +374,22 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
         </div>
       </header>
 
-      {/* 3. CENTRALIZED HERO SECTION: 2 FLANKING IMAGES + LOGO IDENTITY COLOR BUTTONS + ABSTRACT ELEMENTS */}
+      {/* 3. CENTRALIZED HERO SECTION: 2 FLANKING WEDDING IMAGES + SOLID IDENTITY BUTTONS + AMBIENT TEXTURE */}
       <section className="relative overflow-hidden bg-gradient-to-b from-[#FCFBF9] via-white to-[#FAF9F6] pt-12 pb-20 sm:pt-16 sm:pb-24 border-b border-slate-200/80">
         
+        {/* Subtle Atmospheric Islamic Courtyard Background with Low Opacity & Soft Tint Overlay */}
+        <div className="absolute inset-0 -z-20 overflow-hidden pointer-events-none">
+          <img 
+            src="/hero_ambient_bg.jpg" 
+            alt="Islamic Architecture Texture" 
+            className="w-full h-full object-cover object-center opacity-15" 
+          />
+          {/* Gentle black tint overlay */}
+          <div className="absolute inset-0 bg-black/[0.04]" />
+          {/* Subtle light gradient wash to ensure pristine readability */}
+          <div className="absolute inset-0 bg-gradient-to-b from-white/90 via-white/80 to-[#FAF9F6]/95" />
+        </div>
+
         {/* Abstract Ambient Glow Elements */}
         <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[650px] h-[350px] bg-gradient-to-tr from-rose-200/35 via-amber-100/25 to-emerald-100/20 rounded-full blur-3xl pointer-events-none -z-10" />
         
@@ -428,13 +441,13 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
                 Modest, dignified, and intentional matchmaking crafted for practicing Muslims seeking lifelong Nikah.
               </p>
 
-              {/* Two Official Store Buttons in Qurb Logo Identity Color (Rose Crimson) */}
+              {/* Two Official Store Buttons in Solid Qurb Logo Identity Color (No Gradient) */}
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 pt-2">
                 
                 {/* 1. Google Play Store (Native Android App) */}
                 <button
                   onClick={() => setShowAndroidModal(true)}
-                  className="w-full sm:w-auto min-w-[215px] bg-gradient-to-r from-rose-600 via-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white px-5 py-3.5 rounded-2xl shadow-lg shadow-rose-600/25 hover:shadow-xl hover:shadow-rose-600/35 hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-3 cursor-pointer border border-rose-500/40 group"
+                  className="w-full sm:w-auto min-w-[215px] bg-rose-600 hover:bg-rose-700 text-white px-5 py-3.5 rounded-2xl shadow-lg shadow-rose-600/20 hover:shadow-xl hover:shadow-rose-600/30 hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-3 cursor-pointer group"
                 >
                   <GooglePlayIcon className="w-6 h-6 text-white shrink-0 group-hover:scale-105 transition-transform" />
                   <div className="text-left leading-tight">
@@ -446,7 +459,7 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
                 {/* 2. Apple App Store (iOS PWA) */}
                 <button
                   onClick={handlePwaClick}
-                  className="w-full sm:w-auto min-w-[215px] bg-gradient-to-r from-rose-600 via-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white px-5 py-3.5 rounded-2xl shadow-lg shadow-rose-600/25 hover:shadow-xl hover:shadow-rose-600/35 hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-3 cursor-pointer border border-rose-500/40 group"
+                  className="w-full sm:w-auto min-w-[215px] bg-rose-600 hover:bg-rose-700 text-white px-5 py-3.5 rounded-2xl shadow-lg shadow-rose-600/20 hover:shadow-xl hover:shadow-rose-600/30 hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-3 cursor-pointer group"
                 >
                   <AppStoreIcon className="w-6 h-6 text-white shrink-0 group-hover:scale-105 transition-transform" />
                   <div className="text-left leading-tight">
@@ -481,23 +494,23 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
                   <img src="/hero_joyful.jpg" alt="Nikah Couple 1" className="w-full h-full object-cover" />
                 </div>
                 <div className="rounded-2xl overflow-hidden shadow-md border-2 border-white aspect-[4/5]">
-                  <img src="/hero_sunset.jpg" alt="Nikah Couple 2" className="w-full h-full object-cover" />
+                  <img src="/hero_couple_right.jpg" alt="Nikah Couple 2" className="w-full h-full object-cover" />
                 </div>
               </div>
 
             </div>
 
-            {/* Flanking Image 2: Right Side on Desktop (Palace Reflection Pool Nikah) */}
+            {/* Flanking Image 2: Right Side on Desktop (Blessed Nikah Couple) */}
             <div className="hidden lg:block lg:col-span-3">
               <div className="relative rounded-3xl overflow-hidden shadow-xl border-4 border-white bg-white transform rotate-2 hover:rotate-0 hover:scale-102 transition-all duration-500 group">
                 <img 
-                  src="/hero_sunset.jpg" 
-                  alt="Palace Reflection Pool Nikah Couple" 
+                  src="/hero_couple_right.jpg" 
+                  alt="Joyful Nikah Couple in Wedding Attire" 
                   className="w-full h-[390px] object-cover object-center group-hover:scale-105 transition-transform duration-700" 
                 />
                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-900/80 via-slate-900/30 to-transparent p-4 text-white">
-                  <p className="font-serif font-bold text-xs text-white">Sacred Archway</p>
-                  <p className="text-white/80 text-[10px]">Tranquility, Love &amp; Mercy</p>
+                  <p className="font-serif font-bold text-xs text-white">Blessed Nikah</p>
+                  <p className="text-white/80 text-[10px]">Grace, Modesty &amp; Sunnah</p>
                 </div>
               </div>
             </div>

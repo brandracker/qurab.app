@@ -23,9 +23,10 @@ import {
   MapPin,
   Calendar,
   Clock,
-  Share2
+  Share2,
+  CheckCircle2
 } from 'lucide-react';
-import { testimonialsData } from '../data/testimonialsData';
+import { testimonialsData, type TestimonialItem } from '../data/testimonialsData';
 import { halalStoriesData, type HalalStory } from '../data/storiesData';
 import { blogPostsData, type BlogPost } from '../data/blogData';
 import { HalalStoriesPage } from './HalalStoriesPage';
@@ -99,7 +100,7 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
     if (typeof window !== 'undefined') {
       const hash = window.location.hash.toLowerCase();
       if (hash.startsWith('#stories') || hash.startsWith('#halal-stories')) return 'stories';
-      if (hash.startsWith('#blog') || hash.startsWith('#journal')) return 'blog';
+      if (hash.startsWith('#blog') || hash.startsWith('#journal') || hash.startsWith('#blogs')) return 'blog';
     }
     return 'home';
   });
@@ -107,6 +108,15 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
   const [selectedStoryModal, setSelectedStoryModal] = useState<HalalStory | null>(null);
   const [selectedArticleModal, setSelectedArticleModal] = useState<BlogPost | null>(null);
   const [articleCopied, setArticleCopied] = useState<boolean>(false);
+
+  const [selectedTestimonialModal, setSelectedTestimonialModal] = useState<TestimonialItem | null>(null);
+  const [selectedTestimonialTag, setSelectedTestimonialTag] = useState<string>('All');
+  const [showSubmitStoryModal, setShowSubmitStoryModal] = useState<boolean>(false);
+  const [submitSuccess, setSubmitSuccess] = useState<boolean>(false);
+
+  const filteredTestimonials = selectedTestimonialTag === 'All'
+    ? testimonialsData
+    : testimonialsData.filter(t => t.tag === selectedTestimonialTag);
 
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
   const [showIosModal, setShowIosModal] = useState<boolean>(false);
@@ -123,7 +133,7 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
       if (hash.startsWith('#stories') || hash.startsWith('#halal-stories')) {
         setCurrentView('stories');
         window.scrollTo({ top: 0, behavior: 'smooth' });
-      } else if (hash.startsWith('#blog') || hash.startsWith('#journal')) {
+      } else if (hash.startsWith('#blog') || hash.startsWith('#journal') || hash.startsWith('#blogs')) {
         setCurrentView('blog');
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } else if (hash === '' || hash === '#') {
@@ -400,15 +410,15 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
       </aside>
 
       {/* MOBILE QUICK NAVIGATION STRIP */}
-      <div className="md:hidden w-full bg-white border-b border-slate-200 px-4 py-2 flex items-center justify-start gap-2 text-xs font-semibold overflow-x-auto no-scrollbar">
+      <div className="md:hidden w-full bg-white border-b border-slate-200 px-4 py-2.5 flex items-center justify-center gap-3 text-xs font-semibold">
         <button
           onClick={() => {
             window.location.hash = '#stories';
             setCurrentView('stories');
           }}
-          className="px-3 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200 flex items-center gap-1 shrink-0 cursor-pointer"
+          className="px-4 py-1.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-all shadow-2xs"
         >
-          <Heart className="w-3 h-3 fill-rose-600" />
+          <Heart className="w-3.5 h-3.5 fill-rose-600 text-rose-600" />
           <span>Halal Stories</span>
         </button>
         <button
@@ -416,17 +426,11 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
             window.location.hash = '#blog';
             setCurrentView('blog');
           }}
-          className="px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1 shrink-0 cursor-pointer"
+          className="px-4 py-1.5 rounded-full bg-amber-50 text-amber-900 border border-amber-200 flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-all shadow-2xs"
         >
-          <BookOpen className="w-3 h-3 text-amber-700" />
-          <span>Blog</span>
+          <BookOpen className="w-3.5 h-3.5 text-amber-700" />
+          <span>Blogs</span>
         </button>
-        <a href="#testimonials" className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 shrink-0">
-          Testimonials
-        </a>
-        <a href="#experience" className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 shrink-0">
-          App Tour
-        </a>
       </div>
 
       {/* 2. CLEAN LUXURY LIGHT NAVBAR */}
@@ -445,33 +449,35 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
             </div>
           </a>
 
-          {/* Navigation Links */}
-          <nav className="hidden md:flex items-center gap-6 lg:gap-7 text-xs sm:text-sm font-medium text-slate-600">
+          {/* Navigation Links - Exclusive: Blogs & Halal Stories */}
+          <nav className="hidden md:flex items-center gap-3.5 text-xs sm:text-sm font-semibold">
             <button
               onClick={() => {
                 window.location.hash = '#stories';
                 setCurrentView('stories');
               }}
-              className="hover:text-rose-600 transition-colors font-semibold text-rose-700 cursor-pointer flex items-center gap-1.5"
+              className="px-4 py-2 rounded-full border border-rose-200/90 bg-rose-50/70 hover:bg-rose-100/90 text-rose-800 transition-all flex items-center gap-2 cursor-pointer shadow-2xs hover:shadow-sm group"
             >
-              <Heart className="w-3.5 h-3.5 fill-rose-600 text-rose-600" />
+              <Heart className="w-4 h-4 fill-rose-500 text-rose-600 group-hover:scale-110 transition-transform" />
               <span>Halal Stories</span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white text-rose-700 border border-rose-200 shadow-2xs">
+                Real Nikahs
+              </span>
             </button>
+
             <button
               onClick={() => {
                 window.location.hash = '#blog';
                 setCurrentView('blog');
               }}
-              className="hover:text-amber-700 transition-colors font-semibold text-amber-800 cursor-pointer flex items-center gap-1.5"
+              className="px-4 py-2 rounded-full border border-amber-200/90 bg-amber-50/70 hover:bg-amber-100/90 text-amber-900 transition-all flex items-center gap-2 cursor-pointer shadow-2xs hover:shadow-sm group"
             >
-              <BookOpen className="w-3.5 h-3.5 text-amber-700" />
-              <span>Blog</span>
+              <BookOpen className="w-4 h-4 text-amber-700 group-hover:scale-110 transition-transform" />
+              <span>Blogs</span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white text-amber-800 border border-amber-200 shadow-2xs">
+                Sunnah Guide
+              </span>
             </button>
-            <a href="#testimonials" className="hover:text-rose-600 transition-colors">Testimonials</a>
-            <a href="#experience" className="hover:text-rose-600 transition-colors">App Tour</a>
-            <a href="#screens" className="hover:text-rose-600 transition-colors">Screenshots</a>
-            <a href="#nikah" className="hover:text-rose-600 transition-colors">Nikah Covenant</a>
-            <a href="#faq" className="hover:text-rose-600 transition-colors">FAQ</a>
           </nav>
 
           {/* Right Action Buttons */}
@@ -899,15 +905,20 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
       </section>
 
       {/* 5.1 BLESSED TESTIMONIALS SECTION (4 INSPIRING TESTIMONIALS) */}
-      <section id="testimonials" className="py-20 sm:py-28 bg-[#FAF9F6] border-b border-slate-200/80">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+      <section id="testimonials" className="py-20 sm:py-28 bg-[#FAF9F6] border-b border-slate-200/80 relative overflow-hidden">
+        
+        {/* Subtle Ambient Glow */}
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-gradient-to-tr from-rose-200/20 via-amber-100/20 to-emerald-100/15 rounded-full blur-3xl pointer-events-none -z-0" />
+
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 relative z-10">
           
-          <div className="text-center max-w-2xl mx-auto space-y-3 mb-14">
-            <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold">
+          {/* Header */}
+          <div className="text-center max-w-2xl mx-auto space-y-3 mb-12">
+            <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold shadow-2xs">
               <HeartHandshake className="w-3.5 h-3.5 text-rose-600" />
               <span>Blessed Testimonials</span>
             </div>
-            <h2 className="font-serif text-3xl sm:text-4xl font-bold text-slate-900">
+            <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 tracking-tight">
               Words from Real Muslim Couples
             </h2>
             <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
@@ -915,68 +926,188 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
             </p>
           </div>
 
-          {/* 4 Testimonials Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {testimonialsData.map((item) => (
+          {/* Trust Social Proof Metrics Strip */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-10 max-w-4xl mx-auto">
+            <div className="bg-white/90 backdrop-blur-xs p-4 rounded-2xl border border-slate-200/90 shadow-2xs text-center space-y-1 hover:border-amber-200 transition-colors">
+              <div className="flex items-center justify-center gap-1 text-amber-500 mb-1">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                ))}
+              </div>
+              <div className="font-extrabold text-base sm:text-lg text-slate-900">4.9 / 5.0</div>
+              <div className="text-[11px] text-slate-500 font-medium">Verified Nikah Reviews</div>
+            </div>
+
+            <div className="bg-white/90 backdrop-blur-xs p-4 rounded-2xl border border-slate-200/90 shadow-2xs text-center space-y-1 hover:border-emerald-200 transition-colors">
+              <div className="w-7 h-7 rounded-xl bg-emerald-50 text-emerald-600 mx-auto flex items-center justify-center mb-1">
+                <ShieldCheck className="w-4 h-4" />
+              </div>
+              <div className="font-extrabold text-base sm:text-lg text-slate-900">100% Chaperoned</div>
+              <div className="text-[11px] text-slate-500 font-medium">Wali Involved from Day 1</div>
+            </div>
+
+            <div className="bg-white/90 backdrop-blur-xs p-4 rounded-2xl border border-slate-200/90 shadow-2xs text-center space-y-1 hover:border-rose-200 transition-colors">
+              <div className="w-7 h-7 rounded-xl bg-rose-50 text-rose-600 mx-auto flex items-center justify-center mb-1">
+                <Clock className="w-4 h-4" />
+              </div>
+              <div className="font-extrabold text-base sm:text-lg text-slate-900">4.2 Months Avg.</div>
+              <div className="text-[11px] text-slate-500 font-medium">Salam to Blessed Nikah</div>
+            </div>
+
+            <div className="bg-white/90 backdrop-blur-xs p-4 rounded-2xl border border-slate-200/90 shadow-2xs text-center space-y-1 hover:border-slate-300 transition-colors">
+              <div className="w-7 h-7 rounded-xl bg-slate-100 text-slate-700 mx-auto flex items-center justify-center mb-1">
+                <Lock className="w-4 h-4" />
+              </div>
+              <div className="font-extrabold text-base sm:text-lg text-slate-900">Modesty Shield</div>
+              <div className="text-[11px] text-slate-500 font-medium">1-to-1 Mutual Photo Reveal</div>
+            </div>
+          </div>
+
+          {/* Interactive Tag Filter Bar */}
+          <div className="flex items-center justify-center gap-2 flex-wrap mb-10">
+            {['All', 'Wali Chaperoned', 'Spoken Voice Bio Match', 'Modesty Shield First', 'Family Blessing & Sunnah'].map((category) => {
+              const count = category === 'All' ? testimonialsData.length : testimonialsData.filter(t => t.tag === category).length;
+              const isSelected = selectedTestimonialTag === category;
+              return (
+                <button
+                  key={category}
+                  onClick={() => setSelectedTestimonialTag(category)}
+                  className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    isSelected 
+                      ? 'bg-rose-600 text-white shadow-sm shadow-rose-600/25 ring-2 ring-rose-600/30' 
+                      : 'bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-slate-200'
+                  }`}
+                >
+                  <span>{category === 'All' ? 'All Reviews' : category}</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                    isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+                  }`}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Testimonials Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+            {filteredTestimonials.map((item) => (
               <div
                 key={item.id}
-                className="bg-white rounded-3xl p-7 border border-slate-200/90 shadow-xs hover:shadow-xl hover:border-rose-300 transition-all duration-300 flex flex-col justify-between space-y-5 group"
+                className="relative bg-white rounded-3xl p-7 sm:p-8 border border-slate-200/90 shadow-xs hover:shadow-xl hover:border-rose-300 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between space-y-6 group"
               >
-                <div className="space-y-4">
+                {/* Subtle Islamic Star Watermark */}
+                <svg className="absolute top-6 right-6 w-28 h-28 text-slate-100/70 pointer-events-none -z-0 group-hover:text-rose-100/40 transition-colors" viewBox="0 0 100 100" fill="currentColor">
+                  <polygon points="50,0 63,35 100,50 63,65 50,100 37,65 0,50 37,35" />
+                </svg>
+
+                <div className="relative z-10 space-y-4">
                   {/* Top Bar: Stars + Category Pill */}
                   <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1 text-amber-400">
-                      {[...Array(item.stars)].map((_, i) => (
-                        <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
-                      ))}
-                      <span className="text-xs font-bold text-slate-700 ml-1.5">5.0</span>
+                    <div className="flex items-center gap-1.5 text-amber-400">
+                      <div className="flex items-center">
+                        {[...Array(item.stars)].map((_, i) => (
+                          <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
+                        ))}
+                      </div>
+                      <span className="text-xs font-extrabold text-slate-800 ml-1">5.0</span>
+                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 ml-1">
+                        Verified
+                      </span>
                     </div>
-                    <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
+
+                    <span className="text-[10.5px] font-bold px-3 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
                       {item.tag}
                     </span>
                   </div>
 
-                  {/* Quote with quotation mark */}
-                  <div className="relative">
-                    <Quote className="w-8 h-8 text-rose-200/60 absolute -top-3 -left-2 -z-0 pointer-events-none" />
-                    <p className="relative z-10 font-serif text-sm sm:text-base text-slate-800 italic leading-relaxed">
+                  {/* Primary Quote */}
+                  <div className="relative pt-2">
+                    <Quote className="w-10 h-10 text-rose-200/50 absolute -top-2 -left-3 pointer-events-none" />
+                    <p className="relative z-10 font-serif text-base sm:text-lg text-slate-800 italic leading-relaxed font-medium">
                       "{item.quote}"
                     </p>
                   </div>
 
-                  {/* Full Story Note */}
-                  <p className="text-xs text-slate-600 leading-relaxed bg-[#FAF9F6] p-3.5 rounded-2xl border border-slate-200/70">
-                    {item.fullStory}
-                  </p>
+                  {/* Full Story Callout */}
+                  <div className="bg-[#FAF9F6] p-4 rounded-2xl border border-slate-200/80 space-y-2">
+                    <div className="flex items-center justify-between text-[11px] text-slate-500">
+                      <span className="font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-rose-600" />
+                        Nikah Journey Note
+                      </span>
+                      <span className="text-emerald-700 font-semibold">{item.timeline}</span>
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      {item.fullStory}
+                    </p>
+                    <button
+                      onClick={() => setSelectedTestimonialModal(item)}
+                      className="text-xs font-bold text-rose-700 hover:text-rose-800 inline-flex items-center gap-1 pt-1 cursor-pointer transition-colors"
+                    >
+                      <span>Read Full Journey Details</span>
+                      <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Bottom Author Card */}
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-2xl overflow-hidden border border-rose-200 shadow-2xs shrink-0">
-                      <img src={item.avatar} alt={item.coupleNames} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                <div className="relative z-10 pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3.5">
+                    <div className="relative w-12 h-12 rounded-2xl overflow-hidden border-2 border-rose-200 shadow-2xs shrink-0 group-hover:scale-105 transition-transform">
+                      <img src={item.avatar} alt={item.coupleNames} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 ring-1 ring-inset ring-black/5 rounded-2xl" />
                     </div>
                     <div>
                       <div className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
                         <span>{item.coupleNames}</span>
                         {item.verified && (
-                          <span className="text-[9px] font-bold uppercase px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          <span className="text-[9px] font-bold uppercase px-1.5 py-0.2 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
                             Nikah
                           </span>
                         )}
                       </div>
-                      <div className="text-[11px] text-slate-500 mt-0.5">{item.location}</div>
+                      <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
+                        <MapPin className="w-3 h-3 text-slate-400" />
+                        <span>{item.location}</span>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="text-right">
-                    <div className="text-[11px] font-semibold text-emerald-700">{item.timeline}</div>
-                    <div className="text-[10px] text-slate-400">{item.weddingDate}</div>
+                  <div className="text-right shrink-0">
+                    <div className="text-[11.5px] font-bold text-emerald-700 flex items-center justify-end gap-1">
+                      <Check className="w-3 h-3 text-emerald-600" />
+                      <span>{item.timeline}</span>
+                    </div>
+                    <div className="text-[10.5px] text-slate-400 mt-0.5">{item.weddingDate}</div>
                   </div>
                 </div>
 
               </div>
             ))}
+          </div>
+
+          {/* Bottom Community CTA Card */}
+          <div className="mt-14 max-w-3xl mx-auto rounded-3xl bg-gradient-to-r from-rose-50 via-white to-amber-50 border border-rose-200/80 p-6 sm:p-8 text-center space-y-3.5 shadow-xs">
+            <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[11px] font-bold">
+              <Heart className="w-3 h-3 fill-rose-600 text-rose-600" />
+              <span>Did You Find Your Spouse on Qurb?</span>
+            </div>
+            <h3 className="font-serif text-xl sm:text-2xl font-bold text-slate-900">
+              Share Your Nikah Journey with the Ummah
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-600 max-w-xl mx-auto leading-relaxed">
+              Every Halal marriage brings immense Barakah. Share your story to inspire sincere singles, and receive an exclusive engraved Nikah gift from the Qurb team.
+            </p>
+            <div className="pt-2">
+              <button
+                onClick={() => setShowSubmitStoryModal(true)}
+                className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-6 py-2.5 rounded-full shadow-md shadow-rose-600/20 active:scale-95 transition-all cursor-pointer inline-flex items-center gap-2"
+              >
+                <span>Share Your Blessing</span>
+                <HeartHandshake className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
 
         </div>
@@ -2222,6 +2353,221 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
                 <span>Or Launch Web App Immediately in Browser</span>
               </button>
             </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: BLESSED NIKAH TESTIMONIAL MODAL */}
+      {selectedTestimonialModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-xl w-full max-h-[90vh] overflow-y-auto p-6 sm:p-8 shadow-2xl border border-rose-100 space-y-6 relative text-left">
+            <button 
+              onClick={() => setSelectedTestimonialModal(null)}
+              className="absolute top-5 right-5 p-2 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer z-10"
+              aria-label="Close Testimonial"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Couple Header Banner */}
+            <div className="flex items-center gap-4 pt-2">
+              <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border-2 border-rose-200 shadow-md shrink-0">
+                <img 
+                  src={selectedTestimonialModal.avatar} 
+                  alt={selectedTestimonialModal.coupleNames} 
+                  className="w-full h-full object-cover" 
+                />
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="font-serif font-bold text-xl sm:text-2xl text-slate-900">
+                    {selectedTestimonialModal.coupleNames}
+                  </h3>
+                  {selectedTestimonialModal.verified && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                      <span>Verified Nikah</span>
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
+                  <span className="flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                    {selectedTestimonialModal.location}
+                  </span>
+                  <span>•</span>
+                  <span className="text-emerald-700 font-semibold flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5" />
+                    {selectedTestimonialModal.timeline}
+                  </span>
+                </div>
+                <div className="text-[11px] text-slate-400">
+                  {selectedTestimonialModal.weddingDate}
+                </div>
+              </div>
+            </div>
+
+            {/* Rating & Tag Pill */}
+            <div className="flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-[#FAF9F6] border border-slate-200/80">
+              <div className="flex items-center gap-1 text-amber-400">
+                {[...Array(selectedTestimonialModal.stars)].map((_, i) => (
+                  <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
+                ))}
+                <span className="text-xs font-bold text-slate-800 ml-1.5">5.0 Out of 5.0</span>
+              </div>
+              <span className="text-xs font-bold px-3 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
+                {selectedTestimonialModal.tag}
+              </span>
+            </div>
+
+            {/* Featured Quote */}
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-rose-50/60 to-amber-50/40 border border-rose-100 relative">
+              <Quote className="w-8 h-8 text-rose-300/60 mb-1" />
+              <p className="font-serif italic text-sm sm:text-base text-slate-800 leading-relaxed">
+                "{selectedTestimonialModal.quote}"
+              </p>
+            </div>
+
+            {/* Full Story Journey */}
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-rose-600" />
+                <span>The Sacred Journey to Marriage</span>
+              </h4>
+              <p className="text-xs sm:text-sm text-slate-700 leading-relaxed bg-[#FAF9F6] p-4 rounded-2xl border border-slate-200">
+                {selectedTestimonialModal.fullStory}
+              </p>
+            </div>
+
+            {/* Islamic Matrimonial Blessing Dua */}
+            <div className="p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200 text-center space-y-1">
+              <div className="font-serif text-sm font-semibold text-emerald-900">
+                بَارَكَ اللَّهُ لَكَ وَبَارَكَ عَلَيْكَ وَجَمَعَ بَيْنَكُمَا فِي خَيْرٍ
+              </div>
+              <p className="text-[11px] text-emerald-800 italic">
+                "May Allah bless you, shower His blessings upon you, and join you together in goodness."
+              </p>
+            </div>
+
+            {/* CTA */}
+            <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
+              <button
+                onClick={() => {
+                  setSelectedTestimonialModal(null);
+                  onGetStarted();
+                }}
+                className="w-full sm:flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 px-5 rounded-xl shadow-md text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer transition-all"
+              >
+                <span>Find Your Spouse on Qurb</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setSelectedTestimonialModal(null)}
+                className="w-full sm:w-auto px-5 py-3 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-semibold cursor-pointer"
+              >
+                Close Story
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: SUBMIT NIKAH STORY */}
+      {showSubmitStoryModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-5 relative text-left">
+            <button 
+              onClick={() => {
+                setShowSubmitStoryModal(false);
+                setSubmitSuccess(false);
+              }}
+              className="absolute top-5 right-5 p-2 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+              aria-label="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center">
+                <HeartHandshake className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-serif font-bold text-lg text-slate-900">Share Your Nikah Story</h3>
+                <p className="text-xs text-slate-500">Inspire the Ummah with your Halal Union</p>
+              </div>
+            </div>
+
+            {submitSuccess ? (
+              <div className="p-5 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-2.5">
+                <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto" />
+                <div className="font-bold text-sm text-emerald-900">Alhamdulillah! Story Received</div>
+                <p className="text-xs text-emerald-700 leading-relaxed">
+                  May Allah grant immense Barakah in your union. Our editorial team will review your testimony and reach out to deliver your honorary Qurb Nikah gift!
+                </p>
+                <button
+                  onClick={() => {
+                    setShowSubmitStoryModal(false);
+                    setSubmitSuccess(false);
+                  }}
+                  className="mt-3 px-5 py-2 bg-emerald-600 text-white rounded-full text-xs font-bold hover:bg-emerald-700 cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            ) : (
+              <form 
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  setSubmitSuccess(true);
+                }} 
+                className="space-y-3.5 text-xs text-slate-700"
+              >
+                <div>
+                  <label className="block font-semibold mb-1 text-slate-800">Couple Names</label>
+                  <input 
+                    required
+                    type="text" 
+                    placeholder="e.g. Zaid & Ayesha" 
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-rose-600 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1 text-slate-800">Email Address</label>
+                  <input 
+                    required
+                    type="email" 
+                    placeholder="youremail@domain.com" 
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-rose-600 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1 text-slate-800">Wedding Date & City</label>
+                  <input 
+                    required
+                    type="text" 
+                    placeholder="e.g. London, UK (Shawwal 1447)" 
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-rose-600 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1 text-slate-800">Your Testimonial / Story</label>
+                  <textarea 
+                    required
+                    rows={3} 
+                    placeholder="Tell us how Qurb helped you connect with Haya and family blessing..." 
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-rose-600 text-xs resize-none"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 rounded-xl shadow-md text-xs transition-all cursor-pointer"
+                >
+                  Submit Nikah Testimony
+                </button>
+              </form>
+            )}
 
           </div>
         </div>

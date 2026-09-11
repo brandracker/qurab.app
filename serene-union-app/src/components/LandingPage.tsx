@@ -500,33 +500,33 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
       </header>
 
       {/* 3. CENTRALIZED HERO SECTION: 2 FLANKING WEDDING IMAGES + SOLID IDENTITY BUTTONS + AMBIENT TEXTURE */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-[#FCFBF9] via-white to-[#FAF9F6] pt-12 pb-20 sm:pt-16 sm:pb-24 border-b border-slate-200/80">
+      <section className="relative overflow-hidden bg-[#FAF9F6] pt-12 pb-20 sm:pt-16 sm:pb-24 border-b border-slate-200/80">
         
-        {/* Subtle Atmospheric Islamic Courtyard Background with Low Opacity & Soft Tint Overlay */}
-        <div className="absolute inset-0 -z-20 overflow-hidden pointer-events-none">
+        {/* Visible Low-Opacity Islamic Courtyard & Architecture Background */}
+        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
           <img 
             src="/hero_ambient_bg.jpg" 
-            alt="Islamic Architecture Texture" 
-            className="w-full h-full object-cover object-center opacity-15" 
+            alt="Islamic Architecture Background" 
+            className="w-full h-full object-cover object-center opacity-30 sm:opacity-35 transition-opacity" 
           />
-          {/* Gentle black tint overlay */}
-          <div className="absolute inset-0 bg-black/[0.04]" />
-          {/* Subtle light gradient wash to ensure pristine readability */}
-          <div className="absolute inset-0 bg-gradient-to-b from-white/90 via-white/80 to-[#FAF9F6]/95" />
+          {/* Subtle soft white gradient overlay preserving pristine text readability */}
+          <div className="absolute inset-0 bg-gradient-to-b from-white/70 via-white/55 to-[#FAF9F6]/85" />
+          {/* Radial mask to ensure center copy stays high-contrast */}
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.85)_0%,rgba(255,255,255,0.45)_50%,transparent_100%)]" />
         </div>
 
         {/* Abstract Ambient Glow Elements */}
-        <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[650px] h-[350px] bg-gradient-to-tr from-rose-200/35 via-amber-100/25 to-emerald-100/20 rounded-full blur-3xl pointer-events-none -z-10" />
+        <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[650px] h-[350px] bg-gradient-to-tr from-rose-200/30 via-amber-100/20 to-emerald-100/15 rounded-full blur-3xl pointer-events-none z-0" />
         
         {/* Subtle Islamic Geometric Star Background Watermarks */}
-        <svg className="absolute -top-12 left-6 w-64 h-64 text-rose-900/[0.025] pointer-events-none -z-10" viewBox="0 0 100 100" fill="currentColor">
+        <svg className="absolute -top-12 left-6 w-64 h-64 text-rose-900/[0.035] pointer-events-none z-0" viewBox="0 0 100 100" fill="currentColor">
           <polygon points="50,0 63,35 100,50 63,65 50,100 37,65 0,50 37,35" />
         </svg>
-        <svg className="absolute -bottom-10 right-8 w-72 h-72 text-amber-900/[0.025] pointer-events-none -z-10" viewBox="0 0 100 100" fill="currentColor">
+        <svg className="absolute -bottom-10 right-8 w-72 h-72 text-amber-900/[0.035] pointer-events-none z-0" viewBox="0 0 100 100" fill="currentColor">
           <polygon points="50,0 63,35 100,50 63,65 50,100 37,65 0,50 37,35" />
         </svg>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-6 items-center">
             
             {/* Flanking Image 1: Left Side on Desktop (Joyful Muslim Wedding Couple) */}

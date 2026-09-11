@@ -37,9 +37,9 @@ export const blogPostsData: BlogPost[] = [
     author: {
       name: 'Ustadh Luqman Tariq',
       role: 'Family Counselor & Islamic Educator',
-      avatar: '/hero_joyful.jpg'
+      avatar: '/stories/story_zaid_ayesha.jpg'
     },
-    image: '/hero_matrimony.jpg',
+    image: '/blog/blog_courtship_etiquette.jpg',
     featured: true,
     sections: [
       {
@@ -79,9 +79,9 @@ export const blogPostsData: BlogPost[] = [
     author: {
       name: 'Ustadha Maryam Siddiqui',
       role: 'Pre-Marital Counselor & Author',
-      avatar: '/hero_couple_right.jpg'
+      avatar: '/stories/story_hamza_maryam.jpg'
     },
-    image: '/halal_family.jpg',
+    image: '/blog/blog_wali_role.jpg',
     featured: true,
     sections: [
       {
@@ -120,9 +120,9 @@ export const blogPostsData: BlogPost[] = [
     author: {
       name: 'Sheikh Dr. Bilal Al-Hussaini',
       role: 'Jurisprudence Researcher & Lecturer',
-      avatar: '/hero_sunset.jpg'
+      avatar: '/stories/story_bilal_sarah.jpg'
     },
-    image: '/halal_rings.jpg',
+    image: '/blog/blog_mahr_wisdom.jpg',
     featured: true,
     sections: [
       {
@@ -162,9 +162,9 @@ export const blogPostsData: BlogPost[] = [
     author: {
       name: 'Dr. Fatima Karim, PhD',
       role: 'Behavioral Psychologist & Family Counselor',
-      avatar: '/hero_joyful.jpg'
+      avatar: '/stories/story_tariq_fatima.jpg'
     },
-    image: '/hero_ambient_bg.jpg',
+    image: '/blog/blog_voice_values.jpg',
     featured: false,
     sections: [
       {
@@ -193,9 +193,9 @@ export const blogPostsData: BlogPost[] = [
     author: {
       name: 'Imam Zaid Shakir',
       role: 'Community Chaplain & Nikah Registrar',
-      avatar: '/hero_couple_right.jpg'
+      avatar: '/stories/story_yusuf_aminah.jpg'
     },
-    image: '/hero_joyful.jpg',
+    image: '/blog/blog_premarital_questions.jpg',
     featured: false,
     sections: [
       {
@@ -236,9 +236,9 @@ export const blogPostsData: BlogPost[] = [
     author: {
       name: 'Ustadh Luqman Tariq',
       role: 'Family Counselor & Islamic Educator',
-      avatar: '/hero_matrimony.jpg'
+      avatar: '/stories/story_zaid_ayesha.jpg'
     },
-    image: '/halal_couple_bg.jpg',
+    image: '/blog/blog_istikhara_guidance.jpg',
     featured: false,
     sections: [
       {

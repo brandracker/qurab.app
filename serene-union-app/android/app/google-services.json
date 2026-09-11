@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "865198689748",
+    "project_id": "marriage-app-1ca27",
+    "storage_bucket": "marriage-app-1ca27.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:865198689748:android:610832a1a3e9f1af54da41",
+        "android_client_info": {
+          "package_name": "app.qurb.serene"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "865198689748-utp5e8o5g1445ja1hvnovot1l888vuhg.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAQPXlN7dmTNW69DvagXfWzYkpcZ2FhNqk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "865198689748-utp5e8o5g1445ja1hvnovot1l888vuhg.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

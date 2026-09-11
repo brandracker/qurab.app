@@ -23,7 +23,7 @@ export const testimonialsData: TestimonialItem[] = [
     fullStory: 'Ayesha registered her father as her chaperone from day one. When Zaid sent his Salam, my father was able to observe our conversations, ensuring dignified adab. We met as families within 6 weeks and celebrated our Nikah with immense Barakah.',
     tag: 'Wali Chaperoned',
     verified: true,
-    avatar: '/hero_joyful.jpg',
+    avatar: '/stories/story_zaid_ayesha.jpg',
     stars: 5
   },
   {
@@ -36,7 +36,7 @@ export const testimonialsData: TestimonialItem[] = [
     fullStory: 'Tariq was drawn to Fatima’s sincerity in her audio bio where she spoke about her balance of medical residency and Quran memorization. No endless messaging games—just clear mutual goals toward lawful marriage upon the Sunnah.',
     tag: 'Spoken Voice Bio Match',
     verified: true,
-    avatar: '/hero_couple_right.jpg',
+    avatar: '/stories/story_tariq_fatima.jpg',
     stars: 5
   },
   {
@@ -49,7 +49,7 @@ export const testimonialsData: TestimonialItem[] = [
     fullStory: 'Maryam appreciated keeping her pictures blurred on the public feed. We connected over our shared commitment to five daily prayers, community service, and halal living. Our Nikah was simple, blessed, and full of peace.',
     tag: 'Modesty Shield First',
     verified: true,
-    avatar: '/hero_matrimony.jpg',
+    avatar: '/stories/story_hamza_maryam.jpg',
     stars: 5
   },
   {
@@ -62,7 +62,7 @@ export const testimonialsData: TestimonialItem[] = [
     fullStory: 'Both our families wanted a transparent, halal matchmaking process without the commercial pressures of traditional marriage bureaus. Qurb provided the modern dignity and Islamic ethics we needed.',
     tag: 'Family Blessing & Sunnah',
     verified: true,
-    avatar: '/hero_sunset.jpg',
+    avatar: '/stories/story_bilal_sarah.jpg',
     stars: 5
   }
 ];

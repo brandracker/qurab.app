@@ -9,6 +9,20 @@ import {
   sendResetPasswordEmail 
 } from '../services/firebase';
 import { API_BASE } from '../services/dbService';
+import { Capacitor, registerPlugin } from '@capacitor/core';
+
+interface GoogleAuthPluginInterface {
+  signIn(): Promise<{
+    idToken?: string;
+    email?: string;
+    displayName?: string;
+    photoUrl?: string;
+    id?: string;
+  }>;
+  signOut(): Promise<{ success: boolean }>;
+}
+
+const NativeGoogleAuth = registerPlugin<GoogleAuthPluginInterface>('GoogleAuthPlugin');
 
 interface Props {
   onAuthSuccess: (session: { token: string; user: any; isNewUser: boolean }) => void;
@@ -228,6 +242,9 @@ export const AuthScreen: React.FC<Props> = ({
 
   // Google Identity Services Initialization
   useEffect(() => {
+    // On native Android, skip GSI web initialization to avoid WebView issues
+    if (Capacitor.isNativePlatform()) return;
+
     let isMounted = true;
 
     const setupGsi = () => {
@@ -282,9 +299,54 @@ export const AuthScreen: React.FC<Props> = ({
     };
   }, [gender]);
 
-  // Google 1-Click Sign-In (Fallback to Popup if GSI is not loaded)
+  // Google 1-Click Sign-In (Native Android vs Web GSI)
   const handleGoogleSignIn = async () => {
-    // If GSI is available, trigger prompt
+    // 1. If on native Android platform, trigger native Google Play Services Auth
+    if (Capacitor.isNativePlatform()) {
+      setIsLoading(true);
+      setErrorMsg('');
+      try {
+        const result = await NativeGoogleAuth.signIn();
+        if (result?.idToken) {
+          await handleGoogleIdToken(result.idToken);
+        } else if (result?.email) {
+          // Direct synchronization with D1 backend if idToken exchange is handled
+          const res = await fetch(`${API_BASE}/auth/google-login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: result.email,
+              fullName: result.displayName || 'Google Member',
+              photoUrl: result.photoUrl || '',
+              googleUid: result.id || `g_${Date.now()}`
+            })
+          });
+          const data = await res.json();
+          if (data.success) {
+            onAuthSuccess({
+              token: data.token,
+              user: data.user,
+              isNewUser: Boolean(data.user?.isNewUser)
+            });
+          } else {
+            setErrorMsg(data.error || 'Google authentication failed.');
+          }
+        } else {
+          setErrorMsg('Google Sign-In was cancelled.');
+        }
+      } catch (nativeErr: any) {
+        console.warn('Native Google Sign-In error:', nativeErr);
+        const errStr = String(nativeErr?.message || nativeErr || '');
+        if (!errStr.includes('cancelled') && !errStr.includes('12501')) {
+          setErrorMsg('Google Sign-In was interrupted. Please try again or use email & password.');
+        }
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    // 2. If on web browser and GSI is available, trigger prompt
     const google = typeof window !== 'undefined' ? (window as any).google : null;
     if (google?.accounts?.id) {
       google.accounts.id.prompt();
@@ -329,6 +391,7 @@ export const AuthScreen: React.FC<Props> = ({
     }
   };
 
+
   return (
     <div className="w-full h-full flex flex-col justify-between p-6 bg-white relative overflow-y-auto font-sans select-none text-on-surface">
       
@@ -367,13 +430,15 @@ export const AuthScreen: React.FC<Props> = ({
               : 'Sign in to continue your matrimonial journey.'}
           </p>
 
-          {/* Google Sign-In Container (GSI Official + Fallback) */}
+          {/* Google Sign-In Container (GSI Official on Web + Native Android) */}
           <div className="w-full flex flex-col items-center justify-center mb-3.5 min-h-[44px]">
-            <div 
-              ref={googleBtnRef} 
-              className={`w-full flex justify-center ${gsiReady ? 'block' : 'hidden'}`} 
-            />
-            {!gsiReady && (
+            {!Capacitor.isNativePlatform() && (
+              <div 
+                ref={googleBtnRef} 
+                className={`w-full flex justify-center ${gsiReady ? 'block' : 'hidden'}`} 
+              />
+            )}
+            {(!gsiReady || Capacitor.isNativePlatform()) && (
               <button
                 type="button"
                 onClick={handleGoogleSignIn}

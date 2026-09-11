@@ -10,6 +10,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(AdMobPlugin.class);
         registerPlugin(GooglePlayBillingPlugin.class);
+        registerPlugin(GoogleAuthPlugin.class);
         super.onCreate(savedInstanceState);
         handleDeepLink(getIntent());
     }

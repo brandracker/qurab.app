@@ -1,0 +1,2 @@
+# Google AdSense authorized digital seller specification for Qurb (qurb.app)
+google.com, pub-5486823026870276, DIRECT, f08c47fec0942fa0

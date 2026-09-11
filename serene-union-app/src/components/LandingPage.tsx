@@ -399,6 +399,36 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
         </button>
       </aside>
 
+      {/* MOBILE QUICK NAVIGATION STRIP */}
+      <div className="md:hidden w-full bg-white border-b border-slate-200 px-4 py-2 flex items-center justify-start gap-2 text-xs font-semibold overflow-x-auto no-scrollbar">
+        <button
+          onClick={() => {
+            window.location.hash = '#stories';
+            setCurrentView('stories');
+          }}
+          className="px-3 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200 flex items-center gap-1 shrink-0 cursor-pointer"
+        >
+          <Heart className="w-3 h-3 fill-rose-600" />
+          <span>Halal Stories</span>
+        </button>
+        <button
+          onClick={() => {
+            window.location.hash = '#blog';
+            setCurrentView('blog');
+          }}
+          className="px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1 shrink-0 cursor-pointer"
+        >
+          <BookOpen className="w-3 h-3 text-amber-700" />
+          <span>Blog</span>
+        </button>
+        <a href="#testimonials" className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 shrink-0">
+          Testimonials
+        </a>
+        <a href="#experience" className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 shrink-0">
+          App Tour
+        </a>
+      </div>
+
       {/* 2. CLEAN LUXURY LIGHT NAVBAR */}
       <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.02)] transition-all">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between">
@@ -416,11 +446,31 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
           </a>
 
           {/* Navigation Links */}
-          <nav className="hidden md:flex items-center gap-8 text-xs sm:text-sm font-medium text-slate-600">
+          <nav className="hidden md:flex items-center gap-6 lg:gap-7 text-xs sm:text-sm font-medium text-slate-600">
+            <button
+              onClick={() => {
+                window.location.hash = '#stories';
+                setCurrentView('stories');
+              }}
+              className="hover:text-rose-600 transition-colors font-semibold text-rose-700 cursor-pointer flex items-center gap-1.5"
+            >
+              <Heart className="w-3.5 h-3.5 fill-rose-600 text-rose-600" />
+              <span>Halal Stories</span>
+            </button>
+            <button
+              onClick={() => {
+                window.location.hash = '#blog';
+                setCurrentView('blog');
+              }}
+              className="hover:text-amber-700 transition-colors font-semibold text-amber-800 cursor-pointer flex items-center gap-1.5"
+            >
+              <BookOpen className="w-3.5 h-3.5 text-amber-700" />
+              <span>Blog</span>
+            </button>
+            <a href="#testimonials" className="hover:text-rose-600 transition-colors">Testimonials</a>
             <a href="#experience" className="hover:text-rose-600 transition-colors">App Tour</a>
-            <a href="#screens" className="hover:text-rose-600 transition-colors">All Screenshots</a>
+            <a href="#screens" className="hover:text-rose-600 transition-colors">Screenshots</a>
             <a href="#nikah" className="hover:text-rose-600 transition-colors">Nikah Covenant</a>
-            <a href="#family" className="hover:text-rose-600 transition-colors">Family Blessing</a>
             <a href="#faq" className="hover:text-rose-600 transition-colors">FAQ</a>
           </nav>
 
@@ -1859,7 +1909,7 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
                   <span>From Salam to Nikah: The Timeline</span>
                 </h3>
                 <div className="space-y-2">
-                  {selectedStoryModal.timelineMilestones.map((m, idx) => (
+                  {selectedStoryModal.timelineMilestones.map((m: { time: string; event: string }, idx: number) => (
                     <div key={idx} className="flex items-start gap-3 p-3 rounded-xl bg-[#FAF9F6] border border-slate-200/80">
                       <span className="w-6 h-6 rounded-full bg-slate-900 text-white font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">
                         {idx + 1}
@@ -1976,7 +2026,7 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
               </div>
 
               <div className="space-y-6 pt-2 text-slate-700 text-xs sm:text-sm leading-relaxed">
-                {selectedArticleModal.sections.map((sec, idx) => (
+                {selectedArticleModal.sections.map((sec: any, idx: number) => (
                   <div key={idx} className="space-y-3">
                     {sec.heading && (
                       <h2 className="font-serif text-lg font-bold text-slate-900">
@@ -2004,7 +2054,7 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
                           Key Considerations:
                         </div>
                         <ul className="space-y-1.5 list-disc list-inside text-xs text-slate-700">
-                          {sec.keyPoints.map((point, pIdx) => (
+                          {sec.keyPoints.map((point: string, pIdx: number) => (
                             <li key={pIdx} className="leading-relaxed">{point}</li>
                           ))}
                         </ul>
@@ -2020,7 +2070,7 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
                   <span>Summary Takeaways</span>
                 </div>
                 <div className="space-y-1.5">
-                  {selectedArticleModal.keyTakeaways.map((takeaway, tIdx) => (
+                  {selectedArticleModal.keyTakeaways.map((takeaway: string, tIdx: number) => (
                     <div key={tIdx} className="flex items-start gap-2 text-xs text-slate-700">
                       <span className="text-emerald-600 font-bold">•</span>
                       <span>{takeaway}</span>

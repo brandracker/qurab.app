@@ -569,21 +569,31 @@ export const AuthScreen: React.FC<Props> = ({
       {/* Footer */}
       <footer className="w-full text-center py-1 text-[10px] text-secondary">
         By continuing, you agree to Qurb's{' '}
-        <button
-          type="button"
-          onClick={onOpenTerms || (() => { window.location.href = '/terms'; })}
+        <a
+          href="/terms"
+          onClick={(e) => {
+            if (onOpenTerms) {
+              e.preventDefault();
+              onOpenTerms();
+            }
+          }}
           className="underline font-medium hover:text-primary transition-colors cursor-pointer inline"
         >
           Terms of Service
-        </button>
+        </a>
         {' '}&{' '}
-        <button
-          type="button"
-          onClick={onOpenPrivacyPolicy || (() => { window.location.href = '/privacy-policy'; })}
+        <a
+          href="/privacy-policy"
+          onClick={(e) => {
+            if (onOpenPrivacyPolicy) {
+              e.preventDefault();
+              onOpenPrivacyPolicy();
+            }
+          }}
           className="underline font-medium hover:text-primary transition-colors cursor-pointer inline"
         >
           Privacy Policy
-        </button>.
+        </a>.
       </footer>
     </div>
   );

@@ -14,8 +14,23 @@ import {
   Heart, 
   ChevronLeft, 
   ChevronRight,
-  Smartphone
+  Smartphone,
+  Mail,
+  Star,
+  Quote,
+  BookOpen,
+  Sparkles,
+  MapPin,
+  Calendar,
+  Clock,
+  Share2
 } from 'lucide-react';
+import { testimonialsData, type TestimonialItem } from '../data/testimonialsData';
+import { halalStoriesData, type HalalStory } from '../data/storiesData';
+import { blogPostsData, type BlogPost } from '../data/blogData';
+import { HalalStoriesPage } from './HalalStoriesPage';
+import { BlogPage } from './BlogPage';
+
 
 // Official Store Icons from D:\Marriage App\logos\icons
 const GooglePlayIcon: React.FC<{ className?: string }> = ({ className = "w-5 h-5" }) => (
@@ -336,12 +351,9 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
             <div className="w-12 h-12 rounded-2xl bg-white p-2 shadow-xs border border-rose-200 flex items-center justify-center group-hover:scale-105 transition-transform">
               <img src="/icon.svg" alt="Qurb Logo" className="w-8 h-8 object-contain" />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center">
               <span style={{ fontFamily: "'Raleway', sans-serif" }} className="text-3xl font-extrabold tracking-tight text-slate-900">
                 Qurb
-              </span>
-              <span className="text-[10px] font-sans font-bold uppercase px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
-                Halal
               </span>
             </div>
           </a>
@@ -1087,66 +1099,221 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
         </div>
       </section>
 
-      {/* 11. LUXURY FOOTER */}
-      <footer className="w-full bg-[#F5F4F0] border-t border-slate-200/80 py-12 text-slate-600 text-xs">
+      {/* 11. LUXURY MODERN FOOTER */}
+      <footer className="w-full bg-[#0F172A] text-slate-300 border-t border-slate-800 pt-16 pb-12 text-xs">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6 pb-8 border-b border-slate-200">
+          
+          {/* Main Footer Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 pb-12 border-b border-slate-800">
             
-            {/* Brand Logo & Name (Bigger Icon + Raleway Font) */}
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-white p-2 shadow-xs border border-rose-200 flex items-center justify-center shrink-0">
-                <img src="/icon.svg" alt="Qurb Logo" className="w-8 h-8 object-contain" />
-              </div>
-              <div className="text-left">
-                <div className="flex items-center gap-2">
-                  <span style={{ fontFamily: "'Raleway', sans-serif" }} className="text-2xl font-extrabold tracking-tight text-slate-900">
+            {/* Col 1 & 2: Brand Identity, Mission & Trust */}
+            <div className="lg:col-span-2 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-white p-2 shadow-xs border border-rose-200/50 flex items-center justify-center shrink-0">
+                  <img src="/icon.svg" alt="Qurb Logo" className="w-8 h-8 object-contain" />
+                </div>
+                <div>
+                  <span style={{ fontFamily: "'Raleway', sans-serif" }} className="text-3xl font-extrabold tracking-tight text-white">
                     Qurb
                   </span>
-                  <span className="text-[10px] font-sans font-bold uppercase px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    Halal
-                  </span>
+                  <div className="text-rose-400 text-xs font-semibold">Pure Islamic Matrimony &amp; Nikah</div>
                 </div>
-                <div className="text-slate-500 text-[11px] font-medium">Pure Halal Islamic Matrimony &amp; Nikah</div>
+              </div>
+
+              <p className="text-slate-400 text-xs sm:text-sm leading-relaxed max-w-sm">
+                The dignified matrimonial platform built exclusively for practicing Muslims seeking lawful marriage with modesty (Haya), Wali chaperoning, and lifelong Barakah.
+              </p>
+
+              {/* Trust & Safety Highlights */}
+              <div className="flex flex-wrap gap-2 pt-1">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700/60 text-slate-300 text-[11px] font-medium">
+                  <Lock className="w-3 h-3 text-emerald-400" />
+                  <span>256-bit TLS Encrypted</span>
+                </div>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700/60 text-slate-300 text-[11px] font-medium">
+                  <ShieldCheck className="w-3 h-3 text-rose-400" />
+                  <span>Modesty Photo Shield</span>
+                </div>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700/60 text-slate-300 text-[11px] font-medium">
+                  <Users className="w-3 h-3 text-amber-400" />
+                  <span>Wali Chaperoned</span>
+                </div>
+              </div>
+
+              {/* Social Channels */}
+              <div className="pt-2">
+                <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2.5">
+                  Follow Our Journey
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <a 
+                    href="https://www.tiktok.com/@qurb.app" 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="w-9 h-9 rounded-xl bg-slate-800 hover:bg-black border border-slate-700 hover:border-slate-500 flex items-center justify-center text-slate-300 hover:text-white transition-all group"
+                    title="Follow Qurb on TikTok"
+                    aria-label="TikTok"
+                  >
+                    <TikTokIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                  </a>
+                  <a 
+                    href="https://www.instagram.com/qurb.app" 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="w-9 h-9 rounded-xl bg-slate-800 hover:bg-gradient-to-tr hover:from-amber-600 hover:via-rose-600 hover:to-purple-600 border border-slate-700 hover:border-transparent flex items-center justify-center text-slate-300 hover:text-white transition-all group"
+                    title="Follow Qurb on Instagram"
+                    aria-label="Instagram"
+                  >
+                    <InstagramIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                  </a>
+                  <a 
+                    href="mailto:support@qurb.app"
+                    className="w-9 h-9 rounded-xl bg-slate-800 hover:bg-rose-600 border border-slate-700 hover:border-rose-500 flex items-center justify-center text-slate-300 hover:text-white transition-all group"
+                    title="Email Support"
+                    aria-label="Support Email"
+                  >
+                    <Mail className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                  </a>
+                </div>
               </div>
             </div>
 
-            {/* Social Media Links (TikTok & Instagram) */}
-            <div className="flex items-center gap-3">
-              <a 
-                href="https://www.tiktok.com/@qurb.app" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="w-10 h-10 rounded-full bg-white border border-slate-200/80 shadow-2xs flex items-center justify-center text-slate-700 hover:text-black hover:border-slate-400 hover:scale-110 active:scale-95 transition-all"
-                title="Follow Qurb on TikTok"
-                aria-label="TikTok"
-              >
-                <TikTokIcon className="w-4 h-4" />
-              </a>
-              <a 
-                href="https://www.instagram.com/qurb.app" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="w-10 h-10 rounded-full bg-white border border-slate-200/80 shadow-2xs flex items-center justify-center text-slate-700 hover:text-rose-600 hover:border-rose-300 hover:scale-110 active:scale-95 transition-all"
-                title="Follow Qurb on Instagram"
-                aria-label="Instagram"
-              >
-                <InstagramIcon className="w-4 h-4" />
-              </a>
+            {/* Col 3: Product Tour & Features */}
+            <div className="space-y-3">
+              <h4 className="text-white font-bold text-xs uppercase tracking-wider">Product Tour</h4>
+              <ul className="space-y-2.5 text-xs text-slate-400">
+                <li>
+                  <a href="#experience" className="hover:text-rose-400 transition-colors flex items-center gap-1.5">
+                    <span>How Qurb Works</span>
+                  </a>
+                </li>
+                <li>
+                  <a href="#screens" className="hover:text-rose-400 transition-colors flex items-center gap-1.5">
+                    <span>Live App Showcase</span>
+                  </a>
+                </li>
+                <li>
+                  <a href="#nikah" className="hover:text-rose-400 transition-colors flex items-center gap-1.5">
+                    <span>Nikah Covenant</span>
+                  </a>
+                </li>
+                <li>
+                  <a href="#family" className="hover:text-rose-400 transition-colors flex items-center gap-1.5">
+                    <span>Family &amp; Wali Support</span>
+                  </a>
+                </li>
+                <li>
+                  <a href="#faq" className="hover:text-rose-400 transition-colors flex items-center gap-1.5">
+                    <span>Frequently Asked Questions</span>
+                  </a>
+                </li>
+              </ul>
             </div>
 
-            {/* Legal & Support Links */}
-            <div className="flex flex-wrap items-center justify-center md:justify-end gap-5 text-xs text-slate-600 font-medium">
-              <a href="/privacy-policy" className="hover:text-rose-600 transition-colors">Privacy Policy</a>
-              <a href="/terms" className="hover:text-rose-600 transition-colors">Terms of Service</a>
-              <a href="/child-safety" className="hover:text-rose-600 transition-colors">Child Safety Standards</a>
-              <a href="mailto:support@qurb.app" className="hover:text-rose-600 transition-colors">Support</a>
+            {/* Col 4: Platforms & Download */}
+            <div className="space-y-3">
+              <h4 className="text-white font-bold text-xs uppercase tracking-wider">Get the App</h4>
+              <ul className="space-y-2.5 text-xs text-slate-400">
+                <li>
+                  <button 
+                    onClick={() => setShowAndroidModal(true)} 
+                    className="hover:text-rose-400 transition-colors flex items-center gap-2 text-left cursor-pointer"
+                  >
+                    <GooglePlayIcon className="w-3.5 h-3.5 shrink-0 text-rose-400" />
+                    <span>Google Play (Android)</span>
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    onClick={handlePwaClick} 
+                    className="hover:text-rose-400 transition-colors flex items-center gap-2 text-left cursor-pointer"
+                  >
+                    <AppStoreIcon className="w-3.5 h-3.5 shrink-0 text-rose-400" />
+                    <span>App Store (iOS PWA)</span>
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    onClick={onLaunchWebApp} 
+                    className="hover:text-rose-400 transition-colors flex items-center gap-2 text-left cursor-pointer font-medium text-slate-200"
+                  >
+                    <ArrowRight className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
+                    <span>Launch Web App</span>
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    onClick={onLogin} 
+                    className="hover:text-rose-400 transition-colors flex items-center gap-2 text-left cursor-pointer"
+                  >
+                    <Users className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                    <span>Sign In to Account</span>
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    onClick={onGetStarted} 
+                    className="hover:text-rose-400 transition-colors flex items-center gap-2 text-left cursor-pointer text-rose-400 font-semibold"
+                  >
+                    <HeartHandshake className="w-3.5 h-3.5 shrink-0" />
+                    <span>Create Profile Free</span>
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+            {/* Col 5: Trust, Safety & Legal */}
+            <div className="space-y-3">
+              <h4 className="text-white font-bold text-xs uppercase tracking-wider">Trust &amp; Legal</h4>
+              <ul className="space-y-2.5 text-xs text-slate-400">
+                <li>
+                  <a href="/privacy-policy" className="hover:text-rose-400 transition-colors">
+                    Privacy Policy
+                  </a>
+                </li>
+                <li>
+                  <a href="/terms" className="hover:text-rose-400 transition-colors">
+                    Terms of Service
+                  </a>
+                </li>
+                <li>
+                  <a href="/child-safety" className="hover:text-rose-400 transition-colors">
+                    Child Safety Standards
+                  </a>
+                </li>
+                <li>
+                  <a href="#nikah" className="hover:text-rose-400 transition-colors">
+                    Matrimony Charter
+                  </a>
+                </li>
+                <li>
+                  <a href="mailto:support@qurb.app" className="hover:text-rose-400 transition-colors flex items-center gap-1.5">
+                    <span>support@qurb.app</span>
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+          </div>
+
+          {/* Bottom Bar: Copyright, Islamic Blessing & System Status */}
+          <div className="pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-[11px] text-slate-500">
+            <div className="flex items-center gap-2">
+              <span>&copy; {new Date().getFullYear()} Qurb. All rights reserved.</span>
+              <span>•</span>
+              <span>Brandracker / Movemax Solutions</span>
+            </div>
+            
+            <div className="text-slate-400 text-center">
+              Built with Barakah for practicing Muslims worldwide • Honoring Haya &amp; Modesty
+            </div>
+
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-800/70 border border-slate-700/50 text-slate-400 text-[10px]">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Amanah Protected &amp; Verified</span>
             </div>
           </div>
 
-          <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-400">
-            <div>&copy; 2026 Qurb (Brandracker / Movemax Solutions). All rights reserved.</div>
-            <div>Built with Barakah for practicing Muslims worldwide.</div>
-          </div>
         </div>
       </footer>
 

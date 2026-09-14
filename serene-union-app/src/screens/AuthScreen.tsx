@@ -338,7 +338,8 @@ export const AuthScreen: React.FC<Props> = ({
         console.warn('Native Google Sign-In error:', nativeErr);
         const errStr = String(nativeErr?.message || nativeErr || '');
         if (!errStr.includes('cancelled') && !errStr.includes('12501')) {
-          setErrorMsg('Google Sign-In was interrupted. Please try again or use email & password.');
+          const detail = errStr ? ` (${errStr.replace('Google Sign-In failed: ', 'code ')})` : '';
+          setErrorMsg(`Google Sign-In was interrupted${detail}. Please try again or use email & password.`);
         }
       } finally {
         setIsLoading(false);

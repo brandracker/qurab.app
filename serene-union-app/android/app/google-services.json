@@ -14,6 +14,22 @@
       },
       "oauth_client": [
         {
+          "client_id": "865198689748-b1m2pcgmf6i00u24q6hpibhfbh49to6k.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "app.qurb.serene",
+            "certificate_hash": "3b93a7661f9514306f97062a55f70168a8f2fe6e"
+          }
+        },
+        {
+          "client_id": "865198689748-kq4n7jl5l2f6vtv4s2hecf6onhri43qs.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "app.qurb.serene",
+            "certificate_hash": "08219163b0c147999b72b71aa2155db7ad2117e9"
+          }
+        },
+        {
           "client_id": "865198689748-utp5e8o5g1445ja1hvnovot1l888vuhg.apps.googleusercontent.com",
           "client_type": 3
         }

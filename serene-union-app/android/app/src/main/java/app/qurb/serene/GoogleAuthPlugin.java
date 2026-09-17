@@ -57,10 +57,18 @@ public class GoogleAuthPlugin extends Plugin {
         }
 
         try {
-            Intent signInIntent = googleSignInClient.getSignInIntent();
-            startActivityForResult(call, signInIntent, "handleGoogleSignInResult");
+            // Sign out first to ensure account picker dialog always prompts cleanly
+            googleSignInClient.signOut().addOnCompleteListener(task -> {
+                try {
+                    Intent signInIntent = googleSignInClient.getSignInIntent();
+                    startActivityForResult(call, signInIntent, "handleGoogleSignInResult");
+                } catch (Exception e) {
+                    Log.e(TAG, "Failed to launch Google Sign-In intent: " + e.getMessage(), e);
+                    call.reject("Could not launch Google Sign-In: " + e.getMessage());
+                }
+            });
         } catch (Exception e) {
-            Log.e(TAG, "Failed to launch Google Sign-In intent: " + e.getMessage(), e);
+            Log.e(TAG, "Failed during Google Sign-In init: " + e.getMessage(), e);
             call.reject("Could not launch Google Sign-In: " + e.getMessage());
         }
     }
@@ -86,11 +94,52 @@ public class GoogleAuthPlugin extends Plugin {
                 call.reject("Google account details were null");
             }
         } catch (ApiException e) {
-            Log.e(TAG, "Google Sign-In failed with status code: " + e.getStatusCode() + " - " + e.getMessage());
-            call.reject("Google Sign-In failed: " + e.getStatusCode(), String.valueOf(e.getStatusCode()));
+            String appSha1 = getAppSignatureSHA1();
+            Log.e(TAG, "Google Sign-In failed with status code: " + e.getStatusCode() + " - " + e.getMessage() + " [App SHA-1: " + appSha1 + "]");
+            call.reject("Google Sign-In failed: " + e.getStatusCode() + " (SHA-1: " + appSha1 + ")", String.valueOf(e.getStatusCode()));
         } catch (Exception e) {
             Log.e(TAG, "Unexpected error in Google Sign-In: " + e.getMessage(), e);
             call.reject("Google Sign-In error: " + e.getMessage());
+        }
+    }
+
+    private String getAppSignatureSHA1() {
+        try {
+            android.content.Context context = getContext();
+            if (context == null) context = getActivity();
+            if (context == null) return "no_context";
+
+            android.content.pm.PackageManager pm = context.getPackageManager();
+            String packageName = context.getPackageName();
+            android.content.pm.Signature[] signatures;
+
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                android.content.pm.PackageInfo packageInfo = pm.getPackageInfo(packageName, android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES);
+                if (packageInfo != null && packageInfo.signingInfo != null) {
+                    signatures = packageInfo.signingInfo.getApkContentsSigners();
+                } else {
+                    return "no_signing_info";
+                }
+            } else {
+                android.content.pm.PackageInfo packageInfo = pm.getPackageInfo(packageName, android.content.pm.PackageManager.GET_SIGNATURES);
+                signatures = packageInfo != null ? packageInfo.signatures : null;
+            }
+
+            if (signatures != null && signatures.length > 0) {
+                java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-1");
+                byte[] digest = md.digest(signatures[0].toByteArray());
+                StringBuilder hexString = new StringBuilder();
+                for (int i = 0; i < digest.length; i++) {
+                    String hex = Integer.toHexString(0xFF & digest[i]).toUpperCase();
+                    if (hex.length() == 1) hexString.append('0');
+                    hexString.append(hex);
+                    if (i < digest.length - 1) hexString.append(':');
+                }
+                return hexString.toString();
+            }
+            return "no_signatures_found";
+        } catch (Exception ex) {
+            return "err: " + ex.getMessage();
         }
     }
 

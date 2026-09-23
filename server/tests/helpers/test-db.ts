@@ -66,6 +66,7 @@ export class MockD1Database {
         dual_income_preference TEXT DEFAULT 'career_supportive',
         partner_requirements TEXT DEFAULT '{}',
         account_status TEXT DEFAULT 'active',
+        is_banned BOOLEAN DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
@@ -208,6 +209,15 @@ export class MockD1Database {
         completed_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
 
+      CREATE TABLE IF NOT EXISTS admins (
+        id TEXT PRIMARY KEY,
+        username TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        name TEXT NOT NULL,
+        role TEXT DEFAULT 'superadmin',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
       CREATE INDEX IF NOT EXISTS idx_users_gender_created ON users(gender, created_at);
       CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
       CREATE INDEX IF NOT EXISTS idx_user_photos_user_id ON user_photos(user_id, sort_order);
@@ -216,6 +226,12 @@ export class MockD1Database {
       CREATE INDEX IF NOT EXISTS idx_conversations_last_msg ON conversations(last_message_time);
       CREATE INDEX IF NOT EXISTS idx_religious_profiles_user ON religious_profiles(user_id);
       CREATE INDEX IF NOT EXISTS idx_wali_details_user ON wali_details(user_id);
+    `);
+
+    // Seed default test admin if not present
+    this.db.exec(`
+      INSERT OR IGNORE INTO admins (id, username, password_hash, name, role)
+      VALUES ('adm_root', 'admin', 'e510d5bb3f30257c52849f4f7fdd2b2417b6c11f2803924fad888dcbf39de858', 'Qurb Super Admin', 'superadmin');
     `);
   }
 

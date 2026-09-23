@@ -154,49 +154,209 @@
       <image:title>Istikhara for Marriage: How to Seek Allah's Guidance with Clarity</image:title>
       <image:caption>Authentic dua, conditions of Istikhara, and interpreting the signs with serenity.</image:caption>
     </image:image>
+    <image:image>
+      <image:loc>https://qurb.app/blog/blog_courtship_vs_dating.jpg</image:loc>
+      <image:title>Halal Courtship vs Modern Dating: 5 Essential Differences Every Muslim Must Know</image:title>
+      <image:caption>Why chaperoned courtship protects dignity and emotional peace compared to secular dating.</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://qurb.app/blog/blog_red_green_flags.jpg</image:loc>
+      <image:title>Red Flags vs Green Flags in Halal Marriage Proposals: A Sunnah-Based Checklist</image:title>
+      <image:caption>Checklist of Islamic character markers, Salah punctuality, and emotional accountability.</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://qurb.app/blog/blog_nikah_contract_pillars.jpg</image:loc>
+      <image:title>The Complete Step-by-Step Guide to the Islamic Nikah Contract: Pillars and Conditions</image:title>
+      <image:caption>Essential legal pillars, witnesses, bridal gift (Mahr), and protective stipulations in Shariah.</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://qurb.app/blog/blog_wali_for_reverts.jpg</image:loc>
+      <image:title>Who Can Be a Wali for Reverts or Sisters with Absent Guardians</image:title>
+      <image:caption>Shariah guidelines for appointing an authorized Imam or Qadi when paternal guardians are absent.</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://qurb.app/blog/blog_financial_rights_nafaqah.jpg</image:loc>
+      <image:title>Financial Rights in Islamic Marriage: Nafaqah, Spousal Property and Working Wives</image:title>
+      <image:caption>The husband's duty of financial maintenance (Nafaqah) and the wife's complete financial autonomy.</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://qurb.app/blog/blog_parental_rejection_culture.jpg</image:loc>
+      <image:title>Dealing with Parental Rejection and Culture vs Deen in Arranged Marriages</image:title>
+      <image:caption>Overcoming caste, ethnic bias, and tribal pride through Prophetic wisdom and gentle consultation.</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://qurb.app/blog/blog_modesty_photo_shield.jpg</image:loc>
+      <image:title>Why Modesty Photo Shields Protect Your Dignity in Online Matrimony</image:title>
+      <image:caption>The importance of blurred photos and 1-to-1 mutual consent in safeguarding Muslim sisters.</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://qurb.app/blog/blog_age_gap_compatibility.jpg</image:loc>
+      <image:title>Age Gap in Islamic Marriage: Sunnah Precedents and Emotional Compatibility</image:title>
+      <image:caption>Prophetic examples including Mother Khadijah (R.A.) proving character matters over age numbers.</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://qurb.app/blog/blog_kafaah_suitability.jpg</image:loc>
+      <image:title>Understanding Kafa'ah (Suitability and Compatibility) in Islam: What Really Matters</image:title>
+      <image:caption>Why piety and character (Taqwa and Akhlaq) supersede false tribal and financial elitism.</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://qurb.app/blog/blog_coping_rejection_sabr.jpg</image:loc>
+      <image:title>How to Cope with Marriage Proposal Rejection with Sabr and Tawakkul</image:title>
+      <image:caption>Spiritual healing, prophetic Duas, and understanding divine redirection (Khayr al-Ghayb).</image:caption>
+    </image:image>
   </url>
 
-  <!-- Individual Matrimony Journal Articles for Answer Engines -->
+  <!-- Individual Matrimony Journal Articles for Answer Engines & Search Engines -->
   <url>
     <loc>https://qurb.app/#blog/etiquette-of-halal-courtship-haya-to-nikah</loc>
-    <lastmod>2026-09-11</lastmod>
+    <lastmod>2026-09-24</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
     <loc>https://qurb.app/#blog/sacred-role-of-the-wali-guardian-blessing</loc>
-    <lastmod>2026-09-11</lastmod>
+    <lastmod>2026-09-24</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
     <loc>https://qurb.app/#blog/understanding-mahr-in-islam-rights-wisdom</loc>
-    <lastmod>2026-09-11</lastmod>
+    <lastmod>2026-09-24</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
     <loc>https://qurb.app/#blog/beyond-appearance-voice-bios-and-values</loc>
-    <lastmod>2026-09-11</lastmod>
+    <lastmod>2026-09-24</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
     <loc>https://qurb.app/#blog/10-essential-questions-before-nikah</loc>
-    <lastmod>2026-09-11</lastmod>
+    <lastmod>2026-09-24</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
     <loc>https://qurb.app/#blog/istikhara-for-marriage-seeking-allahs-guidance</loc>
-    <lastmod>2026-09-11</lastmod>
+    <lastmod>2026-09-24</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://qurb.app/#blog/halal-courtship-vs-modern-dating-differences</loc>
+    <lastmod>2026-09-24</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+    <image:image>
+      <image:loc>https://qurb.app/blog/blog_courtship_vs_dating.jpg</image:loc>
+      <image:title>Halal Courtship vs Modern Dating: 5 Essential Differences Every Muslim Must Know</image:title>
+    </image:image>
+  </url>
+
+  <url>
+    <loc>https://qurb.app/#blog/red-flags-green-flags-halal-marriage-proposals</loc>
+    <lastmod>2026-09-24</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+    <image:image>
+      <image:loc>https://qurb.app/blog/blog_red_green_flags.jpg</image:loc>
+      <image:title>Red Flags vs Green Flags in Halal Marriage Proposals</image:title>
+    </image:image>
+  </url>
+
+  <url>
+    <loc>https://qurb.app/#blog/complete-guide-to-islamic-nikah-contract-pillars</loc>
+    <lastmod>2026-09-24</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+    <image:image>
+      <image:loc>https://qurb.app/blog/blog_nikah_contract_pillars.jpg</image:loc>
+      <image:title>The Complete Step-by-Step Guide to the Islamic Nikah Contract: Pillars and Conditions</image:title>
+    </image:image>
+  </url>
+
+  <url>
+    <loc>https://qurb.app/#blog/who-can-be-wali-for-reverts-absent-guardians</loc>
+    <lastmod>2026-09-24</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+    <image:image>
+      <image:loc>https://qurb.app/blog/blog_wali_for_reverts.jpg</image:loc>
+      <image:title>Who Can Be a Wali for Reverts or Sisters with Absent Guardians</image:title>
+    </image:image>
+  </url>
+
+  <url>
+    <loc>https://qurb.app/#blog/financial-rights-in-islamic-marriage-nafaqah-savings</loc>
+    <lastmod>2026-09-24</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+    <image:image>
+      <image:loc>https://qurb.app/blog/blog_financial_rights_nafaqah.jpg</image:loc>
+      <image:title>Financial Rights in Islamic Marriage: Nafaqah, Spousal Property and Working Wives</image:title>
+    </image:image>
+  </url>
+
+  <url>
+    <loc>https://qurb.app/#blog/parental-rejection-culture-vs-deen-in-arranged-marriages</loc>
+    <lastmod>2026-09-24</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+    <image:image>
+      <image:loc>https://qurb.app/blog/blog_parental_rejection_culture.jpg</image:loc>
+      <image:title>Dealing with Parental Rejection and Culture vs Deen in Arranged Marriages</image:title>
+    </image:image>
+  </url>
+
+  <url>
+    <loc>https://qurb.app/#blog/why-modesty-photo-shields-protect-dignity-online-matrimony</loc>
+    <lastmod>2026-09-24</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+    <image:image>
+      <image:loc>https://qurb.app/blog/blog_modesty_photo_shield.jpg</image:loc>
+      <image:title>Why Modesty Photo Shields Protect Your Dignity in Online Matrimony</image:title>
+    </image:image>
+  </url>
+
+  <url>
+    <loc>https://qurb.app/#blog/age-difference-in-islamic-marriage-sunnah-compatibility</loc>
+    <lastmod>2026-09-24</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+    <image:image>
+      <image:loc>https://qurb.app/blog/blog_age_gap_compatibility.jpg</image:loc>
+      <image:title>Age Gap in Islamic Marriage: Sunnah Precedents and Emotional Compatibility</image:title>
+    </image:image>
+  </url>
+
+  <url>
+    <loc>https://qurb.app/#blog/understanding-kafaah-suitability-compatibility-in-islam</loc>
+    <lastmod>2026-09-24</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+    <image:image>
+      <image:loc>https://qurb.app/blog/blog_kafaah_suitability.jpg</image:loc>
+      <image:title>Understanding Kafa'ah (Suitability and Compatibility) in Islam: What Really Matters</image:title>
+    </image:image>
+  </url>
+
+  <url>
+    <loc>https://qurb.app/#blog/coping-with-marriage-proposal-rejection-sabr-tawakkul</loc>
+    <lastmod>2026-09-24</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+    <image:image>
+      <image:loc>https://qurb.app/blog/blog_coping_rejection_sabr.jpg</image:loc>
+      <image:title>How to Cope with Marriage Proposal Rejection with Sabr and Tawakkul</image:title>
+    </image:image>
   </url>
 
   <!-- ========================================================== -->

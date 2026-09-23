@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ArrowLeft, 
   BookOpen, 
@@ -36,6 +36,35 @@ export const BlogPage: React.FC<Props> = ({
     }
     return null;
   });
+
+  // Sync when initialArticleId prop updates
+  useEffect(() => {
+    if (initialArticleId) {
+      const found = blogPostsData.find(b => b.id === initialArticleId || b.slug === initialArticleId);
+      if (found) {
+        setActiveArticle(found);
+      }
+    }
+  }, [initialArticleId]);
+
+  // Sync on direct hash changes (e.g. forward/back buttons or manual link navigation)
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash;
+      const parts = hash.split('/');
+      const slug = parts.length > 1 ? parts[1] : null;
+      if (slug) {
+        const found = blogPostsData.find(b => b.id === slug || b.slug === slug);
+        if (found) {
+          setActiveArticle(found);
+        }
+      } else if (hash === '#blog' || hash === '#blogs' || hash === '#journal') {
+        setActiveArticle(null);
+      }
+    };
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, []);
 
   const categories = [
     'All',
@@ -187,7 +216,10 @@ export const BlogPage: React.FC<Props> = ({
       {!searchQuery && selectedCategory === 'All' && featuredPost && (
         <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-10">
           <div 
-            onClick={() => setActiveArticle(featuredPost)}
+            onClick={() => {
+              setActiveArticle(featuredPost);
+              window.location.hash = `#blog/${featuredPost.slug}`;
+            }}
             className="bg-white rounded-3xl overflow-hidden border border-slate-200/90 shadow-sm hover:shadow-xl hover:border-rose-300 transition-all duration-300 cursor-pointer grid grid-cols-1 lg:grid-cols-12 group"
           >
             <div className="lg:col-span-7 aspect-[16/10] lg:aspect-auto overflow-hidden bg-slate-100 relative">
@@ -284,7 +316,10 @@ export const BlogPage: React.FC<Props> = ({
             {filteredPosts.map((post) => (
               <div
                 key={post.id}
-                onClick={() => setActiveArticle(post)}
+                onClick={() => {
+                  setActiveArticle(post);
+                  window.location.hash = `#blog/${post.slug}`;
+                }}
                 className="bg-white rounded-3xl overflow-hidden border border-slate-200/80 shadow-xs hover:shadow-xl hover:border-rose-300 transition-all duration-300 flex flex-col justify-between cursor-pointer group"
               >
                 <div>
@@ -347,7 +382,10 @@ export const BlogPage: React.FC<Props> = ({
       {activeArticle && (
         <div 
           className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
-          onClick={() => setActiveArticle(null)}
+          onClick={() => {
+            setActiveArticle(null);
+            window.location.hash = '#blog';
+          }}
         >
           <div 
             className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 sm:p-9 shadow-2xl relative text-left my-8 border border-slate-100"
@@ -355,7 +393,10 @@ export const BlogPage: React.FC<Props> = ({
           >
             {/* Close Button */}
             <button
-              onClick={() => setActiveArticle(null)}
+              onClick={() => {
+                setActiveArticle(null);
+                window.location.hash = '#blog';
+              }}
               className="absolute top-5 right-5 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-colors cursor-pointer z-10"
               aria-label="Close Article"
             >
@@ -492,7 +533,10 @@ export const BlogPage: React.FC<Props> = ({
               {/* Close Button */}
               <div className="pt-2 text-center">
                 <button
-                  onClick={() => setActiveArticle(null)}
+                  onClick={() => {
+                    setActiveArticle(null);
+                    window.location.hash = '#blog';
+                  }}
                   className="text-xs font-semibold text-slate-500 hover:text-slate-800 cursor-pointer"
                 >
                   Close Article

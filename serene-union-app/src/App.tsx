@@ -22,6 +22,7 @@ import { dbService, API_BASE } from './services/dbService';
 import { notificationService } from './services/notificationService';
 import { Capacitor } from '@capacitor/core';
 import { LandingPage } from './components/LandingPage';
+import { AdminPortal } from './screens/admin/AdminPortal';
 
 type OnboardingStep = 
   | 'welcome' 
@@ -40,6 +41,22 @@ type MainTab = 'discover' | 'matches' | 'chat' | 'my_profile' | 'settings';
 
 export const App: React.FC = () => {
   const isNative = Capacitor.isNativePlatform();
+
+  // STRICT ZERO-BREAKAGE GUARANTEE: Web-Only Admin Portal
+  const isAdminPortal = !isNative && (() => {
+    try {
+      const path = window.location.pathname.toLowerCase();
+      const params = new URLSearchParams(window.location.search);
+      const hash = window.location.hash.toLowerCase();
+      return path.startsWith('/admin') || hash.startsWith('#/admin') || hash.startsWith('#admin') || params.get('portal') === 'admin';
+    } catch {
+      return false;
+    }
+  })();
+
+  if (isAdminPortal) {
+    return <AdminPortal />;
+  }
 
   const [showLanding, setShowLanding] = useState<boolean>(() => {
     // STRICT ZERO-BREAKAGE GUARANTEE:

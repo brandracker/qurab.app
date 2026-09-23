@@ -23,6 +23,8 @@ CREATE TABLE IF NOT EXISTS users (
     blur_photos_by_default BOOLEAN DEFAULT 1,
     profile_visibility TEXT DEFAULT 'approved_only',
     is_vip BOOLEAN DEFAULT 0,
+    account_status TEXT DEFAULT 'active',
+    is_banned BOOLEAN DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -105,4 +107,14 @@ CREATE INDEX IF NOT EXISTS idx_conversations_last_msg ON conversations(last_mess
 CREATE INDEX IF NOT EXISTS idx_religious_profiles_user ON religious_profiles(user_id);
 CREATE INDEX IF NOT EXISTS idx_wali_details_user ON wali_details(user_id);
 CREATE INDEX IF NOT EXISTS idx_users_lat_lon ON users(latitude, longitude);
+
+-- 9. ADMINS TABLE FOR SECURE ADMIN PORTAL
+CREATE TABLE IF NOT EXISTS admins (
+    id TEXT PRIMARY KEY,
+    username TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    name TEXT NOT NULL,
+    role TEXT DEFAULT 'superadmin',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 

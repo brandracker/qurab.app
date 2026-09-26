@@ -51,7 +51,7 @@
         <!-- Google AdMob Application ID (Live Qurb App ID) -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-9708959884639275~9081929429"/>
+            android:value="ca-app-pub-5486823026870276~3052992520"/>
     </application>
 
     <!-- Permissions -->

@@ -1,8 +1,8 @@
 /**
  * Google AdMob Service for Qurb Islamic Matrimony
  * Configured with Live AdMob credentials:
- * - App ID: ca-app-pub-9708959884639275~9081929429
- * - Rewarded Unit ID: ca-app-pub-9708959884639275/8907152102
+ * - App ID: ca-app-pub-5486823026870276~3052992520
+ * - Rewarded Unit ID: ca-app-pub-5486823026870276/7539032440
  */
 
 import { Capacitor, registerPlugin } from '@capacitor/core';
@@ -17,8 +17,8 @@ export interface AdMobConfig {
 }
 
 export const ADMOB_CONFIG: AdMobConfig = {
-  appId: 'ca-app-pub-9708959884639275~9081929429',
-  rewardedAdUnitId: 'ca-app-pub-9708959884639275/8907152102',
+  appId: 'ca-app-pub-5486823026870276~3052992520',
+  rewardedAdUnitId: 'ca-app-pub-5486823026870276/7539032440',
   sampleRewardedAdUnitId: 'ca-app-pub-3940256099942544/5224354917',
   appName: 'Qurb',
   testMode: false

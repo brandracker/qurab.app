@@ -26,7 +26,7 @@ public class AdMobPlugin extends Plugin {
     private static final String TAG = "AdMobPlugin";
 
     // User's Live Qurb AdMob Rewarded Ad Unit ID
-    private static final String LIVE_REWARDED_AD_UNIT_ID = "ca-app-pub-9708959884639275/8907152102";
+    private static final String LIVE_REWARDED_AD_UNIT_ID = "ca-app-pub-5486823026870276/7539032440";
     // Google's Official Universal Sample Unit ID (for initial propagation warmup)
     private static final String SAMPLE_REWARDED_AD_UNIT_ID = "ca-app-pub-3940256099942544/5224354917";
 
@@ -45,7 +45,7 @@ public class AdMobPlugin extends Plugin {
         isInitializing = true;
 
         MobileAds.initialize(getContext(), initializationStatus -> {
-            Log.d(TAG, "Google AdMob MobileAds initialized successfully with App ID: ca-app-pub-9708959884639275~9081929429");
+            Log.d(TAG, "Google AdMob MobileAds initialized successfully with App ID: ca-app-pub-5486823026870276~3052992520");
             preloadRewardedAd(null, null);
         });
     }

@@ -54,6 +54,37 @@ if (!globalThis.fetch || !(globalThis.fetch as any)._isMock) {
         })
       };
     }
+    if (urlStr.includes('/matches/received')) {
+      return {
+        ok: true,
+        json: async () => ({
+          success: true,
+          count: 0,
+          candidates: []
+        })
+      };
+    }
+    if (urlStr.includes('/matches/mutual')) {
+      return {
+        ok: true,
+        json: async () => ({
+          success: true,
+          count: 0,
+          matches: []
+        })
+      };
+    }
+    if (urlStr.includes('/matches/activity')) {
+      return {
+        ok: true,
+        json: async () => ({
+          success: true,
+          sentLikes: [],
+          passed: [],
+          blocked: []
+        })
+      };
+    }
     if (urlStr.includes('/matches/')) {
       return {
         ok: true,
@@ -61,6 +92,19 @@ if (!globalThis.fetch || !(globalThis.fetch as any)._isMock) {
           success: true,
           isMutual: false,
           conversationId: 'conv_mock_test'
+        })
+      };
+    }
+    if (urlStr.includes('/users/detect-location')) {
+      return {
+        ok: true,
+        json: async () => ({
+          success: true,
+          source: 'mock',
+          city: 'London',
+          country: 'GB',
+          latitude: 51.5074,
+          longitude: -0.1278
         })
       };
     }

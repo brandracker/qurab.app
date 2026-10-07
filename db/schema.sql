@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS matches_and_likes (
     id TEXT PRIMARY KEY,
     sender_id TEXT REFERENCES users(id) ON DELETE CASCADE,
     receiver_id TEXT REFERENCES users(id) ON DELETE CASCADE,
-    action TEXT CHECK(action IN ('liked', 'passed', 'mutual_match')) NOT NULL,
+    action TEXT CHECK(action IN ('liked', 'passed', 'mutual_match', 'direct_salam')) NOT NULL,
     photo_reveal_requested BOOLEAN DEFAULT 0,
     photo_reveal_approved BOOLEAN DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

@@ -1236,24 +1236,26 @@ class DBService {
 
   async fetchLikedYouCandidates(): Promise<UserProfile[]> {
     const user = this.getCurrentUser();
+    const localKey = `serene_liked_you_${user.id}`;
 
-    // 1. Try remote API first
-
+    // 1. Try remote API first (Single Source of Truth)
     try {
       const res = await fetch(`${API_BASE}/matches/received?userId=${user.id}`);
       const data = await res.json();
-      if (data.success && Array.isArray(data.candidates) && data.candidates.length > 0) {
+      if (data.success && Array.isArray(data.candidates)) {
+        localStorage.setItem(localKey, JSON.stringify(data.candidates));
         return data.candidates;
       }
-    } catch {}
+    } catch (err) {
+      console.warn('Remote liked-you fetch notice, attempting cache fallback:', err);
+    }
 
-    // 2. Check local-storage incoming interest cache
-    const localKey = `serene_liked_you_${user.id}`;
+    // 2. Check local-storage incoming interest cache if network failed
     const saved = localStorage.getItem(localKey);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       } catch {}
     }
 
@@ -1261,17 +1263,67 @@ class DBService {
     return [];
   }
 
-
   async fetchMutualMatches(): Promise<UserProfile[]> {
     const user = this.getCurrentUser();
+    const localKey = `serene_mutual_matches_${user.id}`;
     try {
       const res = await fetch(`${API_BASE}/matches/mutual?userId=${user.id}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.matches)) {
+        localStorage.setItem(localKey, JSON.stringify(data.matches));
         return data.matches;
       }
-    } catch {}
+    } catch (err) {
+      console.warn('Remote mutual-matches fetch notice, attempting cache fallback:', err);
+    }
+
+    const saved = localStorage.getItem(localKey);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {}
+    }
     return [];
+  }
+
+  async detectLocationByIP(): Promise<{
+    city: string;
+    country: string;
+    latitude: number;
+    longitude: number;
+  } | null> {
+    try {
+      const res = await fetch(`${API_BASE}/users/detect-location`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+          return {
+            city: data.city || 'Current Location',
+            country: data.country || 'GB',
+            latitude: data.latitude,
+            longitude: data.longitude
+          };
+        }
+      }
+    } catch {}
+
+    try {
+      const res = await fetch('https://ipapi.co/json/');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.latitude && data.longitude) {
+          return {
+            city: data.city || 'Current Location',
+            country: data.country_code || 'GB',
+            latitude: parseFloat(data.latitude),
+            longitude: parseFloat(data.longitude)
+          };
+        }
+      }
+    } catch {}
+
+    return null;
   }
 
   async fetchActivityHub(): Promise<{

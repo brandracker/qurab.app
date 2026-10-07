@@ -17,6 +17,8 @@ import { Country, State, type ICountry } from 'country-state-city';
 import { reverseGeocodeOffline } from '../utils/offlineGeo';
 import type { UserProfile, Sect, PracticeLevel, MarriageTimeline } from '../types';
 import { dbService } from '../services/dbService';
+import { Capacitor } from '@capacitor/core';
+import { Geolocation } from '@capacitor/geolocation';
 
 interface Props {
   isOpen: boolean;
@@ -362,13 +364,76 @@ export const EditProfileModal: React.FC<Props> = ({
   };
 
   // GPS Auto-Detect Handler with 100% Offline Device Math Reverse Geocoding
-  const handleDetectLocation = () => {
+  const handleDetectLocation = async () => {
+    setIsLocating(true);
+    setLocationStatus('Detecting accurate GPS location...');
+
+    // 1. Android Native Capacitor Geolocation
+    if (Capacitor.isNativePlatform()) {
+      try {
+        let perm = await Geolocation.checkPermissions();
+        if (perm.location !== 'granted') {
+          perm = await Geolocation.requestPermissions();
+        }
+
+        if (perm.location === 'granted') {
+          const position = await Geolocation.getCurrentPosition({
+            enableHighAccuracy: true,
+            timeout: 10000
+          });
+          const lat = Math.round(position.coords.latitude * 10000) / 10000;
+          const lon = Math.round(position.coords.longitude * 10000) / 10000;
+          setCoords({ latitude: lat, longitude: lon });
+
+          try {
+            const geoResult = reverseGeocodeOffline(lat, lon);
+            if (geoResult.countryCode) setSelectedCountryCode(geoResult.countryCode);
+            if (geoResult.stateCode) {
+              setSelectedStateCode(geoResult.stateCode);
+              setIsCustomState(false);
+            }
+            if (geoResult.cityName) {
+              setSelectedCityName(geoResult.cityName);
+              setIsCustomCity(false);
+              setCustomCityText('');
+            }
+            setIsLocating(false);
+            setLocationStatus(`📍 Accurate coordinates captured: ${geoResult.cityName}, ${geoResult.countryName} (${lat.toFixed(2)}, ${lon.toFixed(2)})`);
+            return;
+          } catch {
+            setIsLocating(false);
+            setLocationStatus(`📍 Accurate coordinates captured (${lat.toFixed(2)}, ${lon.toFixed(2)})`);
+            return;
+          }
+        }
+      } catch (nativeErr) {
+        console.warn('Native GPS capture attempt, attempting fallback:', nativeErr);
+      }
+    }
+
+    // 2. Web Browser Geolocation
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      try {
+        const ipLoc = await dbService.detectLocationByIP();
+        if (ipLoc) {
+          setCoords({ latitude: ipLoc.latitude, longitude: ipLoc.longitude });
+          const geoResult = reverseGeocodeOffline(ipLoc.latitude, ipLoc.longitude);
+          if (geoResult.countryCode) setSelectedCountryCode(geoResult.countryCode);
+          if (geoResult.cityName) {
+            setSelectedCityName(geoResult.cityName);
+            setIsCustomCity(false);
+            setCustomCityText('');
+          }
+          setIsLocating(false);
+          setLocationStatus(`📍 Accurate coordinates captured: ${ipLoc.city}, ${ipLoc.country} (${ipLoc.latitude.toFixed(2)}, ${ipLoc.longitude.toFixed(2)})`);
+          return;
+        }
+      } catch {}
+      setIsLocating(false);
       setLocationStatus('Geolocation is not supported by your browser.');
       return;
     }
-    setIsLocating(true);
-    setLocationStatus('Detecting accurate GPS location...');
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const lat = Math.round(position.coords.latitude * 10000) / 10000;

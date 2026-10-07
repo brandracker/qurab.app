@@ -63,6 +63,8 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
       setSentLikes(activity.sentLikes || []);
       setPassedProfiles(activity.passed || []);
       setBlockedProfiles(activity.blocked || []);
+    }).catch(err => {
+      console.warn('Notice: Background sync for matches completed with fallback:', err);
     }).finally(() => {
       setIsLoading(false);
     });
@@ -73,9 +75,18 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
     const handleSync = () => loadAllData();
     window.addEventListener('serene_activity_updated', handleSync);
     window.addEventListener('serene_block_updated', handleSync);
+    window.addEventListener('focus', handleSync);
+
+    // Live background polling while user is viewing the Matches screen (20s interval)
+    const pollInterval = setInterval(() => {
+      loadAllData();
+    }, 20000);
+
     return () => {
+      clearInterval(pollInterval);
       window.removeEventListener('serene_activity_updated', handleSync);
       window.removeEventListener('serene_block_updated', handleSync);
+      window.removeEventListener('focus', handleSync);
     };
   }, []);
 
@@ -95,10 +106,12 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
     const convId = res.conversationId || `conv_${[currentUser.id, candidate.id].sort().join('_')}`;
     const newConv = dbService.createMatchConversation(candidate);
 
+    const candidateName = candidate.fullName || 'Member';
+    const firstName = candidateName.split(' ')[0] || 'Member';
     notificationService.addNotification({
       type: 'match',
-      title: `Connected with ${candidate.fullName.split(' ')[0]} 🎉`,
-      message: `You and ${candidate.fullName} both expressed mutual interest. Chaperoned chat is now unlocked!`,
+      title: `Connected with ${firstName} 🎉`,
+      message: `You and ${candidateName} both expressed mutual interest. Chaperoned chat is now unlocked!`,
       actionLabel: 'Open Chat',
       targetId: convId || newConv.id,
       avatarUrl: candidate.photos?.[0]
@@ -119,7 +132,8 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
       localStorage.setItem(localKey, JSON.stringify(filtered));
     } catch {}
 
-    setToastMessage(`Passed on ${candidate.fullName.split(' ')[0]}. Moved to your Passed History.`);
+    const candidateFirstName = (candidate.fullName || 'Candidate').split(' ')[0];
+    setToastMessage(`Passed on ${candidateFirstName}. Moved to your Passed History.`);
     setTimeout(() => setToastMessage(null), 3500);
   };
 
@@ -399,7 +413,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
                     <div className="p-2.5 flex-1 flex flex-col justify-between gap-1.5">
                       <div>
                         <h3 className="font-serif font-bold text-xs text-on-surface truncate">
-                          {isVip ? candidate.fullName : `${candidate.fullName.split(' ')[0]} (Liked You)`}
+                          {isVip ? (candidate.fullName || 'Member') : `${(candidate.fullName || 'Member').split(' ')[0]} (Liked You)`}
                         </h3>
                         <p className="text-[10px] text-secondary truncate">
                           {candidate.profession || 'Professional'} · {candidate.religiousProfile?.sect || 'Sunni'}

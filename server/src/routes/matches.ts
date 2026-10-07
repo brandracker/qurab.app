@@ -46,9 +46,14 @@ matchesRouter.post('/action', async (c) => {
         VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
       `).bind(convId, senderId, receiverId, `logs/${convId}.jsonl`, introMessage).run();
 
-      // 3. Insert initial message into messages table if present
+      // 3. Insert initial message into chat_messages table (and legacy messages table)
       try {
         const msgId = `msg_salam_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+        await c.env.DB.prepare(`
+          INSERT INTO chat_messages (id, conversation_id, sender_id, sender_name, text)
+          VALUES (?, ?, ?, 'Member', ?)
+        `).bind(msgId, convId, senderId, introMessage).run();
+
         await c.env.DB.prepare(`
           INSERT INTO messages (id, conversation_id, sender_id, text, wali_notified, created_at)
           VALUES (?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
@@ -88,7 +93,7 @@ matchesRouter.post('/action', async (c) => {
       // Check if receiver has already liked the sender for a true mutual match
       const reverseLike: any = await c.env.DB.prepare(`
         SELECT id, action FROM matches_and_likes 
-        WHERE sender_id = ? AND receiver_id = ? AND (action = 'liked' OR action = 'mutual_match')
+        WHERE sender_id = ? AND receiver_id = ? AND (action = 'liked' OR action = 'mutual_match' OR action = 'direct_salam')
       `).bind(receiverId, senderId).first();
 
       if (reverseLike) {
@@ -222,7 +227,7 @@ matchesRouter.get('/received', async (c) => {
       JOIN users u ON m.sender_id = u.id
       LEFT JOIN religious_profiles rp ON u.id = rp.user_id
       LEFT JOIN wali_details w ON u.id = w.user_id
-      WHERE m.receiver_id = ? AND m.action = 'liked'
+      WHERE m.receiver_id = ? AND (m.action = 'liked' OR m.action = 'direct_salam')
       ORDER BY m.created_at DESC
     `;
 
@@ -336,9 +341,9 @@ matchesRouter.get('/mutual', async (c) => {
       WHERE (m.sender_id = ? OR m.receiver_id = ?) 
         AND (
           m.action = 'mutual_match' 
-          OR (m.action = 'liked' AND EXISTS (
+          OR ((m.action = 'liked' OR m.action = 'direct_salam') AND EXISTS (
             SELECT 1 FROM matches_and_likes m2 
-            WHERE m2.sender_id = m.receiver_id AND m2.receiver_id = m.sender_id AND (m2.action = 'liked' OR m2.action = 'mutual_match')
+            WHERE m2.sender_id = m.receiver_id AND m2.receiver_id = m.sender_id AND (m2.action = 'liked' OR m2.action = 'mutual_match' OR m2.action = 'direct_salam')
           ))
         )
       ORDER BY m.created_at DESC
@@ -439,7 +444,7 @@ matchesRouter.get('/activity', async (c) => {
         m.action, m.created_at as actionTime
       FROM matches_and_likes m
       JOIN users u ON m.receiver_id = u.id
-      WHERE m.sender_id = ? AND (m.action = 'liked' OR m.action = 'mutual_match')
+      WHERE m.sender_id = ? AND (m.action = 'liked' OR m.action = 'mutual_match' OR m.action = 'direct_salam')
       ORDER BY m.created_at DESC
     `).bind(userId).all();
 

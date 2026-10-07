@@ -199,6 +199,46 @@ usersRouter.post('/complete-onboarding', async (c) => {
   }
 });
 
+// 1.5 Auto-Detect Location from Cloudflare Edge Geo IP Headers
+usersRouter.get('/detect-location', async (c) => {
+  try {
+    const rawCf = (c.req.raw as any)?.cf || {};
+    const city = c.req.header('cf-ipcity') || rawCf.city || null;
+    const country = c.req.header('cf-ipcountry') || rawCf.country || null;
+    const continent = c.req.header('cf-ipcontinent') || rawCf.continent || null;
+    const rawLat = c.req.header('cf-iplatitude') || rawCf.latitude;
+    const rawLon = c.req.header('cf-iplongitude') || rawCf.longitude;
+
+    const latitude = rawLat ? parseFloat(String(rawLat)) : null;
+    const longitude = rawLon ? parseFloat(String(rawLon)) : null;
+
+    if (city || country || (latitude !== null && !isNaN(latitude))) {
+      return c.json({
+        success: true,
+        source: 'edge_geoip',
+        city,
+        country,
+        continent,
+        latitude,
+        longitude
+      });
+    }
+
+    // Default safe fallback if headers missing (e.g. localhost test)
+    return c.json({
+      success: true,
+      source: 'fallback',
+      city: 'London',
+      country: 'GB',
+      continent: 'EU',
+      latitude: 51.5074,
+      longitude: -0.1278
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
 // 2. Get User Profile by ID
 usersRouter.get('/:id', async (c) => {
   try {

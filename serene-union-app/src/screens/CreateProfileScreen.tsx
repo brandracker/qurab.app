@@ -109,7 +109,7 @@ export const CreateProfileScreen: React.FC<Props> = ({
   };
 
   return (
-    <div className="w-full h-full flex flex-col justify-between p-6 bg-background font-sans overflow-y-auto pb-24 select-none text-on-surface">
+    <div className="w-full h-full flex flex-col justify-between p-4 sm:p-5 bg-gradient-to-b from-[#FF2560] via-[#F31A56] to-[#DE0E46] font-sans overflow-y-auto pb-24 select-none text-white transition-all">
       {/* Hidden File Input */}
       <input
         ref={fileInputRef}
@@ -121,46 +121,51 @@ export const CreateProfileScreen: React.FC<Props> = ({
 
       <div>
         {/* Header & Step Indicator */}
-        <div className="flex items-center justify-between mb-3 pt-2">
+        <div className="flex items-center justify-between mb-3 pt-1">
           <button
             onClick={onBack}
-            className="w-9 h-9 rounded-full bg-white border border-outline flex items-center justify-center text-on-surface hover:bg-surface-variant transition-colors shadow-subtle"
+            className="w-9 h-9 rounded-full bg-white text-[#FF2560] flex items-center justify-center hover:bg-white/90 active:scale-95 transition-all shadow-md cursor-pointer"
+            title="Go Back"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-4 h-4 stroke-[2.5]" />
           </button>
-          <div className="flex items-center gap-1">
-            <span className="text-[11px] font-bold text-primary tracking-wider uppercase">Step 5 of 5</span>
-            <span className="text-[11px] text-secondary">· Modesty & Photos</span>
+          <div className="flex items-center gap-1.5 bg-black/20 backdrop-blur-md px-3.5 py-1 rounded-full border border-white/20 shadow-xs">
+            <span className="text-[11px] font-bold text-white tracking-wider uppercase">Step 5 of 5</span>
+            <span className="text-[11px] font-medium text-white/90">· Modesty & Photos</span>
           </div>
           <div className="w-9" />
         </div>
 
         {/* 5-Step Progress Bars */}
-        <div className="grid grid-cols-5 gap-1.5 mb-5">
-          <div className="h-1.5 rounded-full bg-primary" />
-          <div className="h-1.5 rounded-full bg-primary" />
-          <div className="h-1.5 rounded-full bg-primary" />
-          <div className="h-1.5 rounded-full bg-primary" />
-          <div className="h-1.5 rounded-full bg-primary" />
+        <div className="grid grid-cols-5 gap-1.5 mb-4 px-0.5">
+          <div className="h-2 rounded-full bg-white/70" />
+          <div className="h-2 rounded-full bg-white/70" />
+          <div className="h-2 rounded-full bg-white/70" />
+          <div className="h-2 rounded-full bg-white/70" />
+          <div className="h-2 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.9)] scale-y-110" />
         </div>
 
-        <h1 className="font-serif text-2xl font-bold text-on-surface mb-1">
-          Photos & Modesty Protection
-        </h1>
-        <p className="text-xs text-secondary mb-4 leading-relaxed">
-          Upload up to 6 clear, modest photos. Enable modesty blur to protect your pictures until you mutually approve reveal.
-        </p>
+        <div className="px-1 mb-2">
+          <h1 className="font-serif text-2xl font-bold text-white tracking-tight drop-shadow-xs">
+            Photos & Modesty Protection
+          </h1>
+          <p className="text-xs text-white/90 leading-relaxed font-medium">
+            Upload up to 6 clear, modest photos. Enable modesty blur to protect your pictures until you mutually approve reveal.
+          </p>
+        </div>
 
         {/* Photo Required Error Banner */}
         {photoError && (
-          <div className="p-3 rounded-2xl bg-rose-50 border border-rose-300 text-rose-800 text-xs font-semibold flex items-center gap-2 mb-4 shadow-subtle animate-shake">
+          <div className="p-3.5 rounded-2xl bg-white text-rose-700 text-xs font-bold flex items-center gap-2 mb-4 shadow-lg border border-rose-200 animate-shake">
             <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
             <span>{photoError}</span>
           </div>
         )}
 
-        {/* 6 Photo Grid */}
-        <div id="photo-grid" className="grid grid-cols-3 gap-2.5 mb-4">
+        {/* Floating White Card */}
+        <div className="bg-white rounded-3xl p-4 sm:p-5 shadow-[0_12px_36px_rgba(0,0,0,0.15)] space-y-4 text-slate-900 border border-white/60">
+          {/* 6 Photo Grid */}
+          <div id="photo-grid" className="grid grid-cols-3 gap-2.5">
           {photos.map((p, idx) => (
             <div
               key={idx}
@@ -238,16 +243,17 @@ export const CreateProfileScreen: React.FC<Props> = ({
           </button>
         </div>
       </div>
+    </div>
 
       {/* Submit Button */}
-      <div className="pt-4 space-y-2">
+      <div className="pt-5 space-y-2">
         <button
           onClick={handleSubmit}
           disabled={isUploading}
-          className="w-full py-3 rounded-full bg-primary text-white font-sans text-xs font-bold shadow-brand hover:bg-primary-dark active:scale-98 transition-all flex items-center justify-center gap-1.5"
+          className="w-full py-3.5 rounded-full bg-white text-[#FF2560] font-sans text-xs font-bold shadow-[0_8px_25px_rgba(0,0,0,0.18)] hover:bg-white/95 active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
         >
           <span>{isUploading ? 'Saving Profile...' : (isEditMode ? 'Update Matrimonial Profile 🎉' : 'Complete Matrimonial Profile 🎉')}</span>
-          <Check className="w-4 h-4" />
+          <Check className="w-4 h-4 stroke-[2.5]" />
         </button>
 
         {activePhotos.length === 0 && (
@@ -260,7 +266,7 @@ export const CreateProfileScreen: React.FC<Props> = ({
                 photos: []
               });
             }}
-            className="w-full py-2 text-[11px] font-semibold text-secondary hover:text-primary transition-colors text-center"
+            className="w-full py-2 text-[11px] font-semibold text-white/80 hover:text-white transition-colors text-center cursor-pointer"
           >
             Skip photo for now (Upload later from My Profile)
           </button>

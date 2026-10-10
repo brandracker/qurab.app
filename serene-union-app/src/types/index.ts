@@ -88,6 +88,10 @@ export interface PartnerRequirements {
   relocation?: string;
   education?: string;
   description?: string;
+  dealbreakers?: string[];
+  strictAgeDealbreaker?: boolean;
+  ethnicities?: string[];
+  idealPartnerDescription?: string;
 }
 
 

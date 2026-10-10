@@ -240,4 +240,84 @@ describe('UI & Functional Testing: EditProfileModal (In-Place Matrimonial Biodat
 
     expect(container.firstChild).toBeNull();
   });
+
+  it('7. Renders directly on Partner Criteria tab when initialTab is partner', () => {
+    const userWithCriteria: UserProfile = {
+      ...mockUser,
+      partnerRequirements: {
+        minAge: 24,
+        maxAge: 30,
+        strictAgeDealbreaker: true,
+        maritalStatus: 'never_married',
+        practiceLevel: 'very_practicing',
+        relocation: 'prefer_same_city',
+        education: 'Bachelors Degree',
+        ethnicities: ['South Asian'],
+        dealbreakers: ['non_smoker', 'daily_salah'],
+        description: 'Looking for a pious, kind companion grounded in daily salah.'
+      }
+    };
+
+    render(
+      <EditProfileModal
+        isOpen={true}
+        initialTab="partner"
+        user={userWithCriteria}
+        onClose={vi.fn()}
+      />
+    );
+
+    // Verify Partner Studio is open
+    expect(screen.getByText(/Partner Criteria & Requirements/i)).toBeDefined();
+    expect(screen.getByDisplayValue('24')).toBeDefined();
+    expect(screen.getByDisplayValue('30')).toBeDefined();
+    expect(screen.getByText(/Strict Age Filter/i)).toBeDefined();
+    expect(screen.getByText(/Non-Smoker Only/i)).toBeDefined();
+    expect(screen.getByText(/5x Daily Salah/i)).toBeDefined();
+    expect(screen.getByDisplayValue(/Looking for a pious, kind companion/i)).toBeDefined();
+  });
+
+  it('8. Updates partner requirements and persists complete partnerRequirements payload to dbService on Save', async () => {
+    const updateSpy = vi.spyOn(dbService, 'updateUserProfileLive').mockResolvedValue(mockUser);
+    const handleSaved = vi.fn();
+
+    render(
+      <EditProfileModal
+        isOpen={true}
+        initialTab="partner"
+        user={mockUser}
+        onClose={vi.fn()}
+        onSaved={handleSaved}
+      />
+    );
+
+    // Click age preset "24 - 30"
+    const presetBtn = screen.getByRole('button', { name: '24 - 30' });
+    fireEvent.click(presetBtn);
+
+    // Toggle dealbreaker "Strictly Halal Diet"
+    const halalBtn = screen.getByRole('button', { name: /Strictly Halal Diet/i });
+    fireEvent.click(halalBtn);
+
+    // Save
+    const saveBtn = screen.getByRole('button', { name: /Save Changes/i });
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => {
+      expect(updateSpy).toHaveBeenCalledWith(
+        'usr_edit_modal_test_1',
+        expect.objectContaining({
+          partnerRequirements: expect.objectContaining({
+            minAge: 24,
+            maxAge: 30,
+            dealbreakers: expect.arrayContaining(['halal_diet'])
+          })
+        })
+      );
+    });
+
+    await waitFor(() => {
+      expect(handleSaved).toHaveBeenCalledTimes(1);
+    });
+  });
 });

@@ -67,8 +67,8 @@ export const App: React.FC = () => {
     const params = new URLSearchParams(window.location.search);
     const hash = window.location.hash.toLowerCase();
 
-    // Explicit app flags or paths bypass the landing page
-    if (params.get('app') === 'true' || path.startsWith('/app')) return false;
+    // Explicit app flags, paths, or step/screen queries bypass the landing page
+    if (params.get('app') === 'true' || path.startsWith('/app') || params.get('step') || params.get('screen')) return false;
 
     // Policy and legal deep-links
     if (path.includes('privacy') || params.get('page') === 'privacy' || params.get('view') === 'privacy' || hash.includes('privacy')) return false;
@@ -108,6 +108,22 @@ export const App: React.FC = () => {
 
     if (params.get('mode') === 'resetPassword' || (params.get('oobCode') && params.get('mode') !== 'verifyEmail')) {
       return 'reset_password';
+    }
+
+    // Direct dev step query param, e.g. ?step=intent or ?step=career_intent
+    const directStep = params.get('step') || params.get('screen');
+    if (directStep) {
+      if (directStep === 'intent' || directStep === 'career_intent' || directStep === 'partner_requirements') {
+        return 'career_intent';
+      }
+      const validSteps: OnboardingStep[] = [
+        'welcome', 'auth', 'reset_password', 'privacy_policy', 'terms',
+        'basic_info', 'practice', 'family_lifestyle', 'career_intent',
+        'photos_modesty', 'main_app'
+      ];
+      if (validSteps.includes(directStep as OnboardingStep)) {
+        return directStep as OnboardingStep;
+      }
     }
     
     // 1. Check if user has an ongoing onboarding draft in progress
@@ -416,8 +432,8 @@ export const App: React.FC = () => {
       citizenship: onboardingData.citizenship || currentUser.citizenship || 'Citizen',
       workArrangement: onboardingData.workArrangement || currentUser.workArrangement || 'remote',
       incomeBracket: onboardingData.incomeBracket || currentUser.incomeBracket || '40k_80k',
-      hobbies: onboardingData.hobbies || currentUser.hobbies || ['📚 Books & Islamic History', '✈️ Travel & Umrah', '☕ Specialty Coffee'],
-      personalityTraits: onboardingData.personalityTraits || currentUser.personalityTraits || ['🤍 Family-Oriented', '🌿 Calm & Patient'],
+      hobbies: onboardingData.hobbies || currentUser.hobbies || ['Books & Islamic History', 'Travel & Umrah', 'Specialty Coffee'],
+      personalityTraits: onboardingData.personalityTraits || currentUser.personalityTraits || ['Family-Oriented', 'Calm & Patient'],
       maritalStatus: onboardingData.maritalStatus || currentUser.maritalStatus || 'never_married',
       dualIncomePreference: onboardingData.dualIncomePreference || currentUser.dualIncomePreference || 'career_supportive',
       familyStructure: onboardingData.familyStructure || currentUser.familyStructure || 'nuclear',
@@ -519,12 +535,12 @@ export const App: React.FC = () => {
   return (
     <div className="w-full min-h-screen bg-[#121212] flex items-center justify-center font-sans antialiased text-on-surface">
       {/* Centered Mobile Screen Container */}
-      <div className={`w-full max-w-[440px] h-[100dvh] sm:h-[90vh] sm:max-h-[900px] ${activeTab === 'discover' && currentStep === 'main_app' ? 'bg-black' : 'bg-white'} sm:rounded-[36px] overflow-hidden shadow-2xl flex flex-col relative border border-[#262626]`}>
+      <div className={`w-full max-w-[440px] h-[100dvh] sm:h-[90vh] sm:max-h-[900px] ${['basic_info', 'practice', 'family_lifestyle', 'career_intent', 'photos_modesty'].includes(currentStep) ? 'bg-[#FF2560]' : activeTab === 'discover' && currentStep === 'main_app' ? 'bg-black' : 'bg-white'} sm:rounded-[36px] overflow-hidden shadow-2xl flex flex-col relative border border-[#262626]`}>
         
         {/* Top Simulated Status Bar on Mobile View */}
-        <div className={`hidden sm:flex w-full ${activeTab === 'discover' && currentStep === 'main_app' ? 'bg-black text-white/70 border-white/5' : 'bg-white text-[#737373] border-[#F4F4F5]'} px-6 pt-3 pb-1 items-center justify-between z-40 select-none text-[11px] font-medium border-b`}>
+        <div className={`hidden sm:flex w-full ${['basic_info', 'practice', 'family_lifestyle', 'career_intent', 'photos_modesty'].includes(currentStep) ? 'bg-[#FF2560] text-white border-white/10' : activeTab === 'discover' && currentStep === 'main_app' ? 'bg-black text-white/70 border-white/5' : 'bg-white text-[#737373] border-[#F4F4F5]'} px-6 pt-3 pb-1 items-center justify-between z-40 select-none text-[11px] font-medium border-b`}>
           <span>9:41</span>
-          <div className="w-20 h-4 bg-[#171717] rounded-full mx-auto" />
+          <div className={`w-20 h-4 ${['basic_info', 'practice', 'family_lifestyle', 'career_intent', 'photos_modesty'].includes(currentStep) ? 'bg-black/20' : 'bg-[#171717]'} rounded-full mx-auto`} />
           <div className="flex items-center gap-1.5">
             <span className="text-[10px]">5G</span>
             <div className="w-4 h-2.5 border border-[#737373] rounded-xs p-0.5 flex items-center">
@@ -650,9 +666,27 @@ export const App: React.FC = () => {
         {currentStep === 'career_intent' && (
           <YourIntentScreen
             data={(onboardingData && Object.keys(onboardingData).length > 0 ? onboardingData : currentUser) as any}
-            onBack={() => goToStep('family_lifestyle')}
+            onBack={() => {
+              if (currentUser?.isProfileCompleted && (!onboardingData || Object.keys(onboardingData).length === 0)) {
+                setCurrentStep('main_app');
+              } else {
+                goToStep('family_lifestyle');
+              }
+            }}
             onContinue={(careerData) => {
-              goToStep('photos_modesty', { ...onboardingData, ...careerData });
+              if (currentUser?.isProfileCompleted && (!onboardingData || Object.keys(onboardingData).length === 0)) {
+                const updated: UserProfile = {
+                  ...currentUser,
+                  ...careerData,
+                  partnerRequirements: careerData.partnerRequirements
+                };
+                setCurrentUser(updated);
+                dbService.setCurrentUser(updated);
+                dbService.updateUserProfileLive(updated.id, updated).catch(() => {});
+                setCurrentStep('main_app');
+              } else {
+                goToStep('photos_modesty', { ...onboardingData, ...careerData });
+              }
             }}
           />
         )}

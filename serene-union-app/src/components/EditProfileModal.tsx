@@ -11,7 +11,8 @@ import {
   MapPin,
   GraduationCap,
   Navigation,
-  Globe2
+  Globe2,
+  Sliders
 } from 'lucide-react';
 import { Country, State, type ICountry } from 'country-state-city';
 import { reverseGeocodeOffline } from '../utils/offlineGeo';
@@ -20,14 +21,15 @@ import { dbService } from '../services/dbService';
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
 
+export type TabType = 'personal' | 'career' | 'deen' | 'lifestyle' | 'partner';
+
 interface Props {
   isOpen: boolean;
   user: UserProfile;
   onClose: () => void;
   onSaved?: (updatedUser: UserProfile) => void;
+  initialTab?: TabType;
 }
-
-type TabType = 'personal' | 'career' | 'deen' | 'lifestyle';
 
 // Top priority country codes for quick Islamic & diaspora selection
 const TOP_COUNTRY_CODES = ['GB', 'PK', 'US', 'CA', 'AE', 'SA', 'TR', 'AU', 'DE', 'MY', 'IN', 'BD', 'QA', 'KW', 'OM', 'EG', 'FR', 'NL', 'ID'];
@@ -136,9 +138,10 @@ export const EditProfileModal: React.FC<Props> = ({
   isOpen,
   user,
   onClose,
-  onSaved
+  onSaved,
+  initialTab = 'personal'
 }) => {
-  const [activeTab, setActiveTab] = useState<TabType>('personal');
+  const [activeTab, setActiveTab] = useState<TabType>(initialTab);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -186,6 +189,8 @@ export const EditProfileModal: React.FC<Props> = ({
   const [prayerFrequency, setPrayerFrequency] = useState<string>('5 times daily');
   const [halalDiet, setHalalDiet] = useState<string>('Strictly Halal');
   const [modestyPractice, setModestyPractice] = useState<string>('');
+  const [quranRecitation, setQuranRecitation] = useState<string>('daily');
+  const [hajjUmrahStatus, setHajjUmrahStatus] = useState<string>('planning');
 
   // Marriage & Lifestyle
   const [marriageTimeline, setMarriageTimeline] = useState<MarriageTimeline>('within_1_year');
@@ -195,11 +200,32 @@ export const EditProfileModal: React.FC<Props> = ({
   const [smokingStatus, setSmokingStatus] = useState<string>('non_smoker');
   const [languagesSpoken, setLanguagesSpoken] = useState<string>('English');
   const [childrenDesire, setChildrenDesire] = useState<string>('wants_children');
+  const [mahrPhilosophy, setMahrPhilosophy] = useState<string>('mutual_agreement');
+  const [familyStructure, setFamilyStructure] = useState<string>('nuclear');
+  const [siblingsCount, setSiblingsCount] = useState<number>(2);
+  const [dualIncomePreference, setDualIncomePreference] = useState<string>('career_supportive');
+  const [hobbies, setHobbies] = useState<string[]>([]);
+  const [personalityTraits, setPersonalityTraits] = useState<string[]>([]);
   const [bio, setBio] = useState<string>('');
+
+  // Partner Requirements Studio State
+  const [partnerMinAge, setPartnerMinAge] = useState<number>(21);
+  const [partnerMaxAge, setPartnerMaxAge] = useState<number>(35);
+  const [strictAgeDealbreaker, setStrictAgeDealbreaker] = useState<boolean>(false);
+  const [partnerMaritalStatus, setPartnerMaritalStatus] = useState<string>('any');
+  const [partnerPracticeLevel, setPartnerPracticeLevel] = useState<string>('practicing');
+  const [partnerRelocation, setPartnerRelocation] = useState<string>('open');
+  const [partnerEducation, setPartnerEducation] = useState<string>('any');
+  const [partnerEthnicitiesInput, setPartnerEthnicitiesInput] = useState<string>('');
+  const [partnerDealbreakers, setPartnerDealbreakers] = useState<string[]>(['non_smoker', 'daily_salah']);
+  const [partnerDescription, setPartnerDescription] = useState<string>('');
 
   // Hydrate fields on open or user change
   useEffect(() => {
     if (isOpen && user) {
+      if (initialTab) {
+        setActiveTab(initialTab);
+      }
       setFullName(user.fullName || '');
       setAge(user.age || 25);
       setHeight(user.height || "5'8\" (173 cm)");
@@ -271,8 +297,10 @@ export const EditProfileModal: React.FC<Props> = ({
       setPrayerFrequency(user.religiousProfile?.prayerFrequency || '5 times daily');
       setHalalDiet(user.religiousProfile?.halalDiet || 'Strictly Halal');
       setModestyPractice(user.religiousProfile?.modestyPractice || '');
+      setQuranRecitation(user.religiousProfile?.quranRecitation || 'daily');
+      setHajjUmrahStatus(user.religiousProfile?.hajjUmrahStatus || 'planning');
 
-      // Lifestyle
+      // Lifestyle & Family
       setMarriageTimeline((user.marriageTimeline as MarriageTimeline) || 'within_1_year');
       setMaritalStatus(user.maritalStatus || 'never_married');
       setLivingPreference(user.livingPreference || 'independent');
@@ -280,10 +308,33 @@ export const EditProfileModal: React.FC<Props> = ({
       setSmokingStatus(user.smokingStatus || 'non_smoker');
       setLanguagesSpoken(user.languagesSpoken || 'English');
       setChildrenDesire(user.childrenDesire || 'wants_children');
+      setMahrPhilosophy(user.mahrPhilosophy || 'mutual_agreement');
+      setFamilyStructure(user.familyStructure || 'nuclear');
+      setSiblingsCount(user.siblingsCount ?? 2);
+      setDualIncomePreference(user.dualIncomePreference || 'career_supportive');
+      setHobbies(user.hobbies || []);
+      setPersonalityTraits(user.personalityTraits || []);
       setBio(user.bio || user.religiousProfile?.deenRelationshipBio || '');
+
+      // Partner Requirements Studio
+      setPartnerMinAge(user.partnerRequirements?.minAge || 21);
+      setPartnerMaxAge(user.partnerRequirements?.maxAge || 35);
+      setStrictAgeDealbreaker(Boolean(user.partnerRequirements?.strictAgeDealbreaker));
+      setPartnerMaritalStatus(user.partnerRequirements?.maritalStatus || 'any');
+      setPartnerPracticeLevel(user.partnerRequirements?.practiceLevel || 'practicing');
+      setPartnerRelocation(user.partnerRequirements?.relocation || 'open');
+      setPartnerEducation(user.partnerRequirements?.education || 'any');
+      setPartnerEthnicitiesInput(
+        user.partnerRequirements?.ethnicities && user.partnerRequirements.ethnicities.length > 0
+          ? user.partnerRequirements.ethnicities.join(', ')
+          : ''
+      );
+      setPartnerDealbreakers(user.partnerRequirements?.dealbreakers || ['non_smoker', 'daily_salah']);
+      setPartnerDescription(user.partnerRequirements?.description || user.partnerRequirements?.idealPartnerDescription || '');
+
       setSuccessMessage(null);
     }
-  }, [isOpen, user]);
+  }, [isOpen, user, initialTab]);
 
   if (!isOpen) return null;
 
@@ -499,6 +550,11 @@ export const EditProfileModal: React.FC<Props> = ({
       }
     }
 
+    const parsedEthnicities = partnerEthnicitiesInput
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+
     const updatedProfile: Partial<UserProfile> = {
       fullName: fullName.trim() || user.fullName,
       age: Number(age) || user.age,
@@ -522,6 +578,12 @@ export const EditProfileModal: React.FC<Props> = ({
       smokingStatus: smokingStatus as any,
       languagesSpoken: languagesSpoken.trim(),
       childrenDesire,
+      mahrPhilosophy,
+      familyStructure: familyStructure as any,
+      siblingsCount: Number(siblingsCount),
+      dualIncomePreference: dualIncomePreference as any,
+      hobbies: hobbies.length > 0 ? hobbies : user.hobbies,
+      personalityTraits: personalityTraits.length > 0 ? personalityTraits : user.personalityTraits,
       bio: bio.trim(),
       religiousProfile: {
         ...(user.religiousProfile || {
@@ -535,8 +597,22 @@ export const EditProfileModal: React.FC<Props> = ({
         madhhab,
         prayerFrequency,
         halalDiet,
+        quranRecitation,
         modestyPractice: modestyPractice.trim(),
+        hajjUmrahStatus,
         deenRelationshipBio: bio.trim()
+      },
+      partnerRequirements: {
+        minAge: Number(partnerMinAge),
+        maxAge: Number(partnerMaxAge),
+        strictAgeDealbreaker: Boolean(strictAgeDealbreaker),
+        maritalStatus: partnerMaritalStatus,
+        practiceLevel: partnerPracticeLevel,
+        relocation: partnerRelocation,
+        education: partnerEducation,
+        ethnicities: parsedEthnicities.length > 0 ? parsedEthnicities : (user.partnerRequirements?.ethnicities || []),
+        dealbreakers: partnerDealbreakers,
+        description: partnerDescription.trim() || user.partnerRequirements?.description || 'Seeking a practicing, kind-hearted spouse with good Islamic manners.'
       }
     };
 
@@ -641,6 +717,18 @@ export const EditProfileModal: React.FC<Props> = ({
           >
             <Heart className="w-3.5 h-3.5" />
             <span>Lifestyle</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('partner')}
+            className={`flex-1 py-2.5 flex items-center justify-center gap-1.5 text-xs font-semibold border-b-2 transition-all ${
+              activeTab === 'partner'
+                ? 'border-primary text-primary font-bold bg-white'
+                : 'border-transparent text-secondary hover:text-on-surface'
+            }`}
+          >
+            <Sliders className="w-3.5 h-3.5" />
+            <span>Partner</span>
           </button>
         </nav>
 
@@ -1041,6 +1129,39 @@ export const EditProfileModal: React.FC<Props> = ({
                   />
                 </div>
               </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-on-surface mb-1">
+                    Quran Recitation
+                  </label>
+                  <select
+                    value={quranRecitation}
+                    onChange={(e) => setQuranRecitation(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-outline bg-white text-xs font-medium text-on-surface focus:outline-none focus:border-primary"
+                  >
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="regularly">Regularly</option>
+                    <option value="learning">Learning / Improving</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-on-surface mb-1">
+                    Hajj / Umrah Status
+                  </label>
+                  <select
+                    value={hajjUmrahStatus}
+                    onChange={(e) => setHajjUmrahStatus(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-outline bg-white text-xs font-medium text-on-surface focus:outline-none focus:border-primary"
+                  >
+                    <option value="planning">Planning Insha'Allah</option>
+                    <option value="completed_umrah">Completed Umrah</option>
+                    <option value="completed_hajj">Completed Hajj</option>
+                    <option value="completed_both">Completed Both Hajj & Umrah</option>
+                  </select>
+                </div>
+              </div>
             </div>
           )}
 
@@ -1140,6 +1261,82 @@ export const EditProfileModal: React.FC<Props> = ({
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-on-surface mb-1">
+                    Mahr Philosophy
+                  </label>
+                  <select
+                    value={mahrPhilosophy}
+                    onChange={(e) => setMahrPhilosophy(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-outline bg-white text-xs font-medium text-on-surface focus:outline-none focus:border-primary"
+                  >
+                    <option value="sunnah_mahr">Sunnah / Symbolic Mahr</option>
+                    <option value="mutual_agreement">Mutual Agreement</option>
+                    <option value="modest">Modest Standard</option>
+                    <option value="substantial">Substantial Financial Security</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-on-surface mb-1">
+                    Desire for Children
+                  </label>
+                  <select
+                    value={childrenDesire}
+                    onChange={(e) => setChildrenDesire(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-outline bg-white text-xs font-medium text-on-surface focus:outline-none focus:border-primary"
+                  >
+                    <option value="wants_children">Wants Children</option>
+                    <option value="open_flexible">Open / Flexible</option>
+                    <option value="does_not_want">Does Not Want Children</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-on-surface mb-1">
+                    Family Structure
+                  </label>
+                  <select
+                    value={familyStructure}
+                    onChange={(e) => setFamilyStructure(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-outline bg-white text-xs font-medium text-on-surface focus:outline-none focus:border-primary"
+                  >
+                    <option value="nuclear">Nuclear Family</option>
+                    <option value="joint">Joint Family</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-on-surface mb-1">
+                    Siblings Count
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="20"
+                    value={siblingsCount}
+                    onChange={(e) => setSiblingsCount(Math.max(0, Number(e.target.value)))}
+                    className="w-full px-3 py-2.5 rounded-xl border border-outline bg-white text-xs font-medium text-on-surface focus:outline-none focus:border-primary"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-on-surface mb-1">
+                  Dual-Income Preference
+                </label>
+                <select
+                  value={dualIncomePreference}
+                  onChange={(e) => setDualIncomePreference(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-outline bg-white text-xs font-medium text-on-surface focus:outline-none focus:border-primary"
+                >
+                  <option value="career_supportive">Career Supportive</option>
+                  <option value="homemaker_focused">Homemaker Focused</option>
+                  <option value="flexible">Flexible</option>
+                </select>
+              </div>
+
               <div>
                 <label className="block text-[11px] font-bold text-on-surface mb-1">
                   Matrimonial Bio & Aspirations
@@ -1150,6 +1347,235 @@ export const EditProfileModal: React.FC<Props> = ({
                   onChange={(e) => setBio(e.target.value)}
                   placeholder="Share a brief overview of your personality, goals, and what you seek in a spouse..."
                   className="w-full px-3.5 py-2.5 rounded-xl border border-outline bg-surface/20 text-xs font-medium text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Tab 5: Partner Requirements Studio */}
+          {activeTab === 'partner' && (
+            <div className="space-y-4 animate-fade-in">
+              <div className="p-3 bg-pastel-amber/40 border border-pastel-amber-border rounded-2xl flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                  <Sliders className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-on-surface">Partner Criteria & Requirements</h4>
+                  <p className="text-[10px] text-secondary">Set expectations for your prospective marriage companion</p>
+                </div>
+              </div>
+
+              {/* Age Range Presets & Inputs */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-bold text-on-surface">
+                    Preferred Age Range ({partnerMinAge} - {partnerMaxAge} years)
+                  </label>
+                  <span className="text-[10px] text-secondary font-semibold">Quick Presets</span>
+                </div>
+
+                <div className="grid grid-cols-4 gap-1.5">
+                  {[
+                    { label: '20 - 26', min: 20, max: 26 },
+                    { label: '24 - 30', min: 24, max: 30 },
+                    { label: '27 - 35', min: 27, max: 35 },
+                    { label: '30 - 40', min: 30, max: 40 },
+                  ].map((preset) => {
+                    const isActive = partnerMinAge === preset.min && partnerMaxAge === preset.max;
+                    return (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => {
+                          setPartnerMinAge(preset.min);
+                          setPartnerMaxAge(preset.max);
+                        }}
+                        className={`py-1.5 rounded-xl text-[10px] font-bold border transition-all ${
+                          isActive
+                            ? 'bg-primary text-white border-primary shadow-xs'
+                            : 'bg-white text-secondary border-outline hover:border-primary/50'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <label className="block text-[10px] font-semibold text-secondary mb-1">Min Age</label>
+                    <input
+                      type="number"
+                      min="18"
+                      max={partnerMaxAge}
+                      value={partnerMinAge}
+                      onChange={(e) => setPartnerMinAge(Math.max(18, Number(e.target.value)))}
+                      className="w-full px-3 py-2 rounded-xl border border-outline bg-white text-xs font-medium text-on-surface focus:outline-none focus:border-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-semibold text-secondary mb-1">Max Age</label>
+                    <input
+                      type="number"
+                      min={partnerMinAge}
+                      max="80"
+                      value={partnerMaxAge}
+                      onChange={(e) => setPartnerMaxAge(Math.min(80, Number(e.target.value)))}
+                      className="w-full px-3 py-2 rounded-xl border border-outline bg-white text-xs font-medium text-on-surface focus:outline-none focus:border-primary"
+                    />
+                  </div>
+                </div>
+
+                {/* Strict Age Dealbreaker Toggle */}
+                <label className="flex items-center gap-2.5 p-2.5 rounded-xl bg-surface/50 border border-outline/70 cursor-pointer hover:bg-surface transition-colors mt-2">
+                  <input
+                    type="checkbox"
+                    checked={strictAgeDealbreaker}
+                    onChange={(e) => setStrictAgeDealbreaker(e.target.checked)}
+                    className="w-4 h-4 text-primary rounded border-outline focus:ring-primary accent-primary"
+                  />
+                  <div className="min-w-0">
+                    <span className="text-xs font-bold text-on-surface block">Strict Age Filter (Enforce as Dealbreaker) 🔒</span>
+                    <span className="text-[10px] text-secondary block">Profiles outside this range will not be matched</span>
+                  </div>
+                </label>
+              </div>
+
+              {/* Deen Practice & Marital Status */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-on-surface mb-1">
+                    Religious Practice
+                  </label>
+                  <select
+                    value={partnerPracticeLevel}
+                    onChange={(e) => setPartnerPracticeLevel(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-outline bg-white text-xs font-medium text-on-surface focus:outline-none focus:border-primary"
+                  >
+                    <option value="practicing">Practicing</option>
+                    <option value="very_practicing">Very Practicing</option>
+                    <option value="moderately_practicing">Moderately Practicing</option>
+                    <option value="open_to_any">Open to All</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-on-surface mb-1">
+                    Marital Status
+                  </label>
+                  <select
+                    value={partnerMaritalStatus}
+                    onChange={(e) => setPartnerMaritalStatus(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-outline bg-white text-xs font-medium text-on-surface focus:outline-none focus:border-primary"
+                  >
+                    <option value="any">Open to All</option>
+                    <option value="never_married">Never Married</option>
+                    <option value="divorced">Divorced</option>
+                    <option value="widowed">Widowed</option>
+                    <option value="single_parent">Single Parent</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Education & Relocation */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-on-surface mb-1">
+                    Minimum Education
+                  </label>
+                  <select
+                    value={partnerEducation}
+                    onChange={(e) => setPartnerEducation(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-outline bg-white text-xs font-medium text-on-surface focus:outline-none focus:border-primary"
+                  >
+                    <option value="any">Open to Any Education</option>
+                    <option value="Bachelors Degree">Bachelors Degree or higher</option>
+                    <option value="Masters Degree">Masters Degree or higher</option>
+                    <option value="Doctorate / PhD">Doctorate / PhD</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-on-surface mb-1">
+                    Relocation Preference
+                  </label>
+                  <select
+                    value={partnerRelocation}
+                    onChange={(e) => setPartnerRelocation(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-outline bg-white text-xs font-medium text-on-surface focus:outline-none focus:border-primary"
+                  >
+                    <option value="open">Flexible / Open</option>
+                    <option value="prefer_same_city">Prefer Same City</option>
+                    <option value="prefer_same_country">Prefer Same Country</option>
+                    <option value="willing_to_relocate">Willing to Relocate</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Preferred Ethnicity */}
+              <div>
+                <label className="block text-[11px] font-bold text-on-surface mb-1">
+                  Preferred Ethnicity (comma separated or leave empty for all)
+                </label>
+                <input
+                  type="text"
+                  value={partnerEthnicitiesInput}
+                  onChange={(e) => setPartnerEthnicitiesInput(e.target.value)}
+                  placeholder="e.g. South Asian, Arab, Open to all"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-outline bg-surface/20 text-xs font-medium text-on-surface focus:outline-none focus:border-primary"
+                />
+              </div>
+
+              {/* Non-Negotiable Dealbreakers */}
+              <div>
+                <label className="block text-[11px] font-bold text-on-surface mb-1.5">
+                  Non-Negotiable Dealbreakers
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: 'non_smoker', label: 'Non-Smoker Only', emoji: '🚭' },
+                    { id: 'daily_salah', label: '5x Daily Salah', emoji: '🕌' },
+                    { id: 'halal_diet', label: 'Strictly Halal Diet', emoji: '🍽️' },
+                    { id: 'family_involvement', label: 'Early Wali Involvement', emoji: '🛡️' }
+                  ].map((db) => {
+                    const isSelected = partnerDealbreakers.includes(db.id);
+                    return (
+                      <button
+                        key={db.id}
+                        type="button"
+                        onClick={() => {
+                          if (isSelected) {
+                            setPartnerDealbreakers(partnerDealbreakers.filter((id) => id !== db.id));
+                          } else {
+                            setPartnerDealbreakers([...partnerDealbreakers, db.id]);
+                          }
+                        }}
+                        className={`p-2 rounded-xl border text-left flex items-center gap-2 transition-all ${
+                          isSelected
+                            ? 'bg-rose-50 border-rose-300 text-rose-800 font-bold shadow-2xs'
+                            : 'bg-white border-outline text-secondary hover:border-outline-dark'
+                        }`}
+                      >
+                        <span className="text-base">{db.emoji}</span>
+                        <span className="text-xs leading-tight">{db.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Partner Description / Expectations */}
+              <div>
+                <label className="block text-[11px] font-bold text-on-surface mb-1">
+                  What I am Looking For (Partner Reflections)
+                </label>
+                <textarea
+                  rows={3}
+                  value={partnerDescription}
+                  onChange={(e) => setPartnerDescription(e.target.value)}
+                  placeholder="Describe the values, character, akhlaq, and spiritual alignment you seek in your prospective spouse..."
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-outline bg-surface/20 text-xs font-medium text-on-surface focus:outline-none focus:border-primary resize-none"
                 />
               </div>
             </div>

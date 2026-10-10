@@ -102,26 +102,38 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
     return Math.max(18, age);
   }, [birthYear, birthMonth, birthDay]);
 
-  // --- Height System (Centimeters with live feet conversion) ---
+  // --- Height System (Dual-Unit: Feet & Inches + Centimeters with live sync) ---
   const parseInitialCm = (hStr?: string): number => {
     if (!hStr) return 178;
     const match = hStr.match(/(\d{3})\s*cm/i);
     if (match) return parseInt(match[1], 10);
+    const ftMatch = hStr.match(/(\d)['’]\s*(\d{1,2})/);
+    if (ftMatch) {
+      const ft = parseInt(ftMatch[1], 10);
+      const inc = parseInt(ftMatch[2], 10);
+      return Math.round((ft * 12 + inc) * 2.54);
+    }
     const numMatch = hStr.match(/(\d{2,3})/);
     if (numMatch) {
       const n = parseInt(numMatch[1], 10);
-      if (n >= 130 && n <= 230) return n;
+      if (n >= 120 && n <= 235) return n;
     }
     return 178;
   };
 
   const [heightCm, setHeightCm] = useState<number>(() => parseInitialCm(data?.height));
+  const [heightInputText, setHeightInputText] = useState<string>(() => String(parseInitialCm(data?.height)));
+  const [heightUnit, setHeightUnit] = useState<'ft' | 'cm'>('ft');
 
   // Re-synchronize local state when incoming data changes (e.g. Edit Profile prefill)
   useEffect(() => {
     if (data?.fullName) setFullName(data.fullName);
     if (data?.gender === 'male' || data?.gender === 'female') setGender(data.gender);
-    if (data?.height) setHeightCm(parseInitialCm(data.height));
+    if (data?.height) {
+      const parsed = parseInitialCm(data.height);
+      setHeightCm(parsed);
+      setHeightInputText(String(parsed));
+    }
     if (data?.ethnicity) setEthnicity(data.ethnicity);
     if (data?.citizenship) setCitizenship(data.citizenship);
     if (data?.willingnessToRelocate) setWillingnessToRelocate(data.willingnessToRelocate);
@@ -136,10 +148,27 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
   }, [data]);
 
   const formatCmToFeet = (cm: number): string => {
+    if (!cm || cm < 50) return "5'10\"";
     const totalInches = Math.round(cm / 2.54);
     const feet = Math.floor(totalInches / 12);
     const inches = totalInches % 12;
     return `${feet}'${inches}"`;
+  };
+
+  const totalInches = Math.round((heightCm || 178) / 2.54);
+  const currentFeet = Math.max(4, Math.min(7, Math.floor(totalInches / 12)));
+  const currentInches = Math.max(0, Math.min(11, totalInches % 12));
+
+  const handleFeetChange = (newFeet: number) => {
+    const newCm = Math.round((newFeet * 12 + currentInches) * 2.54);
+    setHeightCm(newCm);
+    setHeightInputText(String(newCm));
+  };
+
+  const handleInchesChange = (newInches: number) => {
+    const newCm = Math.round((currentFeet * 12 + newInches) * 2.54);
+    setHeightCm(newCm);
+    setHeightInputText(String(newCm));
   };
 
   const formattedHeightFull = `${formatCmToFeet(heightCm)} (${heightCm} cm)`;
@@ -517,52 +546,66 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
   ];
 
   return (
-    <div className="w-full h-full flex flex-col justify-between p-5 sm:p-6 bg-background font-sans overflow-y-auto pb-24 select-none text-on-surface">
+    <div className="w-full h-full flex flex-col justify-between p-4 sm:p-5 bg-gradient-to-b from-[#FF2560] via-[#F31A56] to-[#DE0E46] font-sans overflow-y-auto pb-24 select-none text-white transition-all">
       <div>
         {/* Header & Step Indicator */}
         <div className="flex items-center justify-between mb-3 pt-1">
           <button
             onClick={onBack}
-            className="w-9 h-9 rounded-full bg-white border border-outline flex items-center justify-center text-on-surface hover:bg-surface-variant transition-colors shadow-subtle"
+            className="w-9 h-9 rounded-full bg-white text-[#FF2560] flex items-center justify-center hover:bg-white/90 active:scale-95 transition-all shadow-md cursor-pointer"
+            title="Go Back"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-4 h-4 stroke-[2.5]" />
           </button>
-          <div className="flex items-center gap-1">
-            <span className="text-[11px] font-bold text-primary tracking-wider uppercase">Step 1 of 5</span>
-            <span className="text-[11px] text-secondary">· Personal</span>
+          <div className="flex items-center gap-1.5 bg-black/20 backdrop-blur-md px-3.5 py-1 rounded-full border border-white/20 shadow-xs">
+            <span className="text-[11px] font-bold text-white tracking-wider uppercase">Step 1 of 5</span>
+            <span className="text-[11px] font-medium text-white/90">· Personal</span>
           </div>
           <div className="w-9" />
         </div>
 
         {/* 5-Step Progress Bars */}
-        <div className="grid grid-cols-5 gap-1.5 mb-5">
-          <div className="h-1.5 rounded-full bg-primary" />
-          <div className="h-1.5 rounded-full bg-surface-variant" />
-          <div className="h-1.5 rounded-full bg-surface-variant" />
-          <div className="h-1.5 rounded-full bg-surface-variant" />
-          <div className="h-1.5 rounded-full bg-surface-variant" />
+        <div className="grid grid-cols-5 gap-1.5 mb-4 px-0.5">
+          <div className="h-2 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.9)] scale-y-110" />
+          <div className="h-2 rounded-full bg-white/25" />
+          <div className="h-2 rounded-full bg-white/25" />
+          <div className="h-2 rounded-full bg-white/25" />
+          <div className="h-2 rounded-full bg-white/25" />
         </div>
 
-        <h1 className="font-serif text-2xl font-bold text-on-surface mb-1">
-          Personal Background
-        </h1>
-        <p className="text-xs text-secondary mb-4 leading-relaxed">
-          Provide your biodata accurately to help prospective matches understand your profile.
-        </p>
+        <div className="px-1 mb-2">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-7 h-7 rounded-lg bg-white/20 backdrop-blur-md flex items-center justify-center text-white shadow-xs">
+              <User className="w-4 h-4" />
+            </div>
+            <h1 className="font-serif text-2xl font-bold text-white tracking-tight drop-shadow-xs">
+              Personal Background
+            </h1>
+          </div>
+          <p className="text-xs text-white/90 leading-relaxed font-medium">
+            Provide your biodata accurately to help prospective matches understand your profile.
+          </p>
+        </div>
 
         {/* Top Validation Warning Banner */}
         {Object.keys(errors).length > 0 && (
-          <div className="p-3 rounded-2xl bg-rose-50 border border-rose-300 text-rose-800 text-xs font-semibold flex items-center gap-2 mb-4 shadow-subtle animate-shake">
-            <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
-            <span>Please fill in all highlighted required fields before continuing.</span>
+          <div className="mb-4 p-3.5 rounded-2xl bg-white text-rose-700 flex items-start gap-2.5 shadow-lg border border-rose-200 animate-shake">
+            <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
+            <div className="text-xs">
+              <strong className="block font-bold text-rose-900">Please fill in all highlighted required fields before continuing:</strong>
+              <p className="text-[11px] text-rose-700 mt-0.5">
+                Kindly provide your full name and complete all required biodata fields.
+              </p>
+            </div>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Crisp Floating White Card Panel */}
+        <div className="bg-white rounded-3xl p-4 sm:p-5 shadow-[0_12px_36px_rgba(0,0,0,0.15)] space-y-4 text-slate-900 border border-white/60">
           {/* Full Name */}
           <div id="field-fullName">
-            <label className="block text-xs font-bold text-on-surface mb-1">
-              Full Name <span className="text-primary">*</span>
+            <label className="block text-xs font-bold text-slate-800 mb-1">
+              Full Name <span className="text-[#FF2560]">*</span>
             </label>
             <input
               type="text"
@@ -573,10 +616,10 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
                 if (errors.fullName) setErrors(prev => { const cp = { ...prev }; delete cp.fullName; return cp; });
               }}
               placeholder="e.g. Fatima Tariq or Bilal Ahmad"
-              className={`w-full bg-white rounded-2xl px-3.5 py-2.5 text-xs text-on-surface outline-none shadow-subtle transition-all border-2 ${
+              className={`w-full rounded-2xl px-3.5 py-2.5 text-xs outline-none transition-all border-2 ${
                 errors.fullName
-                  ? 'border-rose-500 bg-rose-50/50 ring-2 ring-rose-200'
-                  : 'border-outline focus:border-primary'
+                  ? 'border-rose-500 bg-rose-50/50 ring-2 ring-rose-200 text-rose-900'
+                  : 'bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-[#FF2560] focus:ring-2 focus:ring-[#FF2560]/15 shadow-2xs'
               }`}
             />
             {errors.fullName && (
@@ -589,7 +632,7 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
 
           {/* Gender */}
           <div>
-            <label className="block text-xs font-bold text-on-surface mb-1">Gender</label>
+            <label className="block text-xs font-bold text-slate-800 mb-1.5">Gender</label>
             <div className="grid grid-cols-2 gap-2.5">
               {[
                 { id: 'male' as const, label: 'Brother (Male)' },
@@ -599,10 +642,10 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
                   key={g.id}
                   type="button"
                   onClick={() => setGender(g.id)}
-                  className={`py-2.5 px-3 rounded-2xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                  className={`py-3 px-3 rounded-2xl border text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
                     gender === g.id
-                      ? 'border-primary bg-pastel-rose text-primary shadow-subtle'
-                      : 'border-outline bg-white text-secondary hover:bg-surface-variant'
+                      ? 'border-primary border-[#FF2560] bg-[#FFF0F3] text-primary text-[#FF2560] font-bold shadow-sm ring-1 ring-[#FF2560]'
+                      : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-slate-100 shadow-2xs'
                   }`}
                 >
                   <User className="w-3.5 h-3.5" />
@@ -671,57 +714,136 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
             </div>
           </div>
 
-          {/* Height (Centimeter Input with Automatic Feet & Inches Conversion) */}
-          <div className="bg-white p-3.5 rounded-2xl border border-outline shadow-subtle space-y-2">
+          {/* Height (Dual-Unit System: Feet & Inches Picker + Centimeters Input with Live Conversion) */}
+          <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs space-y-2.5">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-on-surface flex items-center gap-1.5">
-                <Ruler className="w-3.5 h-3.5 text-primary" />
+              <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <Ruler className="w-3.5 h-3.5 text-[#FF2560]" />
                 <span>Height</span>
               </label>
-              <span className="text-[10px] text-secondary font-medium">Enter in cm or pick preset</span>
+
+              {/* Unit Toggle: Feet & Inches (ft/in) vs Centimeters (cm) */}
+              <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setHeightUnit('ft')}
+                  className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold transition-all cursor-pointer ${
+                    heightUnit === 'ft'
+                      ? 'bg-white text-[#FF2560] shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  ft / in
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHeightUnit('cm')}
+                  className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold transition-all cursor-pointer ${
+                    heightUnit === 'cm'
+                      ? 'bg-white text-[#FF2560] shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  cm
+                </button>
+              </div>
             </div>
 
             <div className="flex items-center gap-2.5">
-              {/* Centimeters Number Box */}
-              <div className="relative flex-1">
-                <input
-                  type="number"
-                  min={130}
-                  max={225}
-                  value={heightCm}
-                  onChange={(e) => {
-                    const val = Number(e.target.value);
-                    if (!isNaN(val)) setHeightCm(val);
-                  }}
-                  className="w-full bg-surface-variant border border-outline rounded-xl px-3 py-2 text-xs font-bold text-on-surface outline-none focus:border-primary pr-9"
-                  placeholder="178"
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-secondary">
-                  cm
-                </span>
-              </div>
+              {heightUnit === 'ft' ? (
+                /* Dual Feet & Inches Dropdowns */
+                <div className="grid grid-cols-2 gap-2 flex-1">
+                  <div className="relative">
+                    <select
+                      value={currentFeet}
+                      onChange={(e) => handleFeetChange(Number(e.target.value))}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-800 outline-none focus:border-[#FF2560] appearance-none pr-6 cursor-pointer shadow-2xs"
+                    >
+                      {[4, 5, 6, 7].map(f => (
+                        <option key={f} value={f}>{f} ft</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-3 h-3 text-slate-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
+
+                  <div className="relative">
+                    <select
+                      value={currentInches}
+                      onChange={(e) => handleInchesChange(Number(e.target.value))}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-800 outline-none focus:border-[#FF2560] appearance-none pr-6 cursor-pointer shadow-2xs"
+                    >
+                      {Array.from({ length: 12 }, (_, i) => i).map(inc => (
+                        <option key={inc} value={inc}>{inc} in</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-3 h-3 text-slate-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
+                </div>
+              ) : (
+                /* Centimeters Clean Numeric Input (No 0 Glitch) */
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={heightInputText}
+                    onChange={(e) => {
+                      const cleaned = e.target.value.replace(/\D/g, '').slice(0, 3);
+                      setHeightInputText(cleaned);
+                      if (cleaned) {
+                        const val = parseInt(cleaned, 10);
+                        if (val >= 100 && val <= 235) {
+                          setHeightCm(val);
+                        }
+                      }
+                    }}
+                    onBlur={() => {
+                      if (!heightInputText || parseInt(heightInputText, 10) < 120 || parseInt(heightInputText, 10) > 235) {
+                        setHeightInputText(String(heightCm));
+                      }
+                    }}
+                    placeholder="e.g. 178"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-[#FF2560] pr-10 shadow-2xs"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400">
+                    cm
+                  </span>
+                </div>
+              )}
 
               {/* Automatic Feet / Inches Live Badge */}
-              <div className="px-3.5 py-2 bg-pastel-rose text-primary border border-pastel-rose-border rounded-xl text-xs font-bold shrink-0 shadow-2xs min-w-[110px] text-center flex items-center justify-center gap-1">
-                <span>{formatCmToFeet(heightCm)}</span>
-                <span className="text-[10px] text-primary/70 font-normal">({heightCm} cm)</span>
+              <div className="px-3 py-1.5 bg-[#FFF0F3] text-[#FF2560] border border-[#FFD0DB] rounded-xl text-xs font-bold shrink-0 shadow-2xs min-w-[110px] text-center flex flex-col items-center justify-center">
+                <span className="text-xs font-bold">{formatCmToFeet(heightCm)}</span>
+                <span className="text-[10px] text-[#FF2560]/75 font-normal">({heightCm} cm)</span>
               </div>
             </div>
 
-            {/* Quick Height Presets */}
+            {/* Quick Height Presets (Both Units) */}
             <div className="flex items-center gap-1.5 overflow-x-auto pt-1 no-scrollbar">
-              {[155, 160, 165, 170, 175, 178, 183, 188].map(presetCm => (
+              {[
+                { ft: "5'2\"", cm: 157 },
+                { ft: "5'5\"", cm: 165 },
+                { ft: "5'7\"", cm: 170 },
+                { ft: "5'9\"", cm: 175 },
+                { ft: "5'10\"", cm: 178 },
+                { ft: "5'11\"", cm: 180 },
+                { ft: "6'0\"", cm: 183 },
+                { ft: "6'2\"", cm: 188 }
+              ].map(preset => (
                 <button
-                  key={presetCm}
+                  key={preset.cm}
                   type="button"
-                  onClick={() => setHeightCm(presetCm)}
-                  className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold border transition-all shrink-0 ${
-                    heightCm === presetCm
-                      ? 'bg-primary text-white border-primary'
-                      : 'bg-surface-variant text-secondary border-outline hover:bg-white'
+                  onClick={() => {
+                    setHeightCm(preset.cm);
+                    setHeightInputText(String(preset.cm));
+                  }}
+                  className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all shrink-0 cursor-pointer ${
+                    heightCm === preset.cm
+                      ? 'bg-[#FF2560] text-white border-[#FF2560] shadow-xs ring-1 ring-[#FF2560]'
+                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 hover:border-slate-300 shadow-2xs'
                   }`}
                 >
-                  {presetCm} cm ({formatCmToFeet(presetCm)})
+                  {preset.ft} <span className="text-[9px] font-normal opacity-80">({preset.cm}cm)</span>
                 </button>
               ))}
             </div>
@@ -1001,17 +1123,17 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
               })}
             </div>
           </div>
-        </form>
+        </div>
       </div>
 
       {/* Bottom Action */}
       <div className="pt-5">
         <button
           onClick={handleSubmit}
-          className="w-full py-3.5 rounded-full bg-primary text-white font-sans text-xs font-bold shadow-brand hover:bg-primary-dark active:scale-98 transition-all flex items-center justify-center gap-2"
+          className="w-full py-3.5 rounded-full bg-white text-[#FF2560] font-sans text-xs font-bold shadow-[0_8px_25px_rgba(0,0,0,0.18)] hover:bg-white/95 active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer"
         >
           <span>Continue to Deen & Practice</span>
-          <ArrowRight className="w-4 h-4" />
+          <ArrowRight className="w-4 h-4 stroke-[2.5]" />
         </button>
       </div>
     </div>

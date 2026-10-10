@@ -55,44 +55,48 @@ export const FamilyLifestyleScreen: React.FC<Props> = ({ data, onNext, onBack })
   };
 
   return (
-    <div className="w-full h-full flex flex-col justify-between p-5 sm:p-6 bg-background font-sans overflow-y-auto pb-24 select-none text-on-surface">
+    <div className="w-full h-full flex flex-col justify-between p-4 sm:p-5 bg-gradient-to-b from-[#FF2560] via-[#F31A56] to-[#DE0E46] font-sans overflow-y-auto pb-24 select-none text-white transition-all">
       {/* Top Header & Progress */}
       <div>
         <div className="flex items-center justify-between mb-3 pt-1">
           <button
             onClick={onBack}
-            className="w-9 h-9 rounded-full bg-white border border-outline flex items-center justify-center text-on-surface hover:bg-surface-variant transition-colors shadow-subtle"
+            className="w-9 h-9 rounded-full bg-white text-[#FF2560] flex items-center justify-center hover:bg-white/90 active:scale-95 transition-all shadow-md cursor-pointer"
+            title="Go Back"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-4 h-4 stroke-[2.5]" />
           </button>
-          <div className="flex items-center gap-1">
-            <span className="text-[11px] font-bold text-primary tracking-wider uppercase">Step 3 of 5</span>
-            <span className="text-[11px] text-secondary">· Family</span>
+          <div className="flex items-center gap-1.5 bg-black/20 backdrop-blur-md px-3.5 py-1 rounded-full border border-white/20 shadow-xs">
+            <span className="text-[11px] font-bold text-white tracking-wider uppercase">Step 3 of 5</span>
+            <span className="text-[11px] font-medium text-white/90">· Family</span>
           </div>
           <div className="w-9" />
         </div>
 
         {/* 5-Step Progress Bars */}
-        <div className="grid grid-cols-5 gap-1.5 mb-5">
-          <div className="h-1.5 rounded-full bg-primary" />
-          <div className="h-1.5 rounded-full bg-primary" />
-          <div className="h-1.5 rounded-full bg-primary" />
-          <div className="h-1.5 rounded-full bg-surface-variant" />
-          <div className="h-1.5 rounded-full bg-surface-variant" />
+        <div className="grid grid-cols-5 gap-1.5 mb-4 px-0.5">
+          <div className="h-2 rounded-full bg-white/70" />
+          <div className="h-2 rounded-full bg-white/70" />
+          <div className="h-2 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.9)] scale-y-110" />
+          <div className="h-2 rounded-full bg-white/25" />
+          <div className="h-2 rounded-full bg-white/25" />
         </div>
 
-        <h1 className="font-serif text-2xl font-bold text-on-surface mb-1">
-          Family & Living Outlook
-        </h1>
-        <p className="text-xs text-secondary mb-4 leading-relaxed">
-          Living preferences and family values are essential for lifelong marital harmony.
-        </p>
+        <div className="px-1 mb-2">
+          <h1 className="font-serif text-2xl font-bold text-white tracking-tight drop-shadow-xs">
+            Family & Living Outlook
+          </h1>
+          <p className="text-xs text-white/90 leading-relaxed font-medium">
+            Living preferences and family values are essential for lifelong marital harmony.
+          </p>
+        </div>
 
-        <div className="space-y-4">
+        {/* Floating White Card */}
+        <div className="bg-white rounded-3xl p-4 sm:p-5 shadow-[0_12px_36px_rgba(0,0,0,0.15)] space-y-4 text-slate-900 border border-white/60">
           {/* Post-Marriage Living Arrangement */}
           <div>
-            <label className="block text-xs font-bold text-on-surface mb-1.5">
-              Post-Marriage Living Arrangement <span className="text-primary">*</span>
+            <label className="block text-xs font-bold text-slate-800 mb-1.5">
+              Post-Marriage Living Arrangement <span className="text-[#FF2560]">*</span>
             </label>
             <div className="grid grid-cols-1 gap-2.5">
               {[
@@ -413,10 +417,10 @@ export const FamilyLifestyleScreen: React.FC<Props> = ({ data, onNext, onBack })
       <div className="pt-5">
         <button
           onClick={handleContinue}
-          className="w-full py-3.5 rounded-full bg-primary text-white font-sans text-xs font-bold shadow-brand hover:bg-primary-dark active:scale-98 transition-all flex items-center justify-center gap-2"
+          className="w-full py-3.5 rounded-full bg-white text-[#FF2560] font-sans text-xs font-bold shadow-[0_8px_25px_rgba(0,0,0,0.18)] hover:bg-white/95 active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer"
         >
           <span>Continue to Career & Intent</span>
-          <ArrowRight className="w-4 h-4" />
+          <ArrowRight className="w-4 h-4 stroke-[2.5]" />
         </button>
       </div>
     </div>

@@ -637,6 +637,32 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
                 </div>
               </div>
 
+              {/* Active Dealbreakers Display */}
+              {profile.partnerRequirements?.dealbreakers && profile.partnerRequirements.dealbreakers.length > 0 && (
+                <div className="pt-0.5">
+                  <span className="text-[10px] text-pastel-amber-text font-bold uppercase tracking-wider block mb-1">
+                    Non-Negotiable Dealbreakers:
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {profile.partnerRequirements.dealbreakers.map((db, idx) => {
+                      const labels: Record<string, { label: string; emoji: string }> = {
+                        non_smoker: { label: 'Non-Smoker Only', emoji: '🚭' },
+                        daily_salah: { label: '5x Daily Salah', emoji: '🕌' },
+                        halal_diet: { label: 'Strictly Halal Diet', emoji: '🍽️' },
+                        family_involvement: { label: 'Early Wali Involvement', emoji: '🛡️' }
+                      };
+                      const item = labels[db] || { label: db.replace(/_/g, ' '), emoji: '🔒' };
+                      return (
+                        <span key={idx} className="bg-white text-rose-700 px-2 py-0.5 rounded-xl text-[10px] font-bold border border-rose-200 shadow-2xs flex items-center gap-1.5">
+                          <span>{item.emoji}</span>
+                          <span>{item.label}</span>
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Expectations Note */}
               <div className="bg-white/80 p-2.5 rounded-xl border border-pastel-amber-border text-xs leading-relaxed text-on-surface">
                 <span className="text-[10px] text-pastel-amber-text font-bold uppercase tracking-wider block mb-0.5">Looking for in a spouse:</span>

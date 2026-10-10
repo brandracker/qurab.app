@@ -428,6 +428,13 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
         >
           Open Web App →
         </button>
+        <a 
+          href="/?step=career_intent"
+          className="ml-2 px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 font-bold text-[10px] hover:bg-rose-200 transition-colors hidden sm:inline-flex items-center gap-1 shadow-2xs"
+          title="Direct preview for Partner Criteria Studio"
+        >
+          <span>Preview Criteria Studio →</span>
+        </a>
       </aside>
 
       {/* MOBILE QUICK NAVIGATION STRIP */}

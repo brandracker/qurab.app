@@ -36,7 +36,8 @@ import {
   Volume2,
   Loader2,
   Hand,
-  TrendingUp
+  TrendingUp,
+  Sliders
 } from 'lucide-react';
 import type { UserProfile } from '../types';
 import { dbService } from '../services/dbService';
@@ -50,9 +51,10 @@ interface Props {
   onEditProfile?: () => void;
   onProfileUpdated?: (updatedUser: UserProfile) => void;
   onLogout?: () => void;
+  onOpenEditRequirements?: () => void;
 }
 
-export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile, onProfileUpdated, onLogout }) => {
+export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile, onProfileUpdated, onLogout, onOpenEditRequirements }) => {
   const [currentUserProfile, setCurrentUserProfile] = useState<UserProfile>(() => {
     const cur = dbService.getCurrentUser();
     return (cur?.id && cur.id !== 'usr_guest') ? cur : propUser;
@@ -60,6 +62,25 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
   const user = (currentUserProfile?.id && currentUserProfile.id !== 'usr_guest') ? currentUserProfile : propUser;
 
   const [showEditModal, setShowEditModal] = useState<boolean>(false);
+  const [editModalTab, setEditModalTab] = useState<'personal' | 'career' | 'deen' | 'lifestyle' | 'partner'>('personal');
+
+  const handleOpenEditCriteria = () => {
+    if (onOpenEditRequirements) {
+      onOpenEditRequirements();
+    }
+    setEditModalTab('partner');
+    setShowEditModal(true);
+  };
+
+  const handleOpenEditProfile = () => {
+    if (onEditProfile) {
+      onEditProfile();
+    } else {
+      setEditModalTab('personal');
+      setShowEditModal(true);
+    }
+  };
+
   const [showQuizModal, setShowQuizModal] = useState<boolean>(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState<boolean>(false);
   const [showAdModal, setShowAdModal] = useState<boolean>(false);
@@ -886,6 +907,30 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
 
                 <div className="bg-white p-2.5 rounded-xl border border-pastel-mint-border shadow-2xs flex items-center gap-2.5">
                   <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center shrink-0">
+                    <Compass className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] text-pastel-mint-text font-medium block">Sect & Madhhab</span>
+                    <strong className="text-on-surface text-[11px] block truncate">
+                      {rel?.sect || 'Sunni'}{rel?.madhhab ? ` · ${rel.madhhab}` : ''}
+                    </strong>
+                  </div>
+                </div>
+
+                <div className="bg-white p-2.5 rounded-xl border border-pastel-mint-border shadow-2xs flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center shrink-0">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] text-pastel-mint-text font-medium block">Dietary Standard</span>
+                    <strong className="text-on-surface text-[11px] block truncate capitalize">
+                      {rel?.halalDiet || (user.dietaryStandard ? user.dietaryStandard.replace(/_/g, ' ') : 'Strictly Halal')}
+                    </strong>
+                  </div>
+                </div>
+
+                <div className="bg-white p-2.5 rounded-xl border border-pastel-mint-border shadow-2xs flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center shrink-0">
                     <BookOpen className="w-3.5 h-3.5" />
                   </div>
                   <div className="min-w-0">
@@ -943,6 +988,30 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
                     <span className="text-[10px] text-pastel-sand-text font-medium block">Family Structure</span>
                     <strong className="text-on-surface capitalize text-[11px] block truncate">
                       {user.familyStructure || 'Nuclear'} ({user.siblingsCount ?? 2} Siblings)
+                    </strong>
+                  </div>
+                </div>
+
+                <div className="bg-white p-2.5 rounded-xl border border-pastel-sand-border shadow-2xs flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-pink-50 text-pink-600 border border-pink-200 flex items-center justify-center shrink-0">
+                    <Users className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] text-pastel-sand-text font-medium block">Desire for Children</span>
+                    <strong className="text-on-surface capitalize text-[11px] block truncate">
+                      {user.childrenDesire ? user.childrenDesire.replace(/_/g, ' ') : 'Wants Children'}
+                    </strong>
+                  </div>
+                </div>
+
+                <div className="bg-white p-2.5 rounded-xl border border-pastel-sand-border shadow-2xs flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center shrink-0">
+                    <Heart className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] text-pastel-sand-text font-medium block">Mahr Philosophy</span>
+                    <strong className="text-on-surface capitalize text-[11px] block truncate">
+                      {user.mahrPhilosophy ? user.mahrPhilosophy.replace(/_/g, ' ') : 'Sunnah / Mutual Agreement'}
                     </strong>
                   </div>
                 </div>
@@ -1043,6 +1112,18 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
                     </div>
                   </div>
                 )}
+
+                <div className="bg-white p-2.5 rounded-xl border border-pastel-sky-border shadow-2xs flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center shrink-0">
+                    <TrendingUp className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] text-pastel-sky-text font-medium block">Income Bracket</span>
+                    <strong className="text-on-surface text-[11px] block truncate capitalize">
+                      {user.incomeBracket ? user.incomeBracket.replace(/_/g, ' ') : 'Undisclosed'}
+                    </strong>
+                  </div>
+                </div>
 
                 <div className="bg-white p-2.5 rounded-xl border border-pastel-sky-border shadow-2xs flex items-center gap-2.5 col-span-2">
                   <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center shrink-0">
@@ -1155,14 +1236,31 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
 
             {/* 6. My Partner Requirements & Expectations */}
             <div className="bg-pastel-amber/60 rounded-2xl p-3.5 border border-pastel-amber-border space-y-2.5 shadow-subtle">
-              <h3 className="text-xs font-bold text-pastel-amber-text uppercase tracking-wider flex items-center gap-1.5">
-                <Heart className="w-3.5 h-3.5 text-pastel-amber-text fill-pastel-amber-text/30" />
-                <span>My Partner Requirements & Expectations</span>
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold text-pastel-amber-text uppercase tracking-wider flex items-center gap-1.5">
+                  <Heart className="w-3.5 h-3.5 text-pastel-amber-text fill-pastel-amber-text/30" />
+                  <span>My Partner Requirements & Expectations</span>
+                </h3>
+                <button
+                  type="button"
+                  onClick={handleOpenEditCriteria}
+                  className="text-[10px] font-bold text-primary bg-white px-2.5 py-1 rounded-full border border-pastel-amber-border hover:bg-rose-50 shadow-2xs flex items-center gap-1 cursor-pointer transition-colors"
+                >
+                  <span>Edit Criteria</span>
+                  <Sliders className="w-3 h-3 text-primary" />
+                </button>
+              </div>
               
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="bg-white p-2.5 rounded-xl border border-pastel-amber-border shadow-2xs">
-                  <span className="text-[10px] text-pastel-amber-text font-medium block">Preferred Age</span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-pastel-amber-text font-medium block">Preferred Age</span>
+                    {user.partnerRequirements?.strictAgeDealbreaker && (
+                      <span className="text-[9px] bg-rose-50 text-rose-700 font-bold px-1.5 py-0.5 rounded-md border border-rose-200">
+                        Strict 🔒
+                      </span>
+                    )}
+                  </div>
                   <strong className="text-on-surface text-[11px] block truncate">
                     {user.partnerRequirements?.minAge && user.partnerRequirements?.maxAge
                       ? `${user.partnerRequirements.minAge} - ${user.partnerRequirements.maxAge} years`
@@ -1190,7 +1288,49 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
                     {user.partnerRequirements?.relocation ? user.partnerRequirements.relocation.replace(/_/g, ' ') : 'Flexible / Open'}
                   </strong>
                 </div>
+
+                <div className="bg-white p-2.5 rounded-xl border border-pastel-amber-border shadow-2xs">
+                  <span className="text-[10px] text-pastel-amber-text font-medium block">Preferred Education</span>
+                  <strong className="text-on-surface text-[11px] block truncate capitalize">
+                    {user.partnerRequirements?.education ? user.partnerRequirements.education.replace(/_/g, ' ') : 'Open to Any'}
+                  </strong>
+                </div>
+
+                <div className="bg-white p-2.5 rounded-xl border border-pastel-amber-border shadow-2xs">
+                  <span className="text-[10px] text-pastel-amber-text font-medium block">Preferred Ethnicity</span>
+                  <strong className="text-on-surface text-[11px] block truncate capitalize">
+                    {user.partnerRequirements?.ethnicities && user.partnerRequirements.ethnicities.length > 0
+                      ? user.partnerRequirements.ethnicities.join(', ')
+                      : 'Open to All'}
+                  </strong>
+                </div>
               </div>
+
+              {/* Active Dealbreakers Display */}
+              {user.partnerRequirements?.dealbreakers && user.partnerRequirements.dealbreakers.length > 0 && (
+                <div className="pt-0.5">
+                  <span className="text-[10px] text-pastel-amber-text font-bold uppercase tracking-wider block mb-1">
+                    Active Non-Negotiables:
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {user.partnerRequirements.dealbreakers.map((db, idx) => {
+                      const labels: Record<string, { label: string; emoji: string }> = {
+                        non_smoker: { label: 'Non-Smoker Only', emoji: '🚭' },
+                        daily_salah: { label: '5x Daily Salah', emoji: '🕌' },
+                        halal_diet: { label: 'Strictly Halal Diet', emoji: '🍽️' },
+                        family_involvement: { label: 'Early Wali Involvement', emoji: '🛡️' }
+                      };
+                      const item = labels[db] || { label: db.replace(/_/g, ' '), emoji: '🔒' };
+                      return (
+                        <span key={idx} className="bg-white text-rose-700 px-2 py-0.5 rounded-xl text-[10px] font-bold border border-rose-200 shadow-2xs flex items-center gap-1.5">
+                          <span>{item.emoji}</span>
+                          <span>{item.label}</span>
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Expectations Note */}
               <div className="bg-white/80 p-2.5 rounded-xl border border-pastel-amber-border text-xs leading-relaxed text-on-surface">
@@ -1226,13 +1366,7 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
 
         {/* Action Button */}
         <button
-          onClick={() => {
-            if (onEditProfile) {
-              onEditProfile();
-            } else {
-              setShowEditModal(true);
-            }
-          }}
+          onClick={handleOpenEditProfile}
           className="w-full py-3 rounded-full bg-white border border-primary text-primary font-sans text-xs font-bold hover:bg-pastel-rose active:scale-98 transition-all flex items-center justify-center gap-1.5 shadow-subtle"
         >
           <Edit3 className="w-3.5 h-3.5" />
@@ -1291,6 +1425,7 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
       {showEditModal && (
         <EditProfileModal
           isOpen={showEditModal}
+          initialTab={editModalTab}
           user={user}
           onClose={() => setShowEditModal(false)}
           onSaved={(updated) => {

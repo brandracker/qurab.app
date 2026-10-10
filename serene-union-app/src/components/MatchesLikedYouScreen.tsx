@@ -60,9 +60,41 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
     ]).then(([received, mutual, activity]) => {
       setInterestedProfiles(received || []);
       setMutualMatches(mutual || []);
-      setSentLikes(activity.sentLikes || []);
+      const likes = activity.sentLikes || [];
+      setSentLikes(likes);
       setPassedProfiles(activity.passed || []);
       setBlockedProfiles(activity.blocked || []);
+
+      // Auto-heal any stale placeholder records from earlier app versions in background
+      const candidatesToHeal = likes.filter((l: any) => !l.fullName || l.fullName === 'Candidate' || !l.photos || l.photos.length === 0);
+      if (candidatesToHeal.length > 0) {
+        Promise.all(candidatesToHeal.map((c: any) => dbService.fetchUserProfile(c.id))).then(resolved => {
+          let hasUpdates = false;
+          const healedMap = new Map();
+          resolved.forEach(p => {
+            if (p && p.id && p.fullName && p.fullName !== 'Candidate') {
+              healedMap.set(p.id, p);
+              hasUpdates = true;
+            }
+          });
+          if (hasUpdates) {
+            setSentLikes(prev => prev.map(item => {
+              const healed = healedMap.get(item.id);
+              if (healed) {
+                return {
+                  ...item,
+                  fullName: healed.fullName,
+                  profession: healed.profession || item.profession,
+                  location: healed.location || item.location,
+                  photos: healed.photos && healed.photos.length > 0 ? healed.photos : item.photos,
+                  marriageTimeline: healed.marriageTimeline || item.marriageTimeline
+                };
+              }
+              return item;
+            }));
+          }
+        }).catch(() => {});
+      }
     }).catch(err => {
       console.warn('Notice: Background sync for matches completed with fallback:', err);
     }).finally(() => {
@@ -92,7 +124,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
 
 
   const handleInstantMatch = async (candidate: UserProfile) => {
-    const res = await dbService.sendMatchAction(candidate.id, 'liked');
+    const res = await dbService.sendMatchAction(candidate.id, 'liked', undefined, candidate);
     setInterestedProfiles(prev => prev.filter(p => p.id !== candidate.id));
 
     // Remove from local liked_you cache
@@ -122,7 +154,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
 
 
   const handlePassCandidate = async (candidate: UserProfile) => {
-    await dbService.sendMatchAction(candidate.id, 'passed');
+    await dbService.sendMatchAction(candidate.id, 'passed', undefined, candidate);
     setInterestedProfiles(prev => prev.filter(p => p.id !== candidate.id));
 
     const localKey = `serene_liked_you_${currentUser.id}`;
@@ -747,7 +779,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
             setSelectedProfile(null);
           } : undefined}
           onPass={activeTab === 'received' ? (pid) => {
-            dbService.sendMatchAction(pid, 'passed');
+            dbService.sendMatchAction(pid, 'passed', undefined, selectedProfile);
             setSelectedProfile(null);
             loadAllData();
           } : undefined}

@@ -82,7 +82,11 @@ export const matchService = {
     return { sentLikes: localLikes, passed: localPassed, blocked: localBlocked };
   },
 
-  async sendMatchAction(targetUserId: string, action: 'liked' | 'passed'): Promise<{ isMutual: boolean; conversationId?: string; message?: string }> {
+  async sendMatchAction(
+    targetUserId: string, 
+    action: 'liked' | 'passed',
+    targetProfile?: Partial<UserProfile>
+  ): Promise<{ isMutual: boolean; conversationId?: string; message?: string }> {
     const user = profileService.getCurrentUser();
     
     let allProf: UserProfile[] = [];
@@ -90,18 +94,24 @@ export const matchService = {
       const stored = localStorage.getItem(PROFILES_KEY);
       if (stored) allProf = JSON.parse(stored);
     } catch {}
-    const targetProf = allProf.find(p => p.id === targetUserId);
+    const cachedProf = allProf.find(p => p.id === targetUserId);
+    const prof = targetProfile || cachedProf;
+
+    const safePhotos = (prof?.photos || cachedProf?.photos || []).map(p => {
+      if (typeof p === 'string' && p.startsWith('data:') && p.length > 50000) return '';
+      return p;
+    }).filter(Boolean);
 
     const actionItem = {
       id: targetUserId,
-      fullName: targetProf?.fullName || 'Candidate',
-      age: targetProf?.age || 26,
-      gender: targetProf?.gender || (user.gender === 'male' ? 'female' : 'male'),
-      location: targetProf?.location || 'Global',
-      profession: targetProf?.profession || 'Professional',
-      marriageTimeline: targetProf?.marriageTimeline || 'within_1_year',
-      bio: targetProf?.bio || 'Seeking a pious spouse for marriage.',
-      photos: targetProf?.photos || [],
+      fullName: prof?.fullName || cachedProf?.fullName || 'Candidate',
+      age: prof?.age || cachedProf?.age || 26,
+      gender: prof?.gender || cachedProf?.gender || (user.gender === 'male' ? 'female' : 'male'),
+      location: prof?.location || cachedProf?.location || 'Global',
+      profession: prof?.profession || cachedProf?.profession || 'Professional',
+      marriageTimeline: prof?.marriageTimeline || cachedProf?.marriageTimeline || 'within_1_year',
+      bio: prof?.bio || cachedProf?.bio || 'Seeking a pious spouse for marriage.',
+      photos: safePhotos,
       action,
       actionTime: new Date().toISOString()
     };
@@ -110,20 +120,20 @@ export const matchService = {
       const likesKey = `serene_likes_sent_${user.id}`;
       const localLikes = this.getUserLikesSent(user.id).filter(l => l.id !== targetUserId);
       localLikes.unshift(actionItem);
-      localStorage.setItem(likesKey, JSON.stringify(localLikes));
+      try { localStorage.setItem(likesKey, JSON.stringify(localLikes)); } catch {}
 
       const passedKey = `serene_passed_${user.id}`;
       const localPassed = this.getUserPassed(user.id).filter(p => p.id !== targetUserId);
-      localStorage.setItem(passedKey, JSON.stringify(localPassed));
+      try { localStorage.setItem(passedKey, JSON.stringify(localPassed)); } catch {}
     } else if (action === 'passed') {
       const passedKey = `serene_passed_${user.id}`;
       const localPassed = this.getUserPassed(user.id).filter(p => p.id !== targetUserId);
       localPassed.unshift(actionItem);
-      localStorage.setItem(passedKey, JSON.stringify(localPassed));
+      try { localStorage.setItem(passedKey, JSON.stringify(localPassed)); } catch {}
 
       const likesKey = `serene_likes_sent_${user.id}`;
       const localLikes = this.getUserLikesSent(user.id).filter(l => l.id !== targetUserId);
-      localStorage.setItem(likesKey, JSON.stringify(localLikes));
+      try { localStorage.setItem(likesKey, JSON.stringify(localLikes)); } catch {}
     }
 
     window.dispatchEvent(new CustomEvent('serene_activity_updated'));

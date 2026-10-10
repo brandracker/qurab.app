@@ -231,9 +231,17 @@ class DBService {
           const data = await res.json();
           if (data.success && Array.isArray(data.profiles) && data.profiles.length > 0) {
             const activeProfiles = data.profiles.filter((p: UserProfile) => p.accountStatus !== 'deactivated' && p.profileVisibility !== 'hidden');
+            // Sanitize heavy base64 photos to prevent QuotaExceededError on Android WebView
+            const lightweightProfiles = activeProfiles.map((p: UserProfile) => ({
+              ...p,
+              photos: (p.photos || []).map(photo => {
+                if (typeof photo === 'string' && photo.startsWith('data:') && photo.length > 50000) return '';
+                return photo;
+              }).filter(Boolean)
+            }));
             this.memoryProfiles = activeProfiles;
             try {
-              localStorage.setItem(this.profilesKey, JSON.stringify(activeProfiles));
+              localStorage.setItem(this.profilesKey, JSON.stringify(lightweightProfiles));
             } catch (storageErr) {
               console.warn('Storage quota limit reached on mobile, keeping profiles in memory:', storageErr);
             }
@@ -267,15 +275,18 @@ class DBService {
           const data = await res.json();
           if (data.success && data.profile) {
             const current = this.getCurrentUser();
-            const merged: UserProfile = {
-              ...current,
-              ...data.profile,
-              isVip: (typeof data.profile.isVip === 'boolean') ? data.profile.isVip : current.isVip,
-              isProfileCompleted: (typeof data.profile.isProfileCompleted === 'boolean') ? data.profile.isProfileCompleted : current.isProfileCompleted
-            };
-            this.setCurrentUser(merged);
-            window.dispatchEvent(new CustomEvent('serene_user_profile_updated', { detail: { user: merged } }));
-            return merged;
+            if (userId === current.id) {
+              const merged: UserProfile = {
+                ...current,
+                ...data.profile,
+                isVip: (typeof data.profile.isVip === 'boolean') ? data.profile.isVip : current.isVip,
+                isProfileCompleted: (typeof data.profile.isProfileCompleted === 'boolean') ? data.profile.isProfileCompleted : current.isProfileCompleted
+              };
+              this.setCurrentUser(merged);
+              window.dispatchEvent(new CustomEvent('serene_user_profile_updated', { detail: { user: merged } }));
+              return merged;
+            }
+            return data.profile as UserProfile;
           }
         } catch {}
       }
@@ -1160,22 +1171,30 @@ class DBService {
   async sendMatchAction(
     targetUserId: string, 
     action: 'liked' | 'passed' | 'direct_salam', 
-    messageText?: string
+    messageText?: string,
+    targetProfile?: Partial<UserProfile>
   ): Promise<{ isMutual: boolean; conversationId?: string; message?: string }> {
     const user = this.getCurrentUser();
     const allProf = this.getAllProfiles();
-    const targetProf = allProf.find(p => p.id === targetUserId);
+    const cachedProf = allProf.find(p => p.id === targetUserId);
+    const prof = targetProfile || cachedProf;
+
+    // Sanitize heavy base64 photos to prevent QuotaExceededError in Android WebView localStorage
+    const safePhotos = (prof?.photos || cachedProf?.photos || []).map(p => {
+      if (typeof p === 'string' && p.startsWith('data:') && p.length > 50000) return '';
+      return p;
+    }).filter(Boolean);
 
     const actionItem = {
       id: targetUserId,
-      fullName: targetProf?.fullName || 'Candidate',
-      age: targetProf?.age || 26,
-      gender: targetProf?.gender || (user.gender === 'male' ? 'female' : 'male'),
-      location: targetProf?.location || 'Global',
-      profession: targetProf?.profession || 'Professional',
-      marriageTimeline: targetProf?.marriageTimeline || 'within_1_year',
-      bio: targetProf?.bio || 'Seeking a pious spouse for marriage.',
-      photos: targetProf?.photos || [],
+      fullName: prof?.fullName || cachedProf?.fullName || 'Candidate',
+      age: prof?.age || cachedProf?.age || 26,
+      gender: prof?.gender || cachedProf?.gender || (user.gender === 'male' ? 'female' : 'male'),
+      location: prof?.location || cachedProf?.location || 'Global',
+      profession: prof?.profession || cachedProf?.profession || 'Professional',
+      marriageTimeline: prof?.marriageTimeline || cachedProf?.marriageTimeline || 'within_1_year',
+      bio: prof?.bio || cachedProf?.bio || 'Seeking a pious spouse for marriage.',
+      photos: safePhotos,
       action: action,
       actionTime: new Date().toISOString()
     };
@@ -1184,20 +1203,20 @@ class DBService {
       const likesKey = `serene_likes_sent_${user.id}`;
       const localLikes = this.getUserLikesSent(user.id).filter(l => l.id !== targetUserId);
       localLikes.unshift(actionItem);
-      localStorage.setItem(likesKey, JSON.stringify(localLikes));
+      try { localStorage.setItem(likesKey, JSON.stringify(localLikes)); } catch {}
 
       const passedKey = `serene_passed_${user.id}`;
       const localPassed = this.getUserPassed(user.id).filter(p => p.id !== targetUserId);
-      localStorage.setItem(passedKey, JSON.stringify(localPassed));
+      try { localStorage.setItem(passedKey, JSON.stringify(localPassed)); } catch {}
     } else if (action === 'passed') {
       const passedKey = `serene_passed_${user.id}`;
       const localPassed = this.getUserPassed(user.id).filter(p => p.id !== targetUserId);
       localPassed.unshift(actionItem);
-      localStorage.setItem(passedKey, JSON.stringify(localPassed));
+      try { localStorage.setItem(passedKey, JSON.stringify(localPassed)); } catch {}
 
       const likesKey = `serene_likes_sent_${user.id}`;
       const localLikes = this.getUserLikesSent(user.id).filter(l => l.id !== targetUserId);
-      localStorage.setItem(likesKey, JSON.stringify(localLikes));
+      try { localStorage.setItem(likesKey, JSON.stringify(localLikes)); } catch {}
     }
 
     // Immediately dispatch real-time sync event
@@ -1229,9 +1248,10 @@ class DBService {
   async recordMatchAction(
     targetUserId: string, 
     action: 'liked' | 'passed' | 'direct_salam', 
-    messageText?: string
+    messageText?: string,
+    targetProfile?: Partial<UserProfile>
   ): Promise<{ isMutual: boolean; conversationId?: string; message?: string }> {
-    return this.sendMatchAction(targetUserId, action, messageText);
+    return this.sendMatchAction(targetUserId, action, messageText, targetProfile);
   }
 
   async fetchLikedYouCandidates(): Promise<UserProfile[]> {
@@ -1342,8 +1362,26 @@ class DBService {
       if (data.success) {
         const mergeMap = (localList: any[], remoteList: any[]) => {
           const map = new Map();
-          [...localList, ...remoteList].forEach(item => {
+          localList.forEach(item => {
             if (item && item.id) map.set(item.id, { ...item });
+          });
+          remoteList.forEach(item => {
+            if (item && item.id) {
+              const existing = map.get(item.id);
+              const safePhotos = (item.photos || existing?.photos || []).map((p: any) => {
+                if (typeof p === 'string' && p.startsWith('data:') && p.length > 50000) return '';
+                return p;
+              }).filter(Boolean);
+
+              map.set(item.id, {
+                ...existing,
+                ...item,
+                fullName: (item.fullName && item.fullName !== 'Candidate') ? item.fullName : (existing?.fullName || item.fullName || 'Candidate'),
+                profession: (item.profession && item.profession !== 'Professional') ? item.profession : (existing?.profession || item.profession || 'Professional'),
+                location: (item.location && item.location !== 'Global') ? item.location : (existing?.location || item.location || 'Global'),
+                photos: safePhotos
+              });
+            }
           });
           return Array.from(map.values());
         };
@@ -1352,9 +1390,9 @@ class DBService {
         const mergedPassed = mergeMap(localPassed, data.passed || []);
         const mergedBlocked = mergeMap(localBlocked, data.blocked || []);
 
-        localStorage.setItem(`serene_likes_sent_${user.id}`, JSON.stringify(mergedLikes));
-        localStorage.setItem(`serene_passed_${user.id}`, JSON.stringify(mergedPassed));
-        localStorage.setItem(`serene_blocked_${user.id}`, JSON.stringify(mergedBlocked));
+        try { localStorage.setItem(`serene_likes_sent_${user.id}`, JSON.stringify(mergedLikes)); } catch {}
+        try { localStorage.setItem(`serene_passed_${user.id}`, JSON.stringify(mergedPassed)); } catch {}
+        try { localStorage.setItem(`serene_blocked_${user.id}`, JSON.stringify(mergedBlocked)); } catch {}
 
         return {
           sentLikes: mergedLikes,

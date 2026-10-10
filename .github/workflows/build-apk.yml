@@ -38,7 +38,7 @@ jobs:
         working-directory: serene-union-app
         run: npm install
 
-      - name: Verify Frontend Test Suite (165 Tests)
+      - name: Verify Frontend Test Suite (170 Tests)
         working-directory: serene-union-app
         run: npm test
 
@@ -106,12 +106,13 @@ jobs:
         if: github.ref == 'refs/heads/main'
         continue-on-error: true
         with:
-          tag_name: v1.0.9
-          name: "Qurb v1.0.9 (APK & AAB)"
+          tag_name: v1.0.10
+          name: "Qurb v1.0.10 (APK & AAB)"
           body: |
-            ### Qurb Matrimony v1.0.9 (Build 10)
-            - Complete Onboarding Matrimonial Biodata Display across all Profile Cards (Halal Diet, Sect & Madhhab, Mahr, Children Desire, Income Bracket)
-            - Dedicated In-Place Partner Criteria Studio with Age Presets, Strict Dealbreaker Enforcement, and Filters
+            ### Qurb Matrimony v1.0.10 (Build 11)
+            - Candidate Hydration & Zero-Fallback: Preserves live names and details on matches/likes without falling back to placeholder 'Candidate'
+            - Android WebView Storage Quota Protection: Sanitizes excessive base64 photos to eliminate QuotaExceededError in mobile localStorage
+            - Auto-Heal Engine: Automatically transforms any legacy placeholder entries into complete Cloudflare D1 candidate profiles
             - Full Android Release AAB & APK Bundles for Google Play Store upload
           files: |
             serene-union-app/android/app/build/outputs/apk/release/app-release.apk

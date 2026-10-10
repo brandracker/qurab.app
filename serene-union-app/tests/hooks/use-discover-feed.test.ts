@@ -99,7 +99,7 @@ describe('useDiscoverFeed Custom Hook Architecture & Wiring', () => {
       result.current.handlePass('usr_cand_ayesha');
     });
 
-    expect(passSpy).toHaveBeenCalledWith('usr_cand_ayesha', 'passed');
+    expect(passSpy).toHaveBeenCalledWith('usr_cand_ayesha', 'passed', undefined, mockCandidateA);
     expect(result.current.likesRemaining).toBe(50);
     expect(result.current.currentProfile?.id).toBe('usr_cand_hina');
   });
@@ -124,7 +124,7 @@ describe('useDiscoverFeed Custom Hook Architecture & Wiring', () => {
 
     expect(consumeSalamSpy).toHaveBeenCalledWith('usr_hook_viewer');
     expect(createConvSpy).toHaveBeenCalledWith(mockCandidateA, 'Assalamu Alaikum!');
-    expect(sendMatchSpy).toHaveBeenCalledWith(mockCandidateA.id, 'direct_salam', 'Assalamu Alaikum!');
+    expect(sendMatchSpy).toHaveBeenCalledWith(mockCandidateA.id, 'direct_salam', 'Assalamu Alaikum!', mockCandidateA);
     expect(onChatSpy).toHaveBeenCalledWith('conv_direct_test');
     // Candidate A must be removed from Discover queue
     expect(result.current.currentProfile?.id).toBe('usr_cand_hina');

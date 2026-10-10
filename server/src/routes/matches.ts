@@ -439,11 +439,15 @@ matchesRouter.get('/activity', async (c) => {
     // A. Sent Likes
     const { results: sentLikesRows } = await c.env.DB.prepare(`
       SELECT 
-        u.id, u.full_name as fullName, u.location, u.profession, u.marriage_timeline as marriageTimeline,
+        COALESCE(u.id, m.receiver_id) as id, 
+        COALESCE(u.full_name, 'Candidate') as fullName, 
+        COALESCE(u.location, 'Global') as location, 
+        COALESCE(u.profession, 'Professional') as profession, 
+        COALESCE(u.marriage_timeline, 'within_1_year') as marriageTimeline,
         (SELECT photo_url FROM user_photos WHERE user_id = u.id ORDER BY is_primary DESC LIMIT 1) as photoUrl,
         m.action, m.created_at as actionTime
       FROM matches_and_likes m
-      JOIN users u ON m.receiver_id = u.id
+      LEFT JOIN users u ON m.receiver_id = u.id
       WHERE m.sender_id = ? AND (m.action = 'liked' OR m.action = 'mutual_match' OR m.action = 'direct_salam')
       ORDER BY m.created_at DESC
     `).bind(userId).all();

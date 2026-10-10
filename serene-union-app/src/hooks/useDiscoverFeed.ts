@@ -167,7 +167,7 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
     setProfiles(prev => prev.filter(p => p.id !== profile.id));
     setCurrentIndex(curr => Math.max(0, curr));
 
-    const result = await dbService.sendMatchAction(profile.id, 'liked');
+    const result = await dbService.sendMatchAction(profile.id, 'liked', undefined, profile);
     if (result.isMutual) {
       setMatchedProfile(profile);
       notificationService.addNotification({
@@ -198,10 +198,11 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
         e.preventDefault();
       }
     }
-    dbService.sendMatchAction(profileId, 'passed');
+    const passTarget = profiles.find(p => p.id === profileId);
+    dbService.sendMatchAction(profileId, 'passed', undefined, passTarget);
     setProfiles(prev => prev.filter(p => p.id !== profileId));
     setCurrentIndex(curr => Math.max(0, curr));
-  }, []);
+  }, [profiles]);
 
   const handleDirectSalam = useCallback(async (profile: UserProfile, e?: React.MouseEvent | React.TouchEvent) => {
     if (e) {
@@ -230,7 +231,7 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
 
     await dbService.consumeDirectSalam(currentUser.id);
     const conv = dbService.createMatchConversation(target, customMessage);
-    await dbService.sendMatchAction(target.id, 'direct_salam', customMessage);
+    await dbService.sendMatchAction(target.id, 'direct_salam', customMessage, target);
 
     notificationService.addNotification({
       type: 'salam',

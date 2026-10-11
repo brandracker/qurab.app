@@ -11,6 +11,6 @@
     "test:server": "npm --prefix server test",
     "test:all": "npm --prefix serene-union-app test && npm --prefix server test",
     "test:watch": "npm --prefix server run test:watch",
-    "deploy:client": "npm --prefix serene-union-app run build && npx --prefix server wrangler pages deploy \"serene-union-app/dist\" --project-name serene-union"
+    "deploy:client": "npm --prefix serene-union-app run build && cd server && npx wrangler pages deploy ../serene-union-app/dist --project-name serene-union"
   }
 }

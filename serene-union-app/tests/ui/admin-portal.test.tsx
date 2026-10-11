@@ -501,4 +501,75 @@ describe('Admin Portal UI & Isolation Tests', () => {
     const { container } = render(<AdminPortal />);
     expect(container.firstChild).toBeNull();
   });
+
+  it('15. AdminPortal manual subscription manager modal opens and updates VIP tier and quotas', async () => {
+    sessionStorage.setItem('qurb_admin_token', 'adm_tok_adm_root.mock.123');
+
+    let subPayload: any = null;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url: any, opts: any) => {
+      const urlStr = String(url);
+      if (urlStr.includes('/admin/users/usr_sub_1/subscription') && opts?.method === 'POST') {
+        subPayload = JSON.parse(opts.body);
+        return {
+          ok: true,
+          json: async () => ({
+            success: true,
+            isVip: true,
+            tier: 'barakah_vip'
+          })
+        } as any;
+      }
+      if (urlStr.includes('/admin/users')) {
+        return {
+          ok: true,
+          json: async () => ({
+            success: true,
+            users: [
+              {
+                id: 'usr_sub_1',
+                full_name: 'Brother Tariq',
+                email: 'tariq@test.com',
+                gender: 'male',
+                city: 'Birmingham',
+                is_vip: 0,
+                account_status: 'active'
+              }
+            ],
+            total: 1,
+            totalPages: 1
+          })
+        } as any;
+      }
+      return { ok: true, json: async () => ({ success: true, stats: {}, cities: [] }) } as any;
+    });
+
+    render(<AdminPortal />);
+    fireEvent.click(screen.getByRole('button', { name: /User Directory/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Brother Tariq/i)).toBeDefined();
+    });
+
+    // Click VIP & Quotas button
+    const vipQuotaBtn = screen.getByRole('button', { name: /VIP & Quotas/i });
+    fireEvent.click(vipQuotaBtn);
+
+    // Modal opens
+    await waitFor(() => {
+      expect(screen.getByText(/Manage Subscription/i)).toBeDefined();
+      expect(screen.getByText(/Barakah VIP Club/i)).toBeDefined();
+    });
+
+    // Select Barakah VIP and Save
+    fireEvent.click(screen.getByText(/Barakah VIP Club/i));
+    const saveBtn = screen.getByRole('button', { name: /Save & Sync Subscription/i });
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => {
+      expect(subPayload).toMatchObject({
+        tier: 'barakah_vip',
+        isVip: true
+      });
+    });
+  });
 });

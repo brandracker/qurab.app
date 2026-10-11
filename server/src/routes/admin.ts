@@ -36,6 +36,28 @@ async function ensureAdminTableAndSeed(db: any) {
     try {
       await db.prepare("ALTER TABLE users ADD COLUMN account_status TEXT DEFAULT 'active'").run();
     } catch {}
+    try {
+      await db.prepare("ALTER TABLE users ADD COLUMN ban_reason TEXT DEFAULT NULL").run();
+    } catch {}
+
+    try {
+      await db.prepare(`
+        CREATE TABLE IF NOT EXISTS user_wallets (
+          user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+          direct_salams_balance INTEGER DEFAULT 2,
+          daily_messages_quota INTEGER DEFAULT 15,
+          messages_sent_today INTEGER DEFAULT 0,
+          subscription_tier TEXT DEFAULT 'free',
+          is_spotlight_active BOOLEAN DEFAULT 0,
+          spotlight_expires_at TEXT DEFAULT NULL,
+          ads_watched_for_salam INTEGER DEFAULT 0,
+          daily_likes_quota INTEGER DEFAULT 50,
+          likes_used_today INTEGER DEFAULT 0,
+          last_likes_reset_date TEXT DEFAULT '',
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `).run();
+    } catch {}
   } catch (err) {
     console.warn('ensureAdminTable notice:', err);
   }
@@ -320,7 +342,7 @@ adminRouter.get('/users', async (c) => {
   }
 });
 
-// 5. Detailed User Profile Card with all Photos
+// 5. Detailed User Profile Card with all Photos & Wallet Data
 adminRouter.get('/users/:id', async (c) => {
   try {
     const id = c.req.param('id');
@@ -332,6 +354,11 @@ adminRouter.get('/users/:id', async (c) => {
     const religious = await c.env.DB.prepare('SELECT * FROM religious_profiles WHERE user_id = ?').bind(id).first();
     const wali = await c.env.DB.prepare('SELECT * FROM wali_details WHERE user_id = ?').bind(id).first();
     const photos = await c.env.DB.prepare('SELECT * FROM user_photos WHERE user_id = ? ORDER BY is_primary DESC, sort_order ASC').bind(id).all();
+    
+    let wallet: any = null;
+    try {
+      wallet = await c.env.DB.prepare('SELECT * FROM user_wallets WHERE user_id = ?').bind(id).first();
+    } catch {}
 
     return c.json({
       success: true,
@@ -339,7 +366,8 @@ adminRouter.get('/users/:id', async (c) => {
         ...user,
         religious_profile: religious || null,
         wali_details: wali || null,
-        photos: photos?.results || []
+        photos: photos?.results || [],
+        wallet: wallet || null
       }
     });
   } catch (error: any) {
@@ -347,38 +375,51 @@ adminRouter.get('/users/:id', async (c) => {
   }
 });
 
-// 6. Update User Status (Ban / Unban / Suspend)
+// 6. Update User Status (Ban / Unban / Suspend with Audit Reason)
 adminRouter.post('/users/:id/status', async (c) => {
   try {
     const id = c.req.param('id');
-    const { status, isBanned } = await c.req.json();
+    const { status, isBanned, reason } = await c.req.json();
 
     const targetStatus = status || (isBanned ? 'banned' : 'active');
     const bannedFlag = targetStatus === 'banned' ? 1 : 0;
+    const banReason = bannedFlag ? (reason || 'Administrative suspension') : null;
 
-    await c.env.DB.prepare(`
-      UPDATE users 
-      SET account_status = ?, is_banned = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `).bind(targetStatus, bannedFlag, id).run();
+    try {
+      await c.env.DB.prepare(`
+        UPDATE users 
+        SET account_status = ?, is_banned = ?, ban_reason = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).bind(targetStatus, bannedFlag, banReason, id).run();
+    } catch {
+      // Fallback if ban_reason column not yet migrated
+      await c.env.DB.prepare(`
+        UPDATE users 
+        SET account_status = ?, is_banned = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).bind(targetStatus, bannedFlag, id).run();
+    }
 
     return c.json({
       success: true,
       message: `User status successfully updated to ${targetStatus}`,
       status: targetStatus,
-      isBanned: Boolean(bannedFlag)
+      isBanned: Boolean(bannedFlag),
+      reason: banReason
     });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   }
 });
 
-// 7. Update User VIP Status
+// 7. Update User VIP Status & Sync with User Wallet
 adminRouter.post('/users/:id/vip', async (c) => {
   try {
     const id = c.req.param('id');
     const { isVip } = await c.req.json();
     const vipVal = isVip ? 1 : 0;
+    const subTier = vipVal ? 'barakah_vip' : 'free';
+    const msgQuota = vipVal ? 9999 : 15;
 
     await c.env.DB.prepare(`
       UPDATE users 
@@ -386,10 +427,85 @@ adminRouter.post('/users/:id/vip', async (c) => {
       WHERE id = ?
     `).bind(vipVal, id).run();
 
+    try {
+      await c.env.DB.prepare(`
+        INSERT INTO user_wallets (user_id, subscription_tier, daily_messages_quota, direct_salams_balance)
+        VALUES (?, ?, ?, CASE WHEN ? = 1 THEN 20 ELSE 2 END)
+        ON CONFLICT(user_id) DO UPDATE SET 
+          subscription_tier = excluded.subscription_tier,
+          daily_messages_quota = excluded.daily_messages_quota,
+          direct_salams_balance = CASE WHEN ? = 1 AND user_wallets.direct_salams_balance < 20 THEN 20 ELSE user_wallets.direct_salams_balance END
+      `).bind(id, subTier, msgQuota, vipVal, vipVal).run();
+    } catch (err) {
+      console.warn('Wallet VIP sync notice:', err);
+    }
+
     return c.json({
       success: true,
       message: `User VIP status updated to ${Boolean(vipVal)}`,
-      isVip: Boolean(vipVal)
+      isVip: Boolean(vipVal),
+      tier: subTier
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// 7.1 Comprehensive Manual Subscription & Quotas Manager
+adminRouter.post('/users/:id/subscription', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const { tier, directSalams, isVip, resetQuotas } = await c.req.json();
+
+    const isVipActive = isVip !== undefined ? Boolean(isVip) : (tier === 'barakah_vip');
+    const vipVal = isVipActive ? 1 : 0;
+    const subTier = isVipActive ? 'barakah_vip' : 'free';
+    const msgQuota = isVipActive ? 9999 : 15;
+    const bonusSalams = Number(directSalams) || 0;
+
+    // 1. Update users table
+    await c.env.DB.prepare(`
+      UPDATE users 
+      SET is_vip = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).bind(vipVal, id).run();
+
+    // 2. Atomically sync user_wallets
+    try {
+      await c.env.DB.prepare(`
+        INSERT INTO user_wallets (user_id, subscription_tier, daily_messages_quota, direct_salams_balance)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET 
+          subscription_tier = excluded.subscription_tier,
+          daily_messages_quota = excluded.daily_messages_quota,
+          direct_salams_balance = CASE 
+            WHEN ? > 0 THEN user_wallets.direct_salams_balance + ? 
+            WHEN ? = 0 AND ? = 1 AND user_wallets.direct_salams_balance < 20 THEN 20
+            ELSE user_wallets.direct_salams_balance 
+          END,
+          likes_used_today = CASE WHEN ? = 1 THEN 0 ELSE user_wallets.likes_used_today END,
+          messages_sent_today = CASE WHEN ? = 1 THEN 0 ELSE user_wallets.messages_sent_today END
+      `).bind(
+        id, subTier, msgQuota, Math.max(2, bonusSalams),
+        bonusSalams, bonusSalams,
+        bonusSalams, vipVal,
+        resetQuotas ? 1 : 0, resetQuotas ? 1 : 0
+      ).run();
+    } catch (err) {
+      console.warn('Subscription manager wallet sync notice:', err);
+    }
+
+    let updatedWallet: any = null;
+    try {
+      updatedWallet = await c.env.DB.prepare('SELECT * FROM user_wallets WHERE user_id = ?').bind(id).first();
+    } catch {}
+
+    return c.json({
+      success: true,
+      message: `User subscription successfully updated to ${subTier}`,
+      isVip: Boolean(vipVal),
+      tier: subTier,
+      wallet: updatedWallet
     });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);

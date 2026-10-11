@@ -272,4 +272,40 @@ describe('Admin Portal API & Security Integration Tests', () => {
     const notifs = await env.DB.prepare("SELECT * FROM notifications WHERE type = 'system_broadcast'").all();
     expect(notifs?.results?.length).toBeGreaterThanOrEqual(2);
   });
+
+  it('12. POST /api/admin/users/:id/subscription updates VIP and syncs user_wallets tier and quotas', async () => {
+    await env.DB.prepare(`
+      INSERT INTO users (id, phone, email, full_name, dob, gender, location, is_vip)
+      VALUES ('usr_sub_test', '+998877', 'subtest@test.com', 'Sub Candidate', '1996-01-01', 'male', 'Dubai', 0);
+    `).run();
+
+    const subRes = await app.request('/api/admin/users/usr_sub_test/subscription', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${adminToken}`
+      },
+      body: JSON.stringify({
+        tier: 'barakah_vip',
+        directSalams: 25,
+        isVip: true,
+        resetQuotas: true
+      })
+    }, env);
+
+    expect(subRes.status).toBe(200);
+    const subData = await subRes.json();
+    expect(subData.success).toBe(true);
+    expect(subData.isVip).toBe(true);
+    expect(subData.tier).toBe('barakah_vip');
+
+    // Verify database sync across both users and user_wallets
+    const userRow = await env.DB.prepare('SELECT is_vip FROM users WHERE id = ?').bind('usr_sub_test').first();
+    const walletRow = await env.DB.prepare('SELECT subscription_tier, daily_messages_quota, direct_salams_balance FROM user_wallets WHERE user_id = ?').bind('usr_sub_test').first();
+
+    expect(userRow.is_vip).toBe(1);
+    expect(walletRow.subscription_tier).toBe('barakah_vip');
+    expect(walletRow.daily_messages_quota).toBe(9999);
+    expect(walletRow.direct_salams_balance).toBeGreaterThanOrEqual(25);
+  });
 });

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { UserProfile } from '../types';
+import { facebookEventsService } from '../services/facebookEventsService';
 
 interface DirectSalamModalProps {
   candidate: UserProfile;
@@ -31,6 +32,8 @@ export const DirectSalamModal: React.FC<DirectSalamModalProps> = ({
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
+      facebookEventsService.logContact(candidate.id);
+      facebookEventsService.logSpendCredits(1, 'direct_salam');
       await onSend(message.trim() || GREETING_TEMPLATES[0]);
     } finally {
       setIsSubmitting(false);

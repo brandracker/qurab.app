@@ -1,5 +1,15 @@
-import React from 'react';
-import { X, Crown, Star, Trash2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { 
+  X, 
+  Crown, 
+  Star, 
+  Trash2, 
+  ShieldAlert, 
+  Heart, 
+  Sparkles, 
+  UserCheck, 
+  Coins 
+} from 'lucide-react';
 import type { CandidateUser, CandidatePhoto } from '../types';
 
 interface UserInspectModalProps {
@@ -10,6 +20,7 @@ interface UserInspectModalProps {
   onDeletePhoto: (photoId: string) => void;
   onToggleVip: (userId: string, currentVip: boolean) => void;
   onToggleBan: (userId: string, currentStatus: string, currentBanned: boolean) => void;
+  onOpenSubscription?: () => void;
 }
 
 export const UserInspectModal: React.FC<UserInspectModalProps> = ({
@@ -19,20 +30,71 @@ export const UserInspectModal: React.FC<UserInspectModalProps> = ({
   onSetPrimaryPhoto,
   onDeletePhoto,
   onToggleVip,
-  onToggleBan
+  onToggleBan,
+  onOpenSubscription
 }) => {
+  const [confirmBanModal, setConfirmBanModal] = useState<boolean>(false);
+
   if (!user) return null;
 
   const isBanned = user.account_status === 'banned' || Boolean(user.is_banned);
   const isVip = Boolean(user.is_vip);
 
+  // Calculate age from dob if age is missing
+  let displayAge = user.age;
+  if (!displayAge && user.dob) {
+    const birthYear = new Date(user.dob).getFullYear();
+    const currentYear = new Date().getFullYear();
+    if (!isNaN(birthYear) && birthYear > 1900) {
+      displayAge = currentYear - birthYear;
+    }
+  }
+
+  // Religious Profile resolution (from religious_profile object or root fallback)
+  const religious = user.religious_profile;
+  const sect = religious?.sect || user.sect || 'Sunni';
+  const madhhab = religious?.madhhab || 'Hanafi';
+  const practiceLevel = religious?.practice_level || 'practicing';
+  const prayerFrequency = religious?.prayer_frequency || '5 times daily';
+  const halalDiet = religious?.halal_diet || 'Strictly Halal';
+  const deenBio = religious?.deen_relationship_bio;
+
+  // Wali details
+  const wali = user.wali_details;
+
+  // Wallet / Subscription
+  const wallet = user.wallet;
+  const salamsBalance = wallet?.direct_salams_balance ?? (isVip ? 20 : 2);
+
+  const handleBanConfirm = () => {
+    onToggleBan(user.id, user.account_status, isBanned);
+    setConfirmBanModal(false);
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto">
+    <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
       <div className="bg-[#0F172A] border border-white/15 rounded-3xl max-w-2xl w-full p-6 shadow-2xl space-y-6 my-8">
+        
+        {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-white/10">
           <div className="flex items-center space-x-3">
-            <h3 className="text-xl font-bold text-white font-serif">{user.full_name}</h3>
-            {isVip && <Crown className="w-4 h-4 text-amber-400" />}
+            <h3 className="text-xl font-bold text-white font-serif flex items-center space-x-2">
+              <span>{user.full_name}</span>
+              {displayAge ? <span className="text-sm font-sans font-normal text-slate-400">({displayAge} yrs)</span> : null}
+            </h3>
+            {isVip && (
+              <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-[10px] text-amber-300 font-bold uppercase">
+                <Crown className="w-3 h-3 text-amber-400" />
+                <span>Barakah VIP</span>
+              </span>
+            )}
+            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase border ${
+              isBanned 
+                ? 'bg-rose-500/20 text-rose-300 border-rose-500/30' 
+                : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+            }`}>
+              {isBanned ? 'Banned' : 'Active'}
+            </span>
           </div>
           <button 
             onClick={onClose} 
@@ -45,8 +107,8 @@ export const UserInspectModal: React.FC<UserInspectModalProps> = ({
         {/* Picture Arrangement Gallery */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h4 className="text-xs uppercase font-bold tracking-wider text-slate-300">
-              Uploaded Photos Gallery ({userPhotos.length})
+            <h4 className="text-xs uppercase font-bold tracking-wider text-slate-300 flex items-center space-x-1.5">
+              <span>Uploaded Photos Gallery ({userPhotos.length})</span>
             </h4>
             <span className="text-[11px] text-slate-400">Click star to set Primary Discover cover</span>
           </div>
@@ -95,23 +157,127 @@ export const UserInspectModal: React.FC<UserInspectModalProps> = ({
         </div>
 
         {/* Profile Biodata Details */}
-        <div className="grid grid-cols-2 gap-4 text-xs text-slate-300 pt-4 border-t border-white/10">
-          <div><span className="text-slate-500">Gender:</span> <strong className="text-white capitalize ml-1">{user.gender}</strong></div>
-          <div><span className="text-slate-500">Location:</span> <strong className="text-white ml-1">{user.city || user.location}</strong></div>
-          <div><span className="text-slate-500">Email:</span> <span className="text-slate-300 ml-1">{user.email || '—'}</span></div>
-          <div><span className="text-slate-500">Phone:</span> <span className="text-slate-300 ml-1">{user.phone || '—'}</span></div>
-          <div><span className="text-slate-500">Profession:</span> <span className="text-white ml-1">{user.profession || '—'}</span></div>
-          <div><span className="text-slate-500">Education:</span> <span className="text-white ml-1">{user.education || '—'}</span></div>
-          <div><span className="text-slate-500">Sect:</span> <span className="text-white ml-1">{user.sect || '—'}</span></div>
-          <div><span className="text-slate-500">Marital Status:</span> <span className="text-white ml-1">{user.marital_status || '—'}</span></div>
+        <div className="space-y-3 pt-2">
+          <h4 className="text-xs uppercase font-bold tracking-wider text-slate-300">Personal Biodata & Contact</h4>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs text-slate-300 p-4 bg-white/[0.02] border border-white/5 rounded-2xl">
+            <div><span className="text-slate-500 block text-[11px]">Gender:</span> <strong className="text-white capitalize">{user.gender}</strong></div>
+            <div><span className="text-slate-500 block text-[11px]">Location:</span> <strong className="text-white">{user.city || user.location || 'Global'}</strong></div>
+            <div><span className="text-slate-500 block text-[11px]">Email:</span> <span className="text-slate-300 font-mono text-[11px] truncate block">{user.email || '—'}</span></div>
+            <div><span className="text-slate-500 block text-[11px]">Phone:</span> <span className="text-slate-300 font-mono text-[11px]">{user.phone || '—'}</span></div>
+            <div><span className="text-slate-500 block text-[11px]">Profession:</span> <span className="text-white">{user.profession || '—'}</span></div>
+            <div><span className="text-slate-500 block text-[11px]">Education:</span> <span className="text-white">{user.education || '—'}</span></div>
+            <div><span className="text-slate-500 block text-[11px]">Height:</span> <span className="text-white">{user.height || '—'}</span></div>
+            <div><span className="text-slate-500 block text-[11px]">Ethnicity:</span> <span className="text-white">{user.ethnicity || '—'}</span></div>
+            <div><span className="text-slate-500 block text-[11px]">Marriage Timeline:</span> <span className="text-white">{user.marriage_timeline ? user.marriage_timeline.replace(/_/g, ' ') : '—'}</span></div>
+          </div>
         </div>
 
+        {/* Deen & Religious Profile */}
+        <div className="space-y-2">
+          <h4 className="text-xs uppercase font-bold tracking-wider text-emerald-400 flex items-center space-x-1.5">
+            <Heart className="w-3.5 h-3.5" />
+            <span>Deen & Religious Dossier</span>
+          </h4>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs text-slate-300 p-3.5 bg-emerald-500/[0.03] border border-emerald-500/20 rounded-2xl">
+            <div><span className="text-slate-500 block text-[11px]">Practice Level:</span> <strong className="text-emerald-300 capitalize">{practiceLevel.replace(/_/g, ' ')}</strong></div>
+            <div><span className="text-slate-500 block text-[11px]">Sect & Madhhab:</span> <strong className="text-white">{sect} ({madhhab})</strong></div>
+            <div><span className="text-slate-500 block text-[11px]">Prayer:</span> <span className="text-white">{prayerFrequency}</span></div>
+            <div><span className="text-slate-500 block text-[11px]">Diet:</span> <span className="text-white">{halalDiet}</span></div>
+          </div>
+          {deenBio && (
+            <p className="text-xs text-slate-300 italic px-2">"{deenBio}"</p>
+          )}
+        </div>
+
+        {/* Wali / Guardian Details (if present) */}
+        {wali && wali.wali_name ? (
+          <div className="space-y-2">
+            <h4 className="text-xs uppercase font-bold tracking-wider text-sky-400 flex items-center space-x-1.5">
+              <UserCheck className="w-3.5 h-3.5" />
+              <span>Wali / Guardian Chaperone</span>
+            </h4>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs text-slate-300 p-3.5 bg-sky-500/[0.03] border border-sky-500/20 rounded-2xl">
+              <div><span className="text-slate-500 block text-[11px]">Guardian Name:</span> <strong className="text-white">{wali.wali_name}</strong></div>
+              <div><span className="text-slate-500 block text-[11px]">Relationship:</span> <strong className="text-sky-300">{wali.wali_relationship}</strong></div>
+              <div><span className="text-slate-500 block text-[11px]">Phone:</span> <span className="font-mono text-slate-300">{wali.wali_phone}</span></div>
+              <div>
+                <span className="text-slate-500 block text-[11px]">Status:</span>
+                <span className={`inline-block font-semibold ${wali.is_verified ? 'text-emerald-400' : 'text-amber-400'}`}>
+                  {wali.is_verified ? '✓ Verified Chaperone' : '⏳ Pending Verification'}
+                </span>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {/* Wallet & Subscription Details */}
+        <div className="p-3.5 bg-white/[0.02] border border-white/10 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+              <Coins className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="font-semibold text-white flex items-center space-x-1.5">
+                <span>Tier: {isVip ? 'Barakah VIP Club' : 'Standard Free'}</span>
+                {isVip && <Crown className="w-3.5 h-3.5 text-amber-400" />}
+              </div>
+              <div className="text-[11px] text-slate-400">
+                Direct Salams Balance: <span className="text-emerald-400 font-semibold">{salamsBalance}</span>
+              </div>
+            </div>
+          </div>
+
+          {onOpenSubscription && (
+            <button
+              onClick={onOpenSubscription}
+              className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-semibold cursor-pointer transition-all text-xs"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Manage Subscription</span>
+            </button>
+          )}
+        </div>
+
+        {/* Bio / About Me */}
         {user.about_me || user.bio ? (
           <div className="p-3.5 bg-white/[0.02] border border-white/5 rounded-2xl text-xs text-slate-300">
             <div className="text-[10px] uppercase font-bold text-slate-500 mb-1">About Me / Bio</div>
             <p className="italic text-slate-300 leading-relaxed">"{user.about_me || user.bio}"</p>
           </div>
         ) : null}
+
+        {/* Confirmation Modal Overlay for Ban / Unban */}
+        {confirmBanModal && (
+          <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-xs space-y-3">
+            <div className="flex items-center space-x-2 text-rose-300 font-bold">
+              <ShieldAlert className="w-4 h-4" />
+              <span>{isBanned ? 'Confirm Account Unban' : 'Confirm Account Suspension'}</span>
+            </div>
+            <p className="text-slate-300">
+              {isBanned 
+                ? `Are you sure you want to unban ${user.full_name}? The user will regain full platform access.`
+                : `Are you sure you want to ban ${user.full_name}? This will instantly revoke platform access and hide the profile from discovery.`}
+            </p>
+            <div className="flex items-center space-x-2 justify-end">
+              <button
+                onClick={() => setConfirmBanModal(false)}
+                className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-slate-300 text-xs font-semibold cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBanConfirm}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition-all ${
+                  isBanned
+                    ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
+                    : 'bg-rose-500 hover:bg-rose-600 text-white'
+                }`}
+              >
+                {isBanned ? 'Confirm Unban' : 'Confirm Ban'}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Actions Footer inside Modal */}
         <div className="pt-4 border-t border-white/10 flex items-center justify-between">
@@ -128,7 +294,7 @@ export const UserInspectModal: React.FC<UserInspectModalProps> = ({
             </button>
 
             <button
-              onClick={() => onToggleBan(user.id, user.account_status, isBanned)}
+              onClick={() => setConfirmBanModal(true)}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer border ${
                 isBanned
                   ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'

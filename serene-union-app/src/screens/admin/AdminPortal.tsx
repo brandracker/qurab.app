@@ -9,6 +9,7 @@ import { UserDirectoryTab } from './components/UserDirectoryTab';
 import { PhotoModerationTab } from './components/PhotoModerationTab';
 import { UserInspectModal } from './components/UserInspectModal';
 import { BroadcastModal } from './components/BroadcastModal';
+import { SubscriptionModal } from './components/SubscriptionModal';
 import type { 
   AdminTab, 
   DashboardStats, 
@@ -64,6 +65,10 @@ export const AdminPortal: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<CandidateUser | null>(null);
   const [userPhotos, setUserPhotos] = useState<CandidatePhoto[]>([]);
   const [isInspectingLoading, setIsInspectingLoading] = useState(false);
+
+  // Manual Subscription Modal State
+  const [selectedSubscriptionUser, setSelectedSubscriptionUser] = useState<CandidateUser | null>(null);
+  const [isSubmittingSubscription, setIsSubmittingSubscription] = useState(false);
 
   // Photos Moderation Queue Data
   const [photos, setPhotos] = useState<CandidatePhoto[]>([]);
@@ -218,9 +223,64 @@ export const AdminPortal: React.FC = () => {
           setSelectedUser((prev: any) => ({ ...prev, account_status: targetStatus, is_banned: !isBanned ? 1 : 0 }));
         }
         showToast(`User successfully marked as ${targetStatus}!`);
+      } else {
+        showToast(data.error || 'Could not update user status.');
       }
     } catch {
       showToast('Action failed. Please retry.');
+    }
+  };
+
+  // Comprehensive Manual Subscription & Quotas Update
+  const handleUpdateSubscription = async (
+    userId: string,
+    tier: string,
+    directSalams: number,
+    isVip: boolean,
+    resetQuotas: boolean
+  ) => {
+    setIsSubmittingSubscription(true);
+    try {
+      const res = await fetch(`${API_BASE}/admin/users/${userId}/subscription`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`
+        },
+        body: JSON.stringify({ tier, directSalams, isVip, resetQuotas })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setUsers(prev => prev.map(u => u.id === userId ? {
+          ...u,
+          is_vip: isVip ? 1 : 0,
+          wallet: data.wallet || {
+            ...(u.wallet || {}),
+            subscription_tier: tier,
+            direct_salams_balance: (u.wallet?.direct_salams_balance ?? (isVip ? 20 : 2)) + directSalams
+          }
+        } : u));
+
+        if (selectedUser?.id === userId) {
+          setSelectedUser((prev: any) => ({
+            ...prev,
+            is_vip: isVip ? 1 : 0,
+            wallet: data.wallet || {
+              ...(prev?.wallet || {}),
+              subscription_tier: tier,
+              direct_salams_balance: (prev?.wallet?.direct_salams_balance ?? (isVip ? 20 : 2)) + directSalams
+            }
+          }));
+        }
+
+        showToast(`Subscription updated to ${tier === 'barakah_vip' ? 'Barakah VIP' : 'Standard'} successfully!`);
+      } else {
+        showToast(data.error || 'Failed to update subscription.');
+      }
+    } catch {
+      showToast('Subscription update failed. Please check connection.');
+    } finally {
+      setIsSubmittingSubscription(false);
     }
   };
 
@@ -442,6 +502,7 @@ export const AdminPortal: React.FC = () => {
               onInspectUser={handleInspectUser}
               onToggleBan={handleToggleBan}
               onToggleVip={handleToggleVip}
+              onManageSubscription={setSelectedSubscriptionUser}
               isInspectingLoading={isInspectingLoading}
             />
           )}
@@ -470,6 +531,17 @@ export const AdminPortal: React.FC = () => {
           onDeletePhoto={handleDeletePhoto}
           onToggleVip={handleToggleVip}
           onToggleBan={handleToggleBan}
+          onOpenSubscription={() => setSelectedSubscriptionUser(selectedUser)}
+        />
+      )}
+
+      {/* Modular Manual Subscription & Quotas Manager */}
+      {selectedSubscriptionUser && (
+        <SubscriptionModal
+          user={selectedSubscriptionUser}
+          onClose={() => setSelectedSubscriptionUser(null)}
+          onUpdateSubscription={handleUpdateSubscription}
+          isSubmitting={isSubmittingSubscription}
         />
       )}
 

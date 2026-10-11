@@ -35,6 +35,7 @@ import {
 import type { UserProfile } from '../types';
 import { CompatibilityComparisonModal } from './CompatibilityComparisonModal';
 import { dbService } from '../services/dbService';
+import { facebookEventsService } from '../services/facebookEventsService';
 
 interface Props {
   profile: UserProfile;
@@ -55,6 +56,12 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
   const isRevealedToMe = Boolean(profile.isPhotoRevealed) || dbService.isPhotoRevealedTo(profile.id, currentUser.id);
   const isUnblurred = !profile.blurPhotosByDefault || isRevealedToMe || Boolean(profile.photoRevealApproved);
   const [showCompatibilityModal, setShowCompatibilityModal] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (isOpen && profile?.id) {
+      facebookEventsService.logViewContent(profile.id, profile.fullName || 'Candidate');
+    }
+  }, [isOpen, profile?.id, profile?.fullName]);
 
   useEffect(() => {
     return () => {

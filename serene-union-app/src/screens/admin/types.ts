@@ -51,6 +51,10 @@ export interface CandidateUser {
   city?: string;
   location?: string;
   age?: number;
+  dob?: string;
+  height?: string;
+  ethnicity?: string;
+  marriage_timeline?: string;
   profession?: string;
   education?: string;
   sect?: string;
@@ -62,8 +66,29 @@ export interface CandidateUser {
   is_vip: number | boolean;
   account_status: string;
   is_banned: number | boolean;
+  ban_reason?: string;
   photo_count?: number;
   primary_photo?: string;
   photos?: CandidatePhoto[];
+  religious_profile?: {
+    practice_level?: string;
+    sect?: string;
+    madhhab?: string;
+    prayer_frequency?: string;
+    halal_diet?: string;
+    deen_relationship_bio?: string;
+  } | null;
+  wali_details?: {
+    wali_name?: string;
+    wali_phone?: string;
+    wali_relationship?: string;
+    is_verified?: number | boolean;
+  } | null;
+  wallet?: {
+    subscription_tier?: string;
+    direct_salams_balance?: number;
+    daily_messages_quota?: number;
+    is_spotlight_active?: number | boolean;
+  } | null;
   created_at?: string;
 }

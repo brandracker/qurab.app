@@ -9,6 +9,7 @@ import {
   sendResetPasswordEmail 
 } from '../services/firebase';
 import { API_BASE } from '../services/dbService';
+import { facebookEventsService } from '../services/facebookEventsService';
 import { Capacitor, registerPlugin } from '@capacitor/core';
 
 interface GoogleAuthPluginInterface {
@@ -106,6 +107,9 @@ export const AuthScreen: React.FC<Props> = ({
 
       const data = await res.json();
       if (data.success) {
+        if (tab === 'signup' || data.user?.isNewUser) {
+          facebookEventsService.logCompleteRegistration('email');
+        }
         onAuthSuccess({
           token: data.token,
           user: data.user,
@@ -138,6 +142,9 @@ export const AuthScreen: React.FC<Props> = ({
           });
           const data = await res.json();
           if (data.success) {
+            if (tab === 'signup' || data.user?.isNewUser) {
+              facebookEventsService.logCompleteRegistration('email');
+            }
             onAuthSuccess({
               token: data.token,
               user: data.user,
@@ -224,6 +231,9 @@ export const AuthScreen: React.FC<Props> = ({
 
       const data = await res.json();
       if (data.success) {
+        if (data.user?.isNewUser) {
+          facebookEventsService.logCompleteRegistration('google');
+        }
         onAuthSuccess({
           token: data.token,
           user: data.user,

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Crown, TrendingUp, PlayCircle, Wallet, CheckCircle2, X, Check, Hand } from 'lucide-react';
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { API_BASE, dbService } from '../services/dbService';
+import { facebookEventsService } from '../services/facebookEventsService';
 
 const GooglePlayBilling = registerPlugin<any>('GooglePlayBillingPlugin');
 
@@ -69,8 +70,10 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
   ];
 
   const currentItem = products.find(p => p.id === selectedProduct)!;
+  const currentPriceVal = currentItem.id === 'qurb_barakah_monthly' ? 2.99 : (currentItem.id === 'qurb_direct_salam_20' ? 1.99 : 0.99);
 
   const handleInitiatePurchase = async () => {
+    facebookEventsService.logInitiateCheckout(currentItem.id, currentPriceVal, 'USD');
     if (Capacitor.isNativePlatform()) {
       await handleConfirmGooglePlayBilling();
     } else {
@@ -139,6 +142,12 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
       }
     }
     
+    // Log Meta App Events for Purchase & Subscription
+    if (currentItem.isSubscription) {
+      facebookEventsService.logSubscribe('barakah_vip', currentPriceVal, 'USD');
+    }
+    facebookEventsService.logPurchase(currentPriceVal, 'USD', currentItem.id);
+
     // 1. Immediately persist VIP locally and broadcast event
     if (currentItem.id === 'serene_barakah_monthly' || currentItem.id === 'qurb_barakah_monthly') {
       localStorage.setItem(`serene_vip_${userId}`, 'true');

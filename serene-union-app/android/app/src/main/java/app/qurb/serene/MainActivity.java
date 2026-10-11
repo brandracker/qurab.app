@@ -11,6 +11,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(AdMobPlugin.class);
         registerPlugin(GooglePlayBillingPlugin.class);
         registerPlugin(GoogleAuthPlugin.class);
+        registerPlugin(FacebookEventsPlugin.class);
         super.onCreate(savedInstanceState);
         handleDeepLink(getIntent());
     }

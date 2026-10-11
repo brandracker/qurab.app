@@ -38,6 +38,7 @@ interface UserDirectoryTabProps {
   onInspectUser: (userId: string) => void;
   onToggleBan: (userId: string, currentStatus: string, currentBanned: boolean) => void;
   onToggleVip: (userId: string, currentVip: boolean) => void;
+  onManageSubscription?: (user: CandidateUser) => void;
   isInspectingLoading: boolean;
 }
 
@@ -68,6 +69,7 @@ export const UserDirectoryTab: React.FC<UserDirectoryTabProps> = ({
   onInspectUser,
   onToggleBan,
   onToggleVip,
+  onManageSubscription,
   isInspectingLoading
 }) => {
   return (
@@ -264,6 +266,16 @@ export const UserDirectoryTab: React.FC<UserDirectoryTabProps> = ({
                       </td>
 
                       <td className="px-6 py-4 text-right space-x-2">
+                        {onManageSubscription && (
+                          <button
+                            onClick={() => onManageSubscription(u)}
+                            className="text-xs px-2.5 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 font-semibold cursor-pointer transition-all"
+                            title="Manage Subscription & Balances"
+                          >
+                            VIP & Quotas
+                          </button>
+                        )}
+
                         <button
                           onClick={() => onInspectUser(u.id)}
                           disabled={isInspectingLoading}

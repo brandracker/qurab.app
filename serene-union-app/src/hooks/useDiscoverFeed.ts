@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { UserProfile, FilterState } from '../types';
 import { dbService, API_BASE } from '../services/dbService';
 import { notificationService } from '../services/notificationService';
+import { facebookEventsService } from '../services/facebookEventsService';
 
 interface UseDiscoverFeedOptions {
   onOpenChat?: (convId: string) => void;
@@ -132,6 +133,13 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
 
   const handleApplyFilters = useCallback((newFilters: FilterState) => {
     setFilters(newFilters);
+    const searchSummary = [
+      newFilters.practiceLevels?.length ? newFilters.practiceLevels.join('/') : '',
+      newFilters.sects?.length ? newFilters.sects.join('/') : '',
+      newFilters.minAge ? `${newFilters.minAge}-${newFilters.maxAge}` : ''
+    ].filter(Boolean).join(', ');
+    facebookEventsService.logSearch(searchSummary || 'all_candidates', 'matrimonial_candidate');
+
     const updated = dbService.getDiscoverFeed(newFilters);
     setProfiles(updated);
     setCurrentIndex(0);

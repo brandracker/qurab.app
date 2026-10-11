@@ -738,7 +738,8 @@ profilesRouter.get('/discover', async (c) => {
         AND (u.full_name != 'New Member' OR u.full_name IS NULL)
         AND (u.is_profile_completed != 0 OR u.is_profile_completed IS NULL)
         AND (u.is_profile_completed = 1 OR (u.location != 'Global' AND u.location IS NOT NULL))
-        AND (u.account_status != 'deactivated' OR u.account_status IS NULL)
+        AND (u.account_status NOT IN ('deactivated', 'banned') OR u.account_status IS NULL)
+        AND (u.is_banned = 0 OR u.is_banned IS NULL)
         AND (u.profile_visibility != 'hidden' OR u.profile_visibility IS NULL)
         ${actionedFilter}
         ${genderFilter}

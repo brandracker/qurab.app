@@ -77,6 +77,14 @@ authRouter.post('/login', async (c) => {
       return c.json({ success: false, error: 'Invalid email or password. Please try again.' }, 401);
     }
 
+    if (user.account_status === 'banned' || user.is_banned === 1) {
+      return c.json({
+        success: false,
+        error: 'Your account has been suspended by administration. If you believe this is a mistake, please contact support.',
+        isBanned: true
+      }, 403);
+    }
+
     const { results: photos } = await c.env.DB.prepare(`
       SELECT photo_url FROM user_photos WHERE user_id = ? ORDER BY sort_order ASC
     `).bind(user.id).all();
@@ -178,6 +186,14 @@ authRouter.post('/verify-phone-otp', async (c) => {
     let user: any = await c.env.DB.prepare(`SELECT * FROM users WHERE phone = ?`).bind(cleanPhone).first();
     let isNewUser = false;
 
+    if (user && (user.account_status === 'banned' || user.is_banned === 1)) {
+      return c.json({
+        success: false,
+        error: 'Your account has been suspended by administration. If you believe this is a mistake, please contact support.',
+        isBanned: true
+      }, 403);
+    }
+
     if (!user) {
       isNewUser = true;
       const userId = `usr_${Date.now()}`;
@@ -241,6 +257,14 @@ authRouter.post('/google-login', async (c) => {
     `).bind(cleanEmail).first();
 
     let isNewUser = false;
+
+    if (user && (user.account_status === 'banned' || user.is_banned === 1)) {
+      return c.json({
+        success: false,
+        error: 'Your account has been suspended by administration. If you believe this is a mistake, please contact support.',
+        isBanned: true
+      }, 403);
+    }
 
     if (!user) {
       isNewUser = true;

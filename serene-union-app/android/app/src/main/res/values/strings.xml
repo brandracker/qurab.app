@@ -4,4 +4,6 @@
     <string name="title_activity_main">Qurb</string>
     <string name="package_name">app.qurb.serene</string>
     <string name="custom_url_scheme">app.qurb.serene</string>
+    <string name="facebook_app_id">1592317222033848</string>
+    <string name="facebook_client_token">960f46213443354603ad77b397abf04b</string>
 </resources>

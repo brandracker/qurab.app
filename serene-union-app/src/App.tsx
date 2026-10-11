@@ -20,6 +20,7 @@ import { TermsScreen } from './screens/TermsScreen';
 import { NotificationsScreen } from './screens/NotificationsScreen';
 import { dbService, API_BASE } from './services/dbService';
 import { notificationService } from './services/notificationService';
+import { facebookEventsService } from './services/facebookEventsService';
 import { Capacitor } from '@capacitor/core';
 import { LandingPage } from './components/LandingPage';
 import { AdminPortal } from './screens/admin/AdminPortal';
@@ -251,6 +252,8 @@ export const App: React.FC = () => {
         .then(data => {
           if (data.success && data.fulfilled) {
             setStripeSuccessNotice('Barakah VIP Activated! Unlimited likes & VIP features are now active.');
+            facebookEventsService.logSubscribe('barakah_vip', 2.99, 'USD');
+            facebookEventsService.logPurchase(2.99, 'USD', 'qurb_barakah_monthly');
             const uid = data.userId || currentUser.id;
             if (uid) {
               localStorage.setItem(`serene_vip_${uid}`, 'true');
@@ -490,6 +493,9 @@ export const App: React.FC = () => {
     }
 
     localStorage.removeItem('serene_onboarding_draft_v1');
+    if (!isEditingExisting) {
+      facebookEventsService.logCompleteRegistration('onboarding');
+    }
     setCurrentStep('main_app');
     setActiveTab(isEditingExisting ? 'my_profile' : 'discover');
   };

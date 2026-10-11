@@ -292,6 +292,33 @@ describe('Wallet, In-App Purchases & Rewarded Ads API Integration Tests', () => 
     expect(data.success).toBe(false);
     expect(data.error).toContain('sessionId is required');
   });
+
+  it('15. One-time likes quota does NOT auto-reset across date changes', async () => {
+    await app.request('/api/wallet/usr_test_onetime', { method: 'GET' }, env);
+    for (let i = 0; i < 5; i++) {
+      await app.request('/api/wallet/use-like', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: 'usr_test_onetime' })
+      }, env);
+    }
+
+    let walletRes = await app.request('/api/wallet/usr_test_onetime', { method: 'GET' }, env);
+    let walletData = await walletRes.json();
+    expect(walletData.wallet.likesRemaining).toBe(45);
+    expect(walletData.wallet.likesUsedToday).toBe(5);
+
+    // Simulate older date in database
+    await env.DB.prepare(`
+      UPDATE user_wallets SET last_likes_reset_date = '2025-01-01' WHERE user_id = 'usr_test_onetime'
+    `).run();
+
+    // Query wallet on new date - must NOT auto-reset to 50!
+    walletRes = await app.request('/api/wallet/usr_test_onetime', { method: 'GET' }, env);
+    walletData = await walletRes.json();
+    expect(walletData.wallet.likesRemaining).toBe(45);
+    expect(walletData.wallet.likesUsedToday).toBe(5);
+  });
 });
 
 

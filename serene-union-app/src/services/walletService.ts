@@ -3,8 +3,7 @@ import { profileService } from './profileService';
 
 export const walletService = {
   getTodayLikeKey(userId: string): string {
-    const today = new Date().toISOString().slice(0, 10);
-    return `serene_likes_left_${userId}_${today}`;
+    return `serene_likes_left_${userId}`;
   },
 
   getDirectSalams(userId: string): number {

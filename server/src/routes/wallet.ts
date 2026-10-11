@@ -85,13 +85,6 @@ walletRouter.get('/:userId', async (c) => {
         likes_used_today: 0,
         last_likes_reset_date: todayDate
       };
-    } else if (wallet.last_likes_reset_date !== todayDate) {
-      // Auto-reset daily likes counter for new day
-      await c.env.DB.prepare(`
-        UPDATE user_wallets SET likes_used_today = 0, last_likes_reset_date = ? WHERE user_id = ?
-      `).bind(todayDate, userId).run();
-      wallet.likes_used_today = 0;
-      wallet.last_likes_reset_date = todayDate;
     }
 
     let isSpotlightActive = Boolean(wallet.is_spotlight_active);
@@ -156,11 +149,6 @@ walletRouter.post('/use-like', async (c) => {
         VALUES (?, 2, 15, 0, 'free', 50, 0, ?)
       `).bind(userId, todayDate).run();
       wallet = { daily_likes_quota: 50, likes_used_today: 0, last_likes_reset_date: todayDate, subscription_tier: 'free' };
-    } else if (wallet.last_likes_reset_date !== todayDate) {
-      await c.env.DB.prepare(`
-        UPDATE user_wallets SET likes_used_today = 0, last_likes_reset_date = ? WHERE user_id = ?
-      `).bind(todayDate, userId).run();
-      wallet.likes_used_today = 0;
     }
 
     const quota = wallet.daily_likes_quota ?? 50;

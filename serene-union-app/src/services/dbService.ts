@@ -538,8 +538,7 @@ class DBService {
     isSpotlightActive: boolean;
     spotlightExpiresAt: string | null;
   }> {
-    const today = new Date().toISOString().slice(0, 10);
-    const localKey = `serene_likes_left_${userId}_${today}`;
+    const localKey = `serene_likes_left_${userId}`;
     const fallbackCount = parseInt(localStorage.getItem(localKey) || '50', 10);
     const fallbackVip = Boolean(localStorage.getItem(`serene_vip_${userId}`) === 'true');
     const fallbackSalams = parseInt(localStorage.getItem(`serene_salams_left_${userId}`) || '2', 10);
@@ -614,8 +613,7 @@ class DBService {
   }
 
   async consumeDailyLike(userId: string): Promise<{ success: boolean; likesRemaining: number }> {
-    const today = new Date().toISOString().slice(0, 10);
-    const localKey = `serene_likes_left_${userId}_${today}`;
+    const localKey = `serene_likes_left_${userId}`;
     const currentLocal = parseInt(localStorage.getItem(localKey) || '50', 10);
     const nextLocal = Math.max(0, currentLocal - 1);
     try {

@@ -18,7 +18,7 @@ android {
 
     signingConfigs {
         release {
-            storeFile file('../../serene-union-app/android/app/qurb-release-key.jks')
+            storeFile file('qurb-release-key.jks')
             storePassword 'QurbReleasePassword2026!'
             keyAlias 'qurb-release-key'
             keyPassword 'QurbReleasePassword2026!'
@@ -29,7 +29,6 @@ android {
         release {
             signingConfig signingConfigs.release
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
         debug {
             signingConfig signingConfigs.release

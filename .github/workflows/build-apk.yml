@@ -81,6 +81,7 @@ jobs:
         working-directory: admin-android
         run: |
           chmod +x gradlew
+          cp -n ../serene-union-app/android/app/qurb-release-key.jks app/qurb-release-key.jks || true
           ./gradlew assembleRelease --no-daemon --stacktrace
           cp app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/Qurb-Admin.apk
 

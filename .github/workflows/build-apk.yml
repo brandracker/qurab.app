@@ -82,6 +82,7 @@ jobs:
         run: |
           chmod +x gradlew
           cp -n ../serene-union-app/android/app/qurb-release-key.jks app/qurb-release-key.jks || true
+          cp ../serene-union-app/android/local.properties local.properties || echo "sdk.dir=$ANDROID_HOME" > local.properties
           ./gradlew assembleRelease --no-daemon --stacktrace
           ls -la app/build/outputs/apk/release/ || true
           find app/build/outputs/apk/release/ -name "*.apk" -exec cp {} app/build/outputs/apk/release/Qurb-Admin.apk \;

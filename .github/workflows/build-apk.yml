@@ -77,6 +77,13 @@ jobs:
           ./gradlew bundleRelease --no-daemon --stacktrace
           ./gradlew assembleRelease --no-daemon --stacktrace
 
+      - name: Build Qurb Admin Standalone APK
+        working-directory: admin-android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon --stacktrace
+          cp app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/Qurb-Admin.apk
+
       - name: Upload Play Store Signed Release AAB (Google Play Console)
         uses: actions/upload-artifact@v4
         with:
@@ -93,6 +100,14 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      - name: Upload Qurb Admin Standalone APK (Executive Portal)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Qurb-Admin-Portal-APK
+          path: admin-android/app/build/outputs/apk/release/Qurb-Admin.apk
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Backup Release Keystore
         uses: actions/upload-artifact@v4
         with:
@@ -106,15 +121,15 @@ jobs:
         if: github.ref == 'refs/heads/main'
         continue-on-error: true
         with:
-          tag_name: v1.0.11
-          name: "Qurb v1.0.11 (APK & AAB)"
+          tag_name: v1.0.12
+          name: "Qurb v1.0.12 (User AAB & Admin APK)"
           body: |
-            ### Qurb Matrimony v1.0.11 (Build 12)
-            - Meta (Facebook / Instagram) App Events & Native SDK Integration (CompleteRegistration, ViewContent, Search, Subscribe, Purchase)
-            - Admin Portal dossier inspection, deen/chaperone verification, and manual subscription manager
-            - Ban/Unban live enforcement and security hardening
+            ### Qurb Matrimony v1.0.12 (Build 12)
+            - **Qurb-Admin.apk**: Dedicated standalone APK for Qurb Executive Admin Portal (User Dossier, Moderation, Ban/Unban, VIP Quotas)
+            - **app-release.aab**: Production Signed Bundle for Google Play Store upload
+            - **app-release.apk**: Full Client Android APK with Meta SDK & Play Billing
             - 100% automated test verification (274 tests passing)
-            - Full Android Release AAB & APK Bundles for Google Play Store upload
           files: |
             serene-union-app/android/app/build/outputs/apk/release/app-release.apk
             serene-union-app/android/app/build/outputs/bundle/release/app-release.aab
+            admin-android/app/build/outputs/apk/release/Qurb-Admin.apk

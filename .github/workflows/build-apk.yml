@@ -83,7 +83,8 @@ jobs:
           chmod +x gradlew
           cp -n ../serene-union-app/android/app/qurb-release-key.jks app/qurb-release-key.jks || true
           ./gradlew assembleRelease --no-daemon --stacktrace
-          cp app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/Qurb-Admin.apk
+          ls -la app/build/outputs/apk/release/ || true
+          find app/build/outputs/apk/release/ -name "*.apk" -exec cp {} app/build/outputs/apk/release/Qurb-Admin.apk \;
 
       - name: Upload Play Store Signed Release AAB (Google Play Console)
         uses: actions/upload-artifact@v4

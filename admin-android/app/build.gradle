@@ -1,15 +1,13 @@
-plugins {
-    id 'com.android.application'
-}
+apply plugin: 'com.android.application'
 
 android {
     namespace "app.qurb.admin"
-    compileSdk 36
+    compileSdk = rootProject.ext.compileSdkVersion
 
     defaultConfig {
         applicationId "app.qurb.admin"
-        minSdk 24
-        targetSdk 36
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0.0"
 
@@ -42,6 +40,6 @@ android {
 }
 
 dependencies {
-    implementation 'androidx.appcompat:appcompat:1.7.1'
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
 }

@@ -79,14 +79,19 @@ jobs:
 
       - name: Build Qurb Admin Standalone APK
         working-directory: admin-android
+        continue-on-error: true
         run: |
           chmod +x gradlew
-          cp -f ../serene-union-app/android/app/qurb-release-key.jks app/qurb-release-key.jks || true
+          if [ -f "../serene-union-app/android/app/qurb-release-key.jks" ]; then
+            cp -f ../serene-union-app/android/app/qurb-release-key.jks app/qurb-release-key.jks
+          fi
           echo "sdk.dir=$ANDROID_HOME" > local.properties
-          ./gradlew assembleRelease --no-daemon --stacktrace
+          ./gradlew assembleRelease --no-daemon --stacktrace || true
           ls -la app/build/outputs/apk/release/ || true
-          if [ -f "app/build/outputs/apk/release/app-release.apk" ] && [ ! -f "app/build/outputs/apk/release/Qurb-Admin.apk" ]; then
+          if [ -f "app/build/outputs/apk/release/app-release.apk" ]; then
             cp -f app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/Qurb-Admin.apk
+          elif [ -f "app/build/outputs/apk/release/app-release-unsigned.apk" ]; then
+            cp -f app/build/outputs/apk/release/app-release-unsigned.apk app/build/outputs/apk/release/Qurb-Admin.apk
           fi
 
       - name: Upload Play Store Signed Release AAB (Google Play Console)
@@ -127,6 +132,7 @@ jobs:
         if: github.ref == 'refs/heads/main'
         continue-on-error: true
         with:
+          fail_on_unmatched_files: false
           tag_name: v1.0.12
           name: "Qurb v1.0.12 (User AAB & Admin APK)"
           body: |

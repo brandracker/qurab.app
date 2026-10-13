@@ -744,6 +744,10 @@ export async function ensureSeedProfiles(db: any): Promise<number> {
         `wali_${p.id}`, p.id, p.waliName, p.waliPhone, p.waliRelation
       ).run();
 
+      const finalPhoto = p.photo.startsWith('http')
+        ? p.photo
+        : `https://serene-union-api.brandracker.workers.dev/api/photos/media/${p.photo.replace(/^\/seeds\//, '')}`;
+
       await db.prepare(`
         INSERT OR REPLACE INTO user_photos (
           id, user_id, photo_url, is_primary, sort_order
@@ -751,7 +755,7 @@ export async function ensureSeedProfiles(db: any): Promise<number> {
           ?, ?, ?, 1, 1
         )
       `).bind(
-        `photo_${p.id}_1`, p.id, p.photo
+        `photo_${p.id}_1`, p.id, finalPhoto
       ).run();
     }
 

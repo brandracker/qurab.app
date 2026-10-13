@@ -251,17 +251,21 @@ matchesRouter.get('/received', async (c) => {
     let photoMap: Record<string, string[]> = {};
 
     if (userIds.length > 0) {
-      const placeholders = userIds.map(() => '?').join(',');
-      const { results: allPhotos } = await c.env.DB.prepare(`
-        SELECT user_id, photo_url FROM user_photos 
-        WHERE user_id IN (${placeholders})
-        ORDER BY sort_order ASC
-      `).bind(...userIds).all();
+      const chunkSize = 50;
+      for (let i = 0; i < userIds.length; i += chunkSize) {
+        const chunk = userIds.slice(i, i + chunkSize);
+        const placeholders = chunk.map(() => '?').join(',');
+        const { results: chunkPhotos } = await c.env.DB.prepare(`
+          SELECT user_id, photo_url FROM user_photos 
+          WHERE user_id IN (${placeholders})
+          ORDER BY sort_order ASC
+        `).bind(...chunk).all();
 
-      (allPhotos || []).forEach((p: any) => {
-        if (!photoMap[p.user_id]) photoMap[p.user_id] = [];
-        photoMap[p.user_id].push(p.photo_url);
-      });
+        (chunkPhotos || []).forEach((p: any) => {
+          if (!photoMap[p.user_id]) photoMap[p.user_id] = [];
+          photoMap[p.user_id].push(p.photo_url);
+        });
+      }
     }
 
     const formatted = (results || []).map((row: any) => {
@@ -385,17 +389,21 @@ matchesRouter.get('/mutual', async (c) => {
     let photoMap: Record<string, string[]> = {};
 
     if (userIds.length > 0) {
-      const placeholders = userIds.map(() => '?').join(',');
-      const { results: allPhotos } = await c.env.DB.prepare(`
-        SELECT user_id, photo_url FROM user_photos 
-        WHERE user_id IN (${placeholders})
-        ORDER BY sort_order ASC
-      `).bind(...userIds).all();
+      const chunkSize = 50;
+      for (let i = 0; i < userIds.length; i += chunkSize) {
+        const chunk = userIds.slice(i, i + chunkSize);
+        const placeholders = chunk.map(() => '?').join(',');
+        const { results: chunkPhotos } = await c.env.DB.prepare(`
+          SELECT user_id, photo_url FROM user_photos 
+          WHERE user_id IN (${placeholders})
+          ORDER BY sort_order ASC
+        `).bind(...chunk).all();
 
-      (allPhotos || []).forEach((p: any) => {
-        if (!photoMap[p.user_id]) photoMap[p.user_id] = [];
-        photoMap[p.user_id].push(p.photo_url);
-      });
+        (chunkPhotos || []).forEach((p: any) => {
+          if (!photoMap[p.user_id]) photoMap[p.user_id] = [];
+          photoMap[p.user_id].push(p.photo_url);
+        });
+      }
     }
 
     const formatted = (results || []).map((row: any) => {

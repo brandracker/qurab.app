@@ -113,8 +113,10 @@ photosRouter.get('/media/:fileId', async (c) => {
 
     const headers = new Headers();
     object.writeHttpMetadata(headers);
-    headers.set('etag', object.httpEtag);
-    headers.set('Content-Type', object.httpMetadata?.contentType || 'audio/webm');
+    const ext = fileId.split('.').pop()?.toLowerCase();
+    const isImage = ext === 'jpg' || ext === 'jpeg' || ext === 'png' || ext === 'webp';
+    const fallbackMime = isImage ? (ext === 'jpg' ? 'image/jpeg' : `image/${ext}`) : 'audio/webm';
+    headers.set('Content-Type', object.httpMetadata?.contentType || fallbackMime);
     headers.set('Accept-Ranges', 'bytes');
     headers.set('Cache-Control', 'public, max-age=31536000');
     headers.set('Access-Control-Allow-Origin', '*');

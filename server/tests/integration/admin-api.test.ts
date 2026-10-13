@@ -308,4 +308,127 @@ describe('Admin Portal API & Security Integration Tests', () => {
     expect(walletRow.daily_messages_quota).toBe(9999);
     expect(walletRow.direct_salams_balance).toBeGreaterThanOrEqual(25);
   });
+
+  it('13. POST /api/admin/users/:id/gender safely switches gender and resets prior likes, matches and conversations', async () => {
+    // 1. Seed two users (one male, one female) with active match and conversation
+    await env.DB.prepare(`
+      INSERT INTO users (id, phone, email, full_name, dob, gender, location, blur_photos_by_default)
+      VALUES 
+        ('usr_swap_m', '+923011111111', 'brother.swap@test.com', 'Brother Swap', '1995-05-05', 'male', 'Lahore', 0),
+        ('usr_swap_f', '+923022222222', 'sister.swap@test.com', 'Sister Swap', '1997-07-07', 'female', 'Karachi', 1);
+    `).run();
+
+    // Seed like/match and conversation
+    await env.DB.prepare(`
+      INSERT INTO matches_and_likes (id, sender_id, receiver_id, action)
+      VALUES ('match_123', 'usr_swap_m', 'usr_swap_f', 'like');
+    `).run();
+
+    await env.DB.prepare(`
+      INSERT INTO conversations (id, participant_one, participant_two, jsonl_log_path)
+      VALUES ('conv_123', 'usr_swap_m', 'usr_swap_f', '/chats/conv_123.jsonl');
+    `).run();
+
+    // 2. Change Brother Swap's gender to 'female' (e.g. signup mistake correction)
+    const switchRes = await app.request('/api/admin/users/usr_swap_m/gender', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${adminToken}`
+      },
+      body: JSON.stringify({
+        gender: 'female',
+        reason: 'User created account with incorrect gender option'
+      })
+    }, env);
+
+    expect(switchRes.status).toBe(200);
+    const switchData = await switchRes.json();
+    expect(switchData.success).toBe(true);
+    expect(switchData.gender).toBe('female');
+
+    // 3. Verify in database: gender updated, modesty blur active
+    const updatedUser = await env.DB.prepare('SELECT gender, blur_photos_by_default FROM users WHERE id = ?').bind('usr_swap_m').first();
+    expect(updatedUser.gender).toBe('female');
+    expect(updatedUser.blur_photos_by_default).toBe(1);
+
+    // 4. Verify Islamic opposite-gender safeguards: likes/matches & conversations cleanly reset
+    const remainingMatches = await env.DB.prepare('SELECT * FROM matches_and_likes WHERE sender_id = ? OR receiver_id = ?').bind('usr_swap_m', 'usr_swap_m').all();
+    expect(remainingMatches.results.length).toBe(0);
+
+    const remainingConvs = await env.DB.prepare('SELECT * FROM conversations WHERE participant_one = ? OR participant_two = ?').bind('usr_swap_m', 'usr_swap_m').all();
+    expect(remainingConvs.results.length).toBe(0);
+  });
+
+  it('14. DELETE /api/admin/users/:id safely soft-deletes a user and clears interactions', async () => {
+    await env.DB.prepare(`
+      INSERT INTO users (id, phone, email, full_name, dob, gender, location, account_status)
+      VALUES 
+        ('usr_soft_del', '+923033333333', 'softdel@test.com', 'Deactivate Me', '1992-02-02', 'male', 'Islamabad', 'active'),
+        ('usr_partner_f', '+923055555555', 'partnerf@test.com', 'Sister Partner', '1994-04-04', 'female', 'Islamabad', 'active');
+    `).run();
+
+    await env.DB.prepare(`
+      INSERT INTO matches_and_likes (id, sender_id, receiver_id, action)
+      VALUES ('match_del_1', 'usr_soft_del', 'usr_partner_f', 'like');
+    `).run();
+
+    const delRes = await app.request('/api/admin/users/usr_soft_del', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${adminToken}`
+      },
+      body: JSON.stringify({
+        permanent: false,
+        reason: 'User requested account deactivation'
+      })
+    }, env);
+
+    expect(delRes.status).toBe(200);
+    const delData = await delRes.json();
+    expect(delData.success).toBe(true);
+    expect(delData.permanent).toBe(false);
+
+    // Verify user row still exists for audit/billing integrity, but status is 'deleted' and is_banned is 1
+    const userRow = await env.DB.prepare('SELECT account_status, is_banned, ban_reason FROM users WHERE id = ?').bind('usr_soft_del').first();
+    expect(userRow.account_status).toBe('deleted');
+    expect(userRow.is_banned).toBe(1);
+    expect(userRow.ban_reason).toBe('User requested account deactivation');
+
+    // Pending likes/matches wiped
+    const userLikes = await env.DB.prepare('SELECT * FROM matches_and_likes WHERE sender_id = ?').bind('usr_soft_del').all();
+    expect(userLikes.results.length).toBe(0);
+
+    // Directory filter check: user should not be returned on status=active
+    const listRes = await app.request('/api/admin/users?status=active', {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${adminToken}` }
+    }, env);
+    const listData = await listRes.json();
+    const foundInActive = listData.users.some((u: any) => u.id === 'usr_soft_del');
+    expect(foundInActive).toBe(false);
+  });
+
+  it('15. DELETE /api/admin/users/:id?permanent=true permanently purges user and cascades', async () => {
+    await env.DB.prepare(`
+      INSERT INTO users (id, phone, email, full_name, dob, gender, location)
+      VALUES ('usr_hard_del', '+923044444444', 'harddel@test.com', 'Purge Me', '1990-01-01', 'female', 'Rawalpindi');
+    `).run();
+
+    const hardDelRes = await app.request('/api/admin/users/usr_hard_del?permanent=true', {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${adminToken}` }
+    }, env);
+
+    expect(hardDelRes.status).toBe(200);
+    const hardDelData = await hardDelRes.json();
+    expect(hardDelData.success).toBe(true);
+    expect(hardDelData.permanent).toBe(true);
+
+    // Verify completely deleted from database
+    const userRow = await env.DB.prepare('SELECT id FROM users WHERE id = ?').bind('usr_hard_del').first();
+    expect(userRow).toBeNull();
+  });
 });
+

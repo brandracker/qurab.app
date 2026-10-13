@@ -572,4 +572,184 @@ describe('Admin Portal UI & Isolation Tests', () => {
       });
     });
   });
+
+  it('16. AdminPortal UserInspectModal changes gender with confirmation and interaction reset alert', async () => {
+    sessionStorage.setItem('qurb_admin_token', 'adm_tok_adm_root.mock.123');
+
+    let genderPayload: any = null;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url: any, opts: any) => {
+      const urlStr = String(url);
+      if (urlStr.includes('/admin/users/usr_gender_test/gender') && opts?.method === 'POST') {
+        genderPayload = JSON.parse(opts.body);
+        return {
+          ok: true,
+          json: async () => ({
+            success: true,
+            gender: 'female',
+            message: 'User gender updated and interactions reset'
+          })
+        } as any;
+      }
+      if (urlStr.includes('/admin/users/usr_gender_test')) {
+        return {
+          ok: true,
+          json: async () => ({
+            success: true,
+            user: {
+              id: 'usr_gender_test',
+              full_name: 'Brother Ahmad',
+              email: 'ahmad@test.com',
+              gender: 'male',
+              city: 'London',
+              photos: []
+            }
+          })
+        } as any;
+      }
+      if (urlStr.includes('/admin/users')) {
+        return {
+          ok: true,
+          json: async () => ({
+            success: true,
+            users: [
+              {
+                id: 'usr_gender_test',
+                full_name: 'Brother Ahmad',
+                email: 'ahmad@test.com',
+                gender: 'male',
+                city: 'London',
+                is_vip: 0,
+                account_status: 'active'
+              }
+            ],
+            total: 1,
+            totalPages: 1
+          })
+        } as any;
+      }
+      return { ok: true, json: async () => ({ success: true, stats: {}, cities: [] }) } as any;
+    });
+
+    render(<AdminPortal />);
+    fireEvent.click(screen.getByRole('button', { name: /User Directory/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Brother Ahmad/i)).toBeDefined();
+    });
+
+    // Inspect user
+    fireEvent.click(screen.getByRole('button', { name: /Inspect & Photos/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Personal Biodata & Contact/i)).toBeDefined();
+    });
+
+    // Click "Switch to Female" button
+    const switchGenderBtn = screen.getByRole('button', { name: /Switch to Female/i });
+    fireEvent.click(switchGenderBtn);
+
+    // Confirmation dialog should appear warning about opposite-gender matching
+    await waitFor(() => {
+      expect(screen.getByText(/Confirm Gender Switch to Female/i)).toBeDefined();
+      expect(screen.getByText(/All prior likes, matches, and chats will be cleanly reset/i)).toBeDefined();
+    });
+
+    // Click "Confirm Switch to Female"
+    fireEvent.click(screen.getByRole('button', { name: /Confirm Switch to Female/i }));
+
+    await waitFor(() => {
+      expect(genderPayload).toEqual({ gender: 'female' });
+    });
+  });
+
+  it('17. AdminPortal UserInspectModal removes user with soft-delete or permanent purge options', async () => {
+    sessionStorage.setItem('qurb_admin_token', 'adm_tok_adm_root.mock.123');
+
+    let deleteRequested = false;
+    let deletePermanent = false;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url: any, opts: any) => {
+      const urlStr = String(url);
+      if (urlStr.includes('/admin/users/usr_remove_test') && opts?.method === 'DELETE') {
+        deleteRequested = true;
+        const body = opts.body ? JSON.parse(opts.body) : {};
+        deletePermanent = Boolean(body.permanent);
+        return {
+          ok: true,
+          json: async () => ({
+            success: true,
+            message: 'User safely deactivated and marked as deleted'
+          })
+        } as any;
+      }
+      if (urlStr.includes('/admin/users/usr_remove_test')) {
+        return {
+          ok: true,
+          json: async () => ({
+            success: true,
+            user: {
+              id: 'usr_remove_test',
+              full_name: 'Remove Candidate',
+              gender: 'female',
+              city: 'Manchester',
+              photos: []
+            }
+          })
+        } as any;
+      }
+      if (urlStr.includes('/admin/users')) {
+        return {
+          ok: true,
+          json: async () => ({
+            success: true,
+            users: [
+              {
+                id: 'usr_remove_test',
+                full_name: 'Remove Candidate',
+                gender: 'female',
+                city: 'Manchester',
+                is_vip: 0,
+                account_status: 'active'
+              }
+            ],
+            total: 1,
+            totalPages: 1
+          })
+        } as any;
+      }
+      return { ok: true, json: async () => ({ success: true, stats: {}, cities: [] }) } as any;
+    });
+
+    render(<AdminPortal />);
+    fireEvent.click(screen.getByRole('button', { name: /User Directory/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Remove Candidate/i)).toBeDefined();
+    });
+
+    // Inspect user
+    fireEvent.click(screen.getByRole('button', { name: /Inspect & Photos/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Remove User/i })).toBeDefined();
+    });
+
+    // Click Remove User
+    fireEvent.click(screen.getByRole('button', { name: /Remove User/i }));
+
+    // Confirmation dialog appears
+    await waitFor(() => {
+      expect(screen.getByText(/Select removal type for this member/i)).toBeDefined();
+      expect(screen.getByRole('button', { name: /Deactivate \(Soft Delete\)/i })).toBeDefined();
+      expect(screen.getByRole('button', { name: /Permanent Purge/i })).toBeDefined();
+    });
+
+    // Click Deactivate (Soft Delete)
+    fireEvent.click(screen.getByRole('button', { name: /Deactivate \(Soft Delete\)/i }));
+
+    await waitFor(() => {
+      expect(deleteRequested).toBe(true);
+      expect(deletePermanent).toBe(false);
+    });
+  });
 });
+

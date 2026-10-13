@@ -421,6 +421,44 @@ class DBService {
         localStorage.removeItem(this.conversationsKey);
       } catch {}
     }
+
+    // Auto-migrate any activities performed as guest (usr_guest) to newly authenticated user
+    if (user.id && user.id !== 'usr_guest') {
+      try {
+        const guestLikes = this.getUserLikesSent('usr_guest');
+        const guestPassed = this.getUserPassed('usr_guest');
+        const guestBlocked = this.getUserBlocked('usr_guest');
+
+        if (guestLikes.length > 0 || guestPassed.length > 0 || guestBlocked.length > 0) {
+          const userLikes = this.getUserLikesSent(user.id);
+          const userPassed = this.getUserPassed(user.id);
+          const userBlocked = this.getUserBlocked(user.id);
+
+          const mergedLikes = [...guestLikes, ...userLikes.filter(u => !guestLikes.some(g => g.id === u.id))];
+          const mergedPassed = [...guestPassed, ...userPassed.filter(u => !guestPassed.some(g => g.id === u.id))];
+          const mergedBlocked = [...guestBlocked, ...userBlocked.filter(u => !guestBlocked.some(g => g.id === u.id))];
+
+          localStorage.setItem(`serene_likes_sent_${user.id}`, JSON.stringify(mergedLikes));
+          localStorage.setItem(`serene_passed_${user.id}`, JSON.stringify(mergedPassed));
+          localStorage.setItem(`serene_blocked_${user.id}`, JSON.stringify(mergedBlocked));
+
+          // Clean up guest local keys to avoid re-triggering migration
+          localStorage.removeItem('serene_likes_sent_usr_guest');
+          localStorage.removeItem('serene_passed_usr_guest');
+          localStorage.removeItem('serene_blocked_usr_guest');
+
+          // Async sync to Cloudflare D1
+          fetch(`${API_BASE}/matches/migrate-guest`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ guestId: 'usr_guest', authenticatedId: user.id })
+          }).catch(() => {});
+        }
+      } catch (err) {
+        console.warn('Guest migration notice:', err);
+      }
+    }
+
     this.currentUserId = user.id;
     try {
       localStorage.setItem(this.userKey, JSON.stringify(user));
@@ -1170,7 +1208,8 @@ class DBService {
     targetUserId: string, 
     action: 'liked' | 'passed' | 'direct_salam', 
     messageText?: string,
-    targetProfile?: Partial<UserProfile>
+    targetProfile?: Partial<UserProfile>,
+    isMutualMatch?: boolean
   ): Promise<{ isMutual: boolean; conversationId?: string; message?: string }> {
     const user = this.getCurrentUser();
     const allProf = this.getAllProfiles();
@@ -1193,7 +1232,7 @@ class DBService {
       marriageTimeline: prof?.marriageTimeline || cachedProf?.marriageTimeline || 'within_1_year',
       bio: prof?.bio || cachedProf?.bio || 'Seeking a pious spouse for marriage.',
       photos: safePhotos,
-      action: action,
+      action: isMutualMatch ? 'mutual_match' : action,
       actionTime: new Date().toISOString()
     };
 
@@ -1206,6 +1245,17 @@ class DBService {
       const passedKey = `serene_passed_${user.id}`;
       const localPassed = this.getUserPassed(user.id).filter(p => p.id !== targetUserId);
       try { localStorage.setItem(passedKey, JSON.stringify(localPassed)); } catch {}
+
+      if (isMutualMatch) {
+        const mutualKey = `serene_mutual_matches_${user.id}`;
+        try {
+          const savedMutual = JSON.parse(localStorage.getItem(mutualKey) || '[]');
+          if (!savedMutual.some((m: any) => m.id === targetUserId)) {
+            savedMutual.unshift(prof || actionItem);
+            localStorage.setItem(mutualKey, JSON.stringify(savedMutual));
+          }
+        } catch {}
+      }
     } else if (action === 'passed') {
       const passedKey = `serene_passed_${user.id}`;
       const localPassed = this.getUserPassed(user.id).filter(p => p.id !== targetUserId);
@@ -1228,17 +1278,18 @@ class DBService {
           senderId: user.id,
           receiverId: targetUserId,
           action,
-          messageText
+          messageText,
+          isMutualMatch
         })
       });
       const data = await res.json();
       return {
-        isMutual: Boolean(data.isMutual),
+        isMutual: Boolean(data.isMutual || isMutualMatch),
         conversationId: data.conversationId,
         message: data.message
       };
     } catch {
-      return { isMutual: false };
+      return { isMutual: Boolean(isMutualMatch) };
     }
   }
 
@@ -1247,9 +1298,10 @@ class DBService {
     targetUserId: string, 
     action: 'liked' | 'passed' | 'direct_salam', 
     messageText?: string,
-    targetProfile?: Partial<UserProfile>
+    targetProfile?: Partial<UserProfile>,
+    isMutualMatch?: boolean
   ): Promise<{ isMutual: boolean; conversationId?: string; message?: string }> {
-    return this.sendMatchAction(targetUserId, action, messageText, targetProfile);
+    return this.sendMatchAction(targetUserId, action, messageText, targetProfile, isMutualMatch);
   }
 
   async fetchLikedYouCandidates(): Promise<UserProfile[]> {

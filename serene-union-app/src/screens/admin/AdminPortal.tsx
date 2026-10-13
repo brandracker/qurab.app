@@ -231,6 +231,63 @@ export const AdminPortal: React.FC = () => {
     }
   };
 
+  // Switch User Gender
+  const handleChangeGender = async (userId: string, targetGender: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/admin/users/${userId}/gender`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`
+        },
+        body: JSON.stringify({ gender: targetGender })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setUsers(prev => prev.map(u => u.id === userId ? { ...u, gender: targetGender } : u));
+        if (selectedUser?.id === userId) {
+          setSelectedUser((prev: any) => ({ ...prev, gender: targetGender }));
+        }
+        fetchStats();
+        showToast(`Gender updated to ${targetGender} & interactions reset!`);
+      } else {
+        showToast(data.error || 'Failed to update gender.');
+      }
+    } catch {
+      showToast('Network error while updating gender.');
+    }
+  };
+
+  // Remove User (Soft Deactivate or Permanent Purge)
+  const handleRemoveUser = async (userId: string, permanent: boolean = false) => {
+    try {
+      const res = await fetch(`${API_BASE}/admin/users/${userId}${permanent ? '?permanent=true' : ''}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`
+        },
+        body: JSON.stringify({ permanent })
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (permanent) {
+          setUsers(prev => prev.filter(u => u.id !== userId));
+          setTotalUsersCount(prev => Math.max(0, prev - 1));
+        } else {
+          setUsers(prev => prev.map(u => u.id === userId ? { ...u, account_status: 'deleted', is_banned: 1 } : u));
+        }
+        setSelectedUser(null);
+        fetchStats();
+        showToast(data.message || (permanent ? 'User permanently removed!' : 'User deactivated!'));
+      } else {
+        showToast(data.error || 'Failed to remove user.');
+      }
+    } catch {
+      showToast('Network error while removing user.');
+    }
+  };
+
   // Comprehensive Manual Subscription & Quotas Update
   const handleUpdateSubscription = async (
     userId: string,
@@ -531,6 +588,8 @@ export const AdminPortal: React.FC = () => {
           onDeletePhoto={handleDeletePhoto}
           onToggleVip={handleToggleVip}
           onToggleBan={handleToggleBan}
+          onChangeGender={handleChangeGender}
+          onRemoveUser={handleRemoveUser}
           onOpenSubscription={() => setSelectedSubscriptionUser(selectedUser)}
         />
       )}

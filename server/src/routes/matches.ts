@@ -6,24 +6,21 @@ export const matchesRouter = new Hono<AppContext>();
 // 1. Matches & Likes Action with True Mutual Match Detection & Conversation Creation
 matchesRouter.post('/action', async (c) => {
   try {
-    const { senderId, receiverId, action, messageText } = await c.req.json();
+    const { senderId, receiverId, action, messageText, isMutualMatch } = await c.req.json();
     if (!senderId || !receiverId || !action) {
       return c.json({ success: false, error: 'senderId, receiverId, and action are required' }, 400);
     }
 
-    // Ensure guest users exist in users table to prevent SQLITE_CONSTRAINT_FOREIGNKEY errors
-    if (senderId === 'usr_guest' || senderId.startsWith('usr_guest')) {
-      await c.env.DB.prepare(`
-        INSERT OR IGNORE INTO users (id, email, phone, full_name, dob, gender, location)
-        VALUES (?, 'guest@sereneunion.app', '+0000000000', 'Guest Member', '1998-01-01', 'other', 'Global')
-      `).bind(senderId).run();
-    }
-    if (receiverId === 'usr_guest' || receiverId.startsWith('usr_guest')) {
-      await c.env.DB.prepare(`
-        INSERT OR IGNORE INTO users (id, email, phone, full_name, dob, gender, location)
-        VALUES (?, 'guest@sereneunion.app', '+0000000000', 'Guest Member', '1998-01-01', 'other', 'Global')
-      `).bind(receiverId).run();
-    }
+    // Ensure both sender and receiver exist in users table to prevent SQLITE_CONSTRAINT_FOREIGNKEY errors
+    await c.env.DB.prepare(`
+      INSERT OR IGNORE INTO users (id, email, phone, full_name, dob, gender, location)
+      VALUES (?, 'member@sereneunion.app', '+00' || substr(abs(random()), 1, 10), 'Candidate', '1998-01-01', 'other', 'Global')
+    `).bind(senderId).run();
+
+    await c.env.DB.prepare(`
+      INSERT OR IGNORE INTO users (id, email, phone, full_name, dob, gender, location)
+      VALUES (?, 'member@sereneunion.app', '+00' || substr(abs(random()), 1, 10), 'Candidate', '1998-01-01', 'other', 'Global')
+    `).bind(receiverId).run();
 
     const matchId = `mat_${senderId}_${receiverId}`;
 
@@ -90,26 +87,26 @@ matchesRouter.post('/action', async (c) => {
     }
 
     if (action === 'liked') {
-      // Check if receiver has already liked the sender for a true mutual match
+      // Check if receiver has already liked the sender for a true mutual match or if client specified isMutualMatch
       const reverseLike: any = await c.env.DB.prepare(`
         SELECT id, action FROM matches_and_likes 
         WHERE sender_id = ? AND receiver_id = ? AND (action = 'liked' OR action = 'mutual_match' OR action = 'direct_salam')
       `).bind(receiverId, senderId).first();
 
-      if (reverseLike) {
+      if (reverseLike || isMutualMatch) {
         // True Mutual Match!
         const convId = `conv_${[senderId, receiverId].sort().join('_')}`;
 
-        // 1. Update both match records to mutual_match
+        // 1. Update both match records to mutual_match bidirectionally
         await c.env.DB.prepare(`
           INSERT OR REPLACE INTO matches_and_likes (id, sender_id, receiver_id, action)
           VALUES (?, ?, ?, 'mutual_match')
         `).bind(matchId, senderId, receiverId).run();
 
         await c.env.DB.prepare(`
-          UPDATE matches_and_likes SET action = 'mutual_match' 
-          WHERE sender_id = ? AND receiver_id = ?
-        `).bind(receiverId, senderId).run();
+          INSERT OR REPLACE INTO matches_and_likes (id, sender_id, receiver_id, action)
+          VALUES (?, ?, ?, 'mutual_match')
+        `).bind(`mat_${receiverId}_${senderId}`, receiverId, senderId).run();
 
         // 2. Automatically create conversation in D1
         await c.env.DB.prepare(`
@@ -209,14 +206,30 @@ matchesRouter.get('/received', async (c) => {
 
     const query = `
       SELECT 
-        u.id, u.phone, u.email, u.full_name as fullName, u.dob, u.gender, 
-        u.location, u.city, u.country, u.profession, u.education, u.university, u.height, 
-        u.ethnicity, u.marriage_timeline as marriageTimeline, u.bio, 
-        u.family_structure as familyStructure, u.living_preference as livingPreference,
-        u.siblings_count as siblingsCount, u.willingness_to_relocate as willingnessToRelocate,
-        u.smoking_status as smokingStatus, u.languages_spoken as languagesSpoken,
-        u.mahr_philosophy as mahrPhilosophy, u.children_desire as childrenDesire,
-        u.blur_photos_by_default as blurPhotosByDefault, u.profile_visibility as profileVisibility,
+        COALESCE(u.id, m.sender_id) as id, 
+        u.phone, u.email, 
+        COALESCE(u.full_name, 'Member') as fullName, 
+        COALESCE(u.dob, '1998-01-01') as dob, 
+        COALESCE(u.gender, 'other') as gender, 
+        COALESCE(u.location, 'Global') as location, 
+        u.city, u.country, 
+        COALESCE(u.profession, 'Professional') as profession, 
+        COALESCE(u.education, 'Graduate') as education, 
+        u.university, 
+        COALESCE(u.height, '180 cm') as height, 
+        COALESCE(u.ethnicity, 'Global') as ethnicity, 
+        COALESCE(u.marriage_timeline, 'within_1_year') as marriageTimeline, 
+        COALESCE(u.bio, 'Seeking half my deen.') as bio, 
+        COALESCE(u.family_structure, 'nuclear') as familyStructure, 
+        COALESCE(u.living_preference, 'independent') as livingPreference,
+        COALESCE(u.siblings_count, 0) as siblingsCount, 
+        COALESCE(u.willingness_to_relocate, 'open') as willingnessToRelocate,
+        COALESCE(u.smoking_status, 'non_smoker') as smokingStatus, 
+        COALESCE(u.languages_spoken, 'English, Urdu') as languagesSpoken,
+        COALESCE(u.mahr_philosophy, 'mutual_agreement') as mahrPhilosophy, 
+        COALESCE(u.children_desire, 'desires_children') as childrenDesire,
+        COALESCE(u.blur_photos_by_default, 1) as blurPhotosByDefault, 
+        COALESCE(u.profile_visibility, 'all_users') as profileVisibility,
         rp.practice_level as practiceLevel, rp.sect, rp.madhhab, rp.prayer_frequency as prayerFrequency, 
         rp.halal_diet as halalDiet, rp.quran_recitation as quranRecitation,
         rp.modesty_practice as modestyPractice, rp.hajj_umrah_status as hajjUmrahStatus,
@@ -224,7 +237,7 @@ matchesRouter.get('/received', async (c) => {
         w.wali_name as waliName, w.wali_relationship as waliRelationship, w.wali_phone as waliPhone, w.is_verified as waliVerified,
         m.created_at as likedAt
       FROM matches_and_likes m
-      JOIN users u ON m.sender_id = u.id
+      LEFT JOIN users u ON m.sender_id = u.id
       LEFT JOIN religious_profiles rp ON u.id = rp.user_id
       LEFT JOIN wali_details w ON u.id = w.user_id
       WHERE m.receiver_id = ? AND (m.action = 'liked' OR m.action = 'direct_salam')
@@ -321,21 +334,37 @@ matchesRouter.get('/mutual', async (c) => {
 
     const query = `
       SELECT DISTINCT
-        u.id, u.phone, u.email, u.full_name as fullName, u.dob, u.gender, 
-        u.location, u.city, u.country, u.profession, u.education, u.university, u.height, 
-        u.ethnicity, u.marriage_timeline as marriageTimeline, u.bio, 
-        u.family_structure as familyStructure, u.living_preference as livingPreference,
-        u.siblings_count as siblingsCount, u.willingness_to_relocate as willingnessToRelocate,
-        u.smoking_status as smokingStatus, u.languages_spoken as languagesSpoken,
-        u.mahr_philosophy as mahrPhilosophy, u.children_desire as childrenDesire,
-        u.blur_photos_by_default as blurPhotosByDefault, u.profile_visibility as profileVisibility,
+        COALESCE(u.id, CASE WHEN m.sender_id = ? THEN m.receiver_id ELSE m.sender_id END) as id, 
+        u.phone, u.email, 
+        COALESCE(u.full_name, 'Member') as fullName, 
+        COALESCE(u.dob, '1998-01-01') as dob, 
+        COALESCE(u.gender, 'other') as gender, 
+        COALESCE(u.location, 'Global') as location, 
+        u.city, u.country, 
+        COALESCE(u.profession, 'Professional') as profession, 
+        COALESCE(u.education, 'Graduate') as education, 
+        u.university, 
+        COALESCE(u.height, '180 cm') as height, 
+        COALESCE(u.ethnicity, 'Global') as ethnicity, 
+        COALESCE(u.marriage_timeline, 'within_1_year') as marriageTimeline, 
+        COALESCE(u.bio, 'Seeking half my deen.') as bio, 
+        COALESCE(u.family_structure, 'nuclear') as familyStructure, 
+        COALESCE(u.living_preference, 'independent') as livingPreference,
+        COALESCE(u.siblings_count, 0) as siblingsCount, 
+        COALESCE(u.willingness_to_relocate, 'open') as willingnessToRelocate,
+        COALESCE(u.smoking_status, 'non_smoker') as smokingStatus, 
+        COALESCE(u.languages_spoken, 'English, Urdu') as languagesSpoken,
+        COALESCE(u.mahr_philosophy, 'mutual_agreement') as mahrPhilosophy, 
+        COALESCE(u.children_desire, 'desires_children') as childrenDesire,
+        COALESCE(u.blur_photos_by_default, 1) as blurPhotosByDefault, 
+        COALESCE(u.profile_visibility, 'all_users') as profileVisibility,
         rp.practice_level as practiceLevel, rp.sect, rp.madhhab, rp.prayer_frequency as prayerFrequency, 
         rp.halal_diet as halalDiet, rp.quran_recitation as quranRecitation,
         rp.modesty_practice as modestyPractice, rp.hajj_umrah_status as hajjUmrahStatus,
         rp.deen_relationship_bio as deenRelationshipBio,
         w.wali_name as waliName, w.wali_relationship as waliRelationship, w.wali_phone as waliPhone, w.is_verified as waliVerified
       FROM matches_and_likes m
-      JOIN users u ON (m.sender_id = u.id OR m.receiver_id = u.id) AND u.id != ?
+      LEFT JOIN users u ON (m.sender_id = u.id OR m.receiver_id = u.id) AND u.id != ?
       LEFT JOIN religious_profiles rp ON u.id = rp.user_id
       LEFT JOIN wali_details w ON u.id = w.user_id
       WHERE (m.sender_id = ? OR m.receiver_id = ?) 
@@ -349,7 +378,7 @@ matchesRouter.get('/mutual', async (c) => {
       ORDER BY m.created_at DESC
     `;
 
-    const { results } = await c.env.DB.prepare(query).bind(userId, userId, userId).all();
+    const { results } = await c.env.DB.prepare(query).bind(userId, userId, userId, userId).all();
 
     // Fetch photos
     const userIds = (results || []).map((r: any) => r.id);
@@ -466,10 +495,13 @@ matchesRouter.get('/activity', async (c) => {
     // B. Passed Profiles
     const { results: passed } = await c.env.DB.prepare(`
       SELECT 
-        u.id, u.full_name as fullName, u.location, u.profession,
+        COALESCE(u.id, m.receiver_id) as id,
+        COALESCE(u.full_name, 'Candidate') as fullName,
+        COALESCE(u.location, 'Global') as location,
+        COALESCE(u.profession, 'Professional') as profession,
         m.created_at as actionTime
       FROM matches_and_likes m
-      JOIN users u ON m.receiver_id = u.id
+      LEFT JOIN users u ON m.receiver_id = u.id
       WHERE m.sender_id = ? AND m.action = 'passed'
       ORDER BY m.created_at DESC
     `).bind(userId).all();
@@ -477,9 +509,13 @@ matchesRouter.get('/activity', async (c) => {
     // C. Blocked Users
     const { results: blocked } = await c.env.DB.prepare(`
       SELECT 
-        u.id, u.full_name as fullName, u.location, b.reason, b.created_at as actionTime
+        COALESCE(u.id, b.blocked_id) as id,
+        COALESCE(u.full_name, 'Member') as fullName,
+        COALESCE(u.location, 'Global') as location,
+        COALESCE(b.reason, 'User requested block') as reason,
+        b.created_at as actionTime
       FROM blocked_users b
-      JOIN users u ON b.blocked_id = u.id
+      LEFT JOIN users u ON b.blocked_id = u.id
       WHERE b.blocker_id = ?
       ORDER BY b.created_at DESC
     `).bind(userId).all();
@@ -492,6 +528,52 @@ matchesRouter.get('/activity', async (c) => {
     });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// 5. Migrate Guest Activities to Newly Logged-In User
+matchesRouter.post('/migrate-guest', async (c) => {
+  try {
+    const { guestId, authenticatedId } = await c.req.json();
+    if (!guestId || !authenticatedId || guestId === authenticatedId) {
+      return c.json({ success: false, error: 'Valid guestId and authenticatedId are required' }, 400);
+    }
+
+    // Ensure authenticated user exists in users table
+    await c.env.DB.prepare(`
+      INSERT OR IGNORE INTO users (id, email, phone, full_name, dob, gender, location)
+      VALUES (?, 'member@sereneunion.app', '+00' || substr(abs(random()), 1, 10), 'Member', '1998-01-01', 'other', 'Global')
+    `).bind(authenticatedId).run();
+
+    // Delete conflicting matches where authenticatedId already acted on receiver
+    await c.env.DB.prepare(`
+      DELETE FROM matches_and_likes 
+      WHERE sender_id = ? AND receiver_id IN (SELECT receiver_id FROM matches_and_likes WHERE sender_id = ?)
+    `).bind(authenticatedId, guestId).run();
+
+    // Migrate matches_and_likes
+    await c.env.DB.prepare(`
+      UPDATE matches_and_likes 
+      SET sender_id = ?, id = 'mat_' || ? || '_' || receiver_id 
+      WHERE sender_id = ?
+    `).bind(authenticatedId, authenticatedId, guestId).run();
+
+    // Delete conflicting blocks
+    await c.env.DB.prepare(`
+      DELETE FROM blocked_users 
+      WHERE blocker_id = ? AND blocked_id IN (SELECT blocked_id FROM blocked_users WHERE blocker_id = ?)
+    `).bind(authenticatedId, guestId).run();
+
+    // Migrate blocked_users
+    await c.env.DB.prepare(`
+      UPDATE blocked_users 
+      SET blocker_id = ?, id = 'blk_' || ? || '_' || blocked_id 
+      WHERE blocker_id = ?
+    `).bind(authenticatedId, authenticatedId, guestId).run();
+
+    return c.json({ success: true, message: 'Guest activities migrated successfully.' });
+  } catch (err: any) {
+    return c.json({ success: false, error: err.message }, 500);
   }
 });
 
@@ -521,6 +603,17 @@ matchesRouter.post('/block', async (c) => {
     if (!userId || !targetId) {
       return c.json({ success: false, error: 'userId and targetId are required' }, 400);
     }
+
+    // Ensure users exist to satisfy foreign key constraints
+    await c.env.DB.prepare(`
+      INSERT OR IGNORE INTO users (id, email, phone, full_name, dob, gender, location)
+      VALUES (?, 'member@sereneunion.app', '+00' || substr(abs(random()), 1, 10), 'Member', '1998-01-01', 'other', 'Global')
+    `).bind(userId).run();
+
+    await c.env.DB.prepare(`
+      INSERT OR IGNORE INTO users (id, email, phone, full_name, dob, gender, location)
+      VALUES (?, 'member@sereneunion.app', '+00' || substr(abs(random()), 1, 10), 'Member', '1998-01-01', 'other', 'Global')
+    `).bind(targetId).run();
 
     const blockId = `blk_${userId}_${targetId}`;
     await c.env.DB.prepare(`

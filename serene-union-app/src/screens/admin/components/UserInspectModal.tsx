@@ -8,7 +8,8 @@ import {
   Heart, 
   Sparkles, 
   UserCheck, 
-  Coins 
+  Coins,
+  RefreshCw 
 } from 'lucide-react';
 import type { CandidateUser, CandidatePhoto } from '../types';
 
@@ -20,6 +21,8 @@ interface UserInspectModalProps {
   onDeletePhoto: (photoId: string) => void;
   onToggleVip: (userId: string, currentVip: boolean) => void;
   onToggleBan: (userId: string, currentStatus: string, currentBanned: boolean) => void;
+  onChangeGender?: (userId: string, targetGender: string) => void;
+  onRemoveUser?: (userId: string, permanent: boolean) => void;
   onOpenSubscription?: () => void;
 }
 
@@ -31,14 +34,20 @@ export const UserInspectModal: React.FC<UserInspectModalProps> = ({
   onDeletePhoto,
   onToggleVip,
   onToggleBan,
+  onChangeGender,
+  onRemoveUser,
   onOpenSubscription
 }) => {
   const [confirmBanModal, setConfirmBanModal] = useState<boolean>(false);
+  const [confirmGenderModal, setConfirmGenderModal] = useState<boolean>(false);
+  const [confirmRemoveModal, setConfirmRemoveModal] = useState<boolean>(false);
 
   if (!user) return null;
 
   const isBanned = user.account_status === 'banned' || Boolean(user.is_banned);
   const isVip = Boolean(user.is_vip);
+  const currentGender = (user.gender || 'male').toLowerCase();
+  const targetGender = currentGender === 'male' ? 'female' : 'male';
 
   // Calculate age from dob if age is missing
   let displayAge = user.age;
@@ -84,7 +93,7 @@ export const UserInspectModal: React.FC<UserInspectModalProps> = ({
             </h3>
             {isVip && (
               <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-[10px] text-amber-300 font-bold uppercase">
-                <Crown className="w-3 h-3 text-amber-400" />
+                <Crown className="w-3.5 h-3.5 text-amber-400" />
                 <span>Barakah VIP</span>
               </span>
             )}
@@ -160,7 +169,22 @@ export const UserInspectModal: React.FC<UserInspectModalProps> = ({
         <div className="space-y-3 pt-2">
           <h4 className="text-xs uppercase font-bold tracking-wider text-slate-300">Personal Biodata & Contact</h4>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs text-slate-300 p-4 bg-white/[0.02] border border-white/5 rounded-2xl">
-            <div><span className="text-slate-500 block text-[11px]">Gender:</span> <strong className="text-white capitalize">{user.gender}</strong></div>
+            <div>
+              <span className="text-slate-500 block text-[11px]">Gender:</span> 
+              <div className="flex items-center space-x-2 mt-0.5">
+                <strong className="text-white capitalize">{user.gender}</strong>
+                {onChangeGender && (
+                  <button
+                    onClick={() => setConfirmGenderModal(true)}
+                    className="text-[10px] px-2 py-0.5 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/30 font-semibold cursor-pointer transition-all flex items-center space-x-1"
+                    title="Change user gender"
+                  >
+                    <RefreshCw className="w-2.5 h-2.5" />
+                    <span>Change</span>
+                  </button>
+                )}
+              </div>
+            </div>
             <div><span className="text-slate-500 block text-[11px]">Location:</span> <strong className="text-white">{user.city || user.location || 'Global'}</strong></div>
             <div><span className="text-slate-500 block text-[11px]">Email:</span> <span className="text-slate-300 font-mono text-[11px] truncate block">{user.email || '—'}</span></div>
             <div><span className="text-slate-500 block text-[11px]">Phone:</span> <span className="text-slate-300 font-mono text-[11px]">{user.phone || '—'}</span></div>
@@ -279,9 +303,87 @@ export const UserInspectModal: React.FC<UserInspectModalProps> = ({
           </div>
         )}
 
+        {/* Confirmation Modal Overlay for Gender Change */}
+        {confirmGenderModal && (
+          <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs space-y-3">
+            <div className="flex items-center space-x-2 text-amber-300 font-bold">
+              <RefreshCw className="w-4 h-4" />
+              <span>Confirm Gender Switch to {targetGender === 'female' ? 'Female (Sister)' : 'Male (Brother)'}</span>
+            </div>
+            <p className="text-slate-300 leading-relaxed">
+              Are you sure you want to change {user.full_name}'s gender from <strong className="capitalize text-white">{currentGender}</strong> to <strong className="capitalize text-white">{targetGender}</strong>?
+              <span className="block mt-1 text-amber-400 font-medium">
+                ⚠️ All prior likes, matches, and chats will be cleanly reset to preserve Islamic opposite-gender matching integrity.
+              </span>
+            </p>
+            <div className="flex items-center space-x-2 justify-end">
+              <button
+                onClick={() => setConfirmGenderModal(false)}
+                className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-slate-300 text-xs font-semibold cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (onChangeGender) onChangeGender(user.id, targetGender);
+                  setConfirmGenderModal(false);
+                }}
+                className="px-3.5 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition-all bg-amber-500 hover:bg-amber-600 text-slate-950"
+              >
+                Confirm Switch to {targetGender === 'female' ? 'Female' : 'Male'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Confirmation Modal Overlay for Remove User */}
+        {confirmRemoveModal && (
+          <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-xs space-y-3">
+            <div className="flex items-center space-x-2 text-rose-300 font-bold">
+              <Trash2 className="w-4 h-4" />
+              <span>Remove User: {user.full_name}</span>
+            </div>
+            <p className="text-slate-300 leading-relaxed">
+              Select removal type for this member:
+              <span className="block mt-1 text-slate-400">
+                • <strong>Deactivate (Soft Delete)</strong>: Safely hides the account, disables login, and preserves audit/billing integrity.
+              </span>
+              <span className="block mt-0.5 text-rose-400 font-medium">
+                • <strong>Permanent Purge</strong>: Completely wipes this user and all related records from the database.
+              </span>
+            </p>
+            <div className="flex flex-wrap items-center gap-2 justify-end">
+              <button
+                onClick={() => setConfirmRemoveModal(false)}
+                className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-slate-300 text-xs font-semibold cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (onRemoveUser) onRemoveUser(user.id, false);
+                  setConfirmRemoveModal(false);
+                }}
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40"
+              >
+                Deactivate (Soft Delete)
+              </button>
+              <button
+                onClick={() => {
+                  if (onRemoveUser) onRemoveUser(user.id, true);
+                  setConfirmRemoveModal(false);
+                }}
+                className="px-3.5 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition-all bg-rose-500 hover:bg-rose-600 text-white"
+              >
+                Permanent Purge
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Actions Footer inside Modal */}
-        <div className="pt-4 border-t border-white/10 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
+        <div className="pt-4 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => onToggleVip(user.id, isVip)}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer border ${
@@ -303,6 +405,26 @@ export const UserInspectModal: React.FC<UserInspectModalProps> = ({
             >
               {isBanned ? 'Unban Account' : 'Ban Account'}
             </button>
+
+            {onChangeGender && (
+              <button
+                onClick={() => setConfirmGenderModal(true)}
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer border bg-sky-500/20 text-sky-300 border-sky-500/40 hover:bg-sky-500/30 flex items-center space-x-1"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Switch to {targetGender === 'female' ? 'Female' : 'Male'}</span>
+              </button>
+            )}
+
+            {onRemoveUser && (
+              <button
+                onClick={() => setConfirmRemoveModal(true)}
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer border bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-500/30 flex items-center space-x-1"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Remove User</span>
+              </button>
+            )}
           </div>
 
           <button

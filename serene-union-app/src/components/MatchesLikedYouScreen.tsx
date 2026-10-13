@@ -51,8 +51,10 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
   });
   const [showUpgradeModal, setShowUpgradeModal] = useState<boolean>(false);
 
-  const loadAllData = () => {
-    setIsLoading(true);
+  const loadAllData = (isInitial: boolean = false) => {
+    if (isInitial) {
+      setIsLoading(true);
+    }
     Promise.all([
       dbService.fetchLikedYouCandidates(),
       dbService.fetchMutualMatches(),
@@ -98,34 +100,41 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
     }).catch(err => {
       console.warn('Notice: Background sync for matches completed with fallback:', err);
     }).finally(() => {
-      setIsLoading(false);
+      if (isInitial) {
+        setIsLoading(false);
+      }
     });
   };
 
   useEffect(() => {
-    loadAllData();
-    const handleSync = () => loadAllData();
+    // Initial fetch with spinner only on empty load
+    loadAllData(true);
+    
+    // Background silent events listener without screen flicker or spinner
+    const handleSync = () => loadAllData(false);
     window.addEventListener('serene_activity_updated', handleSync);
     window.addEventListener('serene_block_updated', handleSync);
-    window.addEventListener('focus', handleSync);
 
-    // Live background polling while user is viewing the Matches screen (20s interval)
+    // Live background silent polling (25s interval)
     const pollInterval = setInterval(() => {
-      loadAllData();
-    }, 20000);
+      loadAllData(false);
+    }, 25000);
 
     return () => {
       clearInterval(pollInterval);
       window.removeEventListener('serene_activity_updated', handleSync);
       window.removeEventListener('serene_block_updated', handleSync);
-      window.removeEventListener('focus', handleSync);
     };
   }, []);
 
 
   const handleInstantMatch = async (candidate: UserProfile) => {
-    const res = await dbService.sendMatchAction(candidate.id, 'liked', undefined, candidate);
+    // 1. Immediately and smoothly transition profile to Mutual Matches
     setInterestedProfiles(prev => prev.filter(p => p.id !== candidate.id));
+    setMutualMatches(prev => {
+      if (prev.some(m => m.id === candidate.id)) return prev;
+      return [candidate, ...prev];
+    });
 
     // Remove from local liked_you cache
     const localKey = `serene_liked_you_${currentUser.id}`;
@@ -134,6 +143,18 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
       const filtered = saved.filter((p: any) => p.id !== candidate.id);
       localStorage.setItem(localKey, JSON.stringify(filtered));
     } catch {}
+
+    // Add to local mutual cache
+    const mutualKey = `serene_mutual_matches_${currentUser.id}`;
+    try {
+      const saved = JSON.parse(localStorage.getItem(mutualKey) || '[]');
+      if (!saved.some((p: any) => p.id === candidate.id)) {
+        localStorage.setItem(mutualKey, JSON.stringify([candidate, ...saved]));
+      }
+    } catch {}
+
+    // 2. Transmit to server with guaranteed mutual match creation
+    const res = await dbService.sendMatchAction(candidate.id, 'liked', undefined, candidate, true);
     
     const convId = res.conversationId || `conv_${[currentUser.id, candidate.id].sort().join('_')}`;
     const newConv = dbService.createMatchConversation(candidate);
@@ -399,7 +420,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
             </div>
           )}
 
-          {isLoading ? (
+          {isLoading && interestedProfiles.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <Loader2 className="w-6 h-6 text-primary animate-spin mb-2" />
               <p className="text-xs text-secondary">Checking incoming likes...</p>

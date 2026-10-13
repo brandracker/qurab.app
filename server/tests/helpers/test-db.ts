@@ -67,6 +67,7 @@ export class MockD1Database {
         partner_requirements TEXT DEFAULT '{}',
         account_status TEXT DEFAULT 'active',
         is_banned BOOLEAN DEFAULT 0,
+        ban_reason TEXT DEFAULT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
@@ -215,6 +216,14 @@ export class MockD1Database {
         password_hash TEXT NOT NULL,
         name TEXT NOT NULL,
         role TEXT DEFAULT 'superadmin',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS blocked_users (
+        id TEXT PRIMARY KEY,
+        blocker_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        blocked_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        reason TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
 

@@ -292,8 +292,10 @@ adminRouter.get('/users', async (c) => {
 
     if (status === 'banned') {
       baseFilter += ` AND (u.account_status = 'banned' OR u.is_banned = 1)`;
+    } else if (status === 'deleted') {
+      baseFilter += ` AND u.account_status = 'deleted'`;
     } else if (status === 'active') {
-      baseFilter += ` AND (u.account_status != 'banned' AND (u.is_banned = 0 OR u.is_banned IS NULL))`;
+      baseFilter += ` AND (u.account_status != 'banned' AND u.account_status != 'deleted' AND (u.is_banned = 0 OR u.is_banned IS NULL))`;
     }
 
     if (membership === 'vip') {
@@ -507,6 +509,142 @@ adminRouter.post('/users/:id/subscription', async (c) => {
       tier: subTier,
       wallet: updatedWallet
     });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// 7.2 Switch User Gender with Islamic Safe Interaction Reset
+adminRouter.post('/users/:id/gender', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const { gender, reason } = await c.req.json();
+
+    if (!gender || (gender.toLowerCase() !== 'male' && gender.toLowerCase() !== 'female')) {
+      return c.json({ success: false, error: 'Valid gender (male or female) is required' }, 400);
+    }
+
+    const targetGender = gender.toLowerCase().trim();
+
+    // Verify user exists
+    const user = await c.env.DB.prepare('SELECT id, full_name, gender FROM users WHERE id = ?').bind(id).first();
+    if (!user) {
+      return c.json({ success: false, error: 'User not found' }, 404);
+    }
+
+    // 1. Update user's gender
+    await c.env.DB.prepare(`
+      UPDATE users 
+      SET gender = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).bind(targetGender, id).run();
+
+    // 2. Safeguard matching invariants: Reset existing likes & matches
+    await c.env.DB.prepare(`
+      DELETE FROM matches_and_likes WHERE sender_id = ? OR receiver_id = ?
+    `).bind(id, id).run();
+
+    // 3. Reset active conversations to prevent invalid opposite-gender pairings
+    try {
+      await c.env.DB.prepare(`
+        DELETE FROM conversations WHERE participant_one = ? OR participant_two = ?
+      `).bind(id, id).run();
+    } catch {}
+
+    // 4. Reset photo reveals
+    try {
+      await c.env.DB.prepare(`
+        DELETE FROM photo_reveals WHERE owner_id = ? OR viewer_id = ?
+      `).bind(id, id).run();
+    } catch {}
+
+    // 5. If changed to 'male', remove obsolete wali details (brothers don't have walis)
+    if (targetGender === 'male') {
+      try {
+        await c.env.DB.prepare('DELETE FROM wali_details WHERE user_id = ?').bind(id).run();
+      } catch {}
+    } else {
+      // If changed to 'female', default to modest blurred photos for modesty protection
+      try {
+        await c.env.DB.prepare('UPDATE users SET blur_photos_by_default = 1 WHERE id = ?').bind(id).run();
+      } catch {}
+    }
+
+    return c.json({
+      success: true,
+      message: `User gender successfully updated to ${targetGender}. All prior likes, matches, and chats have been safely reset to protect matrimonial matching integrity.`,
+      gender: targetGender,
+      user: {
+        id: user.id,
+        full_name: user.full_name,
+        gender: targetGender
+      }
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// 7.3 Remove User (Soft Deactivate or Permanent Purge)
+adminRouter.delete('/users/:id', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const isPermanentQuery = c.req.query('permanent') === 'true';
+    let isPermanentBody = false;
+    let reason = 'Administrative removal';
+
+    try {
+      const body = await c.req.json();
+      if (body?.permanent) isPermanentBody = true;
+      if (body?.reason) reason = body.reason;
+    } catch {}
+
+    const isPermanent = isPermanentQuery || isPermanentBody;
+
+    // Verify user exists
+    const user = await c.env.DB.prepare('SELECT id, full_name, email FROM users WHERE id = ?').bind(id).first();
+    if (!user) {
+      return c.json({ success: false, error: 'User not found' }, 404);
+    }
+
+    if (isPermanent) {
+      // Hard delete: relies on ON DELETE CASCADE in SQLite/D1
+      await c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(id).run();
+
+      return c.json({
+        success: true,
+        message: `User ${user.full_name || id} and all associated records permanently removed.`,
+        permanent: true,
+        deletedId: id
+      });
+    } else {
+      // Soft delete: marks as deleted, bans, and clears active likes/matches
+      try {
+        await c.env.DB.prepare(`
+          UPDATE users 
+          SET account_status = 'deleted', is_banned = 1, ban_reason = ?, updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `).bind(reason, id).run();
+      } catch {
+        await c.env.DB.prepare(`
+          UPDATE users 
+          SET account_status = 'deleted', is_banned = 1, updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `).bind(id).run();
+      }
+
+      // Clear pending likes/matches so they no longer appear in anyone's queue
+      try {
+        await c.env.DB.prepare('DELETE FROM matches_and_likes WHERE sender_id = ? OR receiver_id = ?').bind(id, id).run();
+      } catch {}
+
+      return c.json({
+        success: true,
+        message: `User ${user.full_name || id} safely deactivated and marked as deleted.`,
+        permanent: false,
+        deletedId: id
+      });
+    }
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   }

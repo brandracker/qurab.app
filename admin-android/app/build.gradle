@@ -1,45 +1,54 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace "app.qurb.admin"
-    compileSdk = rootProject.ext.compileSdkVersion
+    namespace = "app.qurb.admin"
+    compileSdk = rootProject.hasProperty('compileSdkVersion') ? rootProject.compileSdkVersion : 35
 
     defaultConfig {
-        applicationId "app.qurb.admin"
-        minSdkVersion rootProject.ext.minSdkVersion
-        targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0.0"
+        applicationId = "app.qurb.admin"
+        minSdk = rootProject.hasProperty('minSdkVersion') ? rootProject.minSdkVersion : 24
+        targetSdk = rootProject.hasProperty('targetSdkVersion') ? rootProject.targetSdkVersion : 35
+        versionCode = 1
+        versionName = "1.0.0"
 
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     signingConfigs {
         release {
-            storeFile file('qurb-release-key.jks')
-            storePassword 'QurbReleasePassword2026!'
-            keyAlias 'qurb-release-key'
-            keyPassword 'QurbReleasePassword2026!'
+            storeFile = file('qurb-release-key.jks')
+            storePassword = 'QurbReleasePassword2026!'
+            keyAlias = 'qurb-release-key'
+            keyPassword = 'QurbReleasePassword2026!'
         }
     }
 
     buildTypes {
         release {
-            signingConfig signingConfigs.release
-            minifyEnabled false
+            signingConfig = signingConfigs.release
+            minifyEnabled = false
         }
         debug {
-            signingConfig signingConfigs.release
+            signingConfig = signingConfigs.release
         }
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    applicationVariants.all { variant ->
+        variant.outputs.all {
+            outputFileName = "Qurb-Admin.apk"
+        }
     }
 }
 
 dependencies {
-    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation 'androidx.appcompat:appcompat:1.7.1'
+    implementation 'androidx.activity:activity:1.9.3'
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
+    implementation 'androidx.annotation:annotation:1.9.1'
 }
+

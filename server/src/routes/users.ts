@@ -706,6 +706,18 @@ profilesRouter.get('/discover', async (c) => {
     const genderFilter = targetGender ? `AND LOWER(u.gender) = ?` : '';
     const geoFilter = box ? `AND u.latitude BETWEEN ? AND ? AND u.longitude BETWEEN ? AND ?` : '';
 
+    let seedProfilesEnabled = true;
+    try {
+      const setting: any = await c.env.DB.prepare("SELECT value FROM app_settings WHERE key = 'seed_profiles_enabled'").first();
+      if (setting && (setting.value === '0' || setting.value === 0)) {
+        seedProfilesEnabled = false;
+      }
+    } catch {}
+
+    const seedFilter = seedProfilesEnabled
+      ? `AND (u.is_seed = 0 OR u.is_seed IS NULL OR (u.is_seed = 1 AND (u.seed_active = 1 OR u.seed_active IS NULL)))`
+      : `AND (u.is_seed = 0 OR u.is_seed IS NULL)`;
+
     const query = `
       SELECT 
         u.id, u.phone, u.email, u.full_name as fullName, u.dob, u.gender, 
@@ -741,6 +753,7 @@ profilesRouter.get('/discover', async (c) => {
         AND (u.account_status NOT IN ('deactivated', 'banned') OR u.account_status IS NULL)
         AND (u.is_banned = 0 OR u.is_banned IS NULL)
         AND (u.profile_visibility != 'hidden' OR u.profile_visibility IS NULL)
+        ${seedFilter}
         ${actionedFilter}
         ${genderFilter}
       ${geoFilter}

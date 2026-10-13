@@ -1,4 +1,31 @@
-export type AdminTab = 'overview' | 'users' | 'photos';
+export type AdminTab = 'overview' | 'users' | 'photos' | 'seeds';
+
+export interface SeedProfile {
+  id: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  dob: string;
+  city: string;
+  location: string;
+  profession: string;
+  education: string;
+  university?: string;
+  height?: string;
+  ethnicity?: string;
+  bio?: string;
+  seedActive: number | boolean;
+  seedPassword?: string;
+  isSeed: number | boolean;
+  photoUrl?: string;
+  sect?: string;
+  practiceLevel?: string;
+  modestyPractice?: string;
+  waliName?: string;
+  waliRelationship?: string;
+  waliPhone?: string;
+  createdAt?: string;
+}
 
 export interface DashboardStats {
   totalUsers: number;

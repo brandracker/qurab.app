@@ -70,8 +70,8 @@ authRouter.post('/login', async (c) => {
       FROM users u
       LEFT JOIN religious_profiles rp ON u.id = rp.user_id
       LEFT JOIN wali_details w ON u.id = w.user_id
-      WHERE u.email = ? AND (u.password_hash = ? OR u.password_hash IS NULL)
-    `).bind(cleanEmail, passwordHash).first();
+      WHERE (LOWER(u.email) = ? OR u.phone = ? OR u.phone = ?) AND (u.password_hash = ? OR u.password_hash IS NULL)
+    `).bind(cleanEmail, cleanEmail, email.trim(), passwordHash).first();
 
     if (!user) {
       return c.json({ success: false, error: 'Invalid email or password. Please try again.' }, 401);

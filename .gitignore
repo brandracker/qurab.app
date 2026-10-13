@@ -18,6 +18,8 @@ build/
 .env.*
 !.env.example
 .agents/
+!.agents/skills/
+!.agents/skills/**
 
 # Cloudflare Wrangler & Miniflare
 .wrangler/

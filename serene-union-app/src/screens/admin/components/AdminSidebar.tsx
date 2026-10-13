@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, Users, Image as ImageIcon } from 'lucide-react';
+import { Activity, Users, Image as ImageIcon, Sparkles } from 'lucide-react';
 import type { AdminTab } from '../types';
 
 interface AdminSidebarProps {
@@ -48,6 +48,18 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         >
           <ImageIcon className="w-4 h-4" />
           <span>Photo Moderation</span>
+        </button>
+
+        <button
+          onClick={() => onSelectTab('seeds')}
+          className={`flex items-center space-x-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all whitespace-nowrap cursor-pointer ${
+            activeTab === 'seeds'
+              ? 'bg-gradient-to-r from-[#059669] to-[#047857] text-white shadow-lg shadow-[#059669]/30'
+              : 'text-slate-400 hover:bg-white/5 hover:text-white'
+          }`}
+        >
+          <Sparkles className="w-4 h-4 text-emerald-400" />
+          <span>Seed Profiles (25)</span>
         </button>
       </div>
 

@@ -430,5 +430,112 @@ describe('Admin Portal API & Security Integration Tests', () => {
     const userRow = await env.DB.prepare('SELECT id FROM users WHERE id = ?').bind('usr_hard_del').first();
     expect(userRow).toBeNull();
   });
+
+  it('16. GET /api/admin/seed-profiles returns seeded Pakistani profiles and global config', async () => {
+    const res = await app.request('/api/admin/seed-profiles', {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${adminToken}` }
+    }, env);
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.globalEnabled).toBe(true);
+    expect(data.defaultPassword).toBe('QurbSeed@2026');
+    expect(data.totalCount).toBeGreaterThanOrEqual(20);
+    expect(Array.isArray(data.profiles)).toBe(true);
+
+    const first = data.profiles[0];
+    expect(first.fullName).toBeDefined();
+    expect(first.email).toContain('@qurb.app');
+    expect(first.phone).toMatch(/^\+92/);
+    expect(first.photoUrl).toBeDefined();
+    expect(first.seedPassword).toBe('QurbSeed@2026');
+  });
+
+  it('17. Master toggle and individual profile toggle work correctly', async () => {
+    // 1. Toggle global switch off
+    const toggleOffRes = await app.request('/api/admin/seed-profiles/toggle-global', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${adminToken}`
+      },
+      body: JSON.stringify({ enabled: false })
+    }, env);
+
+    expect(toggleOffRes.status).toBe(200);
+    const offData = await toggleOffRes.json();
+    expect(offData.success).toBe(true);
+    expect(offData.globalEnabled).toBe(false);
+
+    // 2. Discover feed excludes seed profiles when global toggle is off
+    const discoverRes = await app.request('/api/profiles/discover?userId=usr_guest', {
+      method: 'GET'
+    }, env);
+    expect(discoverRes.status).toBe(200);
+    const discoverData = await discoverRes.json();
+    const hasSeed = discoverData.profiles.some((p: any) => p.email && p.email.endsWith('@qurb.app'));
+    expect(hasSeed).toBe(false);
+
+    // 3. Toggle global switch back on
+    const toggleOnRes = await app.request('/api/admin/seed-profiles/toggle-global', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${adminToken}`
+      },
+      body: JSON.stringify({ enabled: true })
+    }, env);
+    expect(toggleOnRes.status).toBe(200);
+    const onData = await toggleOnRes.json();
+    expect(onData.globalEnabled).toBe(true);
+
+    // 4. Toggle single profile active/inactive
+    const singleToggleRes = await app.request('/api/admin/seed-profiles/toggle-active/usr_seed_pk_01', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${adminToken}`
+      },
+      body: JSON.stringify({ active: false })
+    }, env);
+    expect(singleToggleRes.status).toBe(200);
+    const singleData = await singleToggleRes.json();
+    expect(singleData.seedActive).toBe(false);
+  });
+
+  it('18. Seed profile credentials allow logging in via /api/auth/login with email or phone', async () => {
+    // Login with email
+    const emailLoginRes = await app.request('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: 'ayesha.doctor@qurb.app',
+        password: 'QurbSeed@2026'
+      })
+    }, env);
+
+    expect(emailLoginRes.status).toBe(200);
+    const emailData = await emailLoginRes.json();
+    expect(emailData.success).toBe(true);
+    expect(emailData.user.id).toBe('usr_seed_pk_01');
+    expect(emailData.user.fullName).toBe('Dr. Ayesha Siddiqui');
+
+    // Login with phone number
+    const phoneLoginRes = await app.request('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: '+923001234501',
+        password: 'QurbSeed@2026'
+      })
+    }, env);
+
+    expect(phoneLoginRes.status).toBe(200);
+    const phoneData = await phoneLoginRes.json();
+    expect(phoneData.success).toBe(true);
+    expect(phoneData.user.id).toBe('usr_seed_pk_01');
+  });
 });
 

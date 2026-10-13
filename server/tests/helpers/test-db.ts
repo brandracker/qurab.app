@@ -66,6 +66,9 @@ export class MockD1Database {
         dual_income_preference TEXT DEFAULT 'career_supportive',
         partner_requirements TEXT DEFAULT '{}',
         account_status TEXT DEFAULT 'active',
+        is_seed BOOLEAN DEFAULT 0,
+        seed_active BOOLEAN DEFAULT 1,
+        seed_password TEXT,
         is_banned BOOLEAN DEFAULT 0,
         ban_reason TEXT DEFAULT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -225,6 +228,12 @@ export class MockD1Database {
         blocked_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         reason TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS app_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
 
       CREATE INDEX IF NOT EXISTS idx_users_gender_created ON users(gender, created_at);

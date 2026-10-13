@@ -7,6 +7,7 @@ import { AdminSidebar } from './components/AdminSidebar';
 import { OverviewTab } from './components/OverviewTab';
 import { UserDirectoryTab } from './components/UserDirectoryTab';
 import { PhotoModerationTab } from './components/PhotoModerationTab';
+import { SeedProfilesTab } from './components/SeedProfilesTab';
 import { UserInspectModal } from './components/UserInspectModal';
 import { BroadcastModal } from './components/BroadcastModal';
 import { SubscriptionModal } from './components/SubscriptionModal';
@@ -574,6 +575,10 @@ export const AdminPortal: React.FC = () => {
               onInspectUser={handleInspectUser}
               onDeletePhoto={handleDeletePhoto}
             />
+          )}
+
+          {activeTab === 'seeds' && adminToken && (
+            <SeedProfilesTab adminToken={adminToken} />
           )}
         </main>
       </div>

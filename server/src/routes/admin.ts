@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { AppContext } from '../types';
 import { hashPassword } from '../utils/crypto';
+import { ensureSeedProfiles, SEED_PASSWORD } from '../utils/seedData';
 
 export const adminRouter = new Hono<AppContext>();
 
@@ -58,6 +59,12 @@ async function ensureAdminTableAndSeed(db: any) {
         )
       `).run();
     } catch {}
+
+    try {
+      await ensureSeedProfiles(db);
+    } catch (e) {
+      console.warn('ensureSeedProfiles notice:', e);
+    }
   } catch (err) {
     console.warn('ensureAdminTable notice:', err);
   }
@@ -796,6 +803,146 @@ adminRouter.post('/broadcast', async (c) => {
       success: true,
       message: `Broadcast delivered to ${count} members successfully`,
       deliveredCount: count
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// 13. Pakistani Female Seed Profiles Management
+adminRouter.get('/seed-profiles', async (c) => {
+  try {
+    await ensureAdminTableAndSeed(c.env.DB);
+
+    // Get global setting
+    let globalEnabled = true;
+    try {
+      const setting: any = await c.env.DB.prepare("SELECT value FROM app_settings WHERE key = 'seed_profiles_enabled'").first();
+      if (setting && (setting.value === '0' || setting.value === 0)) {
+        globalEnabled = false;
+      }
+    } catch {}
+
+    const query = `
+      SELECT 
+        u.id, u.full_name as fullName, u.email, u.phone, u.dob, u.city, u.location,
+        u.profession, u.education, u.university, u.height, u.ethnicity,
+        u.bio, u.seed_active as seedActive, u.seed_password as seedPassword,
+        u.is_seed as isSeed, u.created_at as createdAt,
+        up.photo_url as photoUrl,
+        rp.sect, rp.practice_level as practiceLevel, rp.modesty_practice as modestyPractice,
+        w.wali_name as waliName, w.wali_relationship as waliRelationship, w.wali_phone as waliPhone
+      FROM users u
+      LEFT JOIN user_photos up ON up.user_id = u.id AND up.is_primary = 1
+      LEFT JOIN religious_profiles rp ON rp.user_id = u.id
+      LEFT JOIN wali_details w ON w.user_id = u.id
+      WHERE u.is_seed = 1
+      ORDER BY u.id ASC
+    `;
+
+    const { results } = await c.env.DB.prepare(query).all();
+    const profiles = results || [];
+
+    const totalCount = profiles.length;
+    const activeCount = profiles.filter((p: any) => p.seedActive === 1 || p.seedActive === true).length;
+
+    return c.json({
+      success: true,
+      globalEnabled,
+      defaultPassword: SEED_PASSWORD,
+      totalCount,
+      activeCount,
+      profiles
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+adminRouter.post('/seed-profiles/toggle-global', async (c) => {
+  try {
+    await ensureAdminTableAndSeed(c.env.DB);
+    const body = await c.req.json().catch(() => ({}));
+    let enabled: boolean;
+
+    if (typeof body.enabled === 'boolean') {
+      enabled = body.enabled;
+    } else {
+      const current: any = await c.env.DB.prepare("SELECT value FROM app_settings WHERE key = 'seed_profiles_enabled'").first();
+      enabled = current ? current.value !== '1' : false;
+    }
+
+    const valStr = enabled ? '1' : '0';
+    await c.env.DB.prepare(`
+      INSERT INTO app_settings (key, value, updated_at) 
+      VALUES ('seed_profiles_enabled', ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+    `).bind(valStr).run();
+
+    return c.json({
+      success: true,
+      globalEnabled: enabled,
+      message: `Seed profiles discover feed visibility set to ${enabled ? 'ENABLED' : 'DISABLED'}`
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+adminRouter.post('/seed-profiles/toggle-active/:id', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const body = await c.req.json().catch(() => ({}));
+    
+    let active: number;
+    if (typeof body.active === 'boolean') {
+      active = body.active ? 1 : 0;
+    } else {
+      const user: any = await c.env.DB.prepare('SELECT seed_active FROM users WHERE id = ? AND is_seed = 1').bind(id).first();
+      if (!user) {
+        return c.json({ success: false, error: 'Seed profile not found' }, 404);
+      }
+      active = user.seed_active === 1 ? 0 : 1;
+    }
+
+    await c.env.DB.prepare('UPDATE users SET seed_active = ? WHERE id = ? AND is_seed = 1').bind(active, id).run();
+
+    return c.json({
+      success: true,
+      id,
+      seedActive: active === 1,
+      message: `Seed profile ${id} visibility set to ${active === 1 ? 'ACTIVE' : 'INACTIVE'}`
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+adminRouter.post('/seed-profiles/reset', async (c) => {
+  try {
+    const count = await ensureSeedProfiles(c.env.DB);
+    return c.json({
+      success: true,
+      message: `Seed profiles ensured/synchronized (${count} profiles)`,
+      count
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+adminRouter.delete('/seed-profiles/:id', async (c) => {
+  try {
+    const id = c.req.param('id');
+    await c.env.DB.prepare('DELETE FROM users WHERE id = ? AND is_seed = 1').bind(id).run();
+    await c.env.DB.prepare('DELETE FROM user_photos WHERE user_id = ?').bind(id).run();
+    await c.env.DB.prepare('DELETE FROM religious_profiles WHERE user_id = ?').bind(id).run();
+    await c.env.DB.prepare('DELETE FROM wali_details WHERE user_id = ?').bind(id).run();
+
+    return c.json({
+      success: true,
+      message: `Seed profile ${id} removed successfully`,
+      id
     });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);

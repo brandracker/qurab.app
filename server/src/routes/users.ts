@@ -700,6 +700,10 @@ profilesRouter.get('/discover', async (c) => {
       : null;
 
     const excludeActioned = c.req.query('includeActioned') !== 'true';
+    const blockFilter = currentUserId
+      ? `AND u.id NOT IN (SELECT blocked_id FROM blocked_users WHERE blocker_id = ?)
+         AND u.id NOT IN (SELECT blocker_id FROM blocked_users WHERE blocked_id = ?)`
+      : '';
     const actionedFilter = (currentUserId && excludeActioned)
       ? `AND u.id NOT IN (SELECT receiver_id FROM matches_and_likes WHERE sender_id = ?)`
       : '';
@@ -754,6 +758,7 @@ profilesRouter.get('/discover', async (c) => {
         AND (u.is_banned = 0 OR u.is_banned IS NULL)
         AND (u.profile_visibility != 'hidden' OR u.profile_visibility IS NULL)
         ${seedFilter}
+        ${blockFilter}
         ${actionedFilter}
         ${genderFilter}
       ${geoFilter}
@@ -761,6 +766,9 @@ profilesRouter.get('/discover', async (c) => {
     `;
 
     const bindParams: any[] = [currentUserId];
+    if (currentUserId) {
+      bindParams.push(currentUserId, currentUserId);
+    }
     if (currentUserId && excludeActioned) {
       bindParams.push(currentUserId);
     }

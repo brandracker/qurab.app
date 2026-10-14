@@ -104,7 +104,20 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
     const partnerId = rawParts.find(id => id !== currentUser.id && id.length > 0);
     if (partnerId) {
       const allProfiles = dbService.getAllProfiles();
-      const candidate = allProfiles.find(p => p.id === partnerId);
+      let candidate = allProfiles.find(p => p.id === partnerId);
+      if (!candidate) {
+        try {
+          const likedYou = JSON.parse(localStorage.getItem(`serene_liked_you_${currentUser.id}`) || '[]');
+          candidate = likedYou.find((p: any) => p.id === partnerId);
+        } catch {}
+      }
+      if (!candidate) {
+        try {
+          const mutual = JSON.parse(localStorage.getItem(`serene_mutual_matches_${currentUser.id}`) || '[]');
+          candidate = mutual.find((p: any) => p.id === partnerId);
+        } catch {}
+      }
+
       if (candidate) {
         activeConv = dbService.createMatchConversation(candidate);
       } else {
@@ -148,6 +161,34 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
       }
     }
   }
+
+  // Live profile hydration if candidate details are minimal
+  useEffect(() => {
+    if (!activeConvId) return;
+    const rawParts = activeConvId.replace('conv_', '').split('_');
+    const partnerId = rawParts.find(id => id !== currentUser.id && id.length > 0);
+    if (!partnerId) return;
+
+    if (!activeConv?.otherUser || activeConv.otherUser.fullName === 'Match Candidate') {
+      dbService.fetchUserProfile(partnerId).then(fetched => {
+        if (fetched && fetched.fullName && fetched.fullName !== 'Match Candidate') {
+          setConversations(prev => {
+            const copy = [...prev];
+            const idx = copy.findIndex(c => c.id === activeConvId || (c.otherUser && c.otherUser.id === partnerId));
+            if (idx >= 0) {
+              copy[idx] = {
+                ...copy[idx],
+                otherUser: { ...copy[idx].otherUser, ...fetched }
+              };
+            } else {
+              copy.push(dbService.createMatchConversation(fetched));
+            }
+            return copy;
+          });
+        }
+      }).catch(() => {});
+    }
+  }, [activeConvId, activeConv?.otherUser?.fullName]);
 
   // Live polling for messages & real-time photo reveal status from Cloudflare D1
   useEffect(() => {

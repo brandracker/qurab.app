@@ -16,7 +16,7 @@ export async function optimizeImage(
   file: File | Blob,
   options: OptimizeOptions = {}
 ): Promise<string> {
-  const { maxWidth = 1200, maxHeight = 1200, quality = 0.82 } = options;
+  const { maxWidth = 720, maxHeight = 720, quality = 0.75 } = options;
 
   return new Promise((resolve) => {
     // Quick resolve for empty or missing file

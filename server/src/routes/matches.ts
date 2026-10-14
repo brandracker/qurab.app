@@ -241,11 +241,14 @@ matchesRouter.get('/received', async (c) => {
       LEFT JOIN users u ON m.sender_id = u.id
       LEFT JOIN religious_profiles rp ON u.id = rp.user_id
       LEFT JOIN wali_details w ON u.id = w.user_id
-      WHERE m.receiver_id = ? AND (m.action = 'liked' OR m.action = 'direct_salam' OR m.action = 'mutual_match')
+      WHERE m.receiver_id = ? 
+        AND (m.action = 'liked' OR m.action = 'direct_salam')
+        AND m.sender_id NOT IN (SELECT blocked_id FROM blocked_users WHERE blocker_id = ?)
+        AND m.sender_id NOT IN (SELECT blocker_id FROM blocked_users WHERE blocked_id = ?)
       ORDER BY m.created_at DESC
     `;
 
-    const { results } = await c.env.DB.prepare(query).bind(userId).all();
+    const { results } = await c.env.DB.prepare(query).bind(userId, userId, userId).all();
 
     // Fetch photos
     const userIds = (results || []).map((r: any) => r.id);
@@ -259,12 +262,14 @@ matchesRouter.get('/received', async (c) => {
         const { results: chunkPhotos } = await c.env.DB.prepare(`
           SELECT user_id, photo_url FROM user_photos 
           WHERE user_id IN (${placeholders})
-          ORDER BY sort_order ASC
+          ORDER BY is_primary DESC, sort_order ASC
         `).bind(...chunk).all();
 
         (chunkPhotos || []).forEach((p: any) => {
           if (!photoMap[p.user_id]) photoMap[p.user_id] = [];
-          photoMap[p.user_id].push(p.photo_url);
+          if (photoMap[p.user_id].length < 1) {
+            photoMap[p.user_id].push(p.photo_url);
+          }
         });
       }
     }
@@ -381,10 +386,12 @@ matchesRouter.get('/mutual', async (c) => {
             WHERE m2.sender_id = m.receiver_id AND m2.receiver_id = m.sender_id AND (m2.action = 'liked' OR m2.action = 'mutual_match' OR m2.action = 'direct_salam')
           ))
         )
+        AND u.id NOT IN (SELECT blocked_id FROM blocked_users WHERE blocker_id = ?)
+        AND u.id NOT IN (SELECT blocker_id FROM blocked_users WHERE blocked_id = ?)
       ORDER BY m.created_at DESC
     `;
 
-    const { results } = await c.env.DB.prepare(query).bind(userId, userId, userId, userId).all();
+    const { results } = await c.env.DB.prepare(query).bind(userId, userId, userId, userId, userId, userId).all();
 
     // Fetch photos
     const userIds = (results || []).map((r: any) => r.id);
@@ -398,12 +405,14 @@ matchesRouter.get('/mutual', async (c) => {
         const { results: chunkPhotos } = await c.env.DB.prepare(`
           SELECT user_id, photo_url FROM user_photos 
           WHERE user_id IN (${placeholders})
-          ORDER BY sort_order ASC
+          ORDER BY is_primary DESC, sort_order ASC
         `).bind(...chunk).all();
 
         (chunkPhotos || []).forEach((p: any) => {
           if (!photoMap[p.user_id]) photoMap[p.user_id] = [];
-          photoMap[p.user_id].push(p.photo_url);
+          if (photoMap[p.user_id].length < 1) {
+            photoMap[p.user_id].push(p.photo_url);
+          }
         });
       }
     }
@@ -488,8 +497,10 @@ matchesRouter.get('/activity', async (c) => {
       FROM matches_and_likes m
       LEFT JOIN users u ON m.receiver_id = u.id
       WHERE m.sender_id = ? AND (m.action = 'liked' OR m.action = 'mutual_match' OR m.action = 'direct_salam')
+        AND m.receiver_id NOT IN (SELECT blocked_id FROM blocked_users WHERE blocker_id = ?)
+        AND m.receiver_id NOT IN (SELECT blocker_id FROM blocked_users WHERE blocked_id = ?)
       ORDER BY m.created_at DESC
-    `).bind(userId).all();
+    `).bind(userId, userId, userId).all();
 
     const sentLikes = (sentLikesRows || []).map((row: any) => ({
       id: row.id,
@@ -514,8 +525,10 @@ matchesRouter.get('/activity', async (c) => {
       FROM matches_and_likes m
       LEFT JOIN users u ON m.receiver_id = u.id
       WHERE m.sender_id = ? AND m.action = 'passed'
+        AND m.receiver_id NOT IN (SELECT blocked_id FROM blocked_users WHERE blocker_id = ?)
+        AND m.receiver_id NOT IN (SELECT blocker_id FROM blocked_users WHERE blocked_id = ?)
       ORDER BY m.created_at DESC
-    `).bind(userId).all();
+    `).bind(userId, userId, userId).all();
 
     const passed = (passedRows || []).map((row: any) => ({
       id: row.id,
@@ -641,11 +654,25 @@ matchesRouter.post('/block', async (c) => {
       VALUES (?, ?, ?, ?)
     `).bind(blockId, userId, targetId, reason || 'User requested block').run();
 
-    // Mark in matches_and_likes
+    // Mark in matches_and_likes bidirectionally
     await c.env.DB.prepare(`
       INSERT OR REPLACE INTO matches_and_likes (id, sender_id, receiver_id, action)
       VALUES (?, ?, ?, 'blocked')
     `).bind(`mat_${userId}_${targetId}`, userId, targetId).run();
+
+    await c.env.DB.prepare(`
+      INSERT OR REPLACE INTO matches_and_likes (id, sender_id, receiver_id, action)
+      VALUES (?, ?, ?, 'blocked')
+    `).bind(`mat_${targetId}_${userId}`, targetId, userId).run();
+
+    // Delete active conversation row from D1 so it is immediately removed from live polling
+    const convId = `conv_${[userId, targetId].sort().join('_')}`;
+    await c.env.DB.prepare(`
+      DELETE FROM conversations 
+      WHERE id = ? 
+         OR (participant_one = ? AND participant_two = ?) 
+         OR (participant_one = ? AND participant_two = ?)
+    `).bind(convId, userId, targetId, targetId, userId).run();
 
     return c.json({ success: true, message: 'Profile blocked successfully.' });
   } catch (error: any) {

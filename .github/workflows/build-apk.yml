@@ -133,11 +133,11 @@ jobs:
         continue-on-error: true
         with:
           fail_on_unmatched_files: false
-          tag_name: v1.0.13
-          name: "Qurb v1.0.13 (User AAB, Client APK & Admin APK)"
+          tag_name: v1.0.14
+          name: "Qurb v1.0.14 (User AAB, Client APK & Admin APK)"
           body: |
-            ### Qurb Matrimony v1.0.13 (Build 14)
-            - **app-release.apk**: Full Client Android Signed Release APK (Frontend mapping and query rules updated, Blink-free smooth tabs, Auto-seeding mutual matches in chat, Liked You candidates retained with Matched badge, Authentic Pakistani initials avatar fallback).
+            ### Qurb Matrimony v1.0.14 (Build 15)
+            - **app-release.apk**: Full Client Android Signed Release APK (Payload optimization & photo deduplication, bulletproof LocalStorage quota protection, 2-way block enforcement, instant matches hydration).
             - **app-release.aab**: Production Signed Bundle for Google Play Store console upload.
             - **Qurb-Admin.apk**: Dedicated standalone APK for Qurb Executive Admin Portal.
             - 100% automated test verification across frontend and backend suites.

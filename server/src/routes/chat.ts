@@ -62,7 +62,12 @@ chatRouter.get('/', async (c) => {
       LEFT JOIN wali_details w2 ON u2.id = w2.user_id
       LEFT JOIN religious_profiles rp1 ON u1.id = rp1.user_id
       LEFT JOIN religious_profiles rp2 ON u2.id = rp2.user_id
-      WHERE c.participant_one = ? OR c.participant_two = ?
+      WHERE (c.participant_one = ? OR c.participant_two = ?)
+        AND NOT EXISTS (
+          SELECT 1 FROM blocked_users b
+          WHERE (b.blocker_id = c.participant_one AND b.blocked_id = c.participant_two)
+             OR (b.blocker_id = c.participant_two AND b.blocked_id = c.participant_one)
+        )
       ORDER BY c.last_message_time DESC
     `).bind(userId, userId).all();
 
@@ -85,7 +90,9 @@ chatRouter.get('/', async (c) => {
 
       (photos || []).forEach((p: any) => {
         if (!photoMap[p.user_id]) photoMap[p.user_id] = [];
-        photoMap[p.user_id].push(p.photo_url);
+        if (photoMap[p.user_id].length < 1) {
+          photoMap[p.user_id].push(p.photo_url);
+        }
       });
     }
 
@@ -345,6 +352,19 @@ chatRouter.post('/:id/messages', async (c) => {
           INSERT OR IGNORE INTO conversations (id, participant_one, participant_two, jsonl_log_path, last_message_text, last_message_time)
           VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
         `).bind(targetConvId, p1, p2, `logs/${targetConvId}.jsonl`, text.trim()).run();
+      }
+    }
+
+    // Check if either participant has blocked the other
+    if (p1 && p2) {
+      const isBlocked = await c.env.DB.prepare(`
+        SELECT 1 FROM blocked_users 
+        WHERE (blocker_id = ? AND blocked_id = ?)
+           OR (blocker_id = ? AND blocked_id = ?)
+      `).bind(p1, p2, p2, p1).first();
+
+      if (isBlocked) {
+        return c.json({ success: false, error: 'Cannot send message: This user is blocked.' }, 403);
       }
     }
 

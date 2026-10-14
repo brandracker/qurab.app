@@ -84,14 +84,18 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
         mutual = derivedMutual as any;
       }
 
-      const cleanReceived = (received || []).map((r: any) => ({
-        ...r,
-        photos: Array.isArray(r.photos) ? r.photos.filter((p: string) => !p.includes('photo-1534528741775-53994a69daeb')) : []
-      }));
       const cleanMutual = (mutual || []).map((m: any) => ({
         ...m,
         photos: Array.isArray(m.photos) ? m.photos.filter((p: string) => !p.includes('photo-1534528741775-53994a69daeb')) : []
       }));
+      const mutualIds = new Set(cleanMutual.map((m: any) => m.id));
+
+      const cleanReceived = (received || [])
+        .filter((r: any) => r.action !== 'mutual_match' && !mutualIds.has(r.id))
+        .map((r: any) => ({
+          ...r,
+          photos: Array.isArray(r.photos) ? r.photos.filter((p: string) => !p.includes('photo-1534528741775-53994a69daeb')) : []
+        }));
 
       setInterestedProfiles(prev => JSON.stringify(prev) === JSON.stringify(cleanReceived) ? prev : cleanReceived);
       setMutualMatches(prev => JSON.stringify(prev) === JSON.stringify(cleanMutual) ? prev : cleanMutual);
@@ -483,7 +487,6 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
                   !candidate.photos[0].includes('photo-1534528741775-53994a69daeb')
                 );
                 const photo = hasPhoto ? candidate.photos![0] : null;
-                const isMutual = (candidate as any).action === 'mutual_match';
                 const initial = (candidate.fullName || 'M').charAt(0).toUpperCase();
 
                 return (
@@ -492,10 +495,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
                     className="bg-white rounded-2xl border border-outline overflow-hidden flex flex-col shadow-subtle relative group"
                   >
                     <div 
-                      onClick={() => {
-                        if (isVip) setSelectedProfile(candidate);
-                        else setShowUpgradeModal(true);
-                      }}
+                      onClick={() => setSelectedProfile(candidate)}
                       className="relative aspect-[3/4] bg-surface-variant overflow-hidden cursor-pointer flex items-center justify-center"
                     >
                       {photo ? (
@@ -516,28 +516,27 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
                       )}
                       {!isVip && (
                         <div 
-                          onClick={() => setShowUpgradeModal(true)}
-                          className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 text-white p-2 text-center cursor-pointer backdrop-blur-xs"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowUpgradeModal(true);
+                          }}
+                          className="absolute inset-0 flex flex-col items-center justify-center bg-black/35 hover:bg-black/45 text-white p-2 text-center cursor-pointer transition-colors backdrop-blur-[2px]"
+                          title="Click to unlock VIP photo unblur"
                         >
-                          <Lock className="w-5 h-5 mb-1 text-pastel-amber-border" />
-                          <span className="text-[10px] font-bold">VIP Only</span>
+                          <Lock className="w-4 h-4 mb-1 text-pastel-amber-border" />
+                          <span className="text-[9px] font-bold">VIP Photo</span>
+                          <span className="text-[8px] text-white/90 mt-0.5 underline">View Biodata</span>
                         </div>
                       )}
-                      <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded-full text-[9px] font-bold text-white">
+                      <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded-full text-[9px] font-bold text-white pointer-events-none">
                         {candidate.location?.split(',')[0]}
                         {typeof candidate.distanceKm === 'number' && ` · ${candidate.distanceKm} km`}
                       </div>
-                      {isMutual && (
-                        <div className="absolute top-2 right-2 bg-emerald-600 text-white px-2 py-0.5 rounded-full text-[9px] font-bold flex items-center gap-1 shadow-sm">
-                          <CheckCircle2 className="w-2.5 h-2.5" />
-                          <span>Matched</span>
-                        </div>
-                      )}
                     </div>
 
                     <div className="p-2.5 flex-1 flex flex-col justify-between gap-1.5">
-                      <div>
-                        <h3 className="font-serif font-bold text-xs text-on-surface truncate">
+                      <div onClick={() => setSelectedProfile(candidate)} className="cursor-pointer">
+                        <h3 className="font-serif font-bold text-xs text-on-surface truncate hover:text-primary transition-colors">
                           {isVip ? (candidate.fullName || 'Member') : `${(candidate.fullName || 'Member').split(' ')[0]} (Liked You)`}
                         </h3>
                         <p className="text-[10px] text-secondary truncate">
@@ -547,36 +546,21 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
 
                       <div className="pt-1.5 border-t border-outline">
                         <div className="flex items-center gap-1.5">
-                          {isMutual ? (
-                            <button
-                              onClick={() => {
-                                const newConv = dbService.createMatchConversation(candidate);
-                                onOpenChat(newConv.id);
-                              }}
-                              className="flex-1 py-1.5 rounded-xl bg-emerald-600 text-white text-[10px] font-bold shadow-brand hover:bg-emerald-700 active:scale-95 transition-all flex items-center justify-center gap-1"
-                            >
-                              <MessageCircle className="w-3 h-3" />
-                              <span>Matched · Open Chat</span>
-                            </button>
-                          ) : (
-                            <>
-                              <button
-                                onClick={() => handleInstantMatch(candidate)}
-                                className="flex-1 py-1.5 rounded-xl bg-primary text-white text-[10px] font-bold shadow-brand hover:bg-primary-dark active:scale-95 transition-all flex items-center justify-center gap-1"
-                              >
-                                <Heart className="w-3 h-3 fill-current" />
-                                <span>Match & Chat</span>
-                              </button>
+                          <button
+                            onClick={() => handleInstantMatch(candidate)}
+                            className="flex-1 py-1.5 rounded-xl bg-primary text-white text-[10px] font-bold shadow-brand hover:bg-primary-dark active:scale-95 transition-all flex items-center justify-center gap-1"
+                          >
+                            <Heart className="w-3 h-3 fill-current" />
+                            <span>Match & Chat</span>
+                          </button>
 
-                              <button
-                                onClick={() => handlePassCandidate(candidate)}
-                                className="px-2.5 py-1.5 rounded-xl bg-surface-variant hover:bg-outline text-secondary text-[10px] font-semibold transition-all"
-                                title="Pass"
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
-                            </>
-                          )}
+                          <button
+                            onClick={() => handlePassCandidate(candidate)}
+                            className="px-2.5 py-1.5 rounded-xl bg-surface-variant hover:bg-outline text-secondary text-[10px] font-semibold transition-all"
+                            title="Pass"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
                         </div>
                       </div>
 

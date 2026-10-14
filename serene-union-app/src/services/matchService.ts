@@ -172,7 +172,36 @@ export const matchService = {
     const localBlocked = this.getUserBlocked(user.id).filter(b => b.id !== targetUserId);
     localBlocked.unshift({ id: targetUserId, reason: reason || 'Incompatible match', blockedAt: new Date().toISOString() });
     localStorage.setItem(blockListKey, JSON.stringify(localBlocked));
-    window.dispatchEvent(new CustomEvent('serene_block_updated'));
+
+    // Clean up local conversations
+    try {
+      const convs = JSON.parse(localStorage.getItem('serene_real_conversations_v3') || '[]');
+      const filtered = convs.filter((c: any) => c.otherUser?.id !== targetUserId && c.participantOne !== targetUserId && c.participantTwo !== targetUserId);
+      localStorage.setItem('serene_real_conversations_v3', JSON.stringify(filtered));
+    } catch {}
+
+    // Clean up local liked you
+    try {
+      const likedYou = JSON.parse(localStorage.getItem(`serene_liked_you_${user.id}`) || '[]');
+      localStorage.setItem(`serene_liked_you_${user.id}`, JSON.stringify(likedYou.filter((p: any) => p.id !== targetUserId)));
+    } catch {}
+
+    // Clean up local mutual
+    try {
+      const mutual = JSON.parse(localStorage.getItem(`serene_mutual_matches_${user.id}`) || '[]');
+      localStorage.setItem(`serene_mutual_matches_${user.id}`, JSON.stringify(mutual.filter((p: any) => p.id !== targetUserId)));
+    } catch {}
+
+    // Clean up local sent likes
+    try {
+      const sentLikes = JSON.parse(localStorage.getItem(`serene_likes_sent_${user.id}`) || '[]');
+      localStorage.setItem(`serene_likes_sent_${user.id}`, JSON.stringify(sentLikes.filter((p: any) => p.id !== targetUserId)));
+    } catch {}
+
+    window.dispatchEvent(new CustomEvent('serene_block_updated', { detail: { targetId: targetUserId } }));
+    window.dispatchEvent(new CustomEvent('serene_conversations_updated'));
+    window.dispatchEvent(new CustomEvent('serene_matches_updated'));
+    window.dispatchEvent(new CustomEvent('serene_activity_updated'));
 
     try {
       const res = await fetch(`${API_BASE}/matches/block`, {

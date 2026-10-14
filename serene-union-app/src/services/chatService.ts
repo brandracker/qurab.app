@@ -29,6 +29,12 @@ export const chatService = {
     try {
       const user = profileService.getCurrentUser();
       if (!user?.id || user.id === 'usr_guest') return [];
+      let localBlockedList: any[] = [];
+      try {
+        localBlockedList = JSON.parse(localStorage.getItem(`serene_blocked_${user.id}`) || '[]');
+      } catch {}
+      const blockedIds = new Set(localBlockedList.map((b: any) => b.id));
+
       const res = await fetch(`${API_BASE}/conversations?userId=${user.id}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.conversations)) {
@@ -36,11 +42,20 @@ export const chatService = {
         const convMap = new Map<string, Conversation>();
 
         localConvs.forEach(c => {
-          if (c && c.id) convMap.set(c.id, c);
+          if (c && c.id) {
+            const partner = c.otherUser?.id || (c.participantOne === user.id ? c.participantTwo : c.participantOne);
+            if (!blockedIds.has(partner)) {
+              convMap.set(c.id, c);
+            }
+          }
         });
 
         data.conversations
-          .filter((rc: any) => rc.participantOne === user.id || rc.participantTwo === user.id)
+          .filter((rc: any) => {
+            const isParticipant = rc.participantOne === user.id || rc.participantTwo === user.id;
+            const otherId = rc.participantOne === user.id ? rc.participantTwo : rc.participantOne;
+            return isParticipant && !blockedIds.has(otherId) && !blockedIds.has(rc.otherUser?.id);
+          })
           .forEach((rc: any) => {
             const existing = convMap.get(rc.id);
             const isPhotoRevealed = typeof rc.isPhotoRevealed === 'boolean' 
@@ -78,7 +93,10 @@ export const chatService = {
             });
           });
 
-        const mergedList = Array.from(convMap.values());
+        const mergedList = Array.from(convMap.values()).filter(c => {
+          const partner = c.otherUser?.id || (c.participantOne === user.id ? c.participantTwo : c.participantOne);
+          return !blockedIds.has(partner);
+        });
         localStorage.setItem(CONVERSATIONS_KEY, JSON.stringify(mergedList));
         return mergedList;
       }

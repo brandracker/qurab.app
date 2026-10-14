@@ -154,4 +154,145 @@ describe('Matches, Chat, Wali & Monetization API Integration Tests', () => {
     const updatedWallet = (await updatedWalletRes.json()).wallet;
     expect(updatedWallet.dailyMessagesQuota).toBeGreaterThan(15);
   });
+
+  it('Enforces true two-way block across Discover, Conversations, Matches, and Chat Messaging', async () => {
+    // 1. Establish mutual match and conversation between Brother and Sister
+    await app.request('/api/matches/action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ senderId: sampleBrotherUser.id, receiverId: sampleSisterUser.id, action: 'liked', isMutualMatch: true })
+    }, env);
+
+    // Verify conversation exists
+    const convsBefore = await app.request(`/api/conversations?userId=${sampleBrotherUser.id}`, { method: 'GET' }, env);
+    const convsBeforeData = await convsBefore.json();
+    expect(convsBeforeData.conversations).toHaveLength(1);
+
+    // Verify mutual match appears
+    const mutualBefore = await app.request(`/api/matches/mutual?userId=${sampleBrotherUser.id}`, { method: 'GET' }, env);
+    const mutualBeforeData = await mutualBefore.json();
+    expect(mutualBeforeData.matches).toHaveLength(1);
+
+    // 2. Brother blocks Sister
+    const blockRes = await app.request('/api/matches/block', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: sampleBrotherUser.id, targetId: sampleSisterUser.id, reason: 'Test block' })
+    }, env);
+    expect(blockRes.status).toBe(200);
+
+    // 3. Verify neither Brother nor Sister sees the conversation in /api/conversations
+    const convsBrother = await (await app.request(`/api/conversations?userId=${sampleBrotherUser.id}`, { method: 'GET' }, env)).json();
+    expect(convsBrother.conversations).toHaveLength(0);
+
+    const convsSister = await (await app.request(`/api/conversations?userId=${sampleSisterUser.id}`, { method: 'GET' }, env)).json();
+    expect(convsSister.conversations).toHaveLength(0);
+
+    // 4. Verify neither Brother nor Sister sees the other in /api/matches/mutual
+    const mutualBrother = await (await app.request(`/api/matches/mutual?userId=${sampleBrotherUser.id}`, { method: 'GET' }, env)).json();
+    expect(mutualBrother.matches).toHaveLength(0);
+
+    const mutualSister = await (await app.request(`/api/matches/mutual?userId=${sampleSisterUser.id}`, { method: 'GET' }, env)).json();
+    expect(mutualSister.matches).toHaveLength(0);
+
+    // 5. Verify neither Brother nor Sister sees the other in /api/profiles/discover
+    const discoverBrother = await (await app.request(`/api/profiles/discover?userId=${sampleBrotherUser.id}`, { method: 'GET' }, env)).json();
+    expect(discoverBrother.profiles.some((p: any) => p.id === sampleSisterUser.id)).toBe(false);
+
+    const discoverSister = await (await app.request(`/api/profiles/discover?userId=${sampleSisterUser.id}`, { method: 'GET' }, env)).json();
+    expect(discoverSister.profiles.some((p: any) => p.id === sampleBrotherUser.id)).toBe(false);
+
+    // 6. Verify sending a message to a blocked partner is rejected with 403 Forbidden
+    const convId = `conv_${[sampleBrotherUser.id, sampleSisterUser.id].sort().join('_')}`;
+    const blockedMsgRes = await app.request(`/api/conversations/${convId}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        senderId: sampleSisterUser.id,
+        senderName: sampleSisterUser.full_name,
+        receiverId: sampleBrotherUser.id,
+        text: 'Hello, are you there?'
+      })
+    }, env);
+    expect(blockedMsgRes.status).toBe(403);
+    const blockedMsgData = await blockedMsgRes.json();
+    expect(blockedMsgData.success).toBe(false);
+    expect(blockedMsgData.error).toContain('blocked');
+  });
+
+  it('Separates tabs cleanly: mutual match is excluded from /api/matches/received', async () => {
+    // 1. Brother likes Sister
+    await app.request('/api/matches/action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ senderId: sampleBrotherUser.id, receiverId: sampleSisterUser.id, action: 'liked' })
+    }, env);
+
+    // Sister receives it in Liked You
+    const received1 = await (await app.request(`/api/matches/received?userId=${sampleSisterUser.id}`, { method: 'GET' }, env)).json();
+    expect(received1.candidates.some((c: any) => c.id === sampleBrotherUser.id)).toBe(true);
+
+    // 2. Sister accepts and matches back
+    await app.request('/api/matches/action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ senderId: sampleSisterUser.id, receiverId: sampleBrotherUser.id, action: 'liked', isMutualMatch: true })
+    }, env);
+
+    // Sister now checks /received: Brother MUST NOT appear in pending Liked You!
+    const received2 = await (await app.request(`/api/matches/received?userId=${sampleSisterUser.id}`, { method: 'GET' }, env)).json();
+    expect(received2.candidates.some((c: any) => c.id === sampleBrotherUser.id)).toBe(false);
+
+    // Brother MUST appear exclusively in /mutual
+    const mutualSister = await (await app.request(`/api/matches/mutual?userId=${sampleSisterUser.id}`, { method: 'GET' }, env)).json();
+    expect(mutualSister.matches.some((m: any) => m.id === sampleBrotherUser.id)).toBe(true);
+  });
+
+  it('Limits photo payloads in /received, /mutual, and /conversations to 1 primary photo per candidate', async () => {
+    // Insert 5 test photos for sampleBrotherUser
+    await env.DB.prepare(`
+      INSERT INTO user_photos (id, user_id, photo_url, is_primary, sort_order)
+      VALUES 
+        ('ph_br_1', ?, 'https://example.com/photo1.jpg', 1, 1),
+        ('ph_br_2', ?, 'https://example.com/photo2.jpg', 0, 2),
+        ('ph_br_3', ?, 'https://example.com/photo3.jpg', 0, 3),
+        ('ph_br_4', ?, 'https://example.com/photo4.jpg', 0, 4),
+        ('ph_br_5', ?, 'https://example.com/photo5.jpg', 0, 5)
+    `).bind(sampleBrotherUser.id, sampleBrotherUser.id, sampleBrotherUser.id, sampleBrotherUser.id, sampleBrotherUser.id).run();
+
+    // Brother likes Sister
+    await app.request('/api/matches/action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ senderId: sampleBrotherUser.id, receiverId: sampleSisterUser.id, action: 'liked' })
+    }, env);
+
+    // Verify /matches/received returns only 1 photo for Brother
+    const recRes = await (await app.request(`/api/matches/received?userId=${sampleSisterUser.id}`, { method: 'GET' }, env)).json();
+    const candidate = recRes.candidates.find((c: any) => c.id === sampleBrotherUser.id);
+    expect(candidate).toBeDefined();
+    expect(candidate.photos).toHaveLength(1);
+    expect(candidate.photos[0]).toBe('https://example.com/photo1.jpg');
+
+    // Sister accepts match
+    await app.request('/api/matches/action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ senderId: sampleSisterUser.id, receiverId: sampleBrotherUser.id, action: 'liked', isMutualMatch: true })
+    }, env);
+
+    // Verify /matches/mutual returns only 1 photo for Brother
+    const mutRes = await (await app.request(`/api/matches/mutual?userId=${sampleSisterUser.id}`, { method: 'GET' }, env)).json();
+    const match = mutRes.matches.find((m: any) => m.id === sampleBrotherUser.id);
+    expect(match).toBeDefined();
+    expect(match.photos).toHaveLength(1);
+    expect(match.photos[0]).toBe('https://example.com/photo1.jpg');
+
+    // Verify /conversations returns only 1 photo for Brother
+    const convRes = await (await app.request(`/api/conversations?userId=${sampleSisterUser.id}`, { method: 'GET' }, env)).json();
+    const conv = convRes.conversations.find((c: any) => c.otherUser?.id === sampleBrotherUser.id);
+    expect(conv).toBeDefined();
+    expect(conv.otherUser.photos).toHaveLength(1);
+    expect(conv.otherUser.photos[0]).toBe('https://example.com/photo1.jpg');
+  });
 });

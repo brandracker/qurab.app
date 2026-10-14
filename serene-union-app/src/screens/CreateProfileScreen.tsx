@@ -70,9 +70,20 @@ export const CreateProfileScreen: React.FC<Props> = ({
             isPrimary: activeSlot === 0,
             blurByDefault: blurPhotos
           })
-        }).catch(err => {
-          console.warn('Background photo upload warning:', err);
-        });
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data?.success && data?.photoUrl) {
+              setPhotos(prev => {
+                const copy = [...prev];
+                copy[activeSlot] = data.photoUrl;
+                return copy;
+              });
+            }
+          })
+          .catch(err => {
+            console.warn('Background photo upload warning:', err);
+          });
       }
     } catch (err) {
       console.error('Photo optimization error:', err);

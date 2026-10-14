@@ -3,7 +3,7 @@ import type { AppContext } from '../types';
 
 export const photosRouter = new Hono<AppContext>();
 
-// 1. Photo Upload (R2 Storage integration)
+// 1. Photo Upload (Cloudflare R2 Storage + D1 integration)
 photosRouter.post('/upload', async (c) => {
   try {
     const { userId, photoBase64, isPrimary, blurByDefault } = await c.req.json();
@@ -12,7 +12,40 @@ photosRouter.post('/upload', async (c) => {
     }
 
     const photoId = `ph_${Date.now()}`;
-    const photoUrl = photoBase64.startsWith('data:') ? photoBase64 : `data:image/jpeg;base64,${photoBase64}`;
+    let photoUrl = photoBase64.startsWith('data:') ? photoBase64 : `data:image/jpeg;base64,${photoBase64}`;
+
+    // Extract mime type if available
+    let contentType = 'image/jpeg';
+    const mimeMatch = photoBase64.match(/^data:([^;]+);/);
+    if (mimeMatch && mimeMatch[1]) {
+      contentType = mimeMatch[1];
+    }
+    const ext = contentType.includes('png') ? 'png' : (contentType.includes('webp') ? 'webp' : 'jpg');
+    const fileId = `photo_${userId}_${Date.now()}.${ext}`;
+
+    // Upload to Cloudflare R2 if available
+    if (c.env.MEDIA_BUCKET) {
+      try {
+        const commaIdx = photoBase64.indexOf(',');
+        const rawBase64 = commaIdx !== -1 ? photoBase64.substring(commaIdx + 1) : photoBase64;
+        const base64Clean = rawBase64.replace(/[^A-Za-z0-9+/=]/g, '');
+        const binaryString = atob(base64Clean);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        await c.env.MEDIA_BUCKET.put(fileId, bytes.buffer, {
+          httpMetadata: { contentType }
+        });
+        photoUrl = `https://serene-union-api.brandracker.workers.dev/api/photos/media/${fileId}`;
+      } catch (r2Err) {
+        console.warn('R2 photo storage warning, preserving base64 fallback:', r2Err);
+      }
+    }
+
+    if (isPrimary) {
+      await c.env.DB.prepare(`UPDATE user_photos SET is_primary = 0 WHERE user_id = ?`).bind(userId).run();
+    }
 
     await c.env.DB.prepare(`
       INSERT INTO user_photos (id, user_id, photo_url, is_primary, sort_order)

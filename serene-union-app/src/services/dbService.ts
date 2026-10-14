@@ -1313,7 +1313,15 @@ class DBService {
       const res = await fetch(`${API_BASE}/matches/received?userId=${user.id}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.candidates)) {
-        localStorage.setItem(localKey, JSON.stringify(data.candidates));
+        try {
+          const lightweight = data.candidates.map((c: any) => ({
+            ...c,
+            photos: (c.photos || []).map((p: string) => (typeof p === 'string' && p.startsWith('data:') && p.length > 50000 ? '' : p)).filter(Boolean)
+          }));
+          localStorage.setItem(localKey, JSON.stringify(lightweight));
+        } catch (storageErr) {
+          console.warn('Storage quota limit reached for liked you cache:', storageErr);
+        }
         return data.candidates;
       }
     } catch (err) {
@@ -1340,7 +1348,15 @@ class DBService {
       const res = await fetch(`${API_BASE}/matches/mutual?userId=${user.id}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.matches)) {
-        localStorage.setItem(localKey, JSON.stringify(data.matches));
+        try {
+          const lightweight = data.matches.map((m: any) => ({
+            ...m,
+            photos: (m.photos || []).map((p: string) => (typeof p === 'string' && p.startsWith('data:') && p.length > 50000 ? '' : p)).filter(Boolean)
+          }));
+          localStorage.setItem(localKey, JSON.stringify(lightweight));
+        } catch (storageErr) {
+          console.warn('Storage quota limit reached for mutual matches cache:', storageErr);
+        }
         return data.matches;
       }
     } catch (err) {
@@ -1499,12 +1515,47 @@ class DBService {
 
     if (!localBlocked.some(b => b.id === targetId)) {
       localBlocked.unshift(newBlockedItem);
-      localStorage.setItem(localKey, JSON.stringify(localBlocked));
+      try {
+        localStorage.setItem(localKey, JSON.stringify(localBlocked));
+      } catch (storageErr) {
+        console.warn('Storage quota warning when updating blocked list:', storageErr);
+      }
     }
 
-    // Remove from active conversations
-    const convs = this.getConversations().filter(c => c.otherUser?.id !== targetId);
-    localStorage.setItem(this.conversationsKey, JSON.stringify(convs));
+    // 1. Remove from active conversations
+    try {
+      const convs = this.getConversations().filter(c => c.otherUser?.id !== targetId && c.participantOne !== targetId && c.participantTwo !== targetId);
+      localStorage.setItem(this.conversationsKey, JSON.stringify(convs));
+    } catch (storageErr) {
+      console.warn('Storage quota warning when updating conversations on block:', storageErr);
+    }
+
+    // 2. Remove from Liked You candidates cache
+    const likedYouKey = `serene_liked_you_${user.id}`;
+    try {
+      const savedLiked = JSON.parse(localStorage.getItem(likedYouKey) || '[]');
+      localStorage.setItem(likedYouKey, JSON.stringify(savedLiked.filter((p: any) => p.id !== targetId)));
+    } catch {}
+
+    // 3. Remove from Mutual Matches cache
+    const mutualKey = `serene_mutual_matches_${user.id}`;
+    try {
+      const savedMutual = JSON.parse(localStorage.getItem(mutualKey) || '[]');
+      localStorage.setItem(mutualKey, JSON.stringify(savedMutual.filter((p: any) => p.id !== targetId)));
+    } catch {}
+
+    // 4. Remove from Sent Likes cache
+    const likesKey = `serene_likes_sent_${user.id}`;
+    try {
+      const savedLikes = JSON.parse(localStorage.getItem(likesKey) || '[]');
+      localStorage.setItem(likesKey, JSON.stringify(savedLikes.filter((p: any) => p.id !== targetId)));
+    } catch {}
+
+    // Dispatch global events so UI immediately updates
+    window.dispatchEvent(new CustomEvent('serene_conversations_updated'));
+    window.dispatchEvent(new CustomEvent('serene_matches_updated'));
+    window.dispatchEvent(new CustomEvent('serene_activity_updated'));
+    window.dispatchEvent(new CustomEvent('serene_block_updated', { detail: { targetId } }));
 
     try {
       const res = await fetch(`${API_BASE}/matches/block`, {
@@ -1584,19 +1635,30 @@ class DBService {
     try {
       const user = this.getCurrentUser();
       if (!user?.id || user.id === 'usr_guest') return [];
+      const blockedIds = new Set(this.getUserBlocked(user.id).map((b: any) => b.id));
+
       const res = await fetch(`${API_BASE}/conversations?userId=${user.id}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.conversations)) {
         const localConvs = this.getConversations();
         const convMap = new Map<string, Conversation>();
 
-        // Preload local conversations so messages and local drafts are preserved
+        // Preload local conversations so messages and local drafts are preserved, excluding blocked users
         localConvs.forEach(c => {
-          if (c && c.id) convMap.set(c.id, c);
+          if (c && c.id) {
+            const partner = c.otherUser?.id || (c.participantOne === user.id ? c.participantTwo : c.participantOne);
+            if (!blockedIds.has(partner)) {
+              convMap.set(c.id, c);
+            }
+          }
         });
 
         data.conversations
-          .filter((rc: any) => rc.participantOne === user.id || rc.participantTwo === user.id)
+          .filter((rc: any) => {
+            const isParticipant = rc.participantOne === user.id || rc.participantTwo === user.id;
+            const otherId = rc.participantOne === user.id ? rc.participantTwo : rc.participantOne;
+            return isParticipant && !blockedIds.has(otherId) && !blockedIds.has(rc.otherUser?.id);
+          })
           .forEach((rc: any) => {
             const existing = convMap.get(rc.id);
             const isPhotoRevealed = typeof rc.isPhotoRevealed === 'boolean' 
@@ -1645,7 +1707,7 @@ class DBService {
           const mutualList = await this.fetchMutualMatches();
           if (Array.isArray(mutualList)) {
             mutualList.forEach(m => {
-              if (!m || !m.id) return;
+              if (!m || !m.id || blockedIds.has(m.id)) return;
               const convId = `conv_${[user.id, m.id].sort().join('_')}`;
               if (!convMap.has(convId)) {
                 const rawPhotos = m.photos || [];
@@ -1673,12 +1735,26 @@ class DBService {
           }
         } catch {}
 
-        const mergedList = Array.from(convMap.values());
+        const mergedList = Array.from(convMap.values()).filter(c => {
+          const partner = c.otherUser?.id || (c.participantOne === user.id ? c.participantTwo : c.participantOne);
+          return !blockedIds.has(partner);
+        });
         const prevJson = localStorage.getItem(this.conversationsKey);
-        const newJson = JSON.stringify(mergedList);
+        const lightweightConvs = mergedList.map(c => ({
+          ...c,
+          otherUser: c.otherUser ? {
+            ...c.otherUser,
+            photos: (c.otherUser.photos || []).map(p => (typeof p === 'string' && p.startsWith('data:') && p.length > 50000 ? '' : p)).filter(Boolean)
+          } : undefined
+        }));
+        const newJson = JSON.stringify(lightweightConvs);
 
         if (prevJson !== newJson) {
-          localStorage.setItem(this.conversationsKey, newJson);
+          try {
+            localStorage.setItem(this.conversationsKey, newJson);
+          } catch (storageErr) {
+            console.warn('Storage quota limit reached for conversations cache:', storageErr);
+          }
           try {
             window.dispatchEvent(new CustomEvent('serene_conversations_updated', { detail: { conversations: mergedList } }));
           } catch {}

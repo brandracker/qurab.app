@@ -152,6 +152,7 @@ adminRouter.get('/cities', async (c) => {
       SELECT city, COUNT(*) as count 
       FROM users 
       WHERE city IS NOT NULL AND TRIM(city) != '' AND city != 'Global'
+        AND (is_seed = 0 OR is_seed IS NULL)
       GROUP BY city 
       ORDER BY count DESC, city ASC
       LIMIT 100
@@ -169,15 +170,15 @@ adminRouter.get('/cities', async (c) => {
 // 3. Deep Dashboard Analytics & Executive Metrics
 adminRouter.get('/dashboard/stats', async (c) => {
   try {
-    const totalUsersRes = await c.env.DB.prepare('SELECT COUNT(*) as c FROM users').first();
-    const maleUsersRes = await c.env.DB.prepare("SELECT COUNT(*) as c FROM users WHERE gender = 'male'").first();
-    const femaleUsersRes = await c.env.DB.prepare("SELECT COUNT(*) as c FROM users WHERE gender = 'female'").first();
-    const vipUsersRes = await c.env.DB.prepare('SELECT COUNT(*) as c FROM users WHERE is_vip = 1').first();
+    const totalUsersRes = await c.env.DB.prepare('SELECT COUNT(*) as c FROM users WHERE (is_seed = 0 OR is_seed IS NULL)').first();
+    const maleUsersRes = await c.env.DB.prepare("SELECT COUNT(*) as c FROM users WHERE gender = 'male' AND (is_seed = 0 OR is_seed IS NULL)").first();
+    const femaleUsersRes = await c.env.DB.prepare("SELECT COUNT(*) as c FROM users WHERE gender = 'female' AND (is_seed = 0 OR is_seed IS NULL)").first();
+    const vipUsersRes = await c.env.DB.prepare('SELECT COUNT(*) as c FROM users WHERE is_vip = 1 AND (is_seed = 0 OR is_seed IS NULL)').first();
 
     let bannedCount = 0;
     try {
       const bRes = await c.env.DB.prepare(
-        "SELECT COUNT(*) as c FROM users WHERE (account_status = 'banned' OR is_banned = 1)"
+        "SELECT COUNT(*) as c FROM users WHERE (account_status = 'banned' OR is_banned = 1) AND (is_seed = 0 OR is_seed IS NULL)"
       ).first();
       bannedCount = Number(bRes?.c || 0);
     } catch {}
@@ -200,28 +201,29 @@ adminRouter.get('/dashboard/stats', async (c) => {
       pendingWaliCount = Number(wRes?.c || 0);
     } catch {}
 
-    // Signups growth periods
+    // Signups growth periods (excluding seed profiles)
     let todaySignups = 0;
     let weekSignups = 0;
     let monthSignups = 0;
     try {
-      const todayRes = await c.env.DB.prepare("SELECT COUNT(*) as c FROM users WHERE date(created_at) = date('now')").first();
+      const todayRes = await c.env.DB.prepare("SELECT COUNT(*) as c FROM users WHERE date(created_at) = date('now') AND (is_seed = 0 OR is_seed IS NULL)").first();
       todaySignups = Number(todayRes?.c || 0);
 
-      const weekRes = await c.env.DB.prepare("SELECT COUNT(*) as c FROM users WHERE created_at >= datetime('now', '-7 days')").first();
+      const weekRes = await c.env.DB.prepare("SELECT COUNT(*) as c FROM users WHERE created_at >= datetime('now', '-7 days') AND (is_seed = 0 OR is_seed IS NULL)").first();
       weekSignups = Number(weekRes?.c || 0);
 
-      const monthRes = await c.env.DB.prepare("SELECT COUNT(*) as c FROM users WHERE created_at >= datetime('now', '-30 days')").first();
+      const monthRes = await c.env.DB.prepare("SELECT COUNT(*) as c FROM users WHERE created_at >= datetime('now', '-30 days') AND (is_seed = 0 OR is_seed IS NULL)").first();
       monthSignups = Number(monthRes?.c || 0);
     } catch {}
 
-    // Top 5 populated cities
+    // Top 5 populated cities (real organic users only)
     let topCities: any[] = [];
     try {
       const topCitiesRes = await c.env.DB.prepare(`
         SELECT city, COUNT(*) as count 
         FROM users 
         WHERE city IS NOT NULL AND TRIM(city) != '' AND city != 'Global'
+          AND (is_seed = 0 OR is_seed IS NULL)
         GROUP BY city 
         ORDER BY count DESC 
         LIMIT 5
@@ -278,7 +280,7 @@ adminRouter.get('/users', async (c) => {
     const limit = Math.min(Math.max(10, Number(c.req.query('limit')) || 25), 100);
     const offset = (page - 1) * limit;
 
-    let baseFilter = ' WHERE 1=1';
+    let baseFilter = ' WHERE (u.is_seed = 0 OR u.is_seed IS NULL)';
     const params: any[] = [];
 
     if (search.trim()) {
@@ -666,10 +668,11 @@ adminRouter.get('/photos/moderation', async (c) => {
              u.full_name, u.email, u.gender, u.city, u.profession, u.bio, u.account_status, u.is_vip
       FROM user_photos up
       JOIN users u ON up.user_id = u.id
+      WHERE (u.is_seed = 0 OR u.is_seed IS NULL)
     `;
     const params: any[] = [];
     if (gender) {
-      query += ` WHERE u.gender = ?`;
+      query += ` AND u.gender = ?`;
       params.push(gender);
     }
     query += ` ORDER BY up.id DESC LIMIT 100`;

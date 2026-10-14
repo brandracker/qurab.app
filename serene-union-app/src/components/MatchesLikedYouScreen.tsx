@@ -55,20 +55,46 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
     if (isInitial) {
       setIsLoading(true);
     }
-    Promise.all([
+    Promise.allSettled([
       dbService.fetchLikedYouCandidates(),
       dbService.fetchMutualMatches(),
       dbService.fetchActivityHub()
-    ]).then(([received, mutual, activity]) => {
+    ]).then(([receivedRes, mutualRes, activityRes]) => {
+      const received = receivedRes.status === 'fulfilled' ? receivedRes.value : [];
+      let mutual = mutualRes.status === 'fulfilled' ? mutualRes.value : [];
+      const activity = activityRes.status === 'fulfilled' && activityRes.value
+        ? activityRes.value 
+        : { sentLikes: [], passed: [], blocked: [] };
+
+      const likes = activity.sentLikes || [];
+
+      // Auto-heal mutual matches from confirmed mutual likes if API response was lagged
+      if ((!mutual || mutual.length === 0) && likes.some((l: any) => l.action === 'mutual_match')) {
+        const derivedMutual = likes
+          .filter((l: any) => l.action === 'mutual_match')
+          .map((l: any) => ({
+            id: l.id,
+            fullName: l.fullName || 'Match',
+            location: l.location || 'Global',
+            profession: l.profession || 'Professional',
+            marriageTimeline: l.marriageTimeline || 'within_1_year',
+            photos: l.photos && l.photos.length > 0 ? l.photos : ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500'],
+            blurPhotosByDefault: false
+          }));
+        mutual = derivedMutual as any;
+      }
+
       setInterestedProfiles(received || []);
       setMutualMatches(mutual || []);
-      const likes = activity.sentLikes || [];
       setSentLikes(likes);
-      setPassedProfiles(activity.passed || []);
+      const passedList = activity.passed || [];
+      setPassedProfiles(passedList);
       setBlockedProfiles(activity.blocked || []);
 
       // Auto-heal any stale placeholder records from earlier app versions in background
-      const candidatesToHeal = likes.filter((l: any) => !l.fullName || l.fullName === 'Candidate' || !l.photos || l.photos.length === 0);
+      const candidatesToHeal = [...likes, ...passedList].filter(
+        (l: any) => !l.fullName || l.fullName === 'Candidate' || !l.photos || l.photos.length === 0
+      );
       if (candidatesToHeal.length > 0) {
         Promise.all(candidatesToHeal.map((c: any) => dbService.fetchUserProfile(c.id))).then(resolved => {
           let hasUpdates = false;
@@ -90,6 +116,19 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
                   location: healed.location || item.location,
                   photos: healed.photos && healed.photos.length > 0 ? healed.photos : item.photos,
                   marriageTimeline: healed.marriageTimeline || item.marriageTimeline
+                };
+              }
+              return item;
+            }));
+            setPassedProfiles(prev => prev.map(item => {
+              const healed = healedMap.get(item.id);
+              if (healed) {
+                return {
+                  ...item,
+                  fullName: healed.fullName,
+                  profession: healed.profession || item.profession,
+                  location: healed.location || item.location,
+                  photos: healed.photos && healed.photos.length > 0 ? healed.photos : item.photos
                 };
               }
               return item;

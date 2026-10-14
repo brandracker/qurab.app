@@ -101,7 +101,18 @@ walletRouter.get('/:userId', async (c) => {
 
     const isVip = wallet.subscription_tier === 'barakah_vip' || wallet.subscription_tier === 'vip';
     const quota = wallet.daily_likes_quota ?? 50;
-    const used = wallet.likes_used_today ?? 0;
+    let used = wallet.likes_used_today ?? 0;
+
+    // Daily Midnight Reset Check: Automatically reset counter on date rollover
+    if (wallet.last_likes_reset_date !== todayDate) {
+      used = 0;
+      wallet.likes_used_today = 0;
+      wallet.last_likes_reset_date = todayDate;
+      await c.env.DB.prepare(`
+        UPDATE user_wallets SET likes_used_today = 0, last_likes_reset_date = ? WHERE user_id = ?
+      `).bind(todayDate, userId).run();
+    }
+
     const likesRemaining = isVip ? 9999 : Math.max(0, quota - used);
 
     return c.json({
@@ -126,7 +137,7 @@ walletRouter.get('/:userId', async (c) => {
   }
 });
 
-// 1b. Use a Daily Like (Live D1 Decrement)
+// 1b. Use a Daily Like (Live D1 Decrement with Midnight Reset)
 walletRouter.post('/use-like', async (c) => {
   try {
     const { userId } = await c.req.json();
@@ -152,12 +163,27 @@ walletRouter.post('/use-like', async (c) => {
     }
 
     const quota = wallet.daily_likes_quota ?? 50;
-    const used = (wallet.likes_used_today ?? 0) + 1;
+    let currentUsed = wallet.likes_used_today ?? 0;
+    if (wallet.last_likes_reset_date !== todayDate) {
+      currentUsed = 0;
+    }
+
+    const isVip = wallet.subscription_tier === 'barakah_vip' || wallet.subscription_tier === 'vip';
+    if (!isVip && currentUsed >= quota) {
+      return c.json({
+        success: false,
+        error: 'Daily likes quota exhausted. Resets at midnight.',
+        likesRemaining: 0,
+        likesUsedToday: currentUsed,
+        dailyLikesQuota: quota
+      }, 403);
+    }
+
+    const used = currentUsed + 1;
     await c.env.DB.prepare(`
       UPDATE user_wallets SET likes_used_today = ?, last_likes_reset_date = ? WHERE user_id = ?
     `).bind(used, todayDate, userId).run();
 
-    const isVip = wallet.subscription_tier === 'barakah_vip' || wallet.subscription_tier === 'vip';
     const likesRemaining = isVip ? 9999 : Math.max(0, quota - used);
 
     return c.json({

@@ -1636,6 +1636,9 @@ class DBService {
 
         const mergedList = Array.from(convMap.values());
         localStorage.setItem(this.conversationsKey, JSON.stringify(mergedList));
+        try {
+          window.dispatchEvent(new CustomEvent('serene_conversations_updated', { detail: { conversations: mergedList } }));
+        } catch {}
         return mergedList;
       }
     } catch {}

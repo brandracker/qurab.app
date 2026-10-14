@@ -128,7 +128,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
             bio: 'Seeking half my deen.',
             blurPhotosByDefault: true,
             profileVisibility: 'all_users',
-            photos: ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80'],
+            photos: [],
             religiousProfile: {
               practiceLevel: 'practicing',
               sect: 'Sunni',
@@ -422,7 +422,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                       <div className={`w-12 h-12 rounded-full overflow-hidden border-2 bg-surface-variant flex items-center justify-center group-hover/avatar:border-primary transition-all shadow-subtle ${
                         isIncomingUnread ? 'border-primary ring-2 ring-primary/20' : 'border-primary/30'
                       }`}>
-                        {partner.photos && partner.photos.length > 0 ? (
+                        {partner.photos && partner.photos.length > 0 && !partner.photos[0].includes('photo-1534528741775-53994a69daeb') ? (
                           <img
                             src={partner.photos[0]}
                             alt={partner.fullName}
@@ -539,7 +539,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
             title="Click to view full biodata"
           >
             <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-primary/40 bg-surface-variant flex items-center justify-center group-hover/avatar:border-primary transition-all shadow-subtle">
-              {activeConv.otherUser.photos && activeConv.otherUser.photos.length > 0 ? (
+              {activeConv.otherUser.photos && activeConv.otherUser.photos.length > 0 && !activeConv.otherUser.photos[0].includes('photo-1534528741775-53994a69daeb') ? (
                 <img
                   src={activeConv.otherUser.photos[0]}
                   alt={activeConv.otherUser.fullName}

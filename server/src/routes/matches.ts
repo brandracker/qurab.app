@@ -235,12 +235,13 @@ matchesRouter.get('/received', async (c) => {
         rp.modesty_practice as modestyPractice, rp.hajj_umrah_status as hajjUmrahStatus,
         rp.deen_relationship_bio as deenRelationshipBio,
         w.wali_name as waliName, w.wali_relationship as waliRelationship, w.wali_phone as waliPhone, w.is_verified as waliVerified,
+        m.action as matchAction,
         m.created_at as likedAt
       FROM matches_and_likes m
       LEFT JOIN users u ON m.sender_id = u.id
       LEFT JOIN religious_profiles rp ON u.id = rp.user_id
       LEFT JOIN wali_details w ON u.id = w.user_id
-      WHERE m.receiver_id = ? AND (m.action = 'liked' OR m.action = 'direct_salam')
+      WHERE m.receiver_id = ? AND (m.action = 'liked' OR m.action = 'direct_salam' OR m.action = 'mutual_match')
       ORDER BY m.created_at DESC
     `;
 
@@ -300,7 +301,8 @@ matchesRouter.get('/received', async (c) => {
         bio: row.bio || row.deenRelationshipBio || 'Seeking half my deen.',
         blurPhotosByDefault: Boolean(row.blurPhotosByDefault),
         profileVisibility: row.profileVisibility || 'all_users',
-        photos: userPhotos.length > 0 ? userPhotos : ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80'],
+        photos: userPhotos.length > 0 ? userPhotos : [],
+        action: row.matchAction || 'liked',
         religiousProfile: {
           practiceLevel: row.practiceLevel || 'practicing',
           sect: row.sect || 'Sunni',
@@ -438,7 +440,7 @@ matchesRouter.get('/mutual', async (c) => {
         bio: row.bio || row.deenRelationshipBio || 'Seeking half my deen.',
         blurPhotosByDefault: Boolean(row.blurPhotosByDefault),
         profileVisibility: row.profileVisibility || 'all_users',
-        photos: userPhotos.length > 0 ? userPhotos : ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80'],
+        photos: userPhotos.length > 0 ? userPhotos : [],
         religiousProfile: {
           practiceLevel: row.practiceLevel || 'practicing',
           sect: row.sect || 'Sunni',

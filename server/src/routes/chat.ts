@@ -167,7 +167,7 @@ chatRouter.get('/', async (c) => {
           blurPhotosByDefault: otherBlur,
           isPhotoRevealed,
           hasRevealedToPartner,
-          photos: userPhotos.length > 0 ? userPhotos : ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80'],
+          photos: userPhotos.length > 0 ? userPhotos : [],
           religiousProfile: {
             sect: otherSect || 'Sunni',
             madhhab: otherMadhhab || 'Hanafi',

@@ -869,7 +869,7 @@ profilesRouter.get('/discover', async (c) => {
         accountStatus: row.accountStatus || 'active',
         voiceGreetingUrl: row.voiceGreetingUrl || undefined,
         voiceGreetingDuration: row.voiceGreetingDuration || undefined,
-        photos: userPhotos.length > 0 ? userPhotos : ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80'],
+        photos: userPhotos.length > 0 ? userPhotos : [],
         religiousProfile: {
           practiceLevel: row.practiceLevel || 'practicing',
           sect: row.sect || 'Sunni',

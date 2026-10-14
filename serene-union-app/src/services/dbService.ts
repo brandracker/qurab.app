@@ -30,7 +30,7 @@ export const FALLBACK_PROFILES: UserProfile[] = [
     accountStatus: 'active',
     voiceGreetingUrl: 'https://serene-union-api.brandracker.workers.dev/api/photos/media/voice_usr_1788698668775_1788715872303.webm',
     voiceGreetingDuration: 40,
-    photos: ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&q=80'],
+    photos: [],
     religiousProfile: {
       practiceLevel: 'practicing',
       sect: 'Sunni',
@@ -1606,8 +1606,14 @@ class DBService {
               ? rc.hasRevealedToPartner
               : (existing?.hasRevealedToPartner ?? false);
 
+            const rawPhotos = rc.otherUser?.photos || existing?.otherUser?.photos || [];
+            const sanitizedPhotos = Array.isArray(rawPhotos) 
+              ? rawPhotos.filter((p: string) => typeof p === 'string' && !p.includes('photo-1534528741775-53994a69daeb'))
+              : [];
+
             const otherUserMerged = {
               ...(rc.otherUser || existing?.otherUser),
+              photos: sanitizedPhotos,
               isPhotoRevealed,
               hasRevealedToPartner
             };
@@ -1634,11 +1640,49 @@ class DBService {
             });
           });
 
-        const mergedList = Array.from(convMap.values());
-        localStorage.setItem(this.conversationsKey, JSON.stringify(mergedList));
+        // Auto-seed confirmed mutual matches so they ALWAYS show in Chat screen immediately
         try {
-          window.dispatchEvent(new CustomEvent('serene_conversations_updated', { detail: { conversations: mergedList } }));
+          const mutualList = await this.fetchMutualMatches();
+          if (Array.isArray(mutualList)) {
+            mutualList.forEach(m => {
+              if (!m || !m.id) return;
+              const convId = `conv_${[user.id, m.id].sort().join('_')}`;
+              if (!convMap.has(convId)) {
+                const rawPhotos = m.photos || [];
+                const sanitizedPhotos = Array.isArray(rawPhotos)
+                  ? rawPhotos.filter((p: string) => typeof p === 'string' && !p.includes('photo-1534528741775-53994a69daeb'))
+                  : [];
+                convMap.set(convId, {
+                  id: convId,
+                  participantOne: user.id,
+                  participantTwo: m.id,
+                  otherUser: { ...m, photos: sanitizedPhotos },
+                  lastMessageText: 'You matched! Start with Bismillah.',
+                  lastMessageSenderId: 'system',
+                  lastMessageTime: 'Just now',
+                  lastMessageTimestamp: Date.now(),
+                  unreadCount: 0,
+                  waliName: m.wali?.name,
+                  status: 'active',
+                  messages: [],
+                  isPhotoRevealed: m.photoRevealApproved || false,
+                  hasRevealedToPartner: false
+                });
+              }
+            });
+          }
         } catch {}
+
+        const mergedList = Array.from(convMap.values());
+        const prevJson = localStorage.getItem(this.conversationsKey);
+        const newJson = JSON.stringify(mergedList);
+
+        if (prevJson !== newJson) {
+          localStorage.setItem(this.conversationsKey, newJson);
+          try {
+            window.dispatchEvent(new CustomEvent('serene_conversations_updated', { detail: { conversations: mergedList } }));
+          } catch {}
+        }
         return mergedList;
       }
     } catch {}

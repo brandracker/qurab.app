@@ -78,22 +78,31 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
             location: l.location || 'Global',
             profession: l.profession || 'Professional',
             marriageTimeline: l.marriageTimeline || 'within_1_year',
-            photos: l.photos && l.photos.length > 0 ? l.photos : ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500'],
+            photos: (l.photos && l.photos.length > 0) ? l.photos.filter((p: string) => !p.includes('photo-1534528741775-53994a69daeb')) : [],
             blurPhotosByDefault: false
           }));
         mutual = derivedMutual as any;
       }
 
-      setInterestedProfiles(received || []);
-      setMutualMatches(mutual || []);
-      setSentLikes(likes);
-      const passedList = activity.passed || [];
-      setPassedProfiles(passedList);
-      setBlockedProfiles(activity.blocked || []);
+      const cleanReceived = (received || []).map((r: any) => ({
+        ...r,
+        photos: Array.isArray(r.photos) ? r.photos.filter((p: string) => !p.includes('photo-1534528741775-53994a69daeb')) : []
+      }));
+      const cleanMutual = (mutual || []).map((m: any) => ({
+        ...m,
+        photos: Array.isArray(m.photos) ? m.photos.filter((p: string) => !p.includes('photo-1534528741775-53994a69daeb')) : []
+      }));
 
-      // Auto-heal any stale placeholder records from earlier app versions in background
+      setInterestedProfiles(prev => JSON.stringify(prev) === JSON.stringify(cleanReceived) ? prev : cleanReceived);
+      setMutualMatches(prev => JSON.stringify(prev) === JSON.stringify(cleanMutual) ? prev : cleanMutual);
+      setSentLikes(prev => JSON.stringify(prev) === JSON.stringify(likes) ? prev : likes);
+      const passedList = activity.passed || [];
+      setPassedProfiles(prev => JSON.stringify(prev) === JSON.stringify(passedList) ? prev : passedList);
+      setBlockedProfiles(prev => JSON.stringify(prev) === JSON.stringify(activity.blocked || []) ? prev : (activity.blocked || []));
+
+      // Auto-heal any placeholder records where name is unknown
       const candidatesToHeal = [...likes, ...passedList].filter(
-        (l: any) => !l.fullName || l.fullName === 'Candidate' || !l.photos || l.photos.length === 0
+        (l: any) => (!l.fullName || l.fullName === 'Candidate') && l.id
       );
       if (candidatesToHeal.length > 0) {
         Promise.all(candidatesToHeal.map((c: any) => dbService.fetchUserProfile(c.id))).then(resolved => {
@@ -432,7 +441,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
 
       {/* 1. RECEIVED LIKES TAB */}
       {activeTab === 'received' && (
-        <div className="space-y-3.5 animate-fade-in">
+        <div className="space-y-3.5">
           {/* VIP Banner */}
           {!isVip && interestedProfiles.length > 0 && (
             <div className="bg-pastel-amber rounded-3xl p-3.5 border border-pastel-amber-border flex flex-col gap-2 shadow-subtle">
@@ -467,7 +476,16 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
           ) : interestedProfiles.length > 0 ? (
             <div className="grid grid-cols-2 gap-2.5">
               {interestedProfiles.map(candidate => {
-                const photo = candidate.photos?.[0] || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500';
+                const hasPhoto = Boolean(
+                  candidate.photos && 
+                  candidate.photos.length > 0 && 
+                  candidate.photos[0] && 
+                  !candidate.photos[0].includes('photo-1534528741775-53994a69daeb')
+                );
+                const photo = hasPhoto ? candidate.photos![0] : null;
+                const isMutual = (candidate as any).action === 'mutual_match';
+                const initial = (candidate.fullName || 'M').charAt(0).toUpperCase();
+
                 return (
                   <div
                     key={candidate.id}
@@ -478,15 +496,24 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
                         if (isVip) setSelectedProfile(candidate);
                         else setShowUpgradeModal(true);
                       }}
-                      className="relative aspect-[3/4] bg-surface-variant overflow-hidden cursor-pointer"
+                      className="relative aspect-[3/4] bg-surface-variant overflow-hidden cursor-pointer flex items-center justify-center"
                     >
-                      <img
-                        src={photo}
-                        alt={candidate.fullName}
-                        className={`w-full h-full object-cover transition-all ${
-                          !isVip ? 'filter blur-md scale-110 opacity-70' : 'scale-100'
-                        }`}
-                      />
+                      {photo ? (
+                        <img
+                          src={photo}
+                          alt={candidate.fullName}
+                          className={`w-full h-full object-cover transition-all ${
+                            !isVip ? 'filter blur-md scale-110 opacity-70' : 'scale-100'
+                          }`}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-pastel-rose/30 via-surface-variant to-pastel-lavender/30 text-primary">
+                          <div className="w-14 h-14 rounded-full bg-white shadow-subtle flex items-center justify-center text-xl font-serif font-bold text-primary border border-outline">
+                            {initial}
+                          </div>
+                          <span className="text-[10px] font-medium text-secondary mt-2">Verified Profile</span>
+                        </div>
+                      )}
                       {!isVip && (
                         <div 
                           onClick={() => setShowUpgradeModal(true)}
@@ -500,6 +527,12 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
                         {candidate.location?.split(',')[0]}
                         {typeof candidate.distanceKm === 'number' && ` · ${candidate.distanceKm} km`}
                       </div>
+                      {isMutual && (
+                        <div className="absolute top-2 right-2 bg-emerald-600 text-white px-2 py-0.5 rounded-full text-[9px] font-bold flex items-center gap-1 shadow-sm">
+                          <CheckCircle2 className="w-2.5 h-2.5" />
+                          <span>Matched</span>
+                        </div>
+                      )}
                     </div>
 
                     <div className="p-2.5 flex-1 flex flex-col justify-between gap-1.5">
@@ -514,21 +547,36 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
 
                       <div className="pt-1.5 border-t border-outline">
                         <div className="flex items-center gap-1.5">
-                          <button
-                            onClick={() => handleInstantMatch(candidate)}
-                            className="flex-1 py-1.5 rounded-xl bg-primary text-white text-[10px] font-bold shadow-brand hover:bg-primary-dark active:scale-95 transition-all flex items-center justify-center gap-1"
-                          >
-                            <Heart className="w-3 h-3 fill-current" />
-                            <span>Match & Chat</span>
-                          </button>
+                          {isMutual ? (
+                            <button
+                              onClick={() => {
+                                const newConv = dbService.createMatchConversation(candidate);
+                                onOpenChat(newConv.id);
+                              }}
+                              className="flex-1 py-1.5 rounded-xl bg-emerald-600 text-white text-[10px] font-bold shadow-brand hover:bg-emerald-700 active:scale-95 transition-all flex items-center justify-center gap-1"
+                            >
+                              <MessageCircle className="w-3 h-3" />
+                              <span>Matched · Open Chat</span>
+                            </button>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => handleInstantMatch(candidate)}
+                                className="flex-1 py-1.5 rounded-xl bg-primary text-white text-[10px] font-bold shadow-brand hover:bg-primary-dark active:scale-95 transition-all flex items-center justify-center gap-1"
+                              >
+                                <Heart className="w-3 h-3 fill-current" />
+                                <span>Match & Chat</span>
+                              </button>
 
-                          <button
-                            onClick={() => handlePassCandidate(candidate)}
-                            className="px-2.5 py-1.5 rounded-xl bg-surface-variant hover:bg-outline text-secondary text-[10px] font-semibold transition-all"
-                            title="Pass"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
+                              <button
+                                onClick={() => handlePassCandidate(candidate)}
+                                className="px-2.5 py-1.5 rounded-xl bg-surface-variant hover:bg-outline text-secondary text-[10px] font-semibold transition-all"
+                                title="Pass"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
 
@@ -554,7 +602,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
 
       {/* 2. SENT LIKES TAB */}
       {activeTab === 'sent' && (
-        <div className="space-y-2.5 animate-fade-in">
+        <div className="space-y-2.5">
           {sentLikes.length > 0 ? (
             <div className="space-y-2">
               {sentLikes.map(item => (
@@ -574,7 +622,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
                 >
                   <div className="flex items-center gap-2.5">
                     <div className="w-10 h-10 rounded-full overflow-hidden border border-pastel-rose-border bg-surface-variant flex items-center justify-center shrink-0">
-                      {item.photos && item.photos.length > 0 ? (
+                      {item.photos && item.photos.length > 0 && !item.photos[0].includes('photo-1534528741775-53994a69daeb') ? (
                         <img src={item.photos[0]} alt={item.fullName} className="w-full h-full object-cover" />
                       ) : (
                         <span className="font-serif font-bold text-xs text-primary">{item.fullName ? item.fullName[0] : 'C'}</span>
@@ -626,72 +674,89 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
 
       {/* 3. MUTUAL MATCHES TAB */}
       {activeTab === 'mutual' && (
-        <div className="space-y-2.5 animate-fade-in">
+        <div className="space-y-2.5">
           {mutualMatches.length > 0 ? (
             <div className="space-y-2">
-              {mutualMatches.map(match => (
-                <div
-                  key={match.id}
-                  onClick={() => {
-                    const newConv = dbService.createMatchConversation(match);
-                    onOpenChat(newConv.id);
-                  }}
-                  className="bg-white p-3 rounded-2xl border border-outline shadow-subtle flex items-center justify-between gap-3 hover:border-primary transition-all cursor-pointer group"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-11 h-11 rounded-full bg-surface-variant overflow-hidden border-2 border-primary shrink-0 group-hover:scale-105 transition-transform shadow-2xs">
-                      <img
-                        src={match.photos?.[0] || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500'}
-                        alt={match.fullName}
-                        className={`w-full h-full object-cover ${
-                          match.blurPhotosByDefault && !match.photoRevealApproved ? 'blur-xs' : ''
-                        }`}
-                      />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1">
-                        <h4 className="font-serif font-bold text-xs text-on-surface group-hover:text-primary transition-colors">
-                          {match.fullName}
-                        </h4>
+              {mutualMatches.map(match => {
+                const hasPhoto = Boolean(
+                  match.photos && 
+                  match.photos.length > 0 && 
+                  match.photos[0] && 
+                  !match.photos[0].includes('photo-1534528741775-53994a69daeb')
+                );
+                const photo = hasPhoto ? match.photos![0] : null;
+                const initial = (match.fullName || 'M').charAt(0).toUpperCase();
+
+                return (
+                  <div
+                    key={match.id}
+                    onClick={() => {
+                      const newConv = dbService.createMatchConversation(match);
+                      onOpenChat(newConv.id);
+                    }}
+                    className="bg-white p-3 rounded-2xl border border-outline shadow-subtle flex items-center justify-between gap-3 hover:border-primary transition-all cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-11 h-11 rounded-full bg-surface-variant overflow-hidden border-2 border-primary shrink-0 group-hover:scale-105 transition-transform shadow-2xs flex items-center justify-center">
+                        {photo ? (
+                          <img
+                            src={photo}
+                            alt={match.fullName}
+                            className={`w-full h-full object-cover ${
+                              match.blurPhotosByDefault && !match.photoRevealApproved ? 'blur-xs' : ''
+                            }`}
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-pastel-rose text-primary flex items-center justify-center font-serif font-bold text-sm">
+                            {initial}
+                          </div>
+                        )}
                       </div>
+                      <div>
+                        <div className="flex items-center gap-1">
+                          <h4 className="font-serif font-bold text-xs text-on-surface group-hover:text-primary transition-colors">
+                            {match.fullName}
+                          </h4>
+                        </div>
 
-                      <p className="text-[10px] text-primary font-semibold">
-                        {match.profession || 'Professional'} · {match.location}
-                      </p>
-                      <span className="text-[9px] text-secondary">
-                        Tap to chat · Tap eye for biodata
-                      </span>
+                        <p className="text-[10px] text-primary font-semibold">
+                          {match.profession || 'Professional'} · {match.location}
+                        </p>
+                        <span className="text-[9px] text-secondary">
+                          Tap to chat · Tap eye for biodata
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedProfile(match);
+                        }}
+                        title="View Full Profile"
+                        className="w-8 h-8 rounded-xl bg-surface-variant border border-outline text-on-surface hover:bg-outline flex items-center justify-center transition-colors"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const newConv = dbService.createMatchConversation(match);
+                          onOpenChat(newConv.id);
+                        }}
+                        className="px-3.5 py-2 rounded-xl bg-primary text-white text-xs font-bold flex items-center gap-1 shadow-brand hover:bg-primary-dark active:scale-95 transition-all"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5" />
+                        <span>Chat</span>
+                      </button>
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedProfile(match);
-                      }}
-                      title="View Full Profile"
-                      className="w-8 h-8 rounded-xl bg-surface-variant border border-outline text-on-surface hover:bg-outline flex items-center justify-center transition-colors"
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const newConv = dbService.createMatchConversation(match);
-                        onOpenChat(newConv.id);
-                      }}
-                      className="px-3.5 py-2 rounded-xl bg-primary text-white text-xs font-bold flex items-center gap-1 shadow-brand hover:bg-primary-dark active:scale-95 transition-all"
-                    >
-                      <MessageCircle className="w-3.5 h-3.5" />
-                      <span>Chat</span>
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-14 text-center px-4 bg-white rounded-3xl border border-outline shadow-card">
@@ -709,7 +774,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
 
       {/* 4. PASSED PROFILES */}
       {activeTab === 'passed' && (
-        <div className="space-y-2.5 animate-fade-in">
+        <div className="space-y-2.5">
           {passedProfiles.length > 0 ? (
             <div className="space-y-2">
               <p className="text-[11px] text-secondary">
@@ -722,7 +787,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
                 >
                   <div className="flex items-center gap-2.5">
                     <div className="w-10 h-10 rounded-full overflow-hidden border border-outline bg-surface-variant flex items-center justify-center shrink-0">
-                      {item.photos && item.photos.length > 0 ? (
+                      {item.photos && item.photos.length > 0 && !item.photos[0].includes('photo-1534528741775-53994a69daeb') ? (
                         <img src={item.photos[0]} alt={item.fullName} className="w-full h-full object-cover" />
                       ) : (
                         <span className="font-serif font-bold text-xs text-secondary">{item.fullName ? item.fullName[0] : 'C'}</span>
@@ -761,7 +826,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
 
       {/* 5. BLOCKED USERS */}
       {activeTab === 'blocked' && (
-        <div className="space-y-2.5 animate-fade-in">
+        <div className="space-y-2.5">
           {blockedProfiles.length > 0 ? (
             <div className="space-y-2">
               <p className="text-[11px] text-secondary">

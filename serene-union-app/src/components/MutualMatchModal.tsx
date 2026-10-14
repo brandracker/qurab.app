@@ -28,9 +28,9 @@ export const MutualMatchModal: React.FC<Props> = ({ profile, currentUser: propUs
     ? currentUser.photos[0]
     : null;
 
-  const otherPhoto = profile?.photos && profile.photos.length > 0 && profile.photos[0]
+  const otherPhoto = profile?.photos && profile.photos.length > 0 && profile.photos[0] && !profile.photos[0].includes('photo-1534528741775-53994a69daeb')
     ? profile.photos[0]
-    : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&q=80';
+    : null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs px-4 animate-fade-in select-none text-on-surface">
@@ -70,15 +70,23 @@ export const MutualMatchModal: React.FC<Props> = ({ profile, currentUser: propUs
 
           {/* Matched Profile Photo */}
           <div className="w-22 h-22 rounded-full border-4 border-white overflow-hidden shadow-card ring-2 ring-primary relative bg-surface-variant flex items-center justify-center z-10">
-            <img
-              src={otherPhoto}
-              alt={profile.fullName}
-              className={`w-full h-full object-cover ${profile.blurPhotosByDefault && !profile.photoRevealApproved ? 'filter blur-md' : ''}`}
-            />
-            {profile.blurPhotosByDefault && !profile.photoRevealApproved && (
-              <div className="absolute inset-0 bg-black/30 flex items-center justify-center backdrop-blur-xs">
-                <EyeOff className="w-5 h-5 text-white" />
-              </div>
+            {otherPhoto ? (
+              <>
+                <img
+                  src={otherPhoto}
+                  alt={profile.fullName}
+                  className={`w-full h-full object-cover ${profile.blurPhotosByDefault && !profile.photoRevealApproved ? 'filter blur-md' : ''}`}
+                />
+                {profile.blurPhotosByDefault && !profile.photoRevealApproved && (
+                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center backdrop-blur-xs">
+                    <EyeOff className="w-5 h-5 text-white" />
+                  </div>
+                )}
+              </>
+            ) : (
+              <span className="font-serif text-2xl font-bold text-primary">
+                {(profile.fullName || 'M').charAt(0)}
+              </span>
             )}
           </div>
         </div>

@@ -448,8 +448,7 @@ export const SeedProfilesTab: React.FC<SeedProfilesTabProps> = ({ adminToken }) 
                         alt={p.fullName}
                         className="w-16 h-16 rounded-2xl object-cover border border-white/10 shadow-md group-hover:scale-105 transition duration-200"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src =
-                            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200';
+                          (e.target as HTMLImageElement).src = '/seeds/seed_female_1.jpg';
                         }}
                       />
                       <span className="absolute inset-0 bg-black/30 rounded-2xl opacity-0 group-hover:opacity-100 flex items-center justify-center transition">

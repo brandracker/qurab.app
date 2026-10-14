@@ -790,7 +790,11 @@ profilesRouter.get('/discover', async (c) => {
 
         (chunkPhotos || []).forEach((p: any) => {
           if (!photoMap[p.user_id]) photoMap[p.user_id] = [];
-          photoMap[p.user_id].push(p.photo_url);
+          let url = p.photo_url;
+          if (url && (url.includes('/seeds/') || url.includes('/seed_female_'))) {
+            if (!url.includes('?v=')) url = `${url}?v=ht3_20261014`;
+          }
+          photoMap[p.user_id].push(url);
         });
       }
     }

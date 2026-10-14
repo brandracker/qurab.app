@@ -118,7 +118,7 @@ photosRouter.get('/media/:fileId', async (c) => {
     const fallbackMime = isImage ? (ext === 'jpg' ? 'image/jpeg' : `image/${ext}`) : 'audio/webm';
     headers.set('Content-Type', object.httpMetadata?.contentType || fallbackMime);
     headers.set('Accept-Ranges', 'bytes');
-    headers.set('Cache-Control', 'public, max-age=31536000');
+    headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=86400');
     headers.set('Access-Control-Allow-Origin', '*');
     headers.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
 

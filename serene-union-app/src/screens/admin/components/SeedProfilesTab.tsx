@@ -420,7 +420,8 @@ export const SeedProfilesTab: React.FC<SeedProfilesTabProps> = ({ adminToken }) 
             const isActive = p.seedActive === 1 || p.seedActive === true;
             const age = calculateAge(p.dob);
             const pwd = p.seedPassword || defaultPassword;
-            const photoUrl = p.photoUrl || '/seeds/seed_female_1.jpg';
+            const basePhoto = p.photoUrl || '/seeds/seed_female_1.jpg';
+            const photoUrl = basePhoto.includes('?v=') ? basePhoto : `${basePhoto}?v=ht3_20261014`;
             const likesCount = Number(p.likesReceivedCount || 0);
             const matchesCount = Number(p.mutualMatchesCount || 0);
             const convsCount = Number(p.conversationsCount || 0);
@@ -665,7 +666,11 @@ export const SeedProfilesTab: React.FC<SeedProfilesTabProps> = ({ adminToken }) 
 
             <div className="relative aspect-square w-full bg-black/50 overflow-hidden">
               <img
-                src={previewProfile.photoUrl || '/seeds/seed_female_1.jpg'}
+                src={
+                  (previewProfile.photoUrl || '/seeds/seed_female_1.jpg').includes('?v=')
+                    ? previewProfile.photoUrl || '/seeds/seed_female_1.jpg'
+                    : `${previewProfile.photoUrl || '/seeds/seed_female_1.jpg'}?v=ht3_20261014`
+                }
                 alt={previewProfile.fullName}
                 className="w-full h-full object-cover"
               />

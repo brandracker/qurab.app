@@ -847,7 +847,16 @@ adminRouter.get('/seed-profiles', async (c) => {
     `;
 
     const { results } = await c.env.DB.prepare(query).all();
-    const profiles = results || [];
+    const profiles = (results || []).map((p: any) => {
+      let finalPhoto = p.photoUrl;
+      if (finalPhoto && !finalPhoto.includes('?v=')) {
+        finalPhoto = `${finalPhoto}?v=ht3_20261014`;
+      }
+      return {
+        ...p,
+        photoUrl: finalPhoto
+      };
+    });
 
     const totalCount = profiles.length;
     const activeCount = profiles.filter((p: any) => p.seedActive === 1 || p.seedActive === true).length;

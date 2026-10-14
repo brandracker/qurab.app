@@ -7,8 +7,8 @@ const seedsDir = path.join(__dirname, '..', 'serene-union-app', 'public', 'seeds
 const serverDir = path.join(__dirname, '..', 'server');
 
 const mappings = [
-  { src: 'pak_female_cafe_indoor_1791935984662.jpg', dest: 'seed_female_7.jpg' },
-  { src: 'pak_female_study_1791936048294.jpg', dest: 'seed_female_8.jpg' }
+  { src: 'pak_female_park_walk_1791936869114.jpg', dest: 'seed_female_9.jpg' },
+  { src: 'pak_female_doorway_1791936927337.jpg', dest: 'seed_female_10.jpg' }
 ];
 
 for (const m of mappings) {
@@ -29,4 +29,4 @@ for (const m of mappings) {
   }
 }
 
-console.log('Images 7 and 8 uploaded to R2!');
+console.log('Images 9 and 10 uploaded to R2!');

@@ -7,7 +7,15 @@ const seedsDir = path.join(__dirname, '..', 'serene-union-app', 'public', 'seeds
 const serverDir = path.join(__dirname, '..', 'server');
 
 const mappings = [
-  { src: 'pak_female_lahore_patio_1791938765783.jpg', dest: 'seed_female_16.jpg' }
+  { src: 'seed_female_17_1791998782821.jpg', dest: 'seed_female_17.jpg' },
+  { src: 'seed_female_18_1791998818060.jpg', dest: 'seed_female_18.jpg' },
+  { src: 'seed_female_19_1791998862221.jpg', dest: 'seed_female_19.jpg' },
+  { src: 'seed_female_20_1791998907801.jpg', dest: 'seed_female_20.jpg' },
+  { src: 'seed_female_21_1791998979999.jpg', dest: 'seed_female_21.jpg' },
+  { src: 'seed_female_22_1791999003674.jpg', dest: 'seed_female_22.jpg' },
+  { src: 'seed_female_23_1791999029157.jpg', dest: 'seed_female_23.jpg' },
+  { src: 'seed_female_24_1791999062166.jpg', dest: 'seed_female_24.jpg' },
+  { src: 'seed_female_25_1791999099246.jpg', dest: 'seed_female_25.jpg' }
 ];
 
 for (const m of mappings) {
@@ -28,4 +36,4 @@ for (const m of mappings) {
   }
 }
 
-console.log('Images 9 and 10 uploaded to R2!');
+console.log('All images (17 to 25) copied and uploaded to R2!');

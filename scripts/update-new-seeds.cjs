@@ -7,15 +7,11 @@ const seedsDir = path.join(__dirname, '..', 'serene-union-app', 'public', 'seeds
 const serverDir = path.join(__dirname, '..', 'server');
 
 const mappings = [
-  { src: 'seed_female_17_1791998782821.jpg', dest: 'seed_female_17.jpg' },
-  { src: 'seed_female_18_1791998818060.jpg', dest: 'seed_female_18.jpg' },
-  { src: 'seed_female_19_1791998862221.jpg', dest: 'seed_female_19.jpg' },
-  { src: 'seed_female_20_1791998907801.jpg', dest: 'seed_female_20.jpg' },
-  { src: 'seed_female_21_1791998979999.jpg', dest: 'seed_female_21.jpg' },
-  { src: 'seed_female_22_1791999003674.jpg', dest: 'seed_female_22.jpg' },
-  { src: 'seed_female_23_1791999029157.jpg', dest: 'seed_female_23.jpg' },
-  { src: 'seed_female_24_1791999062166.jpg', dest: 'seed_female_24.jpg' },
-  { src: 'seed_female_25_1791999099246.jpg', dest: 'seed_female_25.jpg' }
+  { src: 'seed_female_26_1792000808688.jpg', dest: 'seed_female_26.jpg' },
+  { src: 'seed_female_27_1792000862403.jpg', dest: 'seed_female_27.jpg' },
+  { src: 'seed_female_28_1792000910587.jpg', dest: 'seed_female_28.jpg' },
+  { src: 'seed_female_29_1792000967880.jpg', dest: 'seed_female_29.jpg' },
+  { src: 'seed_female_30_1792020514873.jpg', dest: 'seed_female_30.jpg' }
 ];
 
 for (const m of mappings) {
@@ -36,4 +32,4 @@ for (const m of mappings) {
   }
 }
 
-console.log('All images (17 to 25) copied and uploaded to R2!');
+console.log('All images (26 to 30) copied and uploaded to R2!');

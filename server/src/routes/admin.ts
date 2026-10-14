@@ -834,7 +834,10 @@ adminRouter.get('/seed-profiles', async (c) => {
         u.is_seed as isSeed, u.created_at as createdAt,
         up.photo_url as photoUrl,
         rp.sect, rp.practice_level as practiceLevel, rp.modesty_practice as modestyPractice,
-        w.wali_name as waliName, w.wali_relationship as waliRelationship, w.wali_phone as waliPhone
+        w.wali_name as waliName, w.wali_relationship as waliRelationship, w.wali_phone as waliPhone,
+        (SELECT COUNT(*) FROM matches_and_likes ml WHERE ml.receiver_id = u.id AND ml.action = 'liked') as likesReceivedCount,
+        (SELECT COUNT(*) FROM matches_and_likes ml WHERE (ml.sender_id = u.id OR ml.receiver_id = u.id) AND ml.action = 'mutual_match') as mutualMatchesCount,
+        (SELECT COUNT(*) FROM conversations c WHERE c.participant_one = u.id OR c.participant_two = u.id) as conversationsCount
       FROM users u
       LEFT JOIN user_photos up ON up.user_id = u.id AND up.is_primary = 1
       LEFT JOIN religious_profiles rp ON rp.user_id = u.id

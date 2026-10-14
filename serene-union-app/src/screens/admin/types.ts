@@ -24,6 +24,9 @@ export interface SeedProfile {
   waliName?: string;
   waliRelationship?: string;
   waliPhone?: string;
+  likesReceivedCount?: number;
+  mutualMatchesCount?: number;
+  conversationsCount?: number;
   createdAt?: string;
 }
 

@@ -17,8 +17,14 @@ import {
   ShieldCheck,
   RefreshCw,
   Trash2,
-  AlertCircle
+  AlertCircle,
+  Heart,
+  MessageSquare,
+  Flame,
+  X,
+  Maximize2
 } from 'lucide-react';
+import { API_BASE } from '../../../services/dbService';
 import type { SeedProfile } from '../types';
 
 interface SeedProfilesTabProps {
@@ -32,16 +38,17 @@ export const SeedProfilesTab: React.FC<SeedProfilesTabProps> = ({ adminToken }) 
   const [loading, setLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedCity, setSelectedCity] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'has_matches' | 'has_likes'>('all');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [togglingGlobal, setTogglingGlobal] = useState<boolean>(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [previewProfile, setPreviewProfile] = useState<SeedProfile | null>(null);
 
   const fetchSeedProfiles = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/admin/seed-profiles', {
+      const res = await fetch(`${API_BASE}/admin/seed-profiles`, {
         headers: {
           Authorization: `Bearer ${adminToken}`
         }
@@ -83,7 +90,7 @@ export const SeedProfilesTab: React.FC<SeedProfilesTabProps> = ({ adminToken }) 
     try {
       setTogglingGlobal(true);
       const targetState = !globalEnabled;
-      const res = await fetch('/api/admin/seed-profiles/toggle-global', {
+      const res = await fetch(`${API_BASE}/admin/seed-profiles/toggle-global`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -113,7 +120,7 @@ export const SeedProfilesTab: React.FC<SeedProfilesTabProps> = ({ adminToken }) 
       const currentActive = profile.seedActive === 1 || profile.seedActive === true;
       const nextActive = !currentActive;
 
-      const res = await fetch(`/api/admin/seed-profiles/toggle-active/${profile.id}`, {
+      const res = await fetch(`${API_BASE}/admin/seed-profiles/toggle-active/${profile.id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -143,7 +150,7 @@ export const SeedProfilesTab: React.FC<SeedProfilesTabProps> = ({ adminToken }) 
     if (!window.confirm('Re-sync / restore all 25 Pakistani female seed profiles?')) return;
     try {
       setLoading(true);
-      const res = await fetch('/api/admin/seed-profiles/reset', {
+      const res = await fetch(`${API_BASE}/admin/seed-profiles/reset`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${adminToken}` }
       });
@@ -162,7 +169,7 @@ export const SeedProfilesTab: React.FC<SeedProfilesTabProps> = ({ adminToken }) 
   const handleDeleteProfile = async (id: string, name: string) => {
     if (!window.confirm(`Permanently remove seed profile "${name}"?`)) return;
     try {
-      const res = await fetch(`/api/admin/seed-profiles/${id}`, {
+      const res = await fetch(`${API_BASE}/admin/seed-profiles/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${adminToken}` }
       });
@@ -197,15 +204,23 @@ export const SeedProfilesTab: React.FC<SeedProfilesTabProps> = ({ adminToken }) 
     const matchesCity = selectedCity === 'all' || p.city === selectedCity;
 
     const isActive = p.seedActive === 1 || p.seedActive === true;
+    const matchesCount = Number(p.mutualMatchesCount || 0);
+    const likesCount = Number(p.likesReceivedCount || 0);
+
     const matchesStatus =
       statusFilter === 'all' ||
       (statusFilter === 'active' && isActive) ||
-      (statusFilter === 'inactive' && !isActive);
+      (statusFilter === 'inactive' && !isActive) ||
+      (statusFilter === 'has_matches' && matchesCount > 0) ||
+      (statusFilter === 'has_likes' && likesCount > 0);
 
     return matchesSearch && matchesCity && matchesStatus;
   });
 
   const activeCount = profiles.filter((p) => p.seedActive === 1 || p.seedActive === true).length;
+  const totalMutualMatches = profiles.reduce((sum, p) => sum + Number(p.mutualMatchesCount || 0), 0);
+  const totalLikesReceived = profiles.reduce((sum, p) => sum + Number(p.likesReceivedCount || 0), 0);
+  const totalConversations = profiles.reduce((sum, p) => sum + Number(p.conversationsCount || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -234,9 +249,8 @@ export const SeedProfilesTab: React.FC<SeedProfilesTabProps> = ({ adminToken }) 
               </span>
             </div>
             <p className="text-sm text-slate-400 max-w-2xl">
-              Authentic Pakistani matrimonial profiles with culturally verified deen biodata,
-              unblurred portraits, and pre-configured test credentials. Control global or individual
-              visibility in the Discover feed.
+              Authentic Pakistani matrimonial profiles with verified biodata, unblurred portraits,
+              real-time active matches tracking, and pre-configured test credentials.
             </p>
           </div>
 
@@ -278,7 +292,7 @@ export const SeedProfilesTab: React.FC<SeedProfilesTabProps> = ({ adminToken }) 
             <button
               onClick={handleResetSeeds}
               className="flex items-center justify-center space-x-2 px-4 py-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white text-xs font-semibold transition cursor-pointer"
-              title="Resynchronize / re-insert missing seed profiles"
+              title="Resynchronize / restore seed profiles"
             >
               <RefreshCw className="w-4 h-4" />
               <span>Sync 25 Seeds</span>
@@ -286,17 +300,17 @@ export const SeedProfilesTab: React.FC<SeedProfilesTabProps> = ({ adminToken }) 
           </div>
         </div>
 
-        {/* Global Credentials Quick Banner */}
-        <div className="mt-6 pt-5 border-t border-white/5 grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Global Stats & Matches Quick Dashboard */}
+        <div className="mt-6 pt-5 border-t border-white/5 grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/5">
-            <div className="text-xs text-slate-400 font-medium">Universal Seed Password</div>
+            <div className="text-xs text-slate-400 font-medium">Universal Password</div>
             <div className="flex items-center justify-between mt-1">
               <code className="text-sm font-mono font-bold text-amber-300">
                 {defaultPassword}
               </code>
               <button
                 onClick={() => copyToClipboard(defaultPassword, 'global-pwd')}
-                className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition cursor-pointer"
+                className="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition cursor-pointer"
                 title="Copy password"
               >
                 {copiedKey === 'global-pwd' ? (
@@ -309,19 +323,35 @@ export const SeedProfilesTab: React.FC<SeedProfilesTabProps> = ({ adminToken }) 
           </div>
 
           <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/5">
-            <div className="text-xs text-slate-400 font-medium">Active Candidates in Feed</div>
+            <div className="text-xs text-slate-400 font-medium">Feed Discoverability</div>
             <div className="text-base font-bold text-white mt-1">
               {activeCount} of {profiles.length}{' '}
               <span className="text-xs font-normal text-slate-400">
-                ({globalEnabled ? 'Currently Discoverable' : 'Paused by Master Switch'})
+                ({globalEnabled ? 'Active' : 'Paused'})
               </span>
             </div>
           </div>
 
           <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/5">
-            <div className="text-xs text-slate-400 font-medium">Pakistani Major Cities</div>
-            <div className="text-sm font-semibold text-emerald-400 mt-1 truncate">
-              Lahore, Karachi, Islamabad, Rawalpindi + 7 more
+            <div className="text-xs text-slate-400 font-medium">Active Mutual Matches</div>
+            <div className="flex items-center space-x-1.5 text-base font-bold text-rose-400 mt-1">
+              <Flame className="w-4 h-4 text-rose-500" />
+              <span>{totalMutualMatches} Matches</span>
+            </div>
+          </div>
+
+          <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/5">
+            <div className="text-xs text-slate-400 font-medium">Interactions Received</div>
+            <div className="flex items-center space-x-2 text-sm font-semibold text-slate-300 mt-1">
+              <span className="text-rose-400 flex items-center space-x-1">
+                <Heart className="w-3.5 h-3.5 fill-rose-500/20 text-rose-400" />
+                <span>{totalLikesReceived}</span>
+              </span>
+              <span>•</span>
+              <span className="text-indigo-400 flex items-center space-x-1">
+                <MessageSquare className="w-3.5 h-3.5 text-indigo-400" />
+                <span>{totalConversations}</span>
+              </span>
             </div>
           </div>
         </div>
@@ -365,6 +395,8 @@ export const SeedProfilesTab: React.FC<SeedProfilesTabProps> = ({ adminToken }) 
             <option value="all">All Status ({profiles.length})</option>
             <option value="active">Active Only ({activeCount})</option>
             <option value="inactive">Inactive Only ({profiles.length - activeCount})</option>
+            <option value="has_matches">Has Mutual Matches (&gt;0)</option>
+            <option value="has_likes">Has Likes Received (&gt;0)</option>
           </select>
         </div>
       </div>
@@ -373,7 +405,7 @@ export const SeedProfilesTab: React.FC<SeedProfilesTabProps> = ({ adminToken }) 
       {loading ? (
         <div className="p-16 text-center text-slate-500 font-medium">
           <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-emerald-400" />
-          Loading Pakistani seed profiles...
+          Connecting and loading seed profiles...
         </div>
       ) : filteredProfiles.length === 0 ? (
         <div className="p-16 rounded-3xl bg-[#0D1527] border border-white/10 text-center text-slate-500">
@@ -388,6 +420,10 @@ export const SeedProfilesTab: React.FC<SeedProfilesTabProps> = ({ adminToken }) 
             const isActive = p.seedActive === 1 || p.seedActive === true;
             const age = calculateAge(p.dob);
             const pwd = p.seedPassword || defaultPassword;
+            const photoUrl = p.photoUrl || '/seeds/seed_female_1.jpg';
+            const likesCount = Number(p.likesReceivedCount || 0);
+            const matchesCount = Number(p.mutualMatchesCount || 0);
+            const convsCount = Number(p.conversationsCount || 0);
 
             return (
               <div
@@ -401,17 +437,23 @@ export const SeedProfilesTab: React.FC<SeedProfilesTabProps> = ({ adminToken }) 
                 <div>
                   {/* Top Row: Avatar & Name */}
                   <div className="flex items-start space-x-4">
-                    <div className="relative">
+                    <div
+                      className="relative cursor-pointer group"
+                      onClick={() => setPreviewProfile(p)}
+                      title="Click to view full photo"
+                    >
                       <img
-                        src={p.photoUrl || '/seeds/seed_female_1.jpg'}
+                        src={photoUrl}
                         alt={p.fullName}
-                        className="w-16 h-16 rounded-2xl object-cover border border-white/10 shadow-md"
+                        className="w-16 h-16 rounded-2xl object-cover border border-white/10 shadow-md group-hover:scale-105 transition duration-200"
                         onError={(e) => {
-                          // Fallback to placeholder if not loaded
                           (e.target as HTMLImageElement).src =
                             'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200';
                         }}
                       />
+                      <span className="absolute inset-0 bg-black/30 rounded-2xl opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                        <Maximize2 className="w-4 h-4 text-white" />
+                      </span>
                       <span
                         className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-[#0D1527] ${
                           isActive && globalEnabled ? 'bg-emerald-400' : 'bg-slate-500'
@@ -438,11 +480,36 @@ export const SeedProfilesTab: React.FC<SeedProfilesTabProps> = ({ adminToken }) 
                     </div>
                   </div>
 
+                  {/* Matches & Activity Metrics (Requested by User) */}
+                  <div className="mt-3.5 p-2.5 rounded-2xl bg-[#111A2E] border border-white/5 flex items-center justify-around text-xs">
+                    <div className="flex items-center space-x-1.5 text-rose-400" title="Likes received from users">
+                      <Heart className="w-4 h-4 fill-rose-500/20 text-rose-400" />
+                      <span className="font-bold">{likesCount}</span>
+                      <span className="text-[10px] text-slate-400">Likes</span>
+                    </div>
+
+                    <div className="h-3.5 w-px bg-white/10" />
+
+                    <div className="flex items-center space-x-1.5 text-amber-400" title="Mutual matches created">
+                      <Flame className="w-4 h-4 text-amber-500" />
+                      <span className="font-bold">{matchesCount}</span>
+                      <span className="text-[10px] text-slate-400">Matches</span>
+                    </div>
+
+                    <div className="h-3.5 w-px bg-white/10" />
+
+                    <div className="flex items-center space-x-1.5 text-indigo-400" title="Active chat conversations">
+                      <MessageSquare className="w-4 h-4 text-indigo-400" />
+                      <span className="font-bold">{convsCount}</span>
+                      <span className="text-[10px] text-slate-400">Chats</span>
+                    </div>
+                  </div>
+
                   {/* Badges / Education & Deen */}
-                  <div className="mt-4 pt-3 border-t border-white/5 flex flex-wrap gap-1.5 text-[11px]">
+                  <div className="mt-3 flex flex-wrap gap-1.5 text-[11px]">
                     <span className="px-2.5 py-1 rounded-xl bg-white/5 text-slate-300 border border-white/5 flex items-center space-x-1">
                       <GraduationCap className="w-3 h-3 text-slate-400" />
-                      <span className="truncate max-w-[140px]">{p.education}</span>
+                      <span className="truncate max-w-[130px]">{p.education}</span>
                     </span>
                     {p.sect && (
                       <span className="px-2.5 py-1 rounded-xl bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 font-medium">
@@ -477,8 +544,8 @@ export const SeedProfilesTab: React.FC<SeedProfilesTabProps> = ({ adminToken }) 
                     </div>
                   )}
 
-                  {/* Login Credentials Box (Requested by user) */}
-                  <div className="mt-4 p-3 rounded-2xl bg-[#090E1A] border border-emerald-500/20 space-y-2">
+                  {/* Login Credentials Box */}
+                  <div className="mt-3.5 p-3 rounded-2xl bg-[#090E1A] border border-emerald-500/20 space-y-2">
                     <div className="flex items-center justify-between text-[11px] font-semibold text-emerald-400 uppercase tracking-wider">
                       <span className="flex items-center space-x-1">
                         <Key className="w-3 h-3" />
@@ -576,6 +643,102 @@ export const SeedProfilesTab: React.FC<SeedProfilesTabProps> = ({ adminToken }) 
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Full Photo & Profile Inspection Modal (Requested by user) */}
+      {previewProfile && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
+          onClick={() => setPreviewProfile(null)}
+        >
+          <div
+            className="bg-[#0D1527] border border-white/10 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl relative animate-fade-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setPreviewProfile(null)}
+              className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/60 text-white hover:bg-black/80 transition cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="relative aspect-square w-full bg-black/50 overflow-hidden">
+              <img
+                src={previewProfile.photoUrl || '/seeds/seed_female_1.jpg'}
+                alt={previewProfile.fullName}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0D1527] via-transparent to-transparent opacity-90" />
+              <div className="absolute bottom-4 left-5 right-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xl font-bold text-white">{previewProfile.fullName}</h3>
+                    <p className="text-sm text-emerald-400 font-medium">
+                      {previewProfile.profession} • {previewProfile.city}
+                    </p>
+                  </div>
+                  <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500 text-white">
+                    {calculateAge(previewProfile.dob)} yrs
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-3 gap-2 p-3 rounded-2xl bg-white/[0.02] border border-white/5 text-center text-xs">
+                <div>
+                  <div className="text-slate-400 text-[10px]">Likes Received</div>
+                  <div className="text-sm font-bold text-rose-400 mt-0.5">
+                    {previewProfile.likesReceivedCount || 0}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-slate-400 text-[10px]">Mutual Matches</div>
+                  <div className="text-sm font-bold text-amber-400 mt-0.5">
+                    {previewProfile.mutualMatchesCount || 0}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-slate-400 text-[10px]">Active Chats</div>
+                  <div className="text-sm font-bold text-indigo-400 mt-0.5">
+                    {previewProfile.conversationsCount || 0}
+                  </div>
+                </div>
+              </div>
+
+              {previewProfile.bio && (
+                <div>
+                  <div className="text-xs text-slate-400 font-semibold mb-1">About & Bio</div>
+                  <p className="text-xs text-slate-300 leading-relaxed bg-white/[0.02] p-3 rounded-xl border border-white/5">
+                    "{previewProfile.bio}"
+                  </p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/5">
+                  <span className="text-slate-400 text-[10px]">Education</span>
+                  <div className="text-slate-200 font-medium mt-0.5 truncate">
+                    {previewProfile.education}
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/5">
+                  <span className="text-slate-400 text-[10px]">Deen Practice</span>
+                  <div className="text-slate-200 font-medium mt-0.5 capitalize">
+                    {previewProfile.sect} • {previewProfile.practiceLevel}
+                  </div>
+                </div>
+              </div>
+
+              {previewProfile.waliName && (
+                <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/5 text-xs text-slate-300 flex items-center justify-between">
+                  <span>Wali: <strong>{previewProfile.waliName}</strong> ({previewProfile.waliRelationship || 'Father'})</span>
+                  <span className="font-mono text-slate-400">{previewProfile.waliPhone}</span>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

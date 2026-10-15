@@ -192,11 +192,18 @@ export const App: React.FC = () => {
     syncLiveChats();
     const chatPollInterval = setInterval(syncLiveChats, 15000);
 
+    // Real-time Presence Heartbeat
+    dbService.sendHeartbeat(currentUser.id);
+    const heartbeatInterval = setInterval(() => {
+      dbService.sendHeartbeat(currentUser.id);
+    }, 45000);
+
     window.addEventListener('serene_conversations_updated', updateChatUnread);
     window.addEventListener('focus', syncLiveChats);
 
     return () => {
       clearInterval(chatPollInterval);
+      clearInterval(heartbeatInterval);
       window.removeEventListener('serene_conversations_updated', updateChatUnread);
       window.removeEventListener('focus', syncLiveChats);
     };

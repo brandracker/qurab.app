@@ -385,6 +385,10 @@ chatRouter.post('/:id/messages', async (c) => {
       WHERE id = ? OR id = ?
     `).bind(text.trim(), senderId, senderId, senderId, targetConvId, rawConvId).run();
 
+    try {
+      await c.env.DB.prepare("UPDATE users SET last_active_at = datetime('now') WHERE id = ?").bind(senderId).run();
+    } catch {}
+
     // 4. Centralized notification in D1 for recipient
     const recipientId = p1 === senderId ? p2 : p1;
     if (recipientId) {

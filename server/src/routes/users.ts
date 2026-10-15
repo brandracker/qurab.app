@@ -196,6 +196,20 @@ usersRouter.post('/complete-onboarding', async (c) => {
     const data = await c.req.json();
     return await saveUserProfileRecord(c, data);
   } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// 1.2 Heartbeat & Real-Time Presence Keepalive
+usersRouter.post('/heartbeat', async (c) => {
+  try {
+    const { userId } = await c.req.json();
+    if (userId) {
+      await c.env.DB.prepare("UPDATE users SET last_active_at = datetime('now') WHERE id = ?").bind(userId).run();
+    }
+    return c.json({ success: true, timestamp: new Date().toISOString() });
+  } catch (err: any) {
+    return c.json({ success: false, error: err.message }, 500);
   }
 });
 
@@ -259,6 +273,10 @@ usersRouter.get('/:id', async (c) => {
     if (!user) {
       return c.json({ success: false, error: 'User not found' }, 404);
     }
+
+    try {
+      await c.env.DB.prepare("UPDATE users SET last_active_at = datetime('now') WHERE id = ?").bind(userId).run();
+    } catch {}
 
     const { results: photos } = await c.env.DB.prepare(`
       SELECT photo_url FROM user_photos WHERE user_id = ? ORDER BY sort_order ASC
@@ -692,6 +710,9 @@ profilesRouter.get('/discover', async (c) => {
       if (viewerLon === null && typeof userRow?.longitude === 'number') {
         viewerLon = userRow.longitude;
       }
+      try {
+        await c.env.DB.prepare("UPDATE users SET last_active_at = datetime('now') WHERE id = ?").bind(currentUserId).run();
+      } catch {}
     }
 
     // Determine bounding box if maxDistance is specified

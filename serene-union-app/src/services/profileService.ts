@@ -271,5 +271,20 @@ export const profileService = {
 
     window.dispatchEvent(new CustomEvent('serene_account_deleted'));
     return true;
+  },
+
+  async sendHeartbeat(userId: string): Promise<boolean> {
+    if (!userId || userId === 'usr_guest') return false;
+    try {
+      const res = await fetch(`${API_BASE}/users/heartbeat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      });
+      const data = await res.json();
+      return Boolean(data.success);
+    } catch {
+      return false;
+    }
   }
 };

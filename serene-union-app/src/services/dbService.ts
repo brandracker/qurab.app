@@ -3,7 +3,8 @@ import type { UserProfile, Conversation, ChatMessage, FilterState } from '../typ
 import { API_BASE, WORKER_API_BASE, LOCAL_API_BASE } from './apiConfig';
 export { API_BASE, WORKER_API_BASE, LOCAL_API_BASE };
 
-export { profileService } from './profileService';
+import { profileService } from './profileService';
+export { profileService };
 export { matchService } from './matchService';
 export { chatService } from './chatService';
 export { walletService } from './walletService';
@@ -1892,6 +1893,11 @@ class DBService {
     }
     const localConv = this.getConversations().find(c => c.id === conversationId || (c.otherUser && conversationId.includes(c.otherUser.id)));
     return localConv?.messages || [];
+  }
+
+  async sendHeartbeat(userId?: string): Promise<boolean> {
+    const targetId = userId || this.getCurrentUser().id;
+    return profileService.sendHeartbeat(targetId);
   }
 }
 

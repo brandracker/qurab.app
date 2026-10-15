@@ -40,6 +40,9 @@ async function ensureAdminTableAndSeed(db: any) {
     try {
       await db.prepare("ALTER TABLE users ADD COLUMN ban_reason TEXT DEFAULT NULL").run();
     } catch {}
+    try {
+      await db.prepare("ALTER TABLE users ADD COLUMN last_active_at DATETIME").run();
+    } catch {}
 
     try {
       await db.prepare(`
@@ -263,6 +266,287 @@ adminRouter.get('/dashboard/stats', async (c) => {
     });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// 3. Live Platform Radar & Real-Time Activity (Active Users & Live Conversations)
+adminRouter.get('/live-activity', async (c) => {
+  try {
+    // A. Live summary metrics
+    let onlineUsersCount = 0;
+    let activeUsersTodayCount = 0;
+    try {
+      const onRes = await c.env.DB.prepare(`
+        SELECT COUNT(*) as c FROM users 
+        WHERE (is_banned = 0 OR is_banned IS NULL)
+          AND (
+            last_active_at >= datetime('now', '-10 minutes')
+            OR (is_seed = 1 AND seed_active = 1)
+          )
+      `).first();
+      // Natural mix: count real active + some active seeds
+      onlineUsersCount = Math.max(1, Number(onRes?.c || 0));
+
+      const todayRes = await c.env.DB.prepare(`
+        SELECT COUNT(*) as c FROM users 
+        WHERE (is_banned = 0 OR is_banned IS NULL)
+          AND date(COALESCE(last_active_at, created_at)) = date('now')
+      `).first();
+      activeUsersTodayCount = Number(todayRes?.c || 0);
+    } catch {}
+
+    let totalConversationsCount = 0;
+    try {
+      const convRes = await c.env.DB.prepare('SELECT COUNT(*) as c FROM conversations').first();
+      totalConversationsCount = Number(convRes?.c || 0);
+    } catch {}
+
+    let totalMessagesCount = 0;
+    let messagesTodayCount = 0;
+    try {
+      const msgRes = await c.env.DB.prepare('SELECT COUNT(*) as c FROM chat_messages').first();
+      totalMessagesCount = Number(msgRes?.c || 0);
+
+      const msgTodayRes = await c.env.DB.prepare("SELECT COUNT(*) as c FROM chat_messages WHERE date(created_at) = date('now')").first();
+      messagesTodayCount = Number(msgTodayRes?.c || 0);
+    } catch {}
+
+    // B. Live / Active Users (Up to 60 users ordered by most recent activity)
+    const { results: rawUsers } = await c.env.DB.prepare(`
+      SELECT 
+        u.id, u.full_name as fullName, u.gender, u.city, u.country, u.profession,
+        u.is_vip as isVip, u.is_seed as isSeed, u.account_status as accountStatus,
+        u.last_active_at as lastActiveAt, u.created_at as createdAt,
+        CAST((strftime('%s', 'now') - strftime('%s', COALESCE(u.last_active_at, u.created_at))) AS INTEGER) as secondsAgo
+      FROM users u
+      WHERE (u.is_banned = 0 OR u.is_banned IS NULL)
+      ORDER BY COALESCE(u.last_active_at, u.created_at) DESC
+      LIMIT 60
+    `).all();
+
+    // Fetch primary photos for all users in liveUsers
+    const userIds = (rawUsers || []).map((u: any) => u.id);
+    const photoMap: Record<string, string> = {};
+    if (userIds.length > 0) {
+      const chunkSize = 25;
+      for (let i = 0; i < userIds.length; i += chunkSize) {
+        const chunk = userIds.slice(i, i + chunkSize);
+        const placeholders = chunk.map(() => '?').join(',');
+        const { results: photos } = await c.env.DB.prepare(`
+          SELECT user_id, photo_url FROM user_photos 
+          WHERE user_id IN (${placeholders})
+          ORDER BY is_primary DESC, sort_order ASC
+        `).bind(...chunk).all();
+        (photos || []).forEach((p: any) => {
+          if (!photoMap[p.user_id]) photoMap[p.user_id] = p.photo_url;
+        });
+      }
+    }
+
+    const liveUsers = (rawUsers || []).map((u: any, idx: number) => {
+      let sec = typeof u.secondsAgo === 'number' && !isNaN(u.secondsAgo) && u.secondsAgo >= 0 
+        ? u.secondsAgo 
+        : Math.max(0, Math.floor((Date.now() - new Date(u.lastActiveAt || u.createdAt).getTime()) / 1000));
+      
+      // If it's an active seed profile, give natural staggered active simulation for demo vibrancy
+      if (u.isSeed && sec > 3600) {
+        sec = (idx % 12) * 180 + 30; // 30s, 3.5m, 6m, 9m, etc.
+      }
+
+      let status: 'online' | 'away' | 'recent' | 'offline' = 'offline';
+      let currentAction = 'Offline';
+
+      if (sec <= 300) {
+        status = 'online';
+        currentAction = idx % 2 === 0 ? 'Active in chat' : 'Browsing discover feed';
+      } else if (sec <= 1800) {
+        status = 'away';
+        currentAction = `Idle for ${Math.round(sec / 60)}m`;
+      } else if (sec <= 86400) {
+        status = 'recent';
+        currentAction = `Active ${Math.round(sec / 3600)}h ago`;
+      } else {
+        status = 'offline';
+        currentAction = 'Offline';
+      }
+
+      let photoUrl = photoMap[u.id] || (u.gender === 'female' ? '/seeds/seed_female_1.jpg' : '/seeds/seed_male_1.jpg');
+      if (photoUrl && photoUrl.includes('/seeds/') && !photoUrl.includes('?v=')) {
+        photoUrl = `${photoUrl}?v=ht3_20261014`;
+      }
+
+      return {
+        id: u.id,
+        fullName: u.fullName || 'Anonymous Member',
+        gender: u.gender || 'male',
+        city: u.city || 'Pakistan',
+        country: u.country || 'Pakistan',
+        profession: u.profession || 'Professional',
+        isVip: Boolean(u.isVip),
+        isSeed: Boolean(u.isSeed),
+        photoUrl,
+        lastActiveAt: u.lastActiveAt || u.createdAt,
+        secondsAgo: sec,
+        status,
+        currentAction
+      };
+    });
+
+    // C. Live Conversations (All conversations with participant details & recent messages)
+    const { results: rawConvs } = await c.env.DB.prepare(`
+      SELECT 
+        c.id, c.participant_one as p1_id, c.participant_two as p2_id,
+        c.last_message_text as lastMessageText, c.last_message_sender_id as lastMessageSenderId,
+        c.last_message_time as lastMessageTime, c.status,
+        c.unread_count_p1 as unreadP1, c.unread_count_p2 as unreadP2,
+        CAST((strftime('%s', 'now') - strftime('%s', c.last_message_time)) AS INTEGER) as secondsAgo,
+        u1.full_name as p1_name, u1.gender as p1_gender, u1.city as p1_city, u1.is_vip as p1_vip,
+        u2.full_name as p2_name, u2.gender as p2_gender, u2.city as p2_city, u2.is_vip as p2_vip,
+        w1.wali_name as w1_name, w2.wali_name as w2_name,
+        (SELECT COUNT(*) FROM chat_messages cm WHERE cm.conversation_id = c.id) as messageCount
+      FROM conversations c
+      LEFT JOIN users u1 ON c.participant_one = u1.id
+      LEFT JOIN users u2 ON c.participant_two = u2.id
+      LEFT JOIN wali_details w1 ON u1.id = w1.user_id
+      LEFT JOIN wali_details w2 ON u2.id = w2.user_id
+      ORDER BY c.last_message_time DESC
+      LIMIT 60
+    `).all();
+
+    // Fetch photos for participants in conversations
+    const convUserIds: string[] = [];
+    (rawConvs || []).forEach((row: any) => {
+      if (row.p1_id && !convUserIds.includes(row.p1_id)) convUserIds.push(row.p1_id);
+      if (row.p2_id && !convUserIds.includes(row.p2_id)) convUserIds.push(row.p2_id);
+    });
+
+    const convPhotoMap: Record<string, string> = {};
+    if (convUserIds.length > 0) {
+      const chunkSize = 25;
+      for (let i = 0; i < convUserIds.length; i += chunkSize) {
+        const chunk = convUserIds.slice(i, i + chunkSize);
+        const placeholders = chunk.map(() => '?').join(',');
+        const { results: photos } = await c.env.DB.prepare(`
+          SELECT user_id, photo_url FROM user_photos 
+          WHERE user_id IN (${placeholders})
+          ORDER BY is_primary DESC, sort_order ASC
+        `).bind(...chunk).all();
+        (photos || []).forEach((p: any) => {
+          if (!convPhotoMap[p.user_id]) convPhotoMap[p.user_id] = p.photo_url;
+        });
+      }
+    }
+
+    const liveConversations = (rawConvs || []).map((row: any) => {
+      let p1Photo = convPhotoMap[row.p1_id] || (row.p1_gender === 'female' ? '/seeds/seed_female_1.jpg' : '/seeds/seed_male_1.jpg');
+      let p2Photo = convPhotoMap[row.p2_id] || (row.p2_gender === 'female' ? '/seeds/seed_female_1.jpg' : '/seeds/seed_male_1.jpg');
+      if (p1Photo && p1Photo.includes('/seeds/') && !p1Photo.includes('?v=')) p1Photo = `${p1Photo}?v=ht3_20261014`;
+      if (p2Photo && p2Photo.includes('/seeds/') && !p2Photo.includes('?v=')) p2Photo = `${p2Photo}?v=ht3_20261014`;
+
+      const waliObserver = row.w1_name || row.w2_name || null;
+
+      const sec = typeof row.secondsAgo === 'number' && !isNaN(row.secondsAgo) && row.secondsAgo >= 0
+        ? row.secondsAgo
+        : Math.max(0, Math.floor((Date.now() - new Date(row.lastMessageTime).getTime()) / 1000));
+
+      return {
+        id: row.id,
+        lastMessageText: row.lastMessageText || 'Matched. Started dialogue.',
+        lastMessageSenderId: row.lastMessageSenderId,
+        lastMessageTime: row.lastMessageTime,
+        secondsAgo: sec,
+        status: row.status || 'active',
+        messageCount: Number(row.messageCount || 0),
+        waliObserver,
+        participantOne: {
+          id: row.p1_id,
+          fullName: row.p1_name || 'Brother',
+          gender: row.p1_gender || 'male',
+          city: row.p1_city || 'Pakistan',
+          isVip: Boolean(row.p1_vip),
+          photoUrl: p1Photo
+        },
+        participantTwo: {
+          id: row.p2_id,
+          fullName: row.p2_name || 'Sister',
+          gender: row.p2_gender || 'female',
+          city: row.p2_city || 'Pakistan',
+          isVip: Boolean(row.p2_vip),
+          photoUrl: p2Photo
+        }
+      };
+    });
+
+    return c.json({
+      success: true,
+      summary: {
+        onlineUsers: onlineUsersCount,
+        activeUsersToday: activeUsersTodayCount,
+        activeConversations: totalConversationsCount,
+        totalMessages: totalMessagesCount,
+        messagesToday: messagesTodayCount
+      },
+      liveUsers,
+      liveConversations,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// 3.1 Get Specific Conversation Transcript for Super Admin Chaperone Oversight
+adminRouter.get('/conversations/:id/messages', async (c) => {
+  try {
+    const convId = c.req.param('id');
+    const conv: any = await c.env.DB.prepare(`
+      SELECT c.*, 
+        u1.full_name as p1_name, u1.gender as p1_gender, u1.city as p1_city,
+        u2.full_name as p2_name, u2.gender as p2_gender, u2.city as p2_city,
+        w1.wali_name as w1_name, w2.wali_name as w2_name
+      FROM conversations c
+      LEFT JOIN users u1 ON c.participant_one = u1.id
+      LEFT JOIN users u2 ON c.participant_two = u2.id
+      LEFT JOIN wali_details w1 ON u1.id = w1.user_id
+      LEFT JOIN wali_details w2 ON u2.id = w2.user_id
+      WHERE c.id = ?
+    `).bind(convId).first();
+
+    if (!conv) {
+      return c.json({ success: false, error: 'Conversation not found' }, 404);
+    }
+
+    const { results: messages } = await c.env.DB.prepare(`
+      SELECT id, conversation_id, sender_id as senderId, sender_name as senderName, text, created_at as timestamp
+      FROM chat_messages
+      WHERE conversation_id = ?
+      ORDER BY created_at ASC
+    `).bind(convId).all();
+
+    return c.json({
+      success: true,
+      conversation: {
+        id: conv.id,
+        status: conv.status || 'active',
+        lastMessageTime: conv.last_message_time,
+        waliObserver: conv.w1_name || conv.w2_name || null,
+        participantOne: {
+          id: conv.participant_one,
+          fullName: conv.p1_name || 'Brother',
+          gender: conv.p1_gender || 'male',
+          city: conv.p1_city || 'Pakistan'
+        },
+        participantTwo: {
+          id: conv.participant_two,
+          fullName: conv.p2_name || 'Sister',
+          gender: conv.p2_gender || 'female',
+          city: conv.p2_city || 'Pakistan'
+        }
+      },
+      messages: messages || []
+    });
+  } catch (err: any) {
+    return c.json({ success: false, error: err.message }, 500);
   }
 });
 

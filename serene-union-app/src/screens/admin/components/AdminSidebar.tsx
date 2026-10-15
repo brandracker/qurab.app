@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, Users, Image as ImageIcon, Sparkles } from 'lucide-react';
+import { Activity, Radio, Users, Image as ImageIcon, Sparkles } from 'lucide-react';
 import type { AdminTab } from '../types';
 
 interface AdminSidebarProps {
@@ -24,6 +24,29 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         >
           <Activity className="w-4 h-4" />
           <span>Overview & Metrics</span>
+        </button>
+
+        <button
+          onClick={() => onSelectTab('live')}
+          className={`flex items-center justify-between px-4 py-3 rounded-2xl text-sm font-semibold transition-all whitespace-nowrap cursor-pointer ${
+            activeTab === 'live'
+              ? 'bg-gradient-to-r from-[#0284C7] to-[#0369A1] text-white shadow-lg shadow-sky-500/30'
+              : 'text-slate-400 hover:bg-white/5 hover:text-white'
+          }`}
+        >
+          <div className="flex items-center space-x-3">
+            <div className="relative flex items-center justify-center">
+              <Radio className="w-4 h-4 text-emerald-400" />
+              <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+            </div>
+            <span>Live Monitor & Chats</span>
+          </div>
+          <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold uppercase tracking-wider">
+            Live
+          </span>
         </button>
 
         <button

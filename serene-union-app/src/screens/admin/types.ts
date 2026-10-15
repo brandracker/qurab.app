@@ -1,4 +1,64 @@
-export type AdminTab = 'overview' | 'users' | 'photos' | 'seeds';
+export type AdminTab = 'overview' | 'live' | 'users' | 'photos' | 'seeds';
+
+export interface LiveUser {
+  id: string;
+  fullName: string;
+  gender: string;
+  city: string;
+  country: string;
+  profession: string;
+  isVip: boolean;
+  isSeed: boolean;
+  photoUrl: string;
+  lastActiveAt: string;
+  secondsAgo: number;
+  status: 'online' | 'away' | 'recent' | 'offline';
+  currentAction: string;
+}
+
+export interface LiveConversationParticipant {
+  id: string;
+  fullName: string;
+  gender: string;
+  city: string;
+  isVip: boolean;
+  photoUrl: string;
+}
+
+export interface LiveConversation {
+  id: string;
+  lastMessageText: string;
+  lastMessageSenderId?: string;
+  lastMessageTime: string;
+  secondsAgo: number;
+  status: string;
+  messageCount: number;
+  waliObserver?: string | null;
+  participantOne: LiveConversationParticipant;
+  participantTwo: LiveConversationParticipant;
+}
+
+export interface LiveActivityData {
+  summary: {
+    onlineUsers: number;
+    activeUsersToday: number;
+    activeConversations: number;
+    totalMessages: number;
+    messagesToday: number;
+  };
+  liveUsers: LiveUser[];
+  liveConversations: LiveConversation[];
+  timestamp: string;
+}
+
+export interface ConversationTranscriptMessage {
+  id: string;
+  conversation_id: string;
+  senderId: string;
+  senderName: string;
+  text: string;
+  timestamp: string;
+}
 
 export interface SeedProfile {
   id: string;

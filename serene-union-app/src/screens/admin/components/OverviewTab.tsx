@@ -5,16 +5,19 @@ import {
   MessageSquare, 
   Crown, 
   RefreshCw, 
-  MapPin 
+  MapPin,
+  Radio,
+  ArrowRight
 } from 'lucide-react';
 import type { DashboardStats } from '../types';
 
 interface OverviewTabProps {
   stats: DashboardStats | null;
   onRefresh: () => void;
+  onSelectTab?: (tab: any) => void;
 }
 
-export const OverviewTab: React.FC<OverviewTabProps> = ({ stats, onRefresh }) => {
+export const OverviewTab: React.FC<OverviewTabProps> = ({ stats, onRefresh, onSelectTab }) => {
   return (
     <div className="space-y-8 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -22,13 +25,25 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ stats, onRefresh }) =>
           <h2 className="text-2xl font-bold text-white font-serif">Platform Health & Demographics</h2>
           <p className="text-xs text-slate-400 mt-1">Live operational statistics & growth velocity</p>
         </div>
-        <button
-          onClick={onRefresh}
-          className="inline-flex items-center space-x-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 text-xs font-semibold transition-all cursor-pointer w-fit"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-          <span>Refresh Real-Time Data</span>
-        </button>
+        <div className="flex items-center space-x-3">
+          {onSelectTab && (
+            <button
+              onClick={() => onSelectTab('live')}
+              className="inline-flex items-center space-x-2 px-4 py-2 rounded-xl bg-gradient-to-r from-sky-600 to-sky-500 hover:from-sky-500 hover:to-sky-400 text-white shadow-lg shadow-sky-600/20 text-xs font-semibold transition-all cursor-pointer w-fit"
+            >
+              <Radio className="w-3.5 h-3.5 text-emerald-300 animate-pulse" />
+              <span>Open Live Monitor</span>
+              <ArrowRight className="w-3.5 h-3.5 ml-1" />
+            </button>
+          )}
+          <button
+            onClick={onRefresh}
+            className="inline-flex items-center space-x-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 text-xs font-semibold transition-all cursor-pointer w-fit"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Refresh Real-Time Data</span>
+          </button>
+        </div>
       </div>
 
       {/* 4 Primary Top Metrics */}

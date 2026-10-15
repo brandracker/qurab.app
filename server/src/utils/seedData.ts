@@ -804,7 +804,7 @@ export const PAKISTANI_MALE_SEEDS: SeedProfileDefinition[] = [
     waliName: 'Chaudhry Tariq Mahmood',
     waliRelation: 'Father',
     waliPhone: '+923009876901',
-    photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80'
+    photo: '/seeds/seed_male_1.jpg'
   },
   {
     id: 'usr_seed_pk_male_02',
@@ -829,7 +829,7 @@ export const PAKISTANI_MALE_SEEDS: SeedProfileDefinition[] = [
     waliName: 'Prof. Dr. Munir Qureshi',
     waliRelation: 'Father',
     waliPhone: '+923009876902',
-    photo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=800&q=80'
+    photo: '/seeds/seed_male_2.jpg'
   },
   {
     id: 'usr_seed_pk_male_03',
@@ -854,7 +854,7 @@ export const PAKISTANI_MALE_SEEDS: SeedProfileDefinition[] = [
     waliName: 'Farooq Usman',
     waliRelation: 'Father',
     waliPhone: '+923009876903',
-    photo: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=800&q=80'
+    photo: '/seeds/seed_male_3.jpg'
   },
   {
     id: 'usr_seed_pk_male_04',
@@ -879,7 +879,7 @@ export const PAKISTANI_MALE_SEEDS: SeedProfileDefinition[] = [
     waliName: 'Brig. (R) Asad Niazi',
     waliRelation: 'Father',
     waliPhone: '+923009876904',
-    photo: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=800&q=80'
+    photo: '/seeds/seed_male_4.jpg'
   },
   {
     id: 'usr_seed_pk_male_05',
@@ -904,7 +904,7 @@ export const PAKISTANI_MALE_SEEDS: SeedProfileDefinition[] = [
     waliName: 'Syed Jalal Kazmi',
     waliRelation: 'Father',
     waliPhone: '+923009876905',
-    photo: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=800&q=80'
+    photo: '/seeds/seed_male_5.jpg'
   },
   {
     id: 'usr_seed_pk_male_06',
@@ -929,7 +929,7 @@ export const PAKISTANI_MALE_SEEDS: SeedProfileDefinition[] = [
     waliName: 'Inamullah Khan',
     waliRelation: 'Father',
     waliPhone: '+923009876906',
-    photo: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=800&q=80'
+    photo: '/seeds/seed_male_6.jpg'
   },
   {
     id: 'usr_seed_pk_male_07',
@@ -954,7 +954,7 @@ export const PAKISTANI_MALE_SEEDS: SeedProfileDefinition[] = [
     waliName: 'Mian Rabbani',
     waliRelation: 'Father',
     waliPhone: '+923009876907',
-    photo: 'https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?w=800&q=80'
+    photo: '/seeds/seed_male_7.jpg'
   },
   {
     id: 'usr_seed_pk_male_08',
@@ -979,7 +979,7 @@ export const PAKISTANI_MALE_SEEDS: SeedProfileDefinition[] = [
     waliName: 'Malik Mehmood',
     waliRelation: 'Father',
     waliPhone: '+923009876908',
-    photo: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=800&q=80'
+    photo: '/seeds/seed_male_8.jpg'
   },
   {
     id: 'usr_seed_pk_male_09',
@@ -1004,7 +1004,7 @@ export const PAKISTANI_MALE_SEEDS: SeedProfileDefinition[] = [
     waliName: 'Shahzad Akhtar',
     waliRelation: 'Father',
     waliPhone: '+923009876909',
-    photo: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=800&q=80'
+    photo: '/seeds/seed_male_9.jpg'
   },
   {
     id: 'usr_seed_pk_male_10',
@@ -1029,7 +1029,7 @@ export const PAKISTANI_MALE_SEEDS: SeedProfileDefinition[] = [
     waliName: 'Rashid Siddique',
     waliRelation: 'Father',
     waliPhone: '+923009876910',
-    photo: 'https://images.unsplash.com/photo-1496345875659-11f7dd282d1d?w=800&q=80'
+    photo: '/seeds/seed_male_10.jpg'
   },
   {
     id: 'usr_seed_pk_male_11',
@@ -1054,7 +1054,7 @@ export const PAKISTANI_MALE_SEEDS: SeedProfileDefinition[] = [
     waliName: 'Haji Abdul Ghaffar Tareen',
     waliRelation: 'Father',
     waliPhone: '+923009876911',
-    photo: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=800&q=80'
+    photo: '/seeds/seed_male_11.jpg'
   },
   {
     id: 'usr_seed_pk_male_12',
@@ -1079,7 +1079,7 @@ export const PAKISTANI_MALE_SEEDS: SeedProfileDefinition[] = [
     waliName: 'Tariq Jamil',
     waliRelation: 'Father',
     waliPhone: '+923009876912',
-    photo: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=800&q=80'
+    photo: '/seeds/seed_male_12.jpg'
   },
   {
     id: 'usr_seed_pk_male_13',
@@ -1104,7 +1104,7 @@ export const PAKISTANI_MALE_SEEDS: SeedProfileDefinition[] = [
     waliName: 'Tahir Mehmood',
     waliRelation: 'Father',
     waliPhone: '+923009876913',
-    photo: 'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=800&q=80'
+    photo: '/seeds/seed_male_13.jpg'
   },
   {
     id: 'usr_seed_pk_male_14',
@@ -1129,7 +1129,7 @@ export const PAKISTANI_MALE_SEEDS: SeedProfileDefinition[] = [
     waliName: 'Col. (R) Rafiq Abbasi',
     waliRelation: 'Father',
     waliPhone: '+923009876914',
-    photo: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=800&q=80'
+    photo: '/seeds/seed_male_14.jpg'
   },
   {
     id: 'usr_seed_pk_male_15',
@@ -1154,7 +1154,7 @@ export const PAKISTANI_MALE_SEEDS: SeedProfileDefinition[] = [
     waliName: 'Syed Raza Jafri',
     waliRelation: 'Father',
     waliPhone: '+923009876915',
-    photo: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=800&q=80'
+    photo: '/seeds/seed_male_15.jpg'
   }
 ];
 

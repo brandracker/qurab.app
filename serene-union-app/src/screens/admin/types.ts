@@ -60,6 +60,21 @@ export interface ConversationTranscriptMessage {
   timestamp: string;
 }
 
+export interface RecentMessageItem {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  senderName: string;
+  senderCity: string;
+  senderGender: string;
+  senderVip: boolean;
+  photoUrl: string;
+  text: string;
+  timestamp: string;
+  secondsAgo: number;
+  recipientName?: string;
+}
+
 export interface SeedProfile {
   id: string;
   fullName: string;

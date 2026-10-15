@@ -546,6 +546,78 @@ adminRouter.get('/conversations/:id/messages', async (c) => {
   }
 });
 
+// 3.2 Live Stream of Recent Platform Messages
+adminRouter.get('/messages/recent', async (c) => {
+  try {
+    const limit = Math.min(100, Math.max(10, Number(c.req.query('limit')) || 60));
+    const { results: rawMessages } = await c.env.DB.prepare(`
+      SELECT 
+        cm.id, cm.conversation_id as conversationId, cm.sender_id as senderId, 
+        cm.sender_name as senderName, cm.text, cm.created_at as timestamp,
+        u.city as senderCity, u.gender as senderGender, u.is_vip as senderVip,
+        c.participant_one as p1_id, c.participant_two as p2_id,
+        u1.full_name as p1_name, u2.full_name as p2_name,
+        CAST((strftime('%s', 'now') - strftime('%s', cm.created_at)) AS INTEGER) as secondsAgo
+      FROM chat_messages cm
+      LEFT JOIN users u ON cm.sender_id = u.id
+      LEFT JOIN conversations c ON cm.conversation_id = c.id
+      LEFT JOIN users u1 ON c.participant_one = u1.id
+      LEFT JOIN users u2 ON c.participant_two = u2.id
+      ORDER BY cm.created_at DESC
+      LIMIT ?
+    `).bind(limit).all();
+
+    // Fetch primary photos for senders
+    const senderIds = Array.from(new Set((rawMessages || []).map((m: any) => m.senderId).filter(Boolean)));
+    const photoMap: Record<string, string> = {};
+    if (senderIds.length > 0) {
+      const chunkSize = 25;
+      for (let i = 0; i < senderIds.length; i += chunkSize) {
+        const chunk = senderIds.slice(i, i + chunkSize);
+        const placeholders = chunk.map(() => '?').join(',');
+        const { results: photos } = await c.env.DB.prepare(`
+          SELECT user_id, photo_url FROM user_photos 
+          WHERE user_id IN (${placeholders})
+          ORDER BY is_primary DESC, sort_order ASC
+        `).bind(...chunk).all();
+        (photos || []).forEach((p: any) => {
+          if (!photoMap[p.user_id]) photoMap[p.user_id] = p.photo_url;
+        });
+      }
+    }
+
+    const messages = (rawMessages || []).map((m: any) => {
+      let photoUrl = photoMap[m.senderId] || (m.senderGender === 'female' ? '/seeds/seed_female_1.jpg' : '/seeds/seed_male_1.jpg');
+      if (photoUrl && photoUrl.includes('/seeds/') && !photoUrl.includes('?v=')) {
+        photoUrl = `${photoUrl}?v=ht3_20261014`;
+      }
+      return {
+        id: m.id,
+        conversationId: m.conversationId,
+        senderId: m.senderId,
+        senderName: m.senderName || 'Member',
+        senderCity: m.senderCity || 'Pakistan',
+        senderGender: m.senderGender || 'male',
+        senderVip: Boolean(m.senderVip),
+        photoUrl,
+        text: m.text,
+        timestamp: m.timestamp,
+        secondsAgo: typeof m.secondsAgo === 'number' && !isNaN(m.secondsAgo) && m.secondsAgo >= 0 
+          ? m.secondsAgo 
+          : Math.max(0, Math.floor((Date.now() - new Date(m.timestamp).getTime()) / 1000)),
+        recipientName: m.senderId === m.p1_id ? (m.p2_name || 'Member') : (m.p1_name || 'Member')
+      };
+    });
+
+    return c.json({
+      success: true,
+      messages
+    });
+  } catch (err: any) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
 // 4. High-Scale User Directory (Server-Side Pagination, Sorting & Multi-Filters)
 adminRouter.get('/users', async (c) => {
   try {

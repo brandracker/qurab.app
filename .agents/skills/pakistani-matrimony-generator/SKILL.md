@@ -1,133 +1,176 @@
 ---
 name: pakistani-matrimony-generator
 description: >-
-  Standardized guidelines, realistic prompt templates, and workflows for generating authentic, fair-complexioned, culturally modern, and non-AI-looking Pakistani matrimonial portraits with natural human touch, side poses, car/lifestyle settings, and candid realism.
+  Standardized guidelines, realistic prompt templates, and workflows for generating authentic, fair-complexioned, culturally modern, and non-AI-looking Pakistani matrimonial portraits specifically tailored for young women aged 18 to 23 years with natural human touch, side poses, car/lifestyle settings, and candid realism.
 ---
 
-# Pakistani Matrimonial Profile & Image Generation Skill (Human Touch v3.0)
+# Pakistani Matrimonial Profile & Image Generation Skill (Human Touch v3.5 — Youthful 18-23 Edition)
 
-This skill provides comprehensive prompt engineering guidelines, human-touch posing standards, and environmental authenticity rules to ensure matrimonial seed portraits look 100% like real, relatable Pakistani women photographed in everyday real-world moments — completely free from stiff AI avatar aesthetics.
+This skill provides comprehensive prompt engineering guidelines, human-touch posing standards, and environmental authenticity rules to ensure female matrimonial seed portraits represent **authentic, graceful, and modern Pakistani young women strictly aged 18 to 23 years**. 
+
+Every generated portrait must look 100% like real, relatable Pakistani young women photographed in everyday real-world moments — completely free from stiff AI avatar aesthetics, excessive airbrushing, or mature styling.
 
 ---
 
-## 1. The "Human Touch" Posing Directive (Anti-Stiffness)
+## 1. Strict Target Age Demographic Standard (18 to 23 Years Old)
+
+### Rule #1: Hard Age Bracket (18 - 23 Years Old Only)
+All female profiles, biodatas, and visual generation prompts **must strictly remain within the 18 to 23 age range**. Never generate or depict individuals looking older than 23 or younger than 18.
+
+| Age | Demographic Profile | Realistic Education / Occupation Archetype |
+|---|---|---|
+| **18** | High school graduate / 1st Year University | Freshman student (BS Computer Science, Pre-Med, BBA, English Lit) |
+| **19** | 1st/2nd Year Undergraduate | University sophomore, student of psychology / design, aspiring artist |
+| **20** | 2nd/3rd Year Undergraduate | Media sciences student, junior content strategist, student of Islamic studies / Alimah course |
+| **21** | 3rd Year University Student | Software engineering student, business student, junior UI/UX intern |
+| **22** | Final Year / Fresh Graduate | 4th year MBBS medical student, fresh graduate in finance/marketing, freelance graphic designer |
+| **23** | Fresh Graduate / Junior Professional | Junior architect, associate software engineer, clinical psychology trainee, boutique entrepreneur |
+
+### Rule #2: Youthful "Clean-Girl" Pakistani Aesthetic
+- **Facial Characteristics:** Soft youthful jawline, bright expressive eyes, smooth vibrant skin with a natural soft glow, naturally full lips with subtle tinted balm, light natural kajal/mascara.
+- **Strictly Banned:** Heavy mature contouring, thick "auntie-style" foundation, overly harsh arched eyebrows, heavy bridal pancake makeup, or deep mature expression lines.
+- **Hair Styling:** Youthful soft blowouts, naturally lustrous dark brown or black hair with gentle loose waves, wispy front flyaway strands, neat half-tied pins, or contemporary lightweight modal/chiffon hijabs in pastel tones.
+
+### Rule #3: Database DOB Calibration (Base Year 2026)
+When generating SQL seeds or database records for this demographic:
+- **Age 18:** DOB `2008-xx-xx`
+- **Age 19:** DOB `2007-xx-xx`
+- **Age 20:** DOB `2006-xx-xx`
+- **Age 21:** DOB `2005-xx-xx`
+- **Age 22:** DOB `2004-xx-xx`
+- **Age 23:** DOB `2003-xx-xx`
+
+---
+
+## 2. The "Human Touch" Posing Directive (Anti-Stiffness)
 
 ### Rule #1: Strictly Ban Stiff Headshots & Centered Mugshots
-Real people never use passport-style or centered corporate headshots for their matrimonial biodatas. They use **warm, candid, lifestyle pictures taken by sisters, mothers, or friends** in casual or celebratory settings.
+Real Pakistani young women never submit stiff passport-style mugshots. They share **warm, lifestyle pictures taken by sisters, university friends, or mothers on an iPhone in natural daylight**.
 
-### Rule #2: Five Core Real-World Pose Archetypes
+### Rule #2: Core Real-World Pose Archetypes for Young Women
 
-#### Archetype A: The Aesthetic Wall Lean (Side Pose / 3/4 Profile)
-- **Posture:** Standing at a 45-degree angle, leaning one shoulder or upper back casually against a textured wall (e.g., exposed brick, soft pastel painted stucco, cafe wall with bougainvillea flowers).
-- **Head & Eyes:** Head turned gently toward the lens, soft relaxed smile, eyes looking naturally at the camera or slightly off-camera.
-- **Hands:** One hand resting casually in a pocket or holding a small clutch/phone, the other relaxed at her side.
+#### Archetype A: The Aesthetic Cafe / Textured Wall Lean (Side Pose / 3/4 Profile)
+- **Posture:** Standing at a 45-degree angle, leaning one shoulder casually against a textured wall (e.g., rustic cafe brickwork in Islamabad F-7, soft pastel stucco in DHA Lahore, or a bougainvillea flower wall).
+- **Head & Eyes:** Head turned gently toward the lens, playful soft smile, eyes looking naturally at the camera or candidly off-angle.
+- **Hands:** One hand lightly holding a smartphone or small pastel handbag, the other relaxed.
 
-#### Archetype B: The Car & Travel Lifestyle Shot
-- **Posture (Exterior):** Standing casually next to a modern car (e.g., white Honda Civic / Toyota in a clean residential driveway or porch in DHA/Bahria), one hand resting lightly near the hood or door frame, body angled naturally.
-- **Posture (Interior):** Seated in the passenger seat with natural daylight pouring through the side window, seatbelt fastened, resting elbow on the door armrest, candid friendly glance.
+#### Archetype B: The Car & Travel Lifestyle Snapshot
+- **Exterior:** Standing casually beside a clean modern sedan car in a paved driveway in Bahria Town or DHA, resting one hand near the door frame, natural relaxed posture.
+- **Interior:** Seated in the passenger seat with bright morning daylight pouring through the window, seatbelt fastened, holding a travel thermos or phone, candid friendly smile.
 
-#### Archetype C: The Veranda / Terrace Railing Lean
-- **Posture:** Resting forearms or leaning against a modern balcony railing or rooftop terrace (overlooking green gardens or Margalla hills haze at golden hour), gentle breeze catching loose hair strands or dupatta.
-- **Vibe:** Relaxed, poised, sophisticated, candid lifestyle portrait.
+#### Archetype C: The University Campus / Terrace Garden Golden-Hour
+- **Posture:** Leaning forearms against a scenic wooden or wrought-iron railing of an outdoor veranda or rooftop garden overlooking green trees at golden hour.
+- **Vibe:** Relaxed, contemplative, graceful, gentle breeze catching loose hair strands or chiffon dupatta.
 
-#### Archetype D: Candid Mid-Action (Adjusting Dupatta / Walking)
-- **Posture:** Caught in a spontaneous natural moment — walking down outdoor stone garden steps, one hand naturally adjusting her chiffon dupatta on her shoulder, genuine candid laughter/smile.
-- **Vibe:** Unstaged, unposed, natural human movement.
+#### Archetype D: Candid Mid-Action (Walking / Adjusting Dupatta)
+- **Posture:** Caught in an unposed candid moment — walking down outdoor stone garden steps, laughing genuinely, one hand adjusting a light dupatta on her shoulder.
+- **Vibe:** Completely unstaged, natural human motion and joy.
 
-#### Archetype E: Cozy Domestic Armchair / Living Lounge
-- **Posture:** Seated comfortably in a plush modern armchair or corner of a textured sofa in a real Pakistani drawing room, holding a ceramic tea cup with both hands, warm cozy lighting.
+#### Archetype E: Cozy Drawing Room / Coffee Lounge
+- **Posture:** Seated curled up comfortably in a plush modern armchair or corner of a sofa in a tasteful drawing room, holding a ceramic chai mug with both hands, warm ambient lamp light.
 - **Vibe:** Family-oriented, grounded, welcoming, relatable.
 
 ---
 
-## 2. Core Visual & Aesthetic Directives
+## 3. Core Visual & Aesthetic Directives
 
 ### A. Complexion & Skin Physics
-- **Skin Tone:** Fair, luminous wheatish-fair, or natural light ivory with authentic warm South Asian undertones (soft rosy/peachy glow).
-- **Physical Imperfections & Realism:**
-  - Fine skin pores and subtle natural smile lines around eyes and mouth.
-  - Stray wisps of hair across the forehead or temple (real human hair has stray flyaways; AI hair is too plasticky).
-  - Natural fabric folds and creases on lawn, silk, or chiffon.
+- **Skin Tone:** Fair, glowing wheatish-fair, or natural light ivory with authentic warm South Asian undertones (soft peachy/rosy flush).
+- **Authentic Texture:**
+  - Youthful fine skin texture, subtle soft smile dimples.
+  - Stray wisps of hair across the temple or hairline (AI hair is overly uniform; real hair has subtle flyaways).
+  - Realistic fabric folds on cotton lawn, linen, georgette, or silk.
 
-### B. Modern & Diverse Wardrobe (Contemporary Pakistani High-Street)
-Wardrobe must reflect modern urban Pakistani fashion (Khaadi, Sapphire, Generation, Sana Safinaz):
-- **Chic Pastel Co-ord Sets:** Solid monotone pastel sets (sage green, dusty rose, lilac, ivory, biscuit beige) with clean modern cuts and straight cigarette pants.
-- **Smart-Casual Fusion:** Crisp cotton or linen kurti with embroidered neckline, paired with tailored culottes and a light chiffon dupatta draped over one shoulder.
-- **Modern Minimalist Hijabi:** Muted modal/chiffon hijab worn neatly with a structured linen blazer, kimono cardigan, or contemporary long shirt.
-- **Festive Semi-Formal:** Raw silk or jacquard with minimal pearl work, delicate wristwatch, small silver or pearl stud earrings.
+### B. Contemporary High-Street Wardrobe (Ages 18-23)
+Wardrobe must reflect modern urban youth fashion in Pakistan (Generation, Sapphire, Khaadi, Outfitters, Sana Safinaz):
+- **Trendy Pastel Co-ord Sets:** Monotone linen or cotton co-ord sets (sage green, powder blue, dusty lilac, peach, oat milk beige) with straight pants.
+- **Minimalist Kurti & Culottes:** Short or knee-length light embroidered cotton kurti with culottes and lightweight chiffon dupatta draped over one shoulder.
+- **Modern Minimalist Hijabi:** Lightweight jersey or crinkle chiffon hijab worn neatly with a casual denim jacket over a long linen tunic, or a modest long trench-style cardigan.
+- **Semi-Formal Family Gathering:** Light organza or raw silk jacquard with subtle pearl work, dainty silver bracelet or minimalist wristwatch, small pearl stud earrings.
 
-### C. Grounding in Real Environments (No Synthetic AI Blur)
-Backgrounds must contain **identifiable physical objects with real textures and shadows**:
-- Visible architectural details: Car wheel & clean driveway paving, real wooden door frame, framed calligraphy on a wall, green potted plants in terracotta pots.
-- Real natural light sources: Afternoon sun casting soft directional shadows, warm indoor lamp glow mixing with natural window light.
-- Natural optical depth of field: Background objects are softly out of focus but recognizably real (not AI generative blur artifacts).
-
----
-
-## 3. Calibrated Master Prompt Formulas
-
-### Formula 1: Aesthetic Wall Lean (Side Pose)
-```
-A candid lifestyle photograph of a fair-complexioned, attractive [Age]-year-old Pakistani woman from [City], [Profession]. 
-She is standing in a three-quarter side pose, leaning her left shoulder casually against an aesthetic [Setting: soft-pink painted stucco wall with green hanging bougainvillea / rustic brick cafe wall in Islamabad]. 
-She is wearing a modern [Attire: chic pastel-sage linen co-ord set with minimalist tailoring and straight pants, delicate silver wristwatch]. 
-Body angled at 45 degrees, head turned toward the camera with a relaxed genuine smile, gentle expressive brown eyes with light kajal, natural stray hair strands caught in the breeze. 
-Natural afternoon daylight casting soft realistic shadows on the wall. 
-Shot on iPhone 15 Pro 48mm lens, unedited real human photo taken by a friend, realistic skin pores, visible fabric texture, completely unblurred, authentic Pakistani candid portrait.
-```
-
-### Formula 2: Next-to-Car Lifestyle Snapshot
-```
-A candid full-body lifestyle photo of a 26-year-old Pakistani woman from Lahore, software engineer. 
-Fair glowing complexion, beautiful natural smile, warm friendly eyes. 
-She is standing casually in a driveway next to a clean white sedan car in DHA Phase 5 Lahore, resting one hand lightly on the side of the car. 
-Wearing an elegant contemporary mustard-yellow cotton kurti with white cigarette trousers and a light printed lawn dupatta draped neatly over one shoulder. 
-Natural late-afternoon outdoor sunlight, real driveway pavers, authentic residential background with lush potted plants. 
-Shot on modern smartphone, candid unposed human snapshot, natural depth of field, real car reflection, sharp facial detail, zero CGI airbrushing, unblurred, lifelike matrimonial photo.
-```
-
-### Formula 3: Balcony Railing Golden-Hour Candid
-```
-A natural candid portrait of a 27-year-old Pakistani doctor from Islamabad. 
-Fair skin with natural warm undertones, soft candid laugh, expressive hazel eyes. 
-She is leaning her forearms against the dark iron railing of a scenic outdoor terrace in Islamabad at golden hour, overlooking green trees in soft evening haze. 
-Wearing an elegant dusty-rose raw silk long shirt with delicate pearl detailing, white chiffon dupatta loosely wrapped around her shoulders. 
-Warm golden sunlight illuminating her face, natural flyaway hair caught in gentle wind, authentic skin texture with natural pores. 
-Shot on 50mm lens f/2.8, unedited candid snapshot, genuine human warmth, sharp focus on eyes, no plastic AI gloss, photorealistic.
-```
-
-### Formula 4: Cozy Domestic Drawing Room (Armchair Chai)
-```
-A heartwarming candid photo of a 25-year-old Pakistani woman from Karachi, architect. 
-Fair complexion, radiant approachable smile, delicate pearl earrings. 
-Seated comfortably in a mid-century modern wooden armchair in a tastefully decorated Pakistani living room in Clifton, holding a ceramic chai cup with both hands. 
-Wearing an ivory and pastel-peach embroidered linen outfit with straight trousers. 
-Natural morning window light streaming from the side, real living room background with bookshelf and indoor monstera plant. 
-Shot on iPhone, realistic domestic candid portrait, authentic room acoustics and lighting, sharp facial features, unblurred, 100% human realism.
-```
+### C. Grounding in Real Physical Environments
+Avoid generic AI generative bokeh voids. Backgrounds must have **real physical landmarks and props**:
+- Real residential architecture: Clean interlocking driveway pavers, clean white car, real potted monstera or ficus plants, wooden French doors.
+- Authentic lighting: Warm afternoon 4 PM golden light, bright morning window light, realistic soft shadows cast on walls or ground.
 
 ---
 
-## 4. Anti-AI Negative Trigger Matrix
+## 4. Calibrated Master Prompt Formulas (Ages 18 to 23)
 
-| Feature | ❌ Banned (AI Artifacts) | ✅ Required (Human Touch) |
+### Formula 1: Aesthetic Wall Lean (19-Year-Old Student)
+```
+A candid lifestyle photograph of a fair-complexioned, graceful 19-year-old Pakistani university student from Islamabad. 
+She has youthful radiant features, expressive dark brown eyes with soft natural kajal, and a genuine relaxed smile. 
+She is standing in a three-quarter side pose at a 45-degree angle, leaning her shoulder casually against a rustic brick cafe wall decorated with hanging bougainvillea flowers in Sector F-7 Islamabad. 
+Wearing a contemporary pastel-sage linen co-ord set with straight pants, lightweight white chiffon dupatta over one shoulder, and a delicate silver wristwatch. 
+Natural afternoon daylight casting soft realistic shadows, natural stray hair strands caught in the light breeze, authentic skin texture with natural soft pores. 
+Shot on iPhone 15 Pro 48mm lens, unedited candid snapshot taken by a friend, realistic fabric texture, completely unblurred, 100% human realism.
+```
+
+### Formula 2: Next-to-Car Lifestyle Snapshot (21-Year-Old Lahore)
+```
+A candid lifestyle full-body photo of a fair-skinned, charming 21-year-old Pakistani woman from Lahore, BS Computer Science student. 
+Youthful glowing complexion, natural candid smile, beautiful dark hair falling naturally over her shoulders. 
+She is standing casually in a clean paved driveway next to a white sedan car in DHA Phase 6 Lahore, resting one hand lightly on the side of the car. 
+Wearing a stylish contemporary mustard-yellow cotton kurti with white cigarette pants and a light printed lawn dupatta. 
+Natural late-afternoon outdoor sunlight, authentic residential driveway with lush green potted plants, real car reflection. 
+Shot on modern smartphone, candid unposed human snapshot, natural depth of field, sharp facial detail, zero CGI airbrushing, unblurred, authentic matrimonial photo.
+```
+
+### Formula 3: Terrace Railing Golden-Hour (22-Year-Old Medical Student)
+```
+A natural candid portrait of a 22-year-old Pakistani MBBS medical student from Rawalpindi. 
+Fair complexion with a warm peachy glow, soft candid laugh, expressive hazel eyes, neat youthful appearance. 
+She is leaning her forearms against the dark wrought-iron railing of a scenic rooftop terrace garden at golden hour, overlooking green trees in soft evening light. 
+Wearing an elegant dusty-rose raw silk long shirt with minimal white lace accents, white chiffon dupatta draped over her shoulders. 
+Warm golden sunlight illuminating her face, natural flyaway hair caught in gentle wind, authentic youthful skin texture. 
+Shot on 50mm lens f/2.8, unedited candid snapshot, genuine human warmth, sharp focus on eyes, no plastic AI gloss, completely photorealistic.
+```
+
+### Formula 4: Cozy Domestic Drawing Room (20-Year-Old Karachi)
+```
+A heartwarming candid photo of a 20-year-old Pakistani architecture student from Karachi. 
+Fair complexion, radiant approachable smile, delicate pearl stud earrings, youthful fresh-faced beauty. 
+Seated comfortably in a mid-century modern wooden armchair in a tastefully decorated Pakistani drawing room in Clifton Karachi, holding a ceramic chai cup with both hands. 
+Wearing an ivory and pastel-peach embroidered cotton-linen outfit with straight trousers. 
+Natural morning window light streaming from the side, real living room background with wooden bookshelf and indoor plant. 
+Shot on iPhone, realistic domestic candid portrait, authentic room lighting and natural shadows, sharp facial features, unblurred, 100% human realism.
+```
+
+### Formula 5: Modern Youthful Hijabi (23-Year-Old Islamabad)
+```
+A stylish, candid portrait of a 23-year-old Pakistani woman from Islamabad, junior UI/UX designer. 
+Fair luminous complexion, friendly intelligent brown eyes, warm natural smile. 
+Wearing a neatly styled muted dust-taupe chiffon hijab, paired with a modern beige linen long tunic and straight-cut trousers. 
+She is seated at an outdoor cafe patio in Islamabad, leaning slightly forward with one hand resting on the wooden table next to a small iced coffee glass. 
+Natural daylight under a canvas umbrella, soft realistic outdoor lighting, visible textile weave on the hijab and tunic, subtle natural skin texture. 
+Shot on smartphone portrait mode, candid and approachable, zero plastic AI rendering, unblurred, elegant and modest matrimonial portrait.
+```
+
+---
+
+## 5. Anti-AI & Demographic Negative Trigger Matrix
+
+| Feature | ❌ Banned (AI Artifacts & Incorrect Age) | ✅ Required (Youthful Human Touch: 18-23) |
 |---|---|---|
-| **Pose** | Centered stiff passport pose, staring straight | Side-angle, leaning on wall, by a car, railing lean, casual movement |
-| **Skin** | Airbrushed waxy porcelain, shiny plastic sheen | Micro-pores, natural skin matte texture, subtle smile lines, real shadows |
-| **Hair** | Hyper-perfect 3D rendered shampoo commercial hair | Natural soft flyaway strands, natural hairline, authentic Pakistani hair volume |
-| **Background** | Synthetic circular orb bokeh, CGI fantasy studio | Real brick/stucco walls, driveway with car, cafe patio, real living room |
-| **Lighting** | Over-saturated neon studio rims, dramatic theatrical glow | Real outdoor daylight, window sunlight, soft golden hour, natural shadows |
-| **Clothing** | Generic heavy bridal glitter or costume robes | Modern ready-to-wear Pakistani brands (Sapphire, Khaadi co-ords, solid pastels) |
+| **Age & Maturity** | Looking 26+, mature facial lines, sunken cheeks, heavy adult styling | Fresh youthful 18-23 appearance, blooming glow, collegiate elegance |
+| **Makeup** | Thick pancake bridal makeup, harsh contouring, dark heavy lipsticks | Light fresh clean-girl makeup, tinted lip balm, subtle kajal, natural brows |
+| **Pose** | Centered stiff passport pose, staring straight into lens | Side-angle 45°, wall lean, next to car, terrace railing lean, casual movement |
+| **Skin Texture** | Airbrushed waxy porcelain, shiny CGI plastic skin | Natural skin micro-pores, youthful matte glow, subtle soft smile dimples |
+| **Hair & Hijab** | Hyper-perfect 3D rendered salon commercial hair | Natural soft flyaway strands, natural hairline, authentic hair volume |
+| **Environment** | Generic circular blur bokeh, synthetic fantasy backdrop | Real brick/stucco wall, driveway with car, cafe patio, real living room |
+| **Wardrobe** | Heavy bridal embroidery, costume robes, auntie-style prints | Modern ready-to-wear youth brands (pastel co-ords, clean kurtis, culottes) |
 
 ---
 
-## 5. Deployment & Seed Pipeline
+## 6. Seed Pipeline & Asset Management
 
-1. **Generation:** When generating new seed portraits, save directly to `serene-union-app/public/seeds/seed_female_[id].jpg`.
-2. **Cloudflare R2 Upload:** Upload to Cloudflare R2 bucket `serene-union-media` via:
+1. **Naming & Paths:**
+   - Save portraits directly to `serene-union-app/public/seeds/seed_female_[id].jpg`.
+2. **Cloudflare R2 Bucket Synchronization:**
    ```bash
    npx wrangler r2 object put serene-union-media/seed_female_[id].jpg --file="serene-union-app/public/seeds/seed_female_[id].jpg" --content-type="image/jpeg"
    ```
-3. **D1 Synchronization:** Auto-linked in Cloudflare D1 `user_photos` table with full CDN path:
-   `https://serene-union-api.brandracker.workers.dev/api/photos/media/seed_female_[id].jpg`.
-4. **Verification:** Verify unblurred clarity and realistic human aesthetic on both Discover feed and Admin Portal.
+3. **Cloudflare D1 Table Verification:**
+   - Linked in `user_photos` with primary flag: `/seeds/seed_female_[id].jpg`.
+   - Age in `users` table aligned with `dob` between 18 and 23 years (birth years `2003` to `2008`).

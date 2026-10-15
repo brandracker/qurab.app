@@ -28,6 +28,7 @@ import { halalStoriesData } from '../data/storiesData';
 import { blogPostsData } from '../data/blogData';
 import { HalalStoriesPage } from './HalalStoriesPage';
 import { BlogPage } from './BlogPage';
+import { CaseStudyPage } from './CaseStudyPage';
 
 
 // Official Store Icons from D:\Marriage App\logos\icons
@@ -102,11 +103,12 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
     return null;
   });
 
-  const [currentView, setCurrentView] = useState<'home' | 'stories' | 'blog'>(() => {
+  const [currentView, setCurrentView] = useState<'home' | 'stories' | 'blog' | 'case-study'>(() => {
     if (typeof window !== 'undefined') {
       const hash = window.location.hash.toLowerCase();
       if (hash.startsWith('#stories') || hash.startsWith('#halal-stories')) return 'stories';
       if (hash.startsWith('#blog') || hash.startsWith('#journal') || hash.startsWith('#blogs')) return 'blog';
+      if (hash.startsWith('#case-study') || hash.startsWith('#casestudy')) return 'case-study';
     }
     return 'home';
   });
@@ -144,6 +146,9 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } else if (hash.startsWith('#blog') || hash.startsWith('#journal') || hash.startsWith('#blogs')) {
         setCurrentView('blog');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else if (hash.startsWith('#case-study') || hash.startsWith('#casestudy')) {
+        setCurrentView('case-study');
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } else if (hash === '' || hash === '#') {
         setCurrentView('home');
@@ -409,6 +414,18 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
         onGetStarted={onGetStarted}
         onLogin={onLogin}
         initialArticleId={deepLinkSlug}
+      />
+    );
+  }
+
+  if (currentView === 'case-study') {
+    return (
+      <CaseStudyPage
+        onBackToLanding={() => {
+          window.location.hash = '';
+          setCurrentView('home');
+        }}
+        onGetStarted={onGetStarted}
       />
     );
   }
@@ -1934,10 +1951,18 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
 
           {/* Bottom Bar: Copyright, Islamic Blessing & System Status */}
           <div className="pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-[11px] text-slate-500">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span>&copy; {new Date().getFullYear()} Qurb. All rights reserved.</span>
               <span>•</span>
-              <span>Brandracker / Movemax Solutions</span>
+              <button
+                onClick={() => {
+                  window.location.hash = '#case-study';
+                  setCurrentView('case-study');
+                }}
+                className="text-rose-600 font-semibold hover:underline cursor-pointer"
+              >
+                Engineered by MoveMax Solutions
+              </button>
             </div>
             
             <div className="text-slate-400 text-center">

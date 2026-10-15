@@ -82,7 +82,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           }`}
         >
           <Sparkles className="w-4 h-4 text-emerald-400" />
-          <span>Seed Profiles (25)</span>
+          <span>Seed Profiles (55)</span>
         </button>
       </div>
 

@@ -272,24 +272,24 @@ adminRouter.get('/dashboard/stats', async (c) => {
 // 3. Live Platform Radar & Real-Time Activity (Active Users & Live Conversations)
 adminRouter.get('/live-activity', async (c) => {
   try {
-    // A. Live summary metrics
+    // A. Live summary metrics (100% Strictly Real Organic Users)
     let onlineUsersCount = 0;
     let activeUsersTodayCount = 0;
     try {
+      // 1. Real human users online in the last 10 minutes
       const onRes = await c.env.DB.prepare(`
         SELECT COUNT(*) as c FROM users 
         WHERE (is_banned = 0 OR is_banned IS NULL)
-          AND (
-            last_active_at >= datetime('now', '-10 minutes')
-            OR (is_seed = 1 AND seed_active = 1)
-          )
+          AND (is_seed = 0 OR is_seed IS NULL)
+          AND last_active_at >= datetime('now', '-10 minutes')
       `).first();
-      // Natural mix: count real active + some active seeds
-      onlineUsersCount = Math.max(1, Number(onRes?.c || 0));
+      onlineUsersCount = Number(onRes?.c || 0);
 
+      // 2. Real human users active today
       const todayRes = await c.env.DB.prepare(`
         SELECT COUNT(*) as c FROM users 
         WHERE (is_banned = 0 OR is_banned IS NULL)
+          AND (is_seed = 0 OR is_seed IS NULL)
           AND date(COALESCE(last_active_at, created_at)) = date('now')
       `).first();
       activeUsersTodayCount = Number(todayRes?.c || 0);
@@ -311,7 +311,7 @@ adminRouter.get('/live-activity', async (c) => {
       messagesTodayCount = Number(msgTodayRes?.c || 0);
     } catch {}
 
-    // B. Live / Active Users (Up to 60 users ordered by most recent activity)
+    // B. Live / Active Real Users (Strictly real members ordered by most recent activity)
     const { results: rawUsers } = await c.env.DB.prepare(`
       SELECT 
         u.id, u.full_name as fullName, u.gender, u.city, u.country, u.profession,
@@ -320,6 +320,7 @@ adminRouter.get('/live-activity', async (c) => {
         CAST((strftime('%s', 'now') - strftime('%s', COALESCE(u.last_active_at, u.created_at))) AS INTEGER) as secondsAgo
       FROM users u
       WHERE (u.is_banned = 0 OR u.is_banned IS NULL)
+        AND (u.is_seed = 0 OR u.is_seed IS NULL)
       ORDER BY COALESCE(u.last_active_at, u.created_at) DESC
       LIMIT 60
     `).all();
@@ -343,25 +344,20 @@ adminRouter.get('/live-activity', async (c) => {
       }
     }
 
-    const liveUsers = (rawUsers || []).map((u: any, idx: number) => {
-      let sec = typeof u.secondsAgo === 'number' && !isNaN(u.secondsAgo) && u.secondsAgo >= 0 
+    const liveUsers = (rawUsers || []).map((u: any) => {
+      const sec = typeof u.secondsAgo === 'number' && !isNaN(u.secondsAgo) && u.secondsAgo >= 0 
         ? u.secondsAgo 
         : Math.max(0, Math.floor((Date.now() - new Date(u.lastActiveAt || u.createdAt).getTime()) / 1000));
-      
-      // If it's an active seed profile, give natural staggered active simulation for demo vibrancy
-      if (u.isSeed && sec > 3600) {
-        sec = (idx % 12) * 180 + 30; // 30s, 3.5m, 6m, 9m, etc.
-      }
 
       let status: 'online' | 'away' | 'recent' | 'offline' = 'offline';
       let currentAction = 'Offline';
 
       if (sec <= 300) {
         status = 'online';
-        currentAction = idx % 2 === 0 ? 'Active in chat' : 'Browsing discover feed';
-      } else if (sec <= 1800) {
+        currentAction = 'Active in app now';
+      } else if (sec <= 900) {
         status = 'away';
-        currentAction = `Idle for ${Math.round(sec / 60)}m`;
+        currentAction = `Active ${Math.round(sec / 60)}m ago`;
       } else if (sec <= 86400) {
         status = 'recent';
         currentAction = `Active ${Math.round(sec / 3600)}h ago`;
@@ -383,7 +379,7 @@ adminRouter.get('/live-activity', async (c) => {
         country: u.country || 'Pakistan',
         profession: u.profession || 'Professional',
         isVip: Boolean(u.isVip),
-        isSeed: Boolean(u.isSeed),
+        isSeed: false,
         photoUrl,
         lastActiveAt: u.lastActiveAt || u.createdAt,
         secondsAgo: sec,

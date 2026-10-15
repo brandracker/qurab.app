@@ -196,7 +196,7 @@ export const LiveMonitorTab: React.FC<LiveMonitorTabProps> = ({
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-5 rounded-3xl bg-[#0D1527] border border-white/10 shadow-lg relative overflow-hidden">
           <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">Online Now</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">Real Users Online</span>
             <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
           </div>
           <div className="text-3xl font-extrabold text-white font-serif">
@@ -204,7 +204,7 @@ export const LiveMonitorTab: React.FC<LiveMonitorTabProps> = ({
           </div>
           <div className="text-[11px] text-slate-400 mt-2 flex items-center space-x-1">
             <Users className="w-3 h-3 text-indigo-400" />
-            <span>{data?.summary?.activeUsersToday ?? 0} active today</span>
+            <span>{data?.summary?.activeUsersToday ?? 0} real active today</span>
           </div>
         </div>
 
@@ -272,7 +272,7 @@ export const LiveMonitorTab: React.FC<LiveMonitorTabProps> = ({
             }`}
           >
             <Users className="w-4 h-4" />
-            <span>Live & Active Users ({data?.liveUsers?.length ?? 0})</span>
+            <span>Real Active Users ({data?.liveUsers?.length ?? 0})</span>
           </button>
         </div>
 
@@ -473,6 +473,9 @@ export const LiveMonitorTab: React.FC<LiveMonitorTabProps> = ({
                         <div className="flex items-center space-x-1.5">
                           <h4 className="text-sm font-bold text-white line-clamp-1">{user.fullName}</h4>
                           {user.isVip && <Crown className="w-3.5 h-3.5 text-amber-400" />}
+                          <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[9px] font-bold tracking-wider">
+                            REAL
+                          </span>
                         </div>
                         <p className="text-[11px] text-slate-400 line-clamp-1 mt-0.5">{user.profession}</p>
                         

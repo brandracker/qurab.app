@@ -5,6 +5,7 @@ import { AdminLogin } from './AdminLogin';
 import { AdminHeader } from './components/AdminHeader';
 import { AdminSidebar } from './components/AdminSidebar';
 import { OverviewTab } from './components/OverviewTab';
+import { DailyActivityTab } from './components/DailyActivityTab';
 import { LiveMonitorTab } from './components/LiveMonitorTab';
 import { UserDirectoryTab } from './components/UserDirectoryTab';
 import { PhotoModerationTab } from './components/PhotoModerationTab';
@@ -510,6 +511,13 @@ export const AdminPortal: React.FC = () => {
               stats={stats}
               onRefresh={fetchStats}
               onSelectTab={setActiveTab}
+            />
+          )}
+
+          {activeTab === 'daily' && adminToken && (
+            <DailyActivityTab
+              adminToken={adminToken}
+              onInspectUser={handleInspectUser}
             />
           )}
 

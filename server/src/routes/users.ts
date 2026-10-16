@@ -200,12 +200,61 @@ usersRouter.post('/complete-onboarding', async (c) => {
   }
 });
 
-// 1.2 Heartbeat & Real-Time Presence Keepalive
+// 1.2 Heartbeat & Real-Time Presence Keepalive with Edge IP Telemetry
 usersRouter.post('/heartbeat', async (c) => {
   try {
-    const { userId } = await c.req.json();
+    const body = await c.req.json().catch(() => ({}));
+    const userId = body.userId;
+    const activeSeconds = Math.min(300, Math.max(10, Number(body.activeSeconds || 60)));
+
     if (userId) {
-      await c.env.DB.prepare("UPDATE users SET last_active_at = datetime('now') WHERE id = ?").bind(userId).run();
+      const rawCf = (c.req.raw as any)?.cf || {};
+      const clientIp = c.req.header('cf-connecting-ip') || c.req.header('x-real-ip') || null;
+      const city = c.req.header('cf-ipcity') || rawCf.city || null;
+      const country = c.req.header('cf-ipcountry') || rawCf.country || null;
+      const isp = rawCf.asOrganization || null;
+      const userAgent = c.req.header('user-agent') || null;
+
+      // 1. Update user master record with last active timestamp & IP
+      await c.env.DB.prepare(`
+        UPDATE users SET 
+          last_active_at = datetime('now'),
+          last_ip = COALESCE(?, last_ip),
+          last_ip_city = COALESCE(?, last_ip_city),
+          last_ip_country = COALESCE(?, last_ip_country),
+          last_ip_isp = COALESCE(?, last_ip_isp)
+        WHERE id = ?
+      `).bind(clientIp, city, country, isp, userId).run();
+
+      // 2. Upsert daily activity metric for today
+      const todayStr = new Date().toISOString().split('T')[0];
+      const activityId = `act_${userId}_${todayStr}`;
+
+      try {
+        await c.env.DB.prepare(`
+          INSERT INTO user_daily_activity (
+            id, user_id, activity_date, total_active_seconds,
+            first_active_at, last_active_at, last_ip, last_city, last_country, last_isp, user_agent, updated_at
+          ) VALUES (
+            ?, ?, ?, ?, datetime('now'), datetime('now'), ?, ?, ?, ?, ?, datetime('now')
+          )
+          ON CONFLICT(user_id, activity_date) DO UPDATE SET
+            total_active_seconds = total_active_seconds + ?,
+            last_active_at = datetime('now'),
+            last_ip = COALESCE(?, user_daily_activity.last_ip),
+            last_city = COALESCE(?, user_daily_activity.last_city),
+            last_country = COALESCE(?, user_daily_activity.last_country),
+            last_isp = COALESCE(?, user_daily_activity.last_isp),
+            user_agent = COALESCE(?, user_daily_activity.user_agent),
+            updated_at = datetime('now')
+        `).bind(
+          activityId, userId, todayStr, activeSeconds,
+          clientIp, city, country, isp, userAgent,
+          activeSeconds, clientIp, city, country, isp, userAgent
+        ).run();
+      } catch (actErr) {
+        console.warn('user_daily_activity upsert warning:', actErr);
+      }
     }
     return c.json({ success: true, timestamp: new Date().toISOString() });
   } catch (err: any) {

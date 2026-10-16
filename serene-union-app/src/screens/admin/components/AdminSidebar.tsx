@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, Radio, Users, Image as ImageIcon, Sparkles } from 'lucide-react';
+import { Activity, Radio, Calendar, Users, Image as ImageIcon, Sparkles } from 'lucide-react';
 import type { AdminTab } from '../types';
 
 interface AdminSidebarProps {
@@ -24,6 +24,18 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         >
           <Activity className="w-4 h-4" />
           <span>Overview & Metrics</span>
+        </button>
+
+        <button
+          onClick={() => onSelectTab('daily')}
+          className={`flex items-center space-x-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all whitespace-nowrap cursor-pointer ${
+            activeTab === 'daily'
+              ? 'bg-gradient-to-r from-sky-500 to-indigo-600 text-white shadow-lg shadow-sky-500/30'
+              : 'text-slate-400 hover:bg-white/5 hover:text-white'
+          }`}
+        >
+          <Calendar className="w-4 h-4 text-sky-400" />
+          <span>Daily Activity</span>
         </button>
 
         <button

@@ -1,4 +1,125 @@
-export type AdminTab = 'overview' | 'live' | 'users' | 'photos' | 'seeds';
+export type AdminTab = 'overview' | 'live' | 'daily' | 'users' | 'photos' | 'seeds';
+
+export interface DailyUserItem {
+  id: string;
+  fullName: string;
+  gender: string;
+  age: number;
+  dob: string;
+  city: string;
+  country: string;
+  profession: string;
+  isVip: boolean;
+  isSeed: boolean;
+  photoUrl: string;
+  totalActiveSeconds: number;
+  activeDurationFormatted: string;
+  firstActiveAt: string;
+  lastActiveAt: string;
+  secondsAgo: number;
+  status: 'online' | 'away' | 'recent' | 'offline';
+  matchesCountToday: number;
+  likesCountToday: number;
+  messagesSentCount: number;
+  ip: string;
+  isp: string;
+  userAgent: string;
+}
+
+export interface DailyActivitySummary {
+  activeUsersCount: number;
+  totalActiveHours: string;
+  matchesCountToday: number;
+  likesCountToday: number;
+  messagesCountToday: number;
+  topCities: { name: string; count: number }[];
+}
+
+export interface DailyActivityResponse {
+  success: boolean;
+  targetDate: string;
+  summary: DailyActivitySummary;
+  users: DailyUserItem[];
+}
+
+export interface UserAuditDetail {
+  user: {
+    id: string;
+    fullName: string;
+    email: string;
+    phone: string;
+    gender: string;
+    dob: string;
+    city: string;
+    country: string;
+    profession: string;
+    education: string;
+    isVip: boolean;
+    isSeed: boolean;
+    photos: string[];
+    waliName?: string;
+    waliRelationship?: string;
+    waliPhone?: string;
+  };
+  telemetry: {
+    ip: string;
+    city: string;
+    country: string;
+    isp: string;
+    userAgent: string;
+    totalActiveSeconds: number;
+    activeDurationFormatted: string;
+    firstActiveAt: string;
+    lastActiveAt: string;
+  };
+  matchesToday: {
+    matchId: string;
+    matchedAt: string;
+    matchType: string;
+    partner: {
+      id: string;
+      fullName: string;
+      city: string;
+      profession: string;
+      gender: string;
+      photoUrl: string;
+    };
+  }[];
+  likesToday: {
+    likeId: string;
+    likedAt: string;
+    recipient: {
+      id: string;
+      fullName: string;
+      city: string;
+      profession: string;
+      gender: string;
+      photoUrl: string;
+    };
+  }[];
+  conversationsToday: {
+    conversationId: string;
+    lastMessageText: string;
+    lastMessageTime: string;
+    partner: {
+      id: string;
+      fullName: string;
+      city: string;
+      profession: string;
+      gender: string;
+      photoUrl: string;
+    };
+    messages: {
+      id: string;
+      senderId: string;
+      senderName: string;
+      text: string;
+      createdAt: string;
+      isFromCurrentUser: boolean;
+      waliNotified: boolean;
+    }[];
+  }[];
+}
 
 export interface LiveUser {
   id: string;

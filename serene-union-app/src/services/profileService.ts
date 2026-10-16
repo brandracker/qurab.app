@@ -279,7 +279,7 @@ export const profileService = {
       const res = await fetch(`${API_BASE}/users/heartbeat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId })
+        body: JSON.stringify({ userId, activeSeconds: 45 })
       });
       const data = await res.json();
       return Boolean(data.success);

@@ -209,6 +209,13 @@ export const App: React.FC = () => {
     };
   }, [currentUser.id]);
 
+  // Meta / Facebook SDK App Launch Event & Immediate Attribution Ping
+  useEffect(() => {
+    facebookEventsService.logAppLaunch().catch(err => {
+      console.warn('[FacebookEvents] Startup launch event error:', err);
+    });
+  }, []);
+
   useEffect(() => {
     // Live Cloudflare D1 Wallet & VIP status sync on app boot
     if (currentUser.id && currentUser.id !== 'usr_guest') {

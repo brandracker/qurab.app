@@ -24,13 +24,40 @@ public class FacebookEventsPlugin extends Plugin {
         try {
             if (getContext() != null) {
                 FacebookSdk.sdkInitialize(getContext());
+                FacebookSdk.setAutoInitEnabled(true);
+                FacebookSdk.setFullySynchronized(true);
+                FacebookSdk.setAutoLogAppEventsEnabled(true);
+                FacebookSdk.setAdvertiserIDCollectionEnabled(true);
                 if (getActivity() != null && getActivity().getApplication() != null) {
                     AppEventsLogger.activateApp(getActivity().getApplication());
                 }
                 logger = AppEventsLogger.newLogger(getContext());
+                if (logger != null) {
+                    logger.flush();
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    @PluginMethod
+    public void activateApp(PluginCall call) {
+        try {
+            if (getActivity() != null && getActivity().getApplication() != null) {
+                AppEventsLogger.activateApp(getActivity().getApplication());
+            }
+            if (logger == null && getContext() != null) {
+                logger = AppEventsLogger.newLogger(getContext());
+            }
+            if (logger != null) {
+                logger.flush();
+            }
+            JSObject ret = new JSObject();
+            ret.put("success", true);
+            call.resolve(ret);
+        } catch (Exception e) {
+            call.reject("Failed to activate app: " + e.getMessage());
         }
     }
 
@@ -66,6 +93,7 @@ public class FacebookEventsPlugin extends Plugin {
 
             if (logger != null) {
                 logger.logEvent(eventName, params);
+                logger.flush();
             }
 
             JSObject ret = new JSObject();
@@ -102,6 +130,7 @@ public class FacebookEventsPlugin extends Plugin {
 
             if (logger != null) {
                 logger.logPurchase(BigDecimal.valueOf(amount), currency, params);
+                logger.flush();
             }
 
             JSObject ret = new JSObject();

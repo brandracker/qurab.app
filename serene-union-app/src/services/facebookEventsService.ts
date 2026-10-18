@@ -3,12 +3,29 @@ import { registerPlugin, Capacitor } from '@capacitor/core';
 interface FacebookEventsPluginInterface {
   logEvent(options: { eventName: string; parameters?: Record<string, any> }): Promise<{ success: boolean }>;
   logPurchase(options: { amount: number; currency: string; parameters?: Record<string, any> }): Promise<{ success: boolean }>;
+  activateApp?(): Promise<{ success: boolean }>;
 }
 
 const FacebookEventsPlugin = registerPlugin<FacebookEventsPluginInterface>('FacebookEventsPlugin');
 
 class FacebookEventsService {
   private isNative = Capacitor.isNativePlatform();
+
+  /**
+   * Activate app and log initial session
+   */
+  async logAppLaunch(): Promise<void> {
+    if (this.isNative) {
+      try {
+        if (FacebookEventsPlugin.activateApp) {
+          await FacebookEventsPlugin.activateApp();
+        }
+      } catch (err) {
+        console.warn('[FacebookEvents] activateApp error:', err);
+      }
+    }
+    await this.logEvent('fb_mobile_activate_app', { app_name: 'Qurb' });
+  }
 
   /**
    * Log any generic or custom Meta App Event

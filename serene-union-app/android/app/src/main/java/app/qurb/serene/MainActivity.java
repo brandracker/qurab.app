@@ -13,6 +13,11 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(GoogleAuthPlugin.class);
         registerPlugin(FacebookEventsPlugin.class);
         super.onCreate(savedInstanceState);
+        try {
+            com.facebook.FacebookSdk.setAutoInitEnabled(true);
+            com.facebook.FacebookSdk.fullyInitialize();
+            com.facebook.appevents.AppEventsLogger.activateApp(getApplication());
+        } catch (Exception ignored) {}
         handleDeepLink(getIntent());
     }
 

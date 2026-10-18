@@ -25,7 +25,6 @@ public class FacebookEventsPlugin extends Plugin {
             if (getContext() != null) {
                 FacebookSdk.sdkInitialize(getContext());
                 FacebookSdk.setAutoInitEnabled(true);
-                FacebookSdk.setFullySynchronized(true);
                 FacebookSdk.setAutoLogAppEventsEnabled(true);
                 FacebookSdk.setAdvertiserIDCollectionEnabled(true);
                 if (getActivity() != null && getActivity().getApplication() != null) {

@@ -15,7 +15,8 @@ public class MainActivity extends BridgeActivity {
         super.onCreate(savedInstanceState);
         try {
             com.facebook.FacebookSdk.setAutoInitEnabled(true);
-            com.facebook.FacebookSdk.fullyInitialize();
+            com.facebook.FacebookSdk.setAutoLogAppEventsEnabled(true);
+            com.facebook.FacebookSdk.setAdvertiserIDCollectionEnabled(true);
             com.facebook.appevents.AppEventsLogger.activateApp(getApplication());
         } catch (Exception ignored) {}
         handleDeepLink(getIntent());

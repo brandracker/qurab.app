@@ -20,6 +20,7 @@ import type { UserProfile, Sect, PracticeLevel, MarriageTimeline } from '../type
 import { dbService } from '../services/dbService';
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
+import { backNavigationService } from '../services/backNavigationService';
 
 export type TabType = 'personal' | 'career' | 'deen' | 'lifestyle' | 'partner';
 
@@ -144,6 +145,14 @@ export const EditProfileModal: React.FC<Props> = ({
   const [activeTab, setActiveTab] = useState<TabType>(initialTab);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    return backNavigationService.register(() => {
+      onClose();
+      return true;
+    });
+  }, [isOpen, onClose]);
 
   // Form State: Personal
   const [fullName, setFullName] = useState<string>('');

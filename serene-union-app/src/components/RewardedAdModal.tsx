@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Volume2, VolumeX, X, PlayCircle, Gift, CheckCircle2, ShieldCheck, HeartHandshake } from 'lucide-react';
 import { admobService, ADMOB_CONFIG } from '../services/admobService';
 import { dbService } from '../services/dbService';
+import { backNavigationService } from '../services/backNavigationService';
 
 interface Props {
   userId: string;
@@ -19,6 +20,14 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes',
 
   const adsWatched = dbService.getAdsWatchedForSalam(userId);
   const currentStep = (adsWatched % 3) + 1;
+
+  useEffect(() => {
+    if (!isOpen) return;
+    return backNavigationService.register(() => {
+      onClose();
+      return true;
+    });
+  }, [isOpen, onClose]);
 
   useEffect(() => {
     if (!isOpen) {

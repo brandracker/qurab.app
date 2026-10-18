@@ -474,6 +474,79 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
     );
   };
 
+  // Auto-detect location on initial mount if not already populated
+  useEffect(() => {
+    // If the user already has a saved city, valid location, or coordinates, don't overwrite
+    if (data?.city || (data?.location && data.location !== 'Global') || data?.latitude) {
+      return;
+    }
+
+    let isMounted = true;
+    const runAutoLocation = async () => {
+      try {
+        // Native check: if permission is already granted, use high accuracy GPS
+        if (Capacitor.isNativePlatform()) {
+          try {
+            const perm = await Geolocation.checkPermissions();
+            if (perm.location === 'granted') {
+              const position = await Geolocation.getCurrentPosition({
+                enableHighAccuracy: true,
+                timeout: 7000
+              });
+              if (!isMounted) return;
+              const lat = Math.round(position.coords.latitude * 10000) / 10000;
+              const lon = Math.round(position.coords.longitude * 10000) / 10000;
+              setCoords({ latitude: lat, longitude: lon });
+              const geoResult = reverseGeocodeOffline(lat, lon);
+              if (geoResult.countryCode) setSelectedCountryCode(geoResult.countryCode);
+              if (geoResult.stateCode) {
+                setSelectedStateCode(geoResult.stateCode);
+                setIsCustomState(false);
+              }
+              if (geoResult.cityName) {
+                setSelectedCityName(geoResult.cityName);
+                setIsCustomCity(false);
+                setCustomCityText('');
+              }
+              setLocationStatus(`📍 Auto-detected: ${geoResult.cityName || ''}, ${geoResult.countryName || ''}`);
+              return;
+            }
+          } catch (e) {
+            // Silently fall through to IP detection
+          }
+        }
+
+        // Fast IP Fallback (Instant Cloudflare Edge Geo - Zero Prompts)
+        const ipLoc = await dbService.detectLocationByIP();
+        if (!isMounted) return;
+        if (ipLoc && ipLoc.latitude && ipLoc.longitude) {
+          setCoords({ latitude: ipLoc.latitude, longitude: ipLoc.longitude });
+          const geoResult = reverseGeocodeOffline(ipLoc.latitude, ipLoc.longitude);
+          if (geoResult.countryCode) setSelectedCountryCode(geoResult.countryCode);
+          if (geoResult.stateCode) {
+            setSelectedStateCode(geoResult.stateCode);
+            setIsCustomState(false);
+          }
+          const cityToUse = geoResult.cityName || ipLoc.city;
+          if (cityToUse) {
+            setSelectedCityName(cityToUse);
+            setIsCustomCity(false);
+            setCustomCityText('');
+          }
+          setLocationStatus(`📍 Auto-detected: ${cityToUse}, ${geoResult.countryName || ipLoc.country}`);
+        }
+      } catch (err) {
+        console.warn('[AutoLocation] Background detection notice:', err);
+      }
+    };
+
+    runAutoLocation();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleSubmit = (e?: React.FormEvent) => {

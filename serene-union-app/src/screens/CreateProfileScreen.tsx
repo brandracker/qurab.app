@@ -15,7 +15,7 @@ interface Props {
 export const CreateProfileScreen: React.FC<Props> = ({ 
   userId = '',
   initialPhotos = [],
-  initialBlurPhotos = true,
+  initialBlurPhotos = false,
   isEditMode = false,
   onBack, 
   onComplete 

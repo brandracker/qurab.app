@@ -403,7 +403,7 @@ class DBService {
       ethnicity: 'Global',
       marriageTimeline: 'within_1_year',
       bio: 'Seeking half my deen.',
-      blurPhotosByDefault: true,
+      blurPhotosByDefault: false,
       profileVisibility: 'all_users',
       photos: [],
       religiousProfile: {

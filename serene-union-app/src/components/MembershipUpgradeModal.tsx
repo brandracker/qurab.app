@@ -3,6 +3,7 @@ import { Crown, TrendingUp, PlayCircle, Wallet, CheckCircle2, X, Check, Hand } f
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { API_BASE, dbService } from '../services/dbService';
 import { facebookEventsService } from '../services/facebookEventsService';
+import { backNavigationService } from '../services/backNavigationService';
 
 const GooglePlayBilling = registerPlugin<any>('GooglePlayBillingPlugin');
 
@@ -24,6 +25,14 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
   const [selectedProduct, setSelectedProduct] = useState<string>('qurb_barakah_monthly');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [purchaseStep, setPurchaseStep] = useState<'selection' | 'google_play_sheet' | 'success'>('selection');
+
+  useEffect(() => {
+    if (!isOpen) return;
+    return backNavigationService.register(() => {
+      onClose();
+      return true;
+    });
+  }, [isOpen, onClose]);
 
   useEffect(() => {
     const handleVipUpdated = () => {

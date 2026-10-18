@@ -24,6 +24,7 @@ import { facebookEventsService } from './services/facebookEventsService';
 import { Capacitor } from '@capacitor/core';
 import { LandingPage } from './components/LandingPage';
 import { AdminPortal } from './screens/admin/AdminPortal';
+import { backNavigationService } from './services/backNavigationService';
 
 type OnboardingStep = 
   | 'welcome' 
@@ -251,6 +252,96 @@ export const App: React.FC = () => {
       window.removeEventListener('serene_user_profile_updated', handleProfileUpdate);
     };
   }, [currentUser.id]);
+
+  // Android Hardware Back Button Master Listener
+  useEffect(() => {
+    let lastBackPressTime = 0;
+
+    const handleHardwareBack = async () => {
+      // 1. Check if an active modal/drawer registered in backNavigationService consumes the event
+      const consumedByModal = backNavigationService.handleBack();
+      if (consumedByModal) return;
+
+      // 2. Priority: Notifications Screen Overlay
+      if (showNotifications) {
+        setShowNotifications(false);
+        return;
+      }
+
+      // 3. Priority: Active Chat Conversation
+      if (activeConvId) {
+        setActiveConvId(null);
+        return;
+      }
+
+      // 4. Priority: Onboarding Steps (navigate back to previous step)
+      if (currentStep !== 'main_app' && currentStep !== 'welcome') {
+        const stepOrder: OnboardingStep[] = [
+          'welcome',
+          'auth',
+          'basic_info',
+          'practice',
+          'family_lifestyle',
+          'career_intent',
+          'photos_modesty'
+        ];
+        const currentIndex = stepOrder.indexOf(currentStep);
+        if (currentIndex > 0) {
+          setCurrentStep(stepOrder[currentIndex - 1]);
+          return;
+        } else if (currentStep === 'privacy_policy' || currentStep === 'terms' || currentStep === 'reset_password') {
+          setCurrentStep('welcome');
+          return;
+        }
+      }
+
+      // 5. Priority: Main App Tabs (return to Discover Feed)
+      if (currentStep === 'main_app' && activeTab !== 'discover') {
+        setActiveTab('discover');
+        return;
+      }
+
+      // 6. Root Screen (Exit Protection with Double-Tap Toast)
+      const now = Date.now();
+      if (now - lastBackPressTime < 2000) {
+        if (Capacitor.isNativePlatform()) {
+          try {
+            const { App: CapApp } = await import('@capacitor/app');
+            CapApp.exitApp();
+          } catch (e) {
+            console.warn('[BackNav] exitApp notice:', e);
+          }
+        }
+      } else {
+        lastBackPressTime = now;
+        const toast = document.createElement('div');
+        toast.innerText = 'Press back again to exit';
+        toast.className = 'fixed bottom-20 left-1/2 -translate-x-1/2 bg-slate-900/95 text-white text-xs font-semibold px-4 py-2 rounded-full shadow-2xl z-[999999] pointer-events-none transition-opacity duration-300 backdrop-blur-md border border-white/10';
+        document.body.appendChild(toast);
+        setTimeout(() => {
+          toast.style.opacity = '0';
+          setTimeout(() => toast.remove(), 300);
+        }, 1800);
+      }
+    };
+
+    let listenerHandle: any = null;
+    if (Capacitor.isNativePlatform()) {
+      import('@capacitor/app').then(({ App: CapApp }) => {
+        listenerHandle = CapApp.addListener('backButton', () => {
+          handleHardwareBack();
+        });
+      }).catch(err => {
+        console.warn('[BackNav] Native backButton listener init notice:', err);
+      });
+    }
+
+    return () => {
+      if (listenerHandle?.remove) {
+        listenerHandle.remove();
+      }
+    };
+  }, [showNotifications, activeConvId, currentStep, activeTab]);
 
   // Stripe Checkout Post-Payment Verification (Web & Native Android Deep Link)
   const [stripeSuccessNotice, setStripeSuccessNotice] = useState<string | null>(null);
@@ -716,7 +807,7 @@ export const App: React.FC = () => {
           <CreateProfileScreen
             userId={onboardingData.userId || currentUser.id}
             initialPhotos={onboardingData.photos?.length > 0 ? onboardingData.photos : (currentUser.photos || [])}
-            initialBlurPhotos={currentUser.blurPhotosByDefault ?? true}
+            initialBlurPhotos={currentUser.blurPhotosByDefault ?? false}
             isEditMode={Boolean(onboardingData._isEditingExisting || (currentUser?.id && currentUser.id !== 'usr_guest' && currentUser.isProfileCompleted))}
             onBack={() => goToStep('career_intent')}
             onComplete={handleFinishOnboarding}

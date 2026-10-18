@@ -36,6 +36,7 @@ import type { UserProfile } from '../types';
 import { CompatibilityComparisonModal } from './CompatibilityComparisonModal';
 import { dbService } from '../services/dbService';
 import { facebookEventsService } from '../services/facebookEventsService';
+import { backNavigationService } from '../services/backNavigationService';
 
 interface Props {
   profile: UserProfile;
@@ -56,6 +57,14 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
   const isRevealedToMe = Boolean(profile.isPhotoRevealed) || dbService.isPhotoRevealedTo(profile.id, currentUser.id);
   const isUnblurred = !profile.blurPhotosByDefault || isRevealedToMe || Boolean(profile.photoRevealApproved);
   const [showCompatibilityModal, setShowCompatibilityModal] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    return backNavigationService.register(() => {
+      onClose();
+      return true;
+    });
+  }, [isOpen, onClose]);
 
   useEffect(() => {
     if (isOpen && profile?.id) {

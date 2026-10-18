@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, CheckSquare, Square, SlidersHorizontal } from 'lucide-react';
 import type { FilterState, Sect, PracticeLevel, MarriageTimeline } from '../types';
+import { backNavigationService } from '../services/backNavigationService';
 
 interface Props {
   filters: FilterState;
@@ -10,6 +11,13 @@ interface Props {
 
 export const FilterModal: React.FC<Props> = ({ filters: initialFilters, onClose, onApply }) => {
   const [filters, setFilters] = useState<FilterState>(initialFilters);
+
+  useEffect(() => {
+    return backNavigationService.register(() => {
+      onClose();
+      return true;
+    });
+  }, [onClose]);
 
   const toggleSect = (sect: Sect) => {
     setFilters(prev => ({

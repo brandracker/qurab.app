@@ -3,7 +3,7 @@ import confetti from 'canvas-confetti';
 import { HeartHandshake, MessageCircle, EyeOff } from 'lucide-react';
 import type { UserProfile } from '../types';
 import { dbService } from '../services/dbService';
-
+import { backNavigationService } from '../services/backNavigationService';
 
 interface Props {
   profile: UserProfile;
@@ -14,6 +14,13 @@ interface Props {
 
 export const MutualMatchModal: React.FC<Props> = ({ profile, currentUser: propUser, onStartChat, onClose }) => {
   const currentUser = propUser || dbService.getCurrentUser();
+
+  useEffect(() => {
+    return backNavigationService.register(() => {
+      onClose();
+      return true;
+    });
+  }, [onClose]);
 
   useEffect(() => {
     confetti({

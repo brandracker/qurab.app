@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { UserProfile } from '../types';
 import { facebookEventsService } from '../services/facebookEventsService';
+import { backNavigationService } from '../services/backNavigationService';
 
 interface DirectSalamModalProps {
   candidate: UserProfile;
@@ -23,6 +24,13 @@ export const DirectSalamModal: React.FC<DirectSalamModalProps> = ({
 }) => {
   const [message, setMessage] = useState(GREETING_TEMPLATES[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    return backNavigationService.register(() => {
+      onClose();
+      return true;
+    });
+  }, [onClose]);
 
   const candidateFirstName = candidate.fullName?.split(' ')[0] || 'Candidate';
   const avatarUrl = candidate.photos?.[0] || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&fit=crop&q=80';

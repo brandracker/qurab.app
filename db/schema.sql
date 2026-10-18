@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS users (
     blur_photos_by_default BOOLEAN DEFAULT 1,
     profile_visibility TEXT DEFAULT 'approved_only',
     is_vip BOOLEAN DEFAULT 0,
+    fcm_token TEXT,
     account_status TEXT DEFAULT 'active',
     is_banned BOOLEAN DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

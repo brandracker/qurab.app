@@ -1,0 +1,142 @@
+import { Capacitor } from '@capacitor/core';
+import { PushNotifications } from '@capacitor/push-notifications';
+import { LocalNotifications } from '@capacitor/local-notifications';
+import { dbService, API_BASE } from './dbService';
+
+class PushNotificationService {
+  private isInitialized = false;
+
+  /**
+   * Initializes Push Notifications & Local Notification Channels on native Android
+   */
+  async init(): Promise<void> {
+    if (!Capacitor.isNativePlatform()) {
+      return;
+    }
+
+    if (this.isInitialized) return;
+    this.isInitialized = true;
+
+    try {
+      // 1. Create Android Notification Channel with Sound & Vibration
+      await PushNotifications.createChannel({
+        id: 'qurb_messages',
+        name: 'Messages & Matches',
+        description: 'Instant notifications for new matrimonial messages, likes, and matches',
+        importance: 5, // High importance (heads-up banner + sound)
+        visibility: 1, // Public (shows on lockscreen)
+        sound: 'default',
+        vibration: true,
+        lights: true,
+        lightColor: '#FF2560'
+      }).catch(err => {
+        console.warn('[Push] Channel creation notice:', err);
+      });
+
+      // 2. Request Notification Permissions (Android 13+ POST_NOTIFICATIONS)
+      let permStatus = await PushNotifications.checkPermissions();
+      if (permStatus.receive === 'prompt' || permStatus.receive === 'prompt-with-rationale') {
+        permStatus = await PushNotifications.requestPermissions();
+      }
+
+      await LocalNotifications.requestPermissions().catch(() => {});
+
+      if (permStatus.receive === 'granted') {
+        // 3. Register with Google FCM
+        await PushNotifications.register();
+      }
+
+      // 4. Handle Registration Token
+      PushNotifications.addListener('registration', async (token) => {
+        console.log('[Push] Native FCM registration token received:', token.value.slice(0, 15) + '...');
+        localStorage.setItem('qurb_fcm_token', token.value);
+        
+        const currentUser = dbService.getCurrentUser();
+        if (currentUser?.id && currentUser.id !== 'usr_guest') {
+          await this.syncTokenWithBackend(currentUser.id, token.value);
+        }
+      });
+
+      PushNotifications.addListener('registrationError', (error) => {
+        console.warn('[Push] Registration error notice:', error);
+      });
+
+      // 5. Handle Foreground Push Notification
+      PushNotifications.addListener('pushNotificationReceived', (notification) => {
+        console.log('[Push] Notification received in foreground:', notification);
+        const data = notification.data || {};
+        this.showLocalNotification(
+          notification.title || 'New Matrimonial Update 💖',
+          notification.body || 'You have a new update in Qurb.',
+          data.conversationId
+        );
+      });
+
+      // 6. Handle Tap on Push Notification
+      PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
+        console.log('[Push] Action performed on notification:', notification);
+        const data = notification.notification.data || {};
+        if (data.conversationId) {
+          window.dispatchEvent(
+            new CustomEvent('qurb_open_chat', { detail: { conversationId: data.conversationId } })
+          );
+        }
+      });
+
+      // 7. Handle Tap on Local Notification
+      LocalNotifications.addListener('localNotificationActionPerformed', (notification) => {
+        const extra = notification.notification.extra || {};
+        if (extra.conversationId) {
+          window.dispatchEvent(
+            new CustomEvent('qurb_open_chat', { detail: { conversationId: extra.conversationId } })
+          );
+        }
+      });
+
+    } catch (err) {
+      console.warn('[Push] Initialization notice:', err);
+    }
+  }
+
+  /**
+   * Syncs user FCM token with Cloudflare D1
+   */
+  async syncTokenWithBackend(userId: string, token: string): Promise<boolean> {
+    try {
+      const res = await fetch(`${API_BASE}/users/push-token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, token })
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Displays an immediate native Android banner notification with sound
+   */
+  async showLocalNotification(title: string, body: string, conversationId?: string): Promise<void> {
+    if (!Capacitor.isNativePlatform()) return;
+
+    try {
+      await LocalNotifications.schedule({
+        notifications: [
+          {
+            id: Math.floor(Math.random() * 1000000),
+            title,
+            body,
+            channelId: 'qurb_messages',
+            extra: { conversationId },
+            sound: 'default'
+          }
+        ]
+      });
+    } catch (err) {
+      console.warn('[LocalNotification] Dispatch notice:', err);
+    }
+  }
+}
+
+export const pushNotificationService = new PushNotificationService();

@@ -262,6 +262,22 @@ usersRouter.post('/heartbeat', async (c) => {
   }
 });
 
+// 1.3 Register Mobile Push Token (FCM)
+usersRouter.post('/push-token', async (c) => {
+  try {
+    const { userId, token } = await c.req.json();
+    if (!userId || !token) {
+      return c.json({ success: false, error: 'userId and token are required' }, 400);
+    }
+    await c.env.DB.prepare(`
+      UPDATE users SET fcm_token = ? WHERE id = ?
+    `).bind(token, userId).run();
+    return c.json({ success: true, message: 'FCM push token registered' });
+  } catch (err: any) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
 // 1.5 Auto-Detect Location from Cloudflare Edge Geo IP Headers
 usersRouter.get('/detect-location', async (c) => {
   try {

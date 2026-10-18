@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import type { AppContext } from '../types';
+import { sendFcmNotification } from '../utils/fcm';
 
 export const chatRouter = new Hono<AppContext>();
 
@@ -392,15 +393,40 @@ chatRouter.post('/:id/messages', async (c) => {
     // 4. Centralized notification in D1 for recipient
     const recipientId = p1 === senderId ? p2 : p1;
     if (recipientId) {
+      const senderFirstName = (senderName || 'Member').split(' ')[0];
+      const preview = text.trim().length > 60 ? `${text.trim().slice(0, 57)}...` : text.trim();
+
       try {
         const notifId = `notif_msg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-        const senderFirstName = (senderName || 'Member').split(' ')[0];
-        const preview = text.trim().length > 60 ? `${text.trim().slice(0, 57)}...` : text.trim();
         await c.env.DB.prepare(`
           INSERT INTO notifications (id, user_id, type, title, message, target_id, action_label, is_read, created_at)
           VALUES (?, ?, 'message', ?, ?, ?, 'Open Chat', 0, CURRENT_TIMESTAMP)
         `).bind(notifId, recipientId, `New Message from ${senderFirstName}`, preview, targetConvId).run();
       } catch {}
+
+      // 5. Remote Android Push Notification via FCM
+      try {
+        const recipientUser: any = await c.env.DB.prepare(
+          "SELECT fcm_token FROM users WHERE id = ?"
+        ).bind(recipientId).first();
+
+        if (recipientUser?.fcm_token) {
+          c.executionCtx.waitUntil(
+            sendFcmNotification(c.env, {
+              token: recipientUser.fcm_token,
+              title: `New Message from ${senderFirstName} 💬`,
+              body: preview,
+              data: {
+                conversationId: targetConvId,
+                senderId: senderId,
+                type: 'chat_message'
+              }
+            })
+          );
+        }
+      } catch (pushErr) {
+        console.warn('[PushNotification] FCM dispatch notice:', pushErr);
+      }
     }
 
     return c.json({

@@ -25,6 +25,7 @@ import { Capacitor } from '@capacitor/core';
 import { LandingPage } from './components/LandingPage';
 import { AdminPortal } from './screens/admin/AdminPortal';
 import { backNavigationService } from './services/backNavigationService';
+import { pushNotificationService } from './services/pushNotificationService';
 
 type OnboardingStep = 
   | 'welcome' 
@@ -180,12 +181,30 @@ export const App: React.FC = () => {
       setUnreadChatCount(count);
     };
 
+    let lastNotifiedMsgTime = Date.now();
+
     const syncLiveChats = async () => {
       try {
         const liveConvs = await dbService.fetchLiveConversations();
-        if (liveConvs) {
+        if (liveConvs && Array.isArray(liveConvs)) {
           const count = liveConvs.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
           setUnreadChatCount(count);
+
+          // Trigger local notification when a new message arrives while outside that conversation
+          for (const conv of liveConvs) {
+            if ((conv.unreadCount || 0) > 0 && activeConvId !== conv.id) {
+              const msgTime = conv.lastMessageTime ? new Date(conv.lastMessageTime).getTime() : 0;
+              if (msgTime > lastNotifiedMsgTime) {
+                lastNotifiedMsgTime = msgTime;
+                const senderName = conv.otherUser?.fullName?.split(' ')[0] || 'A member';
+                pushNotificationService.showLocalNotification(
+                  `New Message from ${senderName} 💬`,
+                  conv.lastMessageText || 'Sent you a message',
+                  conv.id
+                );
+              }
+            }
+          }
         }
       } catch {}
     };
@@ -208,7 +227,32 @@ export const App: React.FC = () => {
       window.removeEventListener('serene_conversations_updated', updateChatUnread);
       window.removeEventListener('focus', syncLiveChats);
     };
-  }, [currentUser.id]);
+  }, [currentUser.id, activeConvId]);
+
+  // Native Push Notifications & FCM Startup
+  useEffect(() => {
+    pushNotificationService.init();
+
+    const handleOpenChatEvent = (e: any) => {
+      if (e.detail?.conversationId) {
+        setActiveConvId(e.detail.conversationId);
+        setActiveTab('chat');
+        setShowNotifications(false);
+      }
+    };
+
+    window.addEventListener('qurb_open_chat', handleOpenChatEvent);
+    return () => window.removeEventListener('qurb_open_chat', handleOpenChatEvent);
+  }, []);
+
+  useEffect(() => {
+    if (currentUser?.id && currentUser.id !== 'usr_guest') {
+      const token = localStorage.getItem('qurb_fcm_token');
+      if (token) {
+        pushNotificationService.syncTokenWithBackend(currentUser.id, token);
+      }
+    }
+  }, [currentUser?.id]);
 
   // Meta / Facebook SDK App Launch Event & Immediate Attribution Ping
   useEffect(() => {

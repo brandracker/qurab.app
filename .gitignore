@@ -17,6 +17,8 @@ build/
 .env
 .env.*
 !.env.example
+*-firebase-adminsdk-*.json
+firebase-adminsdk*.json
 .agents/
 !.agents/skills/
 !.agents/skills/**

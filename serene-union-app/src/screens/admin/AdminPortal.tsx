@@ -97,8 +97,13 @@ export const AdminPortal: React.FC = () => {
   const fetchStats = useCallback(async () => {
     if (!adminToken) return;
     try {
-      const res = await fetch(`${API_BASE}/admin/dashboard/stats`, {
-        headers: { 'Authorization': `Bearer ${adminToken}` }
+      const res = await fetch(`${API_BASE}/admin/dashboard/stats?t=${Date.now()}`, {
+        headers: { 
+          'Authorization': `Bearer ${adminToken}`,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        },
+        cache: 'no-store'
       });
       const data = await res.json();
       if (data.success && data.stats) {

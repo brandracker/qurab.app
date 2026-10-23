@@ -184,7 +184,15 @@ export const chatService = {
           text: m.text || m.content || '',
           timestamp: m.timestamp || (m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'),
           isRead: Boolean(m.isRead ?? m.is_read),
-          waliNotified: Boolean(m.waliNotified ?? m.wali_notified ?? true)
+          waliNotified: Boolean(m.waliNotified ?? m.wali_notified ?? true),
+          mediaUrl: m.mediaUrl || m.media_url,
+          mediaType: m.mediaType || m.media_type,
+          mediaDuration: m.mediaDuration || m.media_duration,
+          fileName: m.fileName || m.file_name,
+          fileSize: m.fileSize || m.file_size,
+          isViewOnce: Boolean(m.isViewOnce ?? m.is_view_once),
+          isOpened: Boolean(m.isOpened ?? m.is_opened),
+          openedAt: m.openedAt || m.opened_at
         }));
 
         if (conv) {

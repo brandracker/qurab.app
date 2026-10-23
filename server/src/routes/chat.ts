@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { AppContext } from '../types';
 import { sendFcmNotification } from '../utils/fcm';
+import { processAiSeedResponse } from '../utils/ai-chat-agent';
 
 export const chatRouter = new Hono<AppContext>();
 
@@ -222,6 +223,64 @@ chatRouter.post('/create', async (c) => {
   }
 });
 
+// 2.1 Upload Media for Chat (Voice Notes, Compressed Photos, Videos, Files)
+chatRouter.post('/upload-media', async (c) => {
+  try {
+    const { conversationId, senderId, fileBase64, fileName, fileType, mediaType, duration } = await c.req.json();
+
+    if (!fileBase64) {
+      return c.json({ success: false, error: 'fileBase64 is required' }, 400);
+    }
+
+    let contentType = fileType || (mediaType === 'audio' ? 'audio/webm' : (mediaType === 'image' ? 'image/jpeg' : 'application/octet-stream'));
+    const mimeMatch = fileBase64.match(/^data:([^;]+);/);
+    if (mimeMatch && mimeMatch[1]) {
+      contentType = mimeMatch[1];
+    }
+
+    const ext = fileName?.split('.').pop()?.toLowerCase() || (mediaType === 'audio' ? 'webm' : (mediaType === 'image' ? 'jpg' : (mediaType === 'video' ? 'mp4' : 'bin')));
+    const safeConv = (conversationId || 'chat').replace(/[^a-zA-Z0-9_-]/g, '');
+    const fileId = `chat_${safeConv}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${ext}`;
+
+    let mediaUrl = `https://serene-union-api.brandracker.workers.dev/api/photos/media/${fileId}`;
+    let size = 0;
+
+    if (c.env.MEDIA_BUCKET) {
+      try {
+        const commaIdx = fileBase64.indexOf(',');
+        const rawBase64 = commaIdx !== -1 ? fileBase64.substring(commaIdx + 1) : fileBase64;
+        const base64Clean = rawBase64.replace(/[^A-Za-z0-9+/=]/g, '');
+        const binaryString = atob(base64Clean);
+        size = binaryString.length;
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        await c.env.MEDIA_BUCKET.put(fileId, bytes.buffer, {
+          httpMetadata: { contentType }
+        });
+      } catch (r2Err) {
+        console.warn('[R2 Storage Notice] chat media upload fallback to data URL:', r2Err);
+        mediaUrl = fileBase64;
+      }
+    } else {
+      // In-memory or test fallback: provide direct url or data URL
+      mediaUrl = `https://serene-union-api.brandracker.workers.dev/api/photos/media/${fileId}`;
+    }
+
+    return c.json({
+      success: true,
+      mediaUrl,
+      mediaType: mediaType || 'file',
+      fileName: fileName || fileId,
+      fileSize: size || fileBase64.length,
+      duration: duration || null
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
 // 3. Get Messages for a Conversation (Normalized with bidirectional lookup)
 chatRouter.get('/:id/messages', async (c) => {
   try {
@@ -247,7 +306,11 @@ chatRouter.get('/:id/messages', async (c) => {
     }
 
     const { results } = await c.env.DB.prepare(`
-      SELECT id, conversation_id, sender_id as senderId, sender_name as senderName, text, created_at as timestamp
+      SELECT id, conversation_id, sender_id as senderId, sender_name as senderName, text,
+             media_url as mediaUrl, media_type as mediaType, media_duration as mediaDuration,
+             file_name as fileName, file_size as fileSize,
+             is_view_once as isViewOnce, is_opened as isOpened, opened_at as openedAt,
+             created_at as timestamp
       FROM chat_messages
       WHERE conversation_id = ? OR conversation_id = ?
       ORDER BY created_at ASC
@@ -257,6 +320,25 @@ chatRouter.get('/:id/messages', async (c) => {
     const userId = c.req.query('userId');
     let isPhotoRevealed = false;
     let hasRevealedToPartner = false;
+
+    // Secure view-once media: If viewed and receiver queries, redact mediaUrl
+    const sanitizedMessages = (results || []).map((row: any) => {
+      const isVO = Boolean(row.isViewOnce);
+      const isOp = Boolean(row.isOpened);
+      if (isVO && isOp && userId && userId !== row.senderId) {
+        return {
+          ...row,
+          isViewOnce: true,
+          isOpened: true,
+          mediaUrl: null // Redacted from network payload once opened
+        };
+      }
+      return {
+        ...row,
+        isViewOnce: isVO,
+        isOpened: isOp
+      };
+    });
 
     if (userId) {
       let p1 = existingConv?.participant_one;
@@ -302,7 +384,7 @@ chatRouter.get('/:id/messages', async (c) => {
 
     return c.json({ 
       success: true, 
-      messages: results || [],
+      messages: sanitizedMessages || [],
       isPhotoRevealed,
       hasRevealedToPartner
     });
@@ -315,10 +397,30 @@ chatRouter.get('/:id/messages', async (c) => {
 chatRouter.post('/:id/messages', async (c) => {
   try {
     const rawConvId = c.req.param('id');
-    const { senderId, senderName, text, receiverId, id } = await c.req.json();
+    const { 
+      senderId, 
+      senderName, 
+      text, 
+      receiverId, 
+      id, 
+      mediaUrl, 
+      mediaType, 
+      mediaDuration, 
+      fileName, 
+      fileSize,
+      isViewOnce
+    } = await c.req.json();
     const msgId = id || `msg_${Date.now()}`;
 
-    if (!text || !text.trim()) {
+    let messageText = (text || '').trim();
+    if (!messageText && mediaUrl) {
+      if (mediaType === 'audio') messageText = '🎤 Voice message';
+      else if (mediaType === 'image') messageText = isViewOnce ? '📷 Photo (View Once)' : '📷 Photo';
+      else if (mediaType === 'video') messageText = isViewOnce ? '🎥 Video (View Once)' : '🎥 Video';
+      else messageText = fileName ? `📎 ${fileName}` : '📎 Attachment';
+    }
+
+    if (!messageText && !mediaUrl) {
       return c.json({ success: false, error: 'Message text is required' }, 400);
     }
 
@@ -352,7 +454,7 @@ chatRouter.post('/:id/messages', async (c) => {
         await c.env.DB.prepare(`
           INSERT OR IGNORE INTO conversations (id, participant_one, participant_two, jsonl_log_path, last_message_text, last_message_time)
           VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-        `).bind(targetConvId, p1, p2, `logs/${targetConvId}.jsonl`, text.trim()).run();
+        `).bind(targetConvId, p1, p2, `logs/${targetConvId}.jsonl`, messageText).run();
       }
     }
 
@@ -370,10 +472,30 @@ chatRouter.post('/:id/messages', async (c) => {
     }
 
     // 2. Insert into chat_messages
-    await c.env.DB.prepare(`
-      INSERT INTO chat_messages (id, conversation_id, sender_id, sender_name, text)
-      VALUES (?, ?, ?, ?, ?)
-    `).bind(msgId, targetConvId, senderId, senderName || 'Member', text.trim()).run();
+    try {
+      await c.env.DB.prepare(`
+        INSERT INTO chat_messages (id, conversation_id, sender_id, sender_name, text, media_url, media_type, media_duration, file_name, file_size, is_view_once, is_opened)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+      `).bind(
+        msgId, 
+        targetConvId, 
+        senderId, 
+        senderName || 'Member', 
+        messageText,
+        mediaUrl || null,
+        mediaType || null,
+        typeof mediaDuration === 'number' ? mediaDuration : null,
+        fileName || null,
+        typeof fileSize === 'number' ? fileSize : null,
+        isViewOnce ? 1 : 0
+      ).run();
+    } catch (insertErr) {
+      // Fallback if media columns missing in some environment
+      await c.env.DB.prepare(`
+        INSERT INTO chat_messages (id, conversation_id, sender_id, sender_name, text)
+        VALUES (?, ?, ?, ?, ?)
+      `).bind(msgId, targetConvId, senderId, senderName || 'Member', messageText).run();
+    }
 
     // 3. Update conversation last message & increment recipient unread count
     await c.env.DB.prepare(`
@@ -384,7 +506,7 @@ chatRouter.post('/:id/messages', async (c) => {
           unread_count_p1 = CASE WHEN participant_one != ? THEN unread_count_p1 + 1 ELSE unread_count_p1 END,
           unread_count_p2 = CASE WHEN participant_two != ? THEN unread_count_p2 + 1 ELSE unread_count_p2 END
       WHERE id = ? OR id = ?
-    `).bind(text.trim(), senderId, senderId, senderId, targetConvId, rawConvId).run();
+    `).bind(messageText, senderId, senderId, senderId, targetConvId, rawConvId).run();
 
     try {
       await c.env.DB.prepare("UPDATE users SET last_active_at = datetime('now') WHERE id = ?").bind(senderId).run();
@@ -394,7 +516,7 @@ chatRouter.post('/:id/messages', async (c) => {
     const recipientId = p1 === senderId ? p2 : p1;
     if (recipientId) {
       const senderFirstName = (senderName || 'Member').split(' ')[0];
-      const preview = text.trim().length > 60 ? `${text.trim().slice(0, 57)}...` : text.trim();
+      const preview = messageText.length > 60 ? `${messageText.slice(0, 57)}...` : messageText;
 
       try {
         const notifId = `notif_msg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
@@ -429,17 +551,66 @@ chatRouter.post('/:id/messages', async (c) => {
       }
     }
 
+    // 6. Autonomous AI Agent Responder for Seed Profiles (usr_seed_*)
+    if (recipientId && (recipientId.startsWith('usr_seed_') || recipientId.includes('seed'))) {
+      const aiPromise = processAiSeedResponse({
+        conversationId: targetConvId,
+        seedUserId: recipientId,
+        realUserId: senderId,
+        userMessageText: messageText,
+        senderName,
+        db: c.env.DB,
+        apiKey: c.env.GEMINI_API_KEY || (typeof process !== 'undefined' ? process.env?.GEMINI_API_KEY : '')
+      });
+
+      if (c.executionCtx?.waitUntil) {
+        c.executionCtx.waitUntil(aiPromise);
+      } else {
+        aiPromise.catch((err) => console.error('[AIChatAgent] Background dispatch error:', err));
+      }
+    }
+
     return c.json({
       success: true,
+      messageId: msgId,
       message: {
         id: msgId,
         senderId,
         senderName: senderName || 'Member',
-        text: text.trim(),
+        text: messageText,
+        mediaUrl: mediaUrl || null,
+        mediaType: mediaType || null,
+        mediaDuration: typeof mediaDuration === 'number' ? mediaDuration : null,
+        fileName: fileName || null,
+        fileSize: typeof fileSize === 'number' ? fileSize : null,
+        isViewOnce: Boolean(isViewOnce),
+        isOpened: false,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         isRead: true,
         waliNotified: true
       }
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// 4.1 Mark View-Once Media as Opened (Permanent Expire / Redact)
+chatRouter.post('/:id/messages/:msgId/open-view-once', async (c) => {
+  try {
+    const rawConvId = c.req.param('id');
+    const msgId = c.req.param('msgId');
+
+    await c.env.DB.prepare(`
+      UPDATE chat_messages 
+      SET is_opened = 1, opened_at = CURRENT_TIMESTAMP 
+      WHERE id = ? AND is_view_once = 1
+    `).bind(msgId).run();
+
+    return c.json({
+      success: true,
+      messageId: msgId,
+      isOpened: true
     });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);

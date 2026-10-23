@@ -71,6 +71,7 @@ export class MockD1Database {
         seed_password TEXT,
         is_banned BOOLEAN DEFAULT 0,
         ban_reason TEXT DEFAULT NULL,
+        fcm_token TEXT DEFAULT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
@@ -140,6 +141,14 @@ export class MockD1Database {
         sender_id TEXT,
         sender_name TEXT,
         text TEXT NOT NULL,
+        media_url TEXT,
+        media_type TEXT,
+        media_duration INTEGER,
+        file_name TEXT,
+        file_size INTEGER,
+        is_view_once INTEGER DEFAULT 0,
+        is_opened INTEGER DEFAULT 0,
+        opened_at DATETIME,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
 
@@ -329,8 +338,17 @@ export class MockD1Database {
 export class MockR2Bucket {
   private store: Map<string, any> = new Map();
 
-  async put(key: string, value: any): Promise<any> {
-    this.store.set(key, value);
+  async put(key: string, value: any, options?: any): Promise<any> {
+    const r2Object = {
+      body: value,
+      httpMetadata: options?.httpMetadata || {},
+      writeHttpMetadata: (headers: Headers) => {
+        if (options?.httpMetadata?.contentType) {
+          headers.set('Content-Type', options.httpMetadata.contentType);
+        }
+      }
+    };
+    this.store.set(key, r2Object);
     return { key, size: 100 };
   }
 

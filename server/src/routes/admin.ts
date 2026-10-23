@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import type { AppContext } from '../types';
 import { hashPassword } from '../utils/crypto';
 import { ensureSeedProfiles, SEED_PASSWORD } from '../utils/seedData';
+import { getPendingCatchupCount, processCatchupReplies } from '../utils/ai-chat-agent';
 
 export const adminRouter = new Hono<AppContext>();
 
@@ -64,7 +65,23 @@ async function ensureAdminTableAndSeed(db: any) {
     } catch {}
 
     try {
-      await ensureSeedProfiles(db);
+      await db.prepare(`
+        CREATE TABLE IF NOT EXISTS system_settings (
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `).run();
+      await db.prepare(`
+        INSERT OR IGNORE INTO system_settings (key, value) VALUES ('ai_agent_enabled', '1')
+      `).run();
+    } catch {}
+
+    try {
+      const seedCheck = await db.prepare("SELECT COUNT(*) as count FROM users WHERE is_seed = 1").first();
+      if (!seedCheck || Number(seedCheck.count) === 0) {
+        await ensureSeedProfiles(db);
+      }
     } catch (e) {
       console.warn('ensureSeedProfiles notice:', e);
     }
@@ -173,6 +190,10 @@ adminRouter.get('/cities', async (c) => {
 // 3. Deep Dashboard Analytics & Executive Metrics
 adminRouter.get('/dashboard/stats', async (c) => {
   try {
+    c.header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    c.header('Pragma', 'no-cache');
+    c.header('Expires', '0');
+
     const totalUsersRes = await c.env.DB.prepare('SELECT COUNT(*) as c FROM users WHERE (is_seed = 0 OR is_seed IS NULL)').first();
     const maleUsersRes = await c.env.DB.prepare("SELECT COUNT(*) as c FROM users WHERE gender = 'male' AND (is_seed = 0 OR is_seed IS NULL)").first();
     const femaleUsersRes = await c.env.DB.prepare("SELECT COUNT(*) as c FROM users WHERE gender = 'female' AND (is_seed = 0 OR is_seed IS NULL)").first();
@@ -1324,10 +1345,39 @@ adminRouter.delete('/seed-profiles/:id', async (c) => {
 // 12.1 Get Daily Activity Summary & User Roster for a specific date
 adminRouter.get('/daily-activity', async (c) => {
   try {
+    c.header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    c.header('Pragma', 'no-cache');
+    c.header('Expires', '0');
+
     const todayStr = new Date().toISOString().split('T')[0];
     const targetDate = c.req.query('date') || todayStr;
 
-    // 1. Fetch users active on this target date
+    // 1. Fetch total distinct active users count without arbitrary limit
+    let totalActiveUsersCount = 0;
+    try {
+      const totalActiveRes = await c.env.DB.prepare(`
+        SELECT COUNT(DISTINCT u.id) as total_active 
+        FROM users u
+        LEFT JOIN user_daily_activity uda ON u.id = uda.user_id AND uda.activity_date = ?
+        WHERE (u.is_banned = 0 OR u.is_banned IS NULL)
+          AND (
+            uda.activity_date = ? 
+            OR date(COALESCE(u.last_active_at, u.created_at)) = ?
+            OR u.id IN (
+              SELECT sender_id FROM matches_and_likes WHERE date(created_at) = ?
+              UNION
+              SELECT receiver_id FROM matches_and_likes WHERE date(created_at) = ?
+              UNION
+              SELECT sender_id FROM chat_messages WHERE date(created_at) = ?
+            )
+          )
+      `).bind(targetDate, targetDate, targetDate, targetDate, targetDate, targetDate).first();
+      totalActiveUsersCount = Number(totalActiveRes?.total_active || 0);
+    } catch (e) {
+      console.warn('Failed to count total active users:', e);
+    }
+
+    // 2. Fetch users active on this target date (capacity up to 250 for audit table)
     const { results: rawRows } = await c.env.DB.prepare(`
       SELECT 
         u.id, u.full_name as fullName, u.gender, u.dob, u.city, u.country, u.profession,
@@ -1360,13 +1410,18 @@ adminRouter.get('/daily-activity', async (c) => {
           )
         )
       ORDER BY COALESCE(uda.last_active_at, u.last_active_at, u.created_at) DESC
-      LIMIT 100
+      LIMIT 250
     `).bind(targetDate, targetDate, targetDate, targetDate, targetDate, targetDate).all();
 
     const userList = rawRows || [];
     const userIds = userList.map((r: any) => r.id);
 
-    // 2. Batch fetch primary photos
+    // If totalActiveUsersCount was 0 or failed, fallback to actual returned list length
+    if (totalActiveUsersCount === 0) {
+      totalActiveUsersCount = userList.length;
+    }
+
+    // 3. Batch fetch primary photos
     const photoMap: Record<string, string> = {};
     if (userIds.length > 0) {
       const chunkSize = 30;
@@ -1384,21 +1439,64 @@ adminRouter.get('/daily-activity', async (c) => {
       }
     }
 
-    // 3. Dynamic aggregates for matches, likes, and messages on target date
+    // 4. Batch fetch real user activity counts (matches, likes, messages)
+    const userLikesMap: Record<string, number> = {};
+    const userMatchesMap: Record<string, number> = {};
+    const userMessagesMap: Record<string, number> = {};
+
+    if (userIds.length > 0) {
+      const chunkSize = 40;
+      for (let i = 0; i < userIds.length; i += chunkSize) {
+        const chunk = userIds.slice(i, i + chunkSize);
+        const placeholders = chunk.map(() => '?').join(',');
+
+        try {
+          const { results: likesRows } = await c.env.DB.prepare(`
+            SELECT sender_id, COUNT(*) as c FROM matches_and_likes 
+            WHERE action IN ('liked', 'direct_salam') AND date(created_at) = ? AND sender_id IN (${placeholders})
+            GROUP BY sender_id
+          `).bind(targetDate, ...chunk).all();
+          (likesRows || []).forEach((r: any) => { userLikesMap[r.sender_id] = Number(r.c || 0); });
+        } catch {}
+
+        try {
+          const { results: matchRows } = await c.env.DB.prepare(`
+            SELECT u_id, COUNT(*) as c FROM (
+              SELECT sender_id as u_id FROM matches_and_likes WHERE action = 'mutual_match' AND date(created_at) = ? AND sender_id IN (${placeholders})
+              UNION ALL
+              SELECT receiver_id as u_id FROM matches_and_likes WHERE action = 'mutual_match' AND date(created_at) = ? AND receiver_id IN (${placeholders})
+            ) GROUP BY u_id
+          `).bind(targetDate, ...chunk, targetDate, ...chunk).all();
+          (matchRows || []).forEach((r: any) => { userMatchesMap[r.u_id] = Number(r.c || 0); });
+        } catch {}
+
+        try {
+          const { results: msgRows } = await c.env.DB.prepare(`
+            SELECT sender_id, COUNT(*) as c FROM chat_messages 
+            WHERE date(created_at) = ? AND sender_id IN (${placeholders})
+            GROUP BY sender_id
+          `).bind(targetDate, ...chunk).all();
+          (msgRows || []).forEach((r: any) => { userMessagesMap[r.sender_id] = Number(r.c || 0); });
+        } catch {}
+      }
+    }
+
+    // 5. Dynamic aggregates for matches, likes, messages, and total engagement on target date
     let matchesCountToday = 0;
     let likesCountToday = 0;
     let messagesCountToday = 0;
+    let totalRealActiveSeconds = 0;
 
     try {
       const matchRes = await c.env.DB.prepare(`
         SELECT COUNT(*) as c FROM matches_and_likes 
-        WHERE action = 'match' AND date(created_at) = ?
+        WHERE action = 'mutual_match' AND date(created_at) = ?
       `).bind(targetDate).first();
       matchesCountToday = Number(matchRes?.c || 0);
 
       const likeRes = await c.env.DB.prepare(`
         SELECT COUNT(*) as c FROM matches_and_likes 
-        WHERE date(created_at) = ?
+        WHERE action IN ('liked', 'direct_salam') AND date(created_at) = ?
       `).bind(targetDate).first();
       likesCountToday = Number(likeRes?.c || 0);
 
@@ -1407,20 +1505,34 @@ adminRouter.get('/daily-activity', async (c) => {
         WHERE date(created_at) = ?
       `).bind(targetDate).first();
       messagesCountToday = Number(msgRes?.c || 0);
+
+      const timeRes = await c.env.DB.prepare(`
+        SELECT SUM(total_active_seconds) as total_sec FROM user_daily_activity 
+        WHERE activity_date = ?
+      `).bind(targetDate).first();
+      totalRealActiveSeconds = Number(timeRes?.total_sec || 0);
     } catch {}
 
-    // 4. Format each active user row with IP telemetry and duration
-    let totalSecondsLogged = 0;
+    // 6. Format each active user row with genuine telemetry and duration
+    let fallbackSecondsLogged = 0;
     const cityCounts: Record<string, number> = {};
 
-    const items = userList.map((u: any, idx: number) => {
-      // Calculate realistic active duration (seconds)
+    const items = userList.map((u: any) => {
+      const uMatches = userMatchesMap[u.id] || Number(u.loggedMatches || 0);
+      const uLikes = userLikesMap[u.id] || Number(u.loggedLikes || 0);
+      const uMsgs = userMessagesMap[u.id] || Number(u.loggedMessages || 0);
+
+      // Calculate genuine active duration (seconds)
       let activeSec = Number(u.totalActiveSeconds || 0);
       if (activeSec <= 0) {
-        // Fallback natural session duration based on activity index
-        activeSec = Math.max(180, (1400 - idx * 28) % 3600);
+        // If user engaged today (likes or msgs), calculate natural engagement duration
+        if (uMatches > 0 || uLikes > 0 || uMsgs > 0) {
+          activeSec = Math.max(240, (uLikes * 60) + (uMsgs * 90) + (uMatches * 180));
+        } else {
+          activeSec = 0;
+        }
       }
-      totalSecondsLogged += activeSec;
+      fallbackSecondsLogged += activeSec;
 
       // Seconds since last activity (if today)
       const lastActiveTimestamp = u.lastActiveAt || u.userLastActive || u.userCreatedAt;
@@ -1434,16 +1546,18 @@ adminRouter.get('/daily-activity', async (c) => {
         else if (secondsAgo <= 3600) status = 'recent';
       }
 
-      // IP and location
-      const resolvedIp = u.dailyIp || u.masterIp || `111.119.${100 + (idx % 120)}.${(idx * 7 + 13) % 250}`;
-      const resolvedCity = u.dailyCity || u.masterIpCity || u.city || 'Islamabad';
+      // Resolved IP and location
+      const resolvedIp = u.dailyIp || u.masterIp || 'Cloudflare Edge (Masked)';
+      const resolvedCity = u.dailyCity || u.masterIpCity || u.city || 'Pakistan';
       const resolvedCountry = u.dailyCountry || u.masterIpCountry || u.country || 'PK';
-      const resolvedIsp = u.dailyIsp || u.masterIpIsp || (idx % 3 === 0 ? 'PTCL Broadband' : idx % 3 === 1 ? 'Nayatel Fiber' : 'Jazz / Mobile Edge');
+      const resolvedIsp = u.dailyIsp || u.masterIpIsp || 'Mobile Broadband';
 
-      cityCounts[resolvedCity] = (cityCounts[resolvedCity] || 0) + 1;
+      if (resolvedCity && resolvedCity !== 'Pakistan' && resolvedCity !== 'Global') {
+        cityCounts[resolvedCity] = (cityCounts[resolvedCity] || 0) + 1;
+      }
 
       // Age calculation
-      let age = 22;
+      let age = 24;
       if (u.dob) {
         const birthYear = parseInt(String(u.dob).split('-')[0], 10);
         if (!isNaN(birthYear)) age = 2026 - birthYear;
@@ -1467,12 +1581,12 @@ adminRouter.get('/daily-activity', async (c) => {
         lastActiveAt: lastActiveTimestamp,
         secondsAgo,
         status,
-        matchesCountToday: Number(u.loggedMatches || (idx % 4 === 0 ? 2 : idx % 2 === 0 ? 1 : 0)),
-        likesCountToday: Number(u.loggedLikes || (idx % 3 === 0 ? 4 : 2)),
-        messagesSentCount: Number(u.loggedMessages || (idx % 2 === 0 ? 5 : 1)),
+        matchesCountToday: uMatches,
+        likesCountToday: uLikes,
+        messagesSentCount: uMsgs,
         ip: resolvedIp,
         isp: resolvedIsp,
-        userAgent: u.userAgent || 'Mozilla/5.0 (iPhone; CPU iOS 17_4 like Mac OS X) AppleWebKit/605.1.15 Mobile'
+        userAgent: u.userAgent || 'Qurb Mobile App'
       };
     });
 
@@ -1481,12 +1595,16 @@ adminRouter.get('/daily-activity', async (c) => {
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
 
+    const effectiveTotalHours = totalRealActiveSeconds > 0
+      ? (totalRealActiveSeconds / 3600).toFixed(1)
+      : (fallbackSecondsLogged / 3600).toFixed(1);
+
     return c.json({
       success: true,
       targetDate,
       summary: {
-        activeUsersCount: items.length,
-        totalActiveHours: (totalSecondsLogged / 3600).toFixed(1),
+        activeUsersCount: totalActiveUsersCount,
+        totalActiveHours: effectiveTotalHours,
         matchesCountToday,
         likesCountToday,
         messagesCountToday,
@@ -1724,3 +1842,98 @@ function formatDuration(sec: number): string {
   }
   return `${Math.max(1, remM)}m`;
 }
+
+// 21. AI Agent System Status
+adminRouter.get('/ai-agent/status', async (c) => {
+  try {
+    let enabled = true;
+    try {
+      const row = await c.env.DB.prepare("SELECT value FROM system_settings WHERE key = 'ai_agent_enabled'").first();
+      if (row) {
+        enabled = row.value === '1' || row.value === 'true';
+      }
+    } catch {}
+
+    const seedCount = await c.env.DB.prepare("SELECT COUNT(*) as c FROM users WHERE is_seed = 1").first();
+
+    return c.json({
+      success: true,
+      enabled,
+      model: 'gemini-2.5-flash',
+      activeSeedProfiles: Number(seedCount?.c || 0)
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// 22. AI Agent System Kill-Switch Toggle (ON / OFF)
+adminRouter.post('/ai-agent/toggle', async (c) => {
+  try {
+    const { enabled } = await c.req.json();
+    const val = enabled ? '1' : '0';
+
+    try {
+      await c.env.DB.prepare(`
+        CREATE TABLE IF NOT EXISTS system_settings (
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `).run();
+    } catch {}
+
+    await c.env.DB.prepare(`
+      INSERT INTO system_settings (key, value, updated_at) 
+      VALUES ('ai_agent_enabled', ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP
+    `).bind(val).run();
+
+    return c.json({
+      success: true,
+      enabled: val === '1',
+      message: `AI Chat Agent is now ${val === '1' ? 'ENABLED' : 'DISABLED'}`
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// 23. AI Agent Pending Chats Count (Unread Salams & Matches)
+adminRouter.get('/ai-agent/pending-count', async (c) => {
+  try {
+    const pendingCount = await getPendingCatchupCount(c.env.DB);
+    return c.json({
+      success: true,
+      pendingCount
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// 24. AI Agent Trigger Batch Catchup Replies
+adminRouter.post('/ai-agent/catchup', async (c) => {
+  try {
+    let body: any = {};
+    try {
+      body = await c.req.json();
+    } catch {}
+
+    const limit = body?.limit || 50;
+    const apiKey = c.env.GEMINI_API_KEY;
+
+    const result = await processCatchupReplies(c.env.DB, apiKey, { limit });
+    const remainingCount = await getPendingCatchupCount(c.env.DB);
+
+    return c.json({
+      success: true,
+      repliedCount: result.repliedCount,
+      processedConvs: result.processedConvs,
+      remainingCount,
+      message: `Successfully replied to ${result.repliedCount} pending chat${result.repliedCount === 1 ? '' : 's'}.`
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});

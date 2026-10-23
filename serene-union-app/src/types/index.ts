@@ -103,6 +103,14 @@ export interface ChatMessage {
   timestamp: string;
   isRead: boolean;
   waliNotified: boolean;
+  mediaUrl?: string;
+  mediaType?: 'audio' | 'image' | 'video' | 'file';
+  mediaDuration?: number;
+  fileName?: string;
+  fileSize?: number;
+  isViewOnce?: boolean;
+  isOpened?: boolean;
+  openedAt?: string;
 }
 
 export interface Conversation {

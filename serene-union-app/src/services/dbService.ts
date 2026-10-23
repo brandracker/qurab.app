@@ -1852,7 +1852,15 @@ class DBService {
             ? (isNaN(new Date(m.timestamp).getTime()) ? m.timestamp : new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
             : (m.timestamp || 'Just now'),
           isRead: true,
-          waliNotified: true
+          waliNotified: true,
+          mediaUrl: m.mediaUrl || m.media_url,
+          mediaType: m.mediaType || m.media_type,
+          mediaDuration: m.mediaDuration || m.media_duration,
+          fileName: m.fileName || m.file_name,
+          fileSize: m.fileSize || m.file_size,
+          isViewOnce: Boolean(m.isViewOnce ?? m.is_view_once),
+          isOpened: Boolean(m.isOpened ?? m.is_opened),
+          openedAt: m.openedAt || m.opened_at
         }));
 
         if (conv) {

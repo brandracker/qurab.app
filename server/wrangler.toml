@@ -14,3 +14,4 @@ bucket_name = "serene-union-media"
 
 [vars]
 ENVIRONMENT = "production"
+GEMINI_API_KEY = "AIzaSyBqhvh6yaLxUXWHrPo5szZUdLAy7oQdY48"

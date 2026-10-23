@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import type { AppContext } from '../types';
+import { processAiSeedResponse } from '../utils/ai-chat-agent';
 
 export const matchesRouter = new Hono<AppContext>();
 
@@ -39,9 +40,17 @@ matchesRouter.post('/action', async (c) => {
 
       // 2. Initialize Conversation in D1
       await c.env.DB.prepare(`
-        INSERT OR IGNORE INTO conversations (id, participant_one, participant_two, jsonl_log_path, last_message_text, last_message_time)
-        VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-      `).bind(convId, senderId, receiverId, `logs/${convId}.jsonl`, introMessage).run();
+        INSERT OR IGNORE INTO conversations (id, participant_one, participant_two, jsonl_log_path, last_message_text, last_message_sender_id, last_message_time)
+        VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      `).bind(convId, senderId, receiverId, `logs/${convId}.jsonl`, introMessage, senderId).run();
+
+      await c.env.DB.prepare(`
+        UPDATE conversations
+        SET last_message_text = ?,
+            last_message_sender_id = ?,
+            last_message_time = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).bind(introMessage, senderId, convId).run();
 
       // 3. Insert initial message into chat_messages table (and legacy messages table)
       try {
@@ -56,6 +65,24 @@ matchesRouter.post('/action', async (c) => {
           VALUES (?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
         `).bind(msgId, convId, senderId, introMessage).run();
       } catch {}
+
+      // 3b. Autonomous AI Agent Responder if recipient is a Seed Profile (usr_seed_*)
+      if (receiverId.startsWith('usr_seed_') || receiverId.includes('seed')) {
+        try {
+          c.executionCtx.waitUntil(
+            processAiSeedResponse({
+              conversationId: convId,
+              seedUserId: receiverId,
+              realUserId: senderId,
+              userMessageText: introMessage,
+              db: c.env.DB,
+              apiKey: c.env.GEMINI_API_KEY
+            }).catch(aiErr => console.error('[Matches DirectSalam AI error]', aiErr))
+          );
+        } catch (ctxErr) {
+          console.warn('[Matches DirectSalam AI ctx warning]:', ctxErr);
+        }
+      }
 
       // 4. Dispatch D1 notification to receiver
       try {
@@ -87,13 +114,14 @@ matchesRouter.post('/action', async (c) => {
     }
 
     if (action === 'liked') {
-      // Check if receiver has already liked the sender for a true mutual match or if client specified isMutualMatch
+      const isSeedRecipient = receiverId.startsWith('usr_seed_') || receiverId.includes('seed');
+      // Check if receiver has already liked the sender for a true mutual match or if client specified isMutualMatch or seed profile auto-matches
       const reverseLike: any = await c.env.DB.prepare(`
         SELECT id, action FROM matches_and_likes 
         WHERE sender_id = ? AND receiver_id = ? AND (action = 'liked' OR action = 'mutual_match' OR action = 'direct_salam')
       `).bind(receiverId, senderId).first();
 
-      if (reverseLike || isMutualMatch) {
+      if (reverseLike || isMutualMatch || isSeedRecipient) {
         // True Mutual Match!
         const convId = `conv_${[senderId, receiverId].sort().join('_')}`;
 

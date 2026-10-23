@@ -8,9 +8,17 @@ import app from './index';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+try {
+  const envPath = path.join(__dirname, '..', '.env');
+  if (fs.existsSync(envPath) && typeof (process as any).loadEnvFile === 'function') {
+    (process as any).loadEnvFile(envPath);
+  }
+} catch {}
+
 const ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID || 'b25a2b1bf3f2d77575913505498ad343';
 const DATABASE_ID = process.env.CLOUDFLARE_DATABASE_ID || 'fcd8c8c6-94f1-46e1-a141-25728da9d520';
 const API_TOKEN = process.env.CLOUDFLARE_API_TOKEN || '';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyBqhvh6yaLxUXWHrPo5szZUdLAy7oQdY48';
 
 const JSONL_DIR = path.join(__dirname, '..', '..', 'db', 'conversations');
 if (!fs.existsSync(JSONL_DIR)) {
@@ -98,7 +106,8 @@ serve({
     return app.fetch(req, {
       DB: dbAdapter as any,
       MEDIA_BUCKET: mediaBucketAdapter as any,
-      ENVIRONMENT: 'development'
+      ENVIRONMENT: 'development',
+      GEMINI_API_KEY
     });
   },
   port: 8787

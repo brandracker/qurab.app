@@ -22,7 +22,10 @@ import {
   MessageSquare,
   Flame,
   X,
-  Maximize2
+  Maximize2,
+  Bot,
+  Zap,
+  Loader2
 } from 'lucide-react';
 import { API_BASE } from '../../../services/dbService';
 import type { SeedProfile } from '../types';
@@ -44,6 +47,10 @@ export const SeedProfilesTab: React.FC<SeedProfilesTabProps> = ({ adminToken }) 
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [previewProfile, setPreviewProfile] = useState<SeedProfile | null>(null);
+  const [aiEnabled, setAiEnabled] = useState<boolean>(true);
+  const [togglingAi, setTogglingAi] = useState<boolean>(false);
+  const [pendingChatsCount, setPendingChatsCount] = useState<number>(0);
+  const [catchingUp, setCatchingUp] = useState<boolean>(false);
 
   const fetchSeedProfiles = async () => {
     try {
@@ -70,7 +77,94 @@ export const SeedProfilesTab: React.FC<SeedProfilesTabProps> = ({ adminToken }) 
 
   useEffect(() => {
     fetchSeedProfiles();
+    fetchAiStatus();
+    fetchPendingCount();
   }, [adminToken]);
+
+  const fetchAiStatus = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/admin/ai-agent/status`, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      const data = await res.json();
+      if (data.success && typeof data.enabled === 'boolean') {
+        setAiEnabled(data.enabled);
+      }
+    } catch (e) {}
+  };
+
+  const fetchPendingCount = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/admin/ai-agent/pending-count`, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      const data = await res.json();
+      if (data.success && typeof data.pendingCount === 'number') {
+        setPendingChatsCount(data.pendingCount);
+      }
+    } catch (e) {}
+  };
+
+  const handleCatchupReplies = async () => {
+    if (catchingUp) return;
+    try {
+      setCatchingUp(true);
+      const res = await fetch(`${API_BASE}/admin/ai-agent/catchup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${adminToken}`
+        },
+        body: JSON.stringify({ limit: 50 })
+      });
+      const data = await res.json();
+      if (data.success) {
+        const replied = data.repliedCount || 0;
+        setPendingChatsCount(data.remainingCount ?? 0);
+        showToast(
+          replied > 0
+            ? `⚡ Auto-replied to ${replied} pending chat${replied === 1 ? '' : 's'} with Gemini AI!`
+            : 'All seed chats & matches are already up-to-date!'
+        );
+        fetchSeedProfiles();
+      } else {
+        showToast(`⚠️ Catchup notice: ${data.error || 'Failed to complete catchup'}`);
+      }
+    } catch (err) {
+      console.error('Failed to execute AI catchup:', err);
+      showToast('⚠️ Error connecting to AI catchup service');
+    } finally {
+      setCatchingUp(false);
+    }
+  };
+
+  const handleToggleAi = async () => {
+    try {
+      setTogglingAi(true);
+      const targetState = !aiEnabled;
+      const res = await fetch(`${API_BASE}/admin/ai-agent/toggle`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${adminToken}`
+        },
+        body: JSON.stringify({ enabled: targetState })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAiEnabled(data.enabled);
+        showToast(
+          data.enabled
+            ? '🤖 AI Chat Agent ENABLED: Seed profiles will auto-reply using Gemini 2.5'
+            : '⏸️ AI Chat Agent MUTED: All seed profile auto-replies are paused'
+        );
+      }
+    } catch (err) {
+      console.error('Failed to toggle AI chat agent:', err);
+    } finally {
+      setTogglingAi(false);
+    }
+  };
 
   const showToast = (msg: string) => {
     setActionMessage(msg);
@@ -286,6 +380,101 @@ export const SeedProfilesTab: React.FC<SeedProfilesTabProps> = ({ adminToken }) 
               >
                 <Power className="w-4 h-4" />
                 <span>{globalEnabled ? 'Turn OFF' : 'Turn ON'}</span>
+              </button>
+            </div>
+
+            {/* AI Auto-Responder Kill Switch */}
+            <div className="flex items-center justify-between sm:justify-start space-x-4 p-3 px-4 rounded-2xl bg-[#131D33] border border-white/10">
+              <div className="text-left">
+                <div className="text-xs text-slate-400 font-medium">AI Chat Auto-Responder</div>
+                <div className="flex items-center space-x-1.5 mt-0.5">
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      aiEnabled ? 'bg-purple-400 animate-pulse' : 'bg-rose-500'
+                    }`}
+                  />
+                  <span
+                    className={`text-sm font-bold ${
+                      aiEnabled ? 'text-purple-400' : 'text-rose-400'
+                    }`}
+                  >
+                    {aiEnabled ? 'GEMINI 2.5 ACTIVE' : 'AI MUTED'}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                onClick={handleToggleAi}
+                disabled={togglingAi}
+                className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${
+                  aiEnabled
+                    ? 'bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-500/30'
+                    : 'bg-slate-700 hover:bg-slate-600 text-slate-200'
+                }`}
+                title="Toggle AI Agent Auto-Replies for all seed profiles"
+              >
+                <Bot className="w-4 h-4" />
+                <span>{aiEnabled ? 'Mute AI' : 'Enable AI'}</span>
+              </button>
+            </div>
+
+            {/* AI Auto-Reply to Pending Salams & Matches Button */}
+            <div className="flex items-center justify-between sm:justify-start space-x-4 p-3 px-4 rounded-2xl bg-[#131D33] border border-white/10">
+              <div className="text-left">
+                <div className="flex items-center space-x-1.5">
+                  <span className="text-xs text-slate-400 font-medium">Pending Unread Chats</span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      fetchPendingCount();
+                    }}
+                    className="text-slate-500 hover:text-slate-300 transition cursor-pointer p-0.5"
+                    title="Refresh pending unread count"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                  </button>
+                </div>
+                <div className="flex items-center space-x-1.5 mt-0.5">
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      pendingChatsCount > 0 ? 'bg-amber-400 animate-pulse' : 'bg-slate-500'
+                    }`}
+                  />
+                  <span
+                    className={`text-sm font-bold ${
+                      pendingChatsCount > 0 ? 'text-amber-400' : 'text-slate-400'
+                    }`}
+                  >
+                    {pendingChatsCount > 0 ? `${pendingChatsCount} PENDING REPLY` : 'ALL REPLIED'}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                onClick={handleCatchupReplies}
+                disabled={catchingUp || pendingChatsCount === 0}
+                className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${
+                  pendingChatsCount > 0
+                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-amber-500/30'
+                    : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-white/5'
+                }`}
+                title={
+                  pendingChatsCount > 0
+                    ? `Auto-reply to all ${pendingChatsCount} unread direct salams, matches, and chats using Gemini AI`
+                    : 'All chats & matches already have replies'
+                }
+              >
+                {catchingUp ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                    <span>Replying...</span>
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-4 h-4" />
+                    <span>Reply All ({pendingChatsCount})</span>
+                  </>
+                )}
               </button>
             </div>
 

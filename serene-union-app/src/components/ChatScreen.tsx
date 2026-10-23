@@ -1,9 +1,171 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, CheckCheck, Send, Heart, MessageCircle, FileText, Ban, MoreVertical, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { 
+  ArrowLeft, CheckCheck, Send, Heart, MessageCircle, FileText, Ban, 
+  MoreVertical, Eye, EyeOff, ShieldCheck, Paperclip, Mic, Play, Pause, 
+  Trash2, X, Download, File, Loader2, Volume2, VolumeX, Maximize2
+} from 'lucide-react';
 import type { Conversation, ChatMessage, UserProfile } from '../types';
 
 import { dbService, API_BASE } from '../services/dbService';
 import { ProfileDetailModal } from './ProfileDetailModal';
+import { 
+  VoiceRecorder, 
+  processAttachedFile, 
+  formatBytes, 
+  formatSeconds 
+} from '../utils/mediaCompressor';
+
+interface ChatVideoPlayerProps {
+  src: string;
+  className?: string;
+  onOpenLightbox?: () => void;
+}
+
+const ChatVideoPlayer: React.FC<ChatVideoPlayerProps> = ({ src, className, onOpenLightbox }) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [progress, setProgress] = useState<number>(0);
+  const [currentTime, setCurrentTime] = useState<number>(0);
+  const [duration, setDuration] = useState<number>(0);
+  const [isMuted, setIsMuted] = useState<boolean>(false);
+
+  const togglePlay = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!videoRef.current) return;
+    if (isPlaying) {
+      videoRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      videoRef.current.play().then(() => {
+        setIsPlaying(true);
+      }).catch(() => {
+        setIsPlaying(false);
+      });
+    }
+  };
+
+  const toggleMute = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!videoRef.current) return;
+    videoRef.current.muted = !videoRef.current.muted;
+    setIsMuted(videoRef.current.muted);
+  };
+
+  const handleTimeUpdate = () => {
+    if (!videoRef.current) return;
+    const cur = videoRef.current.currentTime;
+    const dur = videoRef.current.duration || 1;
+    setCurrentTime(cur);
+    setProgress((cur / dur) * 100);
+  };
+
+  const handleLoadedMetadata = () => {
+    if (!videoRef.current) return;
+    setDuration(videoRef.current.duration || 0);
+  };
+
+  const handleEnded = () => {
+    setIsPlaying(false);
+    setProgress(0);
+    if (videoRef.current) {
+      videoRef.current.currentTime = 0;
+    }
+  };
+
+  return (
+    <div className={`relative rounded-xl overflow-hidden bg-black group select-none shadow-xs ${className || 'w-full max-h-60'}`}>
+      <video
+        ref={videoRef}
+        src={src}
+        playsInline
+        preload="metadata"
+        onTimeUpdate={handleTimeUpdate}
+        onLoadedMetadata={handleLoadedMetadata}
+        onEnded={handleEnded}
+        onClick={togglePlay}
+        className="w-full h-full max-h-60 object-contain bg-black cursor-pointer"
+      />
+
+      {/* Center Play / Pause Button Overlay */}
+      <div 
+        onClick={togglePlay}
+        className={`absolute inset-0 flex items-center justify-center cursor-pointer transition-opacity duration-200 ${
+          isPlaying ? 'opacity-0 group-hover:opacity-100 bg-black/25' : 'opacity-100 bg-black/40'
+        }`}
+      >
+        <button
+          type="button"
+          onClick={togglePlay}
+          className="w-11 h-11 rounded-full bg-white/90 hover:bg-white text-slate-900 shadow-xl flex items-center justify-center transition-transform hover:scale-105 active:scale-95 cursor-pointer"
+          title={isPlaying ? 'Pause' : 'Play'}
+        >
+          {isPlaying ? (
+            <Pause className="w-5 h-5 fill-current text-slate-900" />
+          ) : (
+            <Play className="w-5 h-5 fill-current text-slate-900 ml-0.5" />
+          )}
+        </button>
+      </div>
+
+      {/* Bottom Controls Bar */}
+      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent p-2 pt-3 flex flex-col gap-1 transition-opacity opacity-90 group-hover:opacity-100">
+        {/* Scrubber track */}
+        <div 
+          className="h-1 bg-white/30 hover:h-1.5 rounded-full overflow-hidden cursor-pointer transition-all"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (!videoRef.current || !duration) return;
+            const rect = e.currentTarget.getBoundingClientRect();
+            const clickPos = (e.clientX - rect.left) / rect.width;
+            videoRef.current.currentTime = clickPos * duration;
+          }}
+        >
+          <div className="h-full bg-primary transition-all duration-75" style={{ width: `${progress}%` }} />
+        </div>
+
+        <div className="flex items-center justify-between text-white text-[10px]">
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={togglePlay}
+              className="p-1 hover:text-primary transition-colors cursor-pointer"
+              title={isPlaying ? 'Pause' : 'Play'}
+            >
+              {isPlaying ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current ml-0.5" />}
+            </button>
+            <button
+              type="button"
+              onClick={toggleMute}
+              className="p-1 hover:text-primary transition-colors cursor-pointer"
+              title={isMuted ? 'Unmute' : 'Mute'}
+            >
+              {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+            </button>
+            <span className="font-mono text-[9px] opacity-90">{formatSeconds(Math.floor(currentTime))} / {formatSeconds(Math.floor(duration))}</span>
+          </div>
+
+          {onOpenLightbox && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (videoRef.current && isPlaying) {
+                  videoRef.current.pause();
+                  setIsPlaying(false);
+                }
+                onOpenLightbox();
+              }}
+              className="p-1 hover:text-primary transition-colors cursor-pointer"
+              title="Full screen view"
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 interface Props {
   initialConvId?: string;
@@ -24,6 +186,37 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
   const [roomMessages, setRoomMessages] = useState<ChatMessage[]>([]);
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const currentUser = dbService.getCurrentUser();
+
+  // Voice Recording & Media Attachment State
+  const [isRecording, setIsRecording] = useState<boolean>(false);
+  const [recordingSeconds, setRecordingSeconds] = useState<number>(0);
+  const [isUploadingMedia, setIsUploadingMedia] = useState<boolean>(false);
+  const [uploadStatus, setUploadStatus] = useState<string>('');
+  const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
+  const [audioProgress, setAudioProgress] = useState<number>(0);
+  const [lightboxMedia, setLightboxMedia] = useState<{
+    url: string;
+    type: 'image' | 'video';
+    title?: string;
+    isViewOnce?: boolean;
+    messageId?: string;
+  } | null>(null);
+
+  // Attachment Preview Modal State (with View-Once Option)
+  const [pendingAttachment, setPendingAttachment] = useState<{
+    file: File;
+    previewUrl: string;
+    mediaType: 'image' | 'video' | 'file';
+    name: string;
+    size: number;
+  } | null>(null);
+  const [viewOnceEnabled, setViewOnceEnabled] = useState<boolean>(false);
+  const [attachmentCaption, setAttachmentCaption] = useState<string>('');
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const voiceRecorderRef = useRef<VoiceRecorder | null>(null);
+  const recordingTimerRef = useRef<any>(null);
+  const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
 
 
 
@@ -307,6 +500,338 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
     );
     setTimeout(() => setToastMessage(null), 3000);
   };
+
+  // Helper to send message with optional media (audio, image, video, file)
+  const sendMediaMessage = async (mediaData: {
+    text: string;
+    mediaUrl: string;
+    mediaType: 'audio' | 'image' | 'video' | 'file';
+    mediaDuration?: number;
+    fileName?: string;
+    fileSize?: number;
+    isViewOnce?: boolean;
+  }) => {
+    if (!activeConvId || !activeConv) return;
+    const user = dbService.getCurrentUser();
+    const targetRoomId = activeConv.otherUser?.id 
+      ? (`conv_${[user.id, activeConv.otherUser.id].sort().join('_')}`)
+      : activeConvId;
+
+    const newMsg: ChatMessage = {
+      id: 'msg_' + Date.now(),
+      senderId: user.id,
+      senderName: user.fullName || 'You',
+      text: mediaData.text,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      isRead: true,
+      waliNotified: true,
+      mediaUrl: mediaData.mediaUrl,
+      mediaType: mediaData.mediaType,
+      mediaDuration: mediaData.mediaDuration,
+      fileName: mediaData.fileName,
+      fileSize: mediaData.fileSize,
+      isViewOnce: mediaData.isViewOnce,
+      isOpened: false
+    };
+
+    // Update locally immediately for instant feedback
+    const convs = dbService.getConversations();
+    const current = convs.find(c => c.id === activeConvId || c.id === targetRoomId || (activeConv.otherUser && c.otherUser?.id === activeConv.otherUser.id));
+    if (current) {
+      current.id = targetRoomId;
+      if (!current.messages) current.messages = [];
+      current.messages.push(newMsg);
+      current.lastMessageText = mediaData.text;
+      current.lastMessageSenderId = user.id;
+      current.lastMessageTime = newMsg.timestamp;
+      localStorage.setItem('serene_real_conversations_v3', JSON.stringify(convs));
+      setConversations([...convs]);
+      setRoomMessages(prev => [...prev, newMsg]);
+      if (activeConvId !== targetRoomId) {
+        setActiveConvId(targetRoomId);
+      }
+    } else {
+      setRoomMessages(prev => [...prev, newMsg]);
+    }
+
+    // Save permanently to Cloudflare D1 SQL database
+    try {
+      await fetch(`${API_BASE}/conversations/${targetRoomId}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: newMsg.id,
+          senderId: user.id,
+          senderName: user.fullName || 'Member',
+          text: mediaData.text,
+          receiverId: activeConv.otherUser?.id,
+          mediaUrl: mediaData.mediaUrl,
+          mediaType: mediaData.mediaType,
+          mediaDuration: mediaData.mediaDuration,
+          fileName: mediaData.fileName,
+          fileSize: mediaData.fileSize,
+          isViewOnce: mediaData.isViewOnce
+        })
+      });
+    } catch {}
+  };
+
+  // 1. Voice Recording Handlers
+  const handleStartRecording = async () => {
+    try {
+      const recorder = new VoiceRecorder();
+      await recorder.start();
+      voiceRecorderRef.current = recorder;
+      setIsRecording(true);
+      setRecordingSeconds(0);
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingSeconds(sec => sec + 1);
+      }, 1000);
+    } catch (err: any) {
+      console.error('Microphone error:', err);
+      setToastMessage('Microphone permission required to record voice notes');
+      setTimeout(() => setToastMessage(null), 3500);
+    }
+  };
+
+  const handleCancelRecording = () => {
+    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    voiceRecorderRef.current?.cancel();
+    voiceRecorderRef.current = null;
+    setIsRecording(false);
+    setRecordingSeconds(0);
+  };
+
+  const handleStopAndSendVoice = async () => {
+    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    if (!voiceRecorderRef.current) return;
+
+    try {
+      setIsRecording(false);
+      setIsUploadingMedia(true);
+      setUploadStatus('Compressing voice message...');
+
+      const voiceData = await voiceRecorderRef.current.stop();
+      voiceRecorderRef.current = null;
+
+      setUploadStatus('Uploading voice note...');
+      const targetRoomId = activeConv?.otherUser?.id 
+        ? (`conv_${[currentUser.id, activeConv.otherUser.id].sort().join('_')}`)
+        : (activeConvId || 'chat');
+
+      const res = await fetch(`${API_BASE}/conversations/upload-media`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          conversationId: targetRoomId,
+          senderId: currentUser.id,
+          fileBase64: voiceData.base64,
+          mediaType: 'audio',
+          duration: voiceData.duration,
+          fileName: `voice_${Date.now()}.webm`,
+          fileType: voiceData.mimeType
+        })
+      });
+
+      const data = await res.json();
+      if (data.success && data.mediaUrl) {
+        await sendMediaMessage({
+          text: '🎤 Voice message',
+          mediaUrl: data.mediaUrl,
+          mediaType: 'audio',
+          mediaDuration: voiceData.duration,
+          fileSize: voiceData.size
+        });
+      } else {
+        throw new Error(data.error || 'Upload failed');
+      }
+    } catch (err: any) {
+      console.error('Voice send error:', err);
+      setToastMessage('Failed to send voice message');
+      setTimeout(() => setToastMessage(null), 3000);
+    } finally {
+      setIsUploadingMedia(false);
+      setUploadStatus('');
+      setRecordingSeconds(0);
+    }
+  };
+
+  // 2. File Attachment Handlers (Auto-Compress Images & Media)
+  const handleAttachmentClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = ''; // Reset input for re-selecting same file if needed
+
+    const isImg = file.type.toLowerCase().startsWith('image/');
+    const isVid = file.type.toLowerCase().startsWith('video/');
+    const mediaType: 'image' | 'video' | 'file' = isImg ? 'image' : (isVid ? 'video' : 'file');
+
+    const previewUrl = URL.createObjectURL(file);
+    setPendingAttachment({
+      file,
+      previewUrl,
+      mediaType,
+      name: file.name,
+      size: file.size
+    });
+    setViewOnceEnabled(false);
+    setAttachmentCaption('');
+  };
+
+  const handleConfirmSendAttachment = async () => {
+    if (!pendingAttachment) return;
+    const { file, mediaType } = pendingAttachment;
+    setPendingAttachment(null);
+
+    try {
+      setIsUploadingMedia(true);
+      const isImg = mediaType === 'image';
+      setUploadStatus(isImg ? 'Auto-compressing image...' : 'Preparing attachment...');
+
+      const processed = await processAttachedFile(file);
+      setUploadStatus('Uploading to secure cloud...');
+
+      const targetRoomId = activeConv?.otherUser?.id 
+        ? (`conv_${[currentUser.id, activeConv.otherUser.id].sort().join('_')}`)
+        : (activeConvId || 'chat');
+
+      const res = await fetch(`${API_BASE}/conversations/upload-media`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          conversationId: targetRoomId,
+          senderId: currentUser.id,
+          fileBase64: processed.base64,
+          fileName: processed.name,
+          fileType: processed.mimeType,
+          mediaType: processed.mediaType
+        })
+      });
+
+      const data = await res.json();
+      if (data.success && data.mediaUrl) {
+        let label = attachmentCaption.trim();
+        if (!label) {
+          if (processed.mediaType === 'image') label = viewOnceEnabled ? '📷 Photo (1 Time)' : '📷 Photo';
+          else if (processed.mediaType === 'video') label = viewOnceEnabled ? '🎥 Video (1 Time)' : '🎥 Video';
+          else label = `📎 ${processed.name}`;
+        }
+
+        await sendMediaMessage({
+          text: label,
+          mediaUrl: data.mediaUrl,
+          mediaType: processed.mediaType,
+          fileName: processed.name,
+          fileSize: processed.size,
+          isViewOnce: viewOnceEnabled
+        });
+      } else {
+        throw new Error(data.error || 'Upload failed');
+      }
+    } catch (err: any) {
+      console.error('Attachment upload error:', err);
+      setToastMessage(err.message || 'Failed to upload attachment');
+      setTimeout(() => setToastMessage(null), 3500);
+    } finally {
+      setIsUploadingMedia(false);
+      setUploadStatus('');
+      setViewOnceEnabled(false);
+      setAttachmentCaption('');
+    }
+  };
+
+  const handleCloseLightbox = async () => {
+    if (!lightboxMedia) return;
+
+    if (lightboxMedia.isViewOnce && lightboxMedia.messageId) {
+      const targetMsgId = lightboxMedia.messageId;
+      // Mark as opened locally in roomMessages
+      setRoomMessages(prev => prev.map(m => m.id === targetMsgId ? { ...m, isOpened: true, mediaUrl: undefined } : m));
+      const convs = dbService.getConversations();
+      const current = convs.find(c => c.id === activeConvId);
+      if (current && current.messages) {
+        current.messages = current.messages.map(m => m.id === targetMsgId ? { ...m, isOpened: true, mediaUrl: undefined } : m);
+        localStorage.setItem('serene_real_conversations_v3', JSON.stringify(convs));
+        setConversations([...convs]);
+      }
+
+      // Mark as opened on backend D1 database
+      try {
+        await fetch(`${API_BASE}/conversations/${activeConvId}/messages/${targetMsgId}/open-view-once`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ viewerId: currentUser.id })
+        });
+      } catch {}
+
+      setToastMessage('View-once media has expired.');
+      setTimeout(() => setToastMessage(null), 3000);
+    }
+
+    setLightboxMedia(null);
+  };
+
+  // 3. Audio Message Playback
+  const handleTogglePlayAudio = (msg: ChatMessage) => {
+    if (!msg.mediaUrl) return;
+
+    if (playingAudioId === msg.id) {
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.pause();
+      }
+      setPlayingAudioId(null);
+      return;
+    }
+
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.pause();
+    }
+
+    const audio = new Audio(msg.mediaUrl);
+    audioPlayerRef.current = audio;
+    setPlayingAudioId(msg.id);
+    setAudioProgress(0);
+
+    audio.ontimeupdate = () => {
+      if (audio.duration && !isNaN(audio.duration) && audio.duration > 0) {
+        setAudioProgress(Math.round((audio.currentTime / audio.duration) * 100));
+      }
+    };
+
+    audio.onended = () => {
+      setPlayingAudioId(null);
+      setAudioProgress(0);
+    };
+
+    audio.onerror = () => {
+      setPlayingAudioId(null);
+      setAudioProgress(0);
+      setToastMessage('Could not play audio message');
+      setTimeout(() => setToastMessage(null), 3000);
+    };
+
+    audio.play().catch(() => {
+      setPlayingAudioId(null);
+    });
+  };
+
+  // Clean up audio & recording on unmount
+  useEffect(() => {
+    return () => {
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      voiceRecorderRef.current?.cancel();
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.pause();
+      }
+    };
+  }, []);
 
   // Real User-to-User Send Message
   const handleSendMessage = async () => {
@@ -753,7 +1278,173 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                         : 'bg-white text-on-surface rounded-bl-2xs border border-outline shadow-subtle'
                     }`}
                   >
-                    <p>{msg.text}</p>
+                    {/* 1. Voice Message Bubble */}
+                    {msg.mediaType === 'audio' && msg.mediaUrl ? (
+                      <div className="flex items-center gap-2.5 min-w-[210px] py-0.5">
+                        <button
+                          type="button"
+                          onClick={() => handleTogglePlayAudio(msg)}
+                          className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-all active:scale-95 shadow-xs ${
+                            isMe ? 'bg-white text-primary' : 'bg-primary text-white'
+                          }`}
+                          title={playingAudioId === msg.id ? 'Pause' : 'Play'}
+                        >
+                          {playingAudioId === msg.id ? (
+                            <Pause className="w-4 h-4 fill-current" />
+                          ) : (
+                            <Play className="w-4 h-4 fill-current ml-0.5" />
+                          )}
+                        </button>
+                        <div className="flex-1 flex flex-col gap-1">
+                          {/* Audio Progress Track */}
+                          <div className={`h-1.5 rounded-full overflow-hidden ${isMe ? 'bg-white/30' : 'bg-outline'}`}>
+                            <div 
+                              className={`h-full transition-all duration-150 ${isMe ? 'bg-white' : 'bg-primary'}`}
+                              style={{ width: `${playingAudioId === msg.id ? audioProgress : 0}%` }}
+                            />
+                          </div>
+                          <div className="flex items-center justify-between text-[10px]">
+                            <span className="flex items-center gap-1 font-mono">
+                              <Mic className="w-2.5 h-2.5" />
+                              <span>{msg.mediaDuration ? formatSeconds(msg.mediaDuration) : '0:30'}</span>
+                            </span>
+                            {msg.fileSize ? (
+                              <span className="opacity-75">{formatBytes(msg.fileSize)}</span>
+                            ) : null}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (msg.mediaType === 'image' || msg.mediaType === 'video') && msg.isViewOnce ? (
+                      /* 2. View Once (1-Time Show) Bubble */
+                      !isMe ? (
+                        msg.isOpened ? (
+                          <div className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-100/90 border border-slate-200 text-slate-500 min-w-[170px]">
+                            <div className="w-7 h-7 rounded-full border border-dashed border-slate-400 flex items-center justify-center font-bold text-[11px] text-slate-500">
+                              1
+                            </div>
+                            <div className="text-left">
+                              <p className="font-semibold text-[11px] text-slate-700">Opened</p>
+                              <p className="text-[10px] text-slate-400">1-time media expired</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (msg.mediaUrl) {
+                                setLightboxMedia({
+                                  url: msg.mediaUrl,
+                                  type: msg.mediaType === 'video' ? 'video' : 'image',
+                                  title: msg.mediaType === 'video' ? 'View Once Video' : 'View Once Photo',
+                                  isViewOnce: true,
+                                  messageId: msg.id
+                                });
+                              }
+                            }}
+                            className="flex items-center gap-2.5 p-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-950 min-w-[200px] transition-all cursor-pointer group shadow-2xs text-left"
+                          >
+                            <div className="w-8 h-8 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0">
+                              1
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-bold text-xs text-emerald-950 flex items-center gap-1.5">
+                                <span>{msg.mediaType === 'video' ? 'Video' : 'Photo'}</span>
+                                <span className="text-[9px] bg-emerald-200/90 text-emerald-900 px-1.5 py-0.5 rounded-full font-bold">1-Time</span>
+                              </p>
+                              <p className="text-[10px] text-emerald-800">Tap to view (Disappears)</p>
+                            </div>
+                          </button>
+                        )
+                      ) : (
+                        msg.isOpened ? (
+                          <div className="flex items-center gap-2.5 py-1 min-w-[170px]">
+                            <div className="w-7 h-7 rounded-full border border-white/40 flex items-center justify-center font-bold text-[11px]">
+                              1
+                            </div>
+                            <div className="text-left">
+                              <p className="font-semibold text-[11px] leading-tight">{msg.mediaType === 'video' ? 'Video' : 'Photo'} (View Once)</p>
+                              <p className="text-[9px] opacity-75">Opened by recipient</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-1.5 max-w-[280px]">
+                            <div className="rounded-xl overflow-hidden relative shadow-xs">
+                              {msg.mediaType === 'video' ? (
+                                <ChatVideoPlayer 
+                                  src={msg.mediaUrl!} 
+                                  onOpenLightbox={() => setLightboxMedia({ url: msg.mediaUrl!, type: 'video', title: 'Sent View Once Video' })}
+                                />
+                              ) : (
+                                <div 
+                                  onClick={() => setLightboxMedia({ url: msg.mediaUrl!, type: 'image', title: 'Sent View Once Media' })}
+                                  className="cursor-pointer group/img"
+                                >
+                                  <img src={msg.mediaUrl} alt="View Once" className="w-full max-h-60 object-cover group-hover/img:scale-102 transition-transform duration-200" />
+                                </div>
+                              )}
+                              <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-xs text-white text-[10px] font-bold flex items-center gap-1 border border-white/20 pointer-events-none">
+                                <span className="w-3.5 h-3.5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[9px] font-extrabold">1</span>
+                                <span>View Once</span>
+                              </div>
+                            </div>
+                            {msg.text && !msg.text.includes('(View Once)') && !msg.text.includes('(1 Time)') && (
+                              <p className="mt-1">{msg.text}</p>
+                            )}
+                          </div>
+                        )
+                      )
+                    ) : msg.mediaType === 'image' && msg.mediaUrl ? (
+                      /* 2. Photo Attachment Bubble */
+                      <div className="space-y-1.5 max-w-[260px]">
+                        <div 
+                          onClick={() => setLightboxMedia({ url: msg.mediaUrl!, type: 'image' })}
+                          className="rounded-xl overflow-hidden cursor-pointer group/img relative shadow-xs"
+                          title="Click to view full image"
+                        >
+                          <img 
+                            src={msg.mediaUrl} 
+                            alt="Photo Attachment" 
+                            className="w-full max-h-60 object-cover group-hover/img:scale-102 transition-transform duration-200" 
+                          />
+                        </div>
+                        {msg.text && msg.text !== '📷 Photo' && (
+                          <p className="mt-1">{msg.text}</p>
+                        )}
+                      </div>
+                    ) : msg.mediaType === 'video' && msg.mediaUrl ? (
+                      /* 3. Video Attachment Bubble */
+                      <div className="space-y-1.5 max-w-[280px]">
+                        <ChatVideoPlayer 
+                          src={msg.mediaUrl} 
+                          onOpenLightbox={() => setLightboxMedia({ url: msg.mediaUrl!, type: 'video', title: 'Video Attachment' })}
+                        />
+                        {msg.text && msg.text !== '🎥 Video' && (
+                          <p className="mt-1">{msg.text}</p>
+                        )}
+                      </div>
+                    ) : msg.mediaType === 'file' && msg.mediaUrl ? (
+                      /* 4. Document / File Attachment Bubble */
+                      <a
+                        href={msg.mediaUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`flex items-center gap-2.5 p-1 rounded-xl transition-all ${
+                          isMe ? 'hover:bg-white/10' : 'hover:bg-surface-variant'
+                        }`}
+                      >
+                        <div className={`p-2 rounded-lg ${isMe ? 'bg-white/20' : 'bg-primary/10 text-primary'}`}>
+                          <File className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1 min-w-0 text-left">
+                          <p className="font-semibold truncate text-[11px]">{msg.fileName || 'Document'}</p>
+                          <p className="text-[10px] opacity-75">{msg.fileSize ? formatBytes(msg.fileSize) : 'File'}</p>
+                        </div>
+                        <Download className="w-3.5 h-3.5 shrink-0 opacity-80" />
+                      </a>
+                    ) : (
+                      /* Standard Text Message */
+                      <p>{msg.text}</p>
+                    )}
                   </div>
                   <div className="flex items-center gap-1 text-[9px] text-secondary px-1 font-medium">
                     <span>{msg.timestamp || 'Just now'}</span>
@@ -773,25 +1464,112 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
         <div ref={chatBottomRef} />
       </main>
 
-      {/* Clean Message Input Footer */}
+      {/* Uploading / Compressing Indicator */}
+      {isUploadingMedia && (
+        <div className="px-3.5 py-1.5 bg-sky-50 border-t border-sky-100 flex items-center gap-2 text-sky-700 text-xs font-medium animate-fade-in">
+          <Loader2 className="w-3.5 h-3.5 animate-spin text-sky-600" />
+          <span>{uploadStatus || 'Processing media...'}</span>
+        </div>
+      )}
+
+      {/* Message Input Footer with Voice Record & Auto-Compressed Attachment */}
       <footer className="p-2.5 bg-white border-t border-outline flex items-center gap-2 z-20">
+        {/* Hidden File Attachment Input */}
         <input
-          type="text"
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') handleSendMessage();
-          }}
-          placeholder="Write a respectful message..."
-          className="flex-1 bg-surface-variant border border-outline rounded-full px-3.5 py-2 text-xs text-on-surface outline-none focus:bg-white focus:border-primary placeholder:text-secondary/70"
+          ref={fileInputRef}
+          type="file"
+          onChange={handleFileChange}
+          accept="image/*,video/*,application/pdf"
+          className="hidden"
         />
-        <button
-          onClick={handleSendMessage}
-          disabled={!inputText.trim()}
-          className="w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center shadow-brand hover:bg-primary-dark active:scale-95 disabled:opacity-40 transition-all shrink-0"
-        >
-          <Send className="w-4 h-4" />
-        </button>
+
+        {isRecording ? (
+          /* Live Recording Bar */
+          <div className="flex-1 flex items-center justify-between bg-rose-50 border border-rose-200 rounded-full px-4 py-1.5 animate-fade-in">
+            <div className="flex items-center gap-2.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-ping" />
+              <span className="text-xs font-mono font-bold text-rose-700">
+                {formatSeconds(recordingSeconds)}
+              </span>
+              <span className="text-xs text-rose-600/80 italic font-medium hidden sm:inline">
+                Recording voice note...
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              {/* Cancel Button */}
+              <button
+                type="button"
+                onClick={handleCancelRecording}
+                className="w-8 h-8 rounded-full bg-white hover:bg-rose-100 text-rose-600 flex items-center justify-center transition-all shadow-2xs cursor-pointer"
+                title="Cancel recording"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+
+              {/* Stop & Send Button */}
+              <button
+                type="button"
+                onClick={handleStopAndSendVoice}
+                className="px-3 py-1.5 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-brand flex items-center gap-1.5 transition-all cursor-pointer"
+                title="Send voice note"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>Send</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          /* Normal Message Input Bar */
+          <>
+            {/* Attachment Button */}
+            <button
+              type="button"
+              onClick={handleAttachmentClick}
+              disabled={isUploadingMedia}
+              className="w-9 h-9 rounded-full bg-surface-variant hover:bg-outline border border-outline flex items-center justify-center text-secondary hover:text-primary transition-all active:scale-95 disabled:opacity-40 shrink-0 cursor-pointer"
+              title="Attach photo, video, or document (auto-compressed)"
+            >
+              <Paperclip className="w-4 h-4" />
+            </button>
+
+            {/* Text Input */}
+            <input
+              type="text"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSendMessage();
+              }}
+              placeholder="Write a respectful message..."
+              disabled={isUploadingMedia}
+              className="flex-1 bg-surface-variant border border-outline rounded-full px-3.5 py-2 text-xs text-on-surface outline-none focus:bg-white focus:border-primary placeholder:text-secondary/70 transition-all"
+            />
+
+            {/* Conditional Send vs Mic Button */}
+            {inputText.trim() ? (
+              <button
+                type="button"
+                onClick={handleSendMessage}
+                disabled={isUploadingMedia}
+                className="w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center shadow-brand hover:bg-primary-dark active:scale-95 disabled:opacity-40 transition-all shrink-0 cursor-pointer"
+                title="Send message"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleStartRecording}
+                disabled={isUploadingMedia}
+                className="w-9 h-9 rounded-full bg-primary/10 hover:bg-primary text-primary hover:text-white border border-primary/20 flex items-center justify-center shadow-brand active:scale-95 disabled:opacity-40 transition-all shrink-0 cursor-pointer"
+                title="Record voice note"
+              >
+                <Mic className="w-4 h-4" />
+              </button>
+            )}
+          </>
+        )}
       </footer>
 
       {/* Respectful Close Modal with Real Du'a */}
@@ -920,6 +1698,175 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
           isOpen={Boolean(selectedProfile)}
           onClose={() => setSelectedProfile(null)}
         />
+      )}
+
+      {/* Attachment Send Preview Modal (with View-Once Option) */}
+      {pendingAttachment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 animate-fade-in">
+          <div 
+            className="w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl flex flex-col border border-outline"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="p-3.5 border-b border-outline flex items-center justify-between bg-surface-variant">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-on-surface">
+                  {pendingAttachment.mediaType === 'image' ? 'Send Photo' : (pendingAttachment.mediaType === 'video' ? 'Send Video' : 'Send File')}
+                </span>
+                <span className="text-[10px] text-secondary font-mono">
+                  ({formatBytes(pendingAttachment.size)})
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPendingAttachment(null)}
+                className="w-7 h-7 rounded-full bg-white hover:bg-outline flex items-center justify-center text-secondary hover:text-on-surface transition-all cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Media Preview Box */}
+            <div className="relative bg-slate-950 flex items-center justify-center min-h-[260px] max-h-[380px] overflow-hidden">
+              {pendingAttachment.mediaType === 'image' ? (
+                <img 
+                  src={pendingAttachment.previewUrl} 
+                  alt="Preview" 
+                  className="max-h-[360px] max-w-full object-contain"
+                />
+              ) : pendingAttachment.mediaType === 'video' ? (
+                <ChatVideoPlayer 
+                  src={pendingAttachment.previewUrl} 
+                  className="max-h-[360px] max-w-full"
+                />
+              ) : (
+                <div className="p-8 text-center text-white space-y-2">
+                  <File className="w-12 h-12 mx-auto text-primary" />
+                  <p className="text-xs font-semibold">{pendingAttachment.name}</p>
+                </div>
+              )}
+
+              {/* View Once Active Badge on Preview */}
+              {viewOnceEnabled && (
+                <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-emerald-600 text-white text-[10px] font-bold shadow-md flex items-center gap-1.5 animate-fade-in">
+                  <span className="w-3.5 h-3.5 rounded-full bg-white text-emerald-700 flex items-center justify-center text-[9px] font-black">1</span>
+                  <span>1-Time View (Disappears after opened)</span>
+                </div>
+              )}
+            </div>
+
+            {/* Caption & Controls Footer */}
+            <div className="p-3.5 bg-white border-t border-outline space-y-2.5">
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={attachmentCaption}
+                  onChange={(e) => setAttachmentCaption(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleConfirmSendAttachment();
+                  }}
+                  placeholder="Add a caption..."
+                  className="flex-1 bg-surface-variant border border-outline rounded-full px-3.5 py-2 text-xs text-on-surface outline-none focus:bg-white focus:border-primary transition-all"
+                  autoFocus
+                />
+
+                {/* 1-Time View Toggle Button (WhatsApp / Instagram style) */}
+                {(pendingAttachment.mediaType === 'image' || pendingAttachment.mediaType === 'video') && (
+                  <button
+                    type="button"
+                    onClick={() => setViewOnceEnabled(prev => !prev)}
+                    className={`w-9 h-9 rounded-full font-black text-xs flex items-center justify-center transition-all cursor-pointer border active:scale-90 ${
+                      viewOnceEnabled
+                        ? 'bg-emerald-600 border-emerald-600 text-white shadow-brand ring-2 ring-emerald-200'
+                        : 'bg-surface-variant hover:bg-outline border-outline text-secondary hover:text-on-surface'
+                    }`}
+                    title={viewOnceEnabled ? 'View once is enabled (Click to turn off)' : 'Set photo to View Once (1-Time Show)'}
+                  >
+                    1
+                  </button>
+                )}
+
+                {/* Send Button */}
+                <button
+                  type="button"
+                  onClick={handleConfirmSendAttachment}
+                  className="w-9 h-9 rounded-full bg-primary hover:bg-primary-dark text-white flex items-center justify-center shadow-brand active:scale-95 transition-all cursor-pointer shrink-0"
+                  title="Send"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              </div>
+
+              {(pendingAttachment.mediaType === 'image' || pendingAttachment.mediaType === 'video') && (
+                <div className="flex items-center justify-between text-[11px] px-1 text-secondary">
+                  <span className="flex items-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5 text-primary" />
+                    <span>Auto-compressed before upload</span>
+                  </span>
+                  <span className={viewOnceEnabled ? 'text-emerald-700 font-bold' : 'text-secondary/70'}>
+                    {viewOnceEnabled ? '① View Once Enabled' : 'Tap ① for 1-Time Show'}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Media Lightbox Viewer Modal */}
+      {lightboxMedia && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-fade-in"
+          onClick={handleCloseLightbox}
+        >
+          {/* Top Banner for View-Once Media */}
+          {lightboxMedia.isViewOnce && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 px-3.5 py-1.5 rounded-full bg-emerald-950/85 border border-emerald-500/50 text-emerald-200 text-xs font-semibold flex items-center gap-1.5 backdrop-blur-md shadow-lg z-20">
+              <span className="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-black">1</span>
+              <span>View Once: Will disappear after you close</span>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={handleCloseLightbox}
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition-all cursor-pointer z-20"
+            title="Close viewer"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <div 
+            className="relative max-w-4xl max-h-[85vh] flex flex-col items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {lightboxMedia.type === 'image' ? (
+              <img
+                src={lightboxMedia.url}
+                alt={lightboxMedia.title || 'Attachment Preview'}
+                className="max-w-full max-h-[80vh] rounded-2xl object-contain shadow-2xl"
+              />
+            ) : (
+              <ChatVideoPlayer
+                src={lightboxMedia.url}
+                className="w-full max-h-[80vh] rounded-2xl shadow-2xl"
+              />
+            )}
+            {!lightboxMedia.isViewOnce && (
+              <div className="mt-3 flex items-center gap-3">
+                <a
+                  href={lightboxMedia.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download
+                  className="px-4 py-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold flex items-center gap-1.5 transition-all"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Open Original</span>
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

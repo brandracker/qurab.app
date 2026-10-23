@@ -2,6 +2,7 @@ export type Bindings = {
   DB: D1Database;
   MEDIA_BUCKET: R2Bucket;
   ENVIRONMENT: string;
+  GEMINI_API_KEY?: string;
 };
 
 export type Variables = {

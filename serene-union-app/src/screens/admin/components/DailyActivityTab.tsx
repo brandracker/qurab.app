@@ -50,8 +50,13 @@ export const DailyActivityTab: React.FC<DailyActivityTabProps> = ({
     if (!adminToken) return;
     if (!isSilent) setIsLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/admin/daily-activity?date=${selectedDate}`, {
-        headers: { Authorization: `Bearer ${adminToken}` }
+      const res = await fetch(`${API_BASE}/admin/daily-activity?date=${selectedDate}&t=${Date.now()}`, {
+        headers: { 
+          Authorization: `Bearer ${adminToken}`,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        },
+        cache: 'no-store'
       });
       const json = await res.json();
       if (json.success) {
@@ -174,10 +179,11 @@ export const DailyActivityTab: React.FC<DailyActivityTabProps> = ({
           <button
             onClick={() => fetchDailyActivity()}
             disabled={isLoading}
-            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 transition-all cursor-pointer"
-            title="Refresh"
+            className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-sky-600 to-sky-500 hover:from-sky-500 hover:to-sky-400 text-white shadow-lg shadow-sky-600/20 text-xs font-semibold transition-all cursor-pointer disabled:opacity-50"
+            title="Refresh Real-Time Data"
           >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-sky-400' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+            <span>{isLoading ? 'Syncing...' : 'Sync Real-Time Data'}</span>
           </button>
         </div>
       </div>
@@ -271,7 +277,7 @@ export const DailyActivityTab: React.FC<DailyActivityTabProps> = ({
                 : 'bg-white/5 text-slate-400 hover:text-white'
             }`}
           >
-            All Active ({data?.users?.length || 0})
+            All Active ({summary?.activeUsersCount || data?.users?.length || 0})
           </button>
           
           <button

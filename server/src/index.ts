@@ -18,7 +18,7 @@ const app = new Hono<AppContext>();
 app.use('*', cors({
   origin: '*',
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization'],
+  allowHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'Pragma', 'x-admin-token'],
 }));
 
 // Root & Health Check Endpoints

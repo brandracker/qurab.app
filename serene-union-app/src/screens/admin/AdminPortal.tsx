@@ -99,9 +99,7 @@ export const AdminPortal: React.FC = () => {
     try {
       const res = await fetch(`${API_BASE}/admin/dashboard/stats?t=${Date.now()}`, {
         headers: { 
-          'Authorization': `Bearer ${adminToken}`,
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache'
+          'Authorization': `Bearer ${adminToken}`
         },
         cache: 'no-store'
       });

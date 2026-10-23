@@ -52,9 +52,7 @@ export const DailyActivityTab: React.FC<DailyActivityTabProps> = ({
     try {
       const res = await fetch(`${API_BASE}/admin/daily-activity?date=${selectedDate}&t=${Date.now()}`, {
         headers: { 
-          Authorization: `Bearer ${adminToken}`,
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache'
+          Authorization: `Bearer ${adminToken}`
         },
         cache: 'no-store'
       });

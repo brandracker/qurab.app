@@ -4,7 +4,6 @@ import {
   Users, 
   ArrowRight, 
   ChevronDown, 
-  ExternalLink, 
   ShieldCheck, 
   Check, 
   Mic, 
@@ -29,6 +28,7 @@ import { blogPostsData } from '../data/blogData';
 import { HalalStoriesPage } from './HalalStoriesPage';
 import { BlogPage } from './BlogPage';
 import { CaseStudyPage } from './CaseStudyPage';
+import { isLocalEnvironment } from '../services/apiConfig';
 
 
 // Official Google Play Store listing URL
@@ -97,6 +97,7 @@ interface ScreenshotItem {
 }
 
 export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onLogin }) => {
+  const isLocal = isLocalEnvironment();
   const [deepLinkSlug, setDeepLinkSlug] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
       const hash = window.location.hash;
@@ -128,11 +129,8 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
     : testimonialsData.filter(t => t.tag === selectedTestimonialTag);
 
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
-  const [showIosModal, setShowIosModal] = useState<boolean>(false);
-  const [showAndroidModal, setShowAndroidModal] = useState<boolean>(false);
   const [selectedScreenshot, setSelectedScreenshot] = useState<ScreenshotItem | null>(null);
   const [activeStageIndex, setActiveStageIndex] = useState<number>(0);
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const reelRef = useRef<HTMLDivElement>(null);
 
   // Deep-link Hash Sync for #stories, #blog, and individual article/story slugs
@@ -160,27 +158,6 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
     window.addEventListener('hashchange', handleHash);
     return () => window.removeEventListener('hashchange', handleHash);
   }, []);
-
-  // Capture beforeinstallprompt for 1-click PWA install on Android / Desktop
-  useEffect(() => {
-    const handlePrompt = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-    };
-    window.addEventListener('beforeinstallprompt', handlePrompt);
-    return () => window.removeEventListener('beforeinstallprompt', handlePrompt);
-  }, []);
-
-  const handlePwaClick = () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      deferredPrompt.userChoice.then(() => {
-        setDeferredPrompt(null);
-      });
-    } else {
-      setShowIosModal(true);
-    }
-  };
 
   const scrollReel = (direction: 'left' | 'right') => {
     if (reelRef.current) {
@@ -442,12 +419,23 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
           Nikah Only
         </span>
         <span>Dedicated to lawful Islamic marriage upon the Quran &amp; Sunnah.</span>
-        <button 
-          onClick={onLaunchWebApp}
-          className="underline font-bold text-rose-700 hover:text-rose-800 ml-1 cursor-pointer transition-colors"
-        >
-          Open Web App →
-        </button>
+        {isLocal ? (
+          <button 
+            onClick={onLaunchWebApp}
+            className="underline font-bold text-rose-700 hover:text-rose-800 ml-1 cursor-pointer transition-colors"
+          >
+            Open Web App (Dev) →
+          </button>
+        ) : (
+          <a 
+            href={PLAY_STORE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline font-bold text-rose-700 hover:text-rose-800 ml-1 cursor-pointer transition-colors inline-flex items-center gap-1"
+          >
+            Download on Google Play →
+          </a>
+        )}
         <a 
           href={PLAY_STORE_URL}
           target="_blank"
@@ -533,19 +521,33 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
 
           {/* Right Action Buttons */}
           <div className="flex items-center gap-2.5 sm:gap-3">
-            <button
-              onClick={onLogin}
-              className="text-xs sm:text-sm font-semibold text-slate-700 hover:text-slate-900 px-3 py-2 transition-colors cursor-pointer"
-            >
-              Sign In
-            </button>
-            <button
-              onClick={onGetStarted}
-              className="bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs sm:text-sm px-5 py-2.5 rounded-full active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer shadow-md shadow-rose-600/20"
-            >
-              <span>Get Started</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+            {isLocal ? (
+              <>
+                <button
+                  onClick={onLogin}
+                  className="text-xs sm:text-sm font-semibold text-slate-700 hover:text-slate-900 px-3 py-2 transition-colors cursor-pointer"
+                >
+                  Sign In
+                </button>
+                <button
+                  onClick={onGetStarted}
+                  className="bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs sm:text-sm px-5 py-2.5 rounded-full active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer shadow-md shadow-rose-600/20"
+                >
+                  <span>Get Started</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </>
+            ) : (
+              <a
+                href={PLAY_STORE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs sm:text-sm px-4 sm:px-5 py-2.5 rounded-full active:scale-95 transition-all flex items-center gap-2 cursor-pointer shadow-md shadow-rose-600/20"
+              >
+                <GooglePlayIcon className="w-4 h-4 text-white shrink-0" />
+                <span>Download App</span>
+              </a>
+            )}
           </div>
         </div>
       </header>
@@ -630,21 +632,26 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
                   <GooglePlayIcon className="w-6 h-6 text-white shrink-0 group-hover:scale-105 transition-transform" />
                   <div className="text-left leading-tight">
                     <div className="text-[9px] text-rose-100 font-medium tracking-wider uppercase">GET IT ON</div>
-                    <div className="text-base font-bold text-white tracking-tight">Google Play <span className="text-[10px] text-rose-200 font-normal ml-1">(Native App)</span></div>
+                    <div className="text-base font-bold text-white tracking-tight">Google Play <span className="text-[10px] text-rose-200 font-normal ml-1">(Android)</span></div>
                   </div>
                 </a>
 
-                {/* 2. Apple App Store (iOS PWA) */}
-                <button
-                  onClick={handlePwaClick}
-                  className="w-full sm:w-auto min-w-[215px] bg-rose-600 hover:bg-rose-700 text-white px-5 py-3.5 rounded-2xl shadow-lg shadow-rose-600/20 hover:shadow-xl hover:shadow-rose-600/30 hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-3 cursor-pointer group"
+                {/* 2. Apple App Store (Coming Soon) */}
+                <div
+                  className="w-full sm:w-auto min-w-[215px] bg-white border border-slate-200 text-slate-700 px-5 py-3.5 rounded-2xl shadow-sm flex items-center justify-center gap-3 select-none cursor-default"
+                  title="iOS App is coming soon on the Apple App Store"
                 >
-                  <AppStoreIcon className="w-6 h-6 text-white shrink-0 group-hover:scale-105 transition-transform" />
+                  <AppStoreIcon className="w-6 h-6 text-slate-400 shrink-0" />
                   <div className="text-left leading-tight">
-                    <div className="text-[9px] text-rose-100 font-medium tracking-wider uppercase">DOWNLOAD ON</div>
-                    <div className="text-base font-bold text-white tracking-tight">App Store <span className="text-[10px] text-rose-200 font-normal ml-1">(iOS PWA)</span></div>
+                    <div className="text-[9px] text-slate-400 font-bold tracking-wider uppercase">APPLE APP STORE</div>
+                    <div className="text-base font-bold text-slate-700 tracking-tight flex items-center gap-2">
+                      <span>App Store</span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                        Coming Soon
+                      </span>
+                    </div>
                   </div>
-                </button>
+                </div>
 
               </div>
 
@@ -1691,7 +1698,7 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
           {/* Two Official Store Badges */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 pt-2">
             
-            {/* Google Play (Native App) */}
+            {/* 1. Google Play Store (Native Android App) */}
             <a
               href={PLAY_STORE_URL}
               target="_blank"
@@ -1701,21 +1708,26 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
               <GooglePlayIcon className="w-6 h-6 text-rose-600 shrink-0 group-hover:scale-105 transition-transform" />
               <div className="text-left leading-tight">
                 <div className="text-[9px] text-slate-500 font-bold tracking-wider uppercase">GET IT ON</div>
-                <div className="text-base font-bold text-slate-900 tracking-tight">Google Play <span className="text-[10px] text-rose-600 font-normal ml-0.5">(Native App)</span></div>
+                <div className="text-base font-bold text-slate-900 tracking-tight">Google Play <span className="text-[10px] text-rose-600 font-normal ml-0.5">(Android)</span></div>
               </div>
             </a>
 
-            {/* Apple App Store (iOS PWA) */}
-            <button
-              onClick={handlePwaClick}
-              className="w-full sm:w-auto min-w-[215px] bg-white hover:bg-slate-50 text-slate-900 px-5 py-3.5 rounded-2xl shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-3 cursor-pointer border border-white/60 group"
+            {/* 2. Apple App Store (Coming Soon) */}
+            <div
+              className="w-full sm:w-auto min-w-[215px] bg-white/20 backdrop-blur-md text-white px-5 py-3.5 rounded-2xl shadow-md border border-white/30 flex items-center justify-center gap-3 select-none cursor-default"
+              title="iOS App is coming soon on the Apple App Store"
             >
-              <AppStoreIcon className="w-6 h-6 text-rose-600 shrink-0 group-hover:scale-105 transition-transform" />
+              <AppStoreIcon className="w-6 h-6 text-white/70 shrink-0" />
               <div className="text-left leading-tight">
-                <div className="text-[9px] text-slate-500 font-bold tracking-wider uppercase">DOWNLOAD ON</div>
-                <div className="text-base font-bold text-slate-900 tracking-tight">App Store <span className="text-[10px] text-rose-600 font-normal ml-0.5">(iOS PWA)</span></div>
+                <div className="text-[9px] text-white/70 font-bold tracking-wider uppercase">APPLE APP STORE</div>
+                <div className="text-base font-bold text-white tracking-tight flex items-center gap-2">
+                  <span>App Store</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white text-slate-900 shadow-2xs">
+                    Coming Soon
+                  </span>
+                </div>
               </div>
-            </button>
+            </div>
 
           </div>
         </div>
@@ -1889,41 +1901,54 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
                   </a>
                 </li>
                 <li>
-                  <button 
-                    onClick={handlePwaClick} 
-                    className="hover:text-rose-600 transition-colors flex items-center gap-2 text-left cursor-pointer"
-                  >
-                    <AppStoreIcon className="w-3.5 h-3.5 shrink-0 text-slate-800" />
-                    <span>App Store (iOS PWA)</span>
-                  </button>
+                  <div className="flex items-center gap-2 text-left text-slate-400 select-none">
+                    <AppStoreIcon className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                    <span>App Store <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">Coming Soon</span></span>
+                  </div>
                 </li>
-                <li>
-                  <button 
-                    onClick={onLaunchWebApp} 
-                    className="hover:text-rose-600 transition-colors flex items-center gap-2 text-left cursor-pointer font-semibold text-slate-900"
-                  >
-                    <ArrowRight className="w-3.5 h-3.5 shrink-0 text-emerald-600" />
-                    <span>Launch Web App</span>
-                  </button>
-                </li>
-                <li>
-                  <button 
-                    onClick={onLogin} 
-                    className="hover:text-rose-600 transition-colors flex items-center gap-2 text-left cursor-pointer"
-                  >
-                    <Users className="w-3.5 h-3.5 shrink-0 text-slate-400" />
-                    <span>Sign In to Account</span>
-                  </button>
-                </li>
-                <li>
-                  <button 
-                    onClick={onGetStarted} 
-                    className="hover:text-rose-700 transition-colors flex items-center gap-2 text-left cursor-pointer text-rose-600 font-bold"
-                  >
-                    <HeartHandshake className="w-3.5 h-3.5 shrink-0" />
-                    <span>Create Profile Free</span>
-                  </button>
-                </li>
+                {isLocal ? (
+                  <>
+                    <li>
+                      <button 
+                        onClick={onLaunchWebApp} 
+                        className="hover:text-rose-600 transition-colors flex items-center gap-2 text-left cursor-pointer font-semibold text-slate-900"
+                      >
+                        <ArrowRight className="w-3.5 h-3.5 shrink-0 text-emerald-600" />
+                        <span>Launch Web App (Dev)</span>
+                      </button>
+                    </li>
+                    <li>
+                      <button 
+                        onClick={onLogin} 
+                        className="hover:text-rose-600 transition-colors flex items-center gap-2 text-left cursor-pointer"
+                      >
+                        <Users className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                        <span>Sign In (Dev)</span>
+                      </button>
+                    </li>
+                    <li>
+                      <button 
+                        onClick={onGetStarted} 
+                        className="hover:text-rose-700 transition-colors flex items-center gap-2 text-left cursor-pointer text-rose-600 font-bold"
+                      >
+                        <HeartHandshake className="w-3.5 h-3.5 shrink-0" />
+                        <span>Create Profile (Dev)</span>
+                      </button>
+                    </li>
+                  </>
+                ) : (
+                  <li>
+                    <a 
+                      href={PLAY_STORE_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-rose-700 transition-colors flex items-center gap-2 text-left cursor-pointer text-rose-600 font-bold"
+                    >
+                      <HeartHandshake className="w-3.5 h-3.5 shrink-0" />
+                      <span>Download Android App</span>
+                    </a>
+                  </li>
+                )}
               </ul>
             </div>
 
@@ -2030,124 +2055,7 @@ export const LandingPage: React.FC<Props> = ({ onLaunchWebApp, onGetStarted, onL
 
 
 
-      {/* MODAL: iOS PWA INSTALLATION GUIDE */}
-      {showIosModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-rose-100 space-y-5 relative text-left">
-            <button 
-              onClick={() => setShowIosModal(false)}
-              className="absolute top-5 right-5 p-2 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
 
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl bg-slate-900 text-white flex items-center justify-center">
-                <AppStoreIcon className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="font-serif font-bold text-base text-slate-900">Install on iPhone / iPad</h3>
-                <p className="text-xs text-slate-500">Progressive Web App (PWA)</p>
-              </div>
-            </div>
-
-            <div className="p-4 rounded-xl bg-[#FAF9F6] border border-slate-200 space-y-3 text-xs text-slate-700">
-              <div className="flex items-start gap-2.5">
-                <span className="w-5 h-5 rounded-full bg-rose-600 text-white font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">1</span>
-                <div>
-                  <strong className="text-slate-900">Open in Safari:</strong> Visit <span className="text-rose-600 font-semibold">qurb.app</span> in Apple Safari on your iPhone.
-                </div>
-              </div>
-              <div className="flex items-start gap-2.5">
-                <span className="w-5 h-5 rounded-full bg-rose-600 text-white font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">2</span>
-                <div>
-                  <strong className="text-slate-900">Tap Share:</strong> Tap the Safari <strong className="text-slate-900">Share icon 📤</strong> at the bottom.
-                </div>
-              </div>
-              <div className="flex items-start gap-2.5">
-                <span className="w-5 h-5 rounded-full bg-rose-600 text-white font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">3</span>
-                <div>
-                  <strong className="text-slate-900">Add to Home Screen:</strong> Scroll down and select <strong className="text-rose-700">Add to Home Screen 📱</strong>.
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <button
-                onClick={() => {
-                  setShowIosModal(false);
-                  onLaunchWebApp();
-                }}
-                className="w-full bg-gradient-to-r from-rose-600 to-rose-700 hover:opacity-95 text-white font-bold py-3 px-5 rounded-xl shadow-md text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <span>Launch iOS Web App Now</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-              <p className="text-[11px] text-center text-slate-400">
-                Qurb will install to your home screen and run full-screen.
-              </p>
-            </div>
-
-          </div>
-        </div>
-      )}
-
-      {/* MODAL: ANDROID DOWNLOAD */}
-      {showAndroidModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-5 relative text-left">
-            <button 
-              onClick={() => setShowAndroidModal(false)}
-              className="absolute top-5 right-5 p-2 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl bg-slate-900 text-white flex items-center justify-center">
-                <GooglePlayIcon className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="font-serif font-bold text-base text-slate-900">Download for Android</h3>
-                <p className="text-xs text-slate-500">Official Android App</p>
-              </div>
-            </div>
-
-            <div className="p-4 rounded-xl bg-[#FAF9F6] border border-slate-200 space-y-2 text-xs text-slate-700">
-              <p className="leading-relaxed">
-                Native Android app with Google Play Billing 8.0 support, instant push notifications, and verified modesty safeguards.
-              </p>
-              <div className="flex items-center gap-1.5 text-emerald-700 font-semibold pt-1">
-                <Check className="w-3.5 h-3.5" />
-                <span>Google Play Release (v1.0.1)</span>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <a
-                href={PLAY_STORE_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full bg-[#0F172A] hover:bg-[#1E293B] text-white font-bold py-3 px-5 rounded-xl shadow-md text-xs sm:text-sm flex items-center justify-center gap-2"
-              >
-                <GooglePlayIcon className="w-4 h-4" />
-                <span>Open on Google Play Store</span>
-                <ExternalLink className="w-3.5 h-3.5 ml-1" />
-              </a>
-              <button
-                onClick={() => {
-                  setShowAndroidModal(false);
-                  onLaunchWebApp();
-                }}
-                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-medium py-2.5 px-5 rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <span>Or Launch Web App Immediately in Browser</span>
-              </button>
-            </div>
-
-          </div>
-        </div>
-      )}
 
       {/* MODAL: BLESSED NIKAH TESTIMONIAL MODAL */}
       {selectedTestimonialModal && (

@@ -22,7 +22,8 @@ import { dbService, API_BASE } from './services/dbService';
 import { notificationService } from './services/notificationService';
 import { facebookEventsService } from './services/facebookEventsService';
 import { Capacitor } from '@capacitor/core';
-import { LandingPage } from './components/LandingPage';
+import { LandingPage, PLAY_STORE_URL } from './components/LandingPage';
+import { isLocalEnvironment } from './services/apiConfig';
 import { AdminPortal } from './screens/admin/AdminPortal';
 import { backNavigationService } from './services/backNavigationService';
 import { pushNotificationService } from './services/pushNotificationService';
@@ -45,6 +46,7 @@ type MainTab = 'discover' | 'matches' | 'chat' | 'my_profile' | 'settings';
 
 export const App: React.FC = () => {
   const isNative = Capacitor.isNativePlatform();
+  const isLocal = isLocalEnvironment();
 
   // STRICT ZERO-BREAKAGE GUARANTEE: Web-Only Admin Portal
   const isAdminPortal = !isNative && (() => {
@@ -71,13 +73,20 @@ export const App: React.FC = () => {
     const params = new URLSearchParams(window.location.search);
     const hash = window.location.hash.toLowerCase();
 
-    // Explicit app flags, paths, or step/screen queries bypass the landing page
-    if (params.get('app') === 'true' || path.startsWith('/app') || params.get('step') || params.get('screen')) return false;
-
-    // Policy and legal deep-links
+    // Policy and legal deep-links (privacy policy & terms must stay accessible for store compliance)
     if (path.includes('privacy') || params.get('page') === 'privacy' || params.get('view') === 'privacy' || hash.includes('privacy')) return false;
     if (path.includes('terms') || params.get('page') === 'terms' || params.get('view') === 'terms' || hash.includes('terms')) return false;
     if (params.get('mode') === 'resetPassword' || params.get('oobCode')) return false;
+
+    // In online production deployment (browser-based app disabled):
+    // Always show LandingPage! Web visitors cannot run the browser app online.
+    if (!isLocal) {
+      return true;
+    }
+
+    // LOCAL DEVELOPMENT:
+    // Explicit app flags, paths, or step/screen queries bypass the landing page
+    if (params.get('app') === 'true' || path.startsWith('/app') || params.get('step') || params.get('screen')) return false;
 
     // If visitor already entered the web app during this session
     if (sessionStorage.getItem('qurb_entered_app') === 'true') return false;
@@ -685,21 +694,46 @@ export const App: React.FC = () => {
     return (
       <LandingPage
         onLaunchWebApp={() => {
+          if (!isLocal) {
+            window.open(PLAY_STORE_URL, '_blank');
+            return;
+          }
           sessionStorage.setItem('qurb_entered_app', 'true');
           setShowLanding(false);
         }}
         onGetStarted={() => {
+          if (!isLocal) {
+            window.open(PLAY_STORE_URL, '_blank');
+            return;
+          }
           sessionStorage.setItem('qurb_entered_app', 'true');
           setShowLanding(false);
           setAuthInitialTab('signup');
           setCurrentStep('auth');
         }}
         onLogin={() => {
+          if (!isLocal) {
+            window.open(PLAY_STORE_URL, '_blank');
+            return;
+          }
           sessionStorage.setItem('qurb_entered_app', 'true');
           setShowLanding(false);
           setAuthInitialTab('login');
           setCurrentStep('auth');
         }}
+      />
+    );
+  }
+
+  // PRODUCTION SAFETY GUARD:
+  // If user is on production web (non-native and non-local) and somehow showLanding is false
+  // while not on a legal or reset screen, force render the landing page.
+  if (!isNative && !isLocal && !['privacy_policy', 'terms', 'reset_password'].includes(currentStep)) {
+    return (
+      <LandingPage
+        onLaunchWebApp={() => window.open(PLAY_STORE_URL, '_blank')}
+        onGetStarted={() => window.open(PLAY_STORE_URL, '_blank')}
+        onLogin={() => window.open(PLAY_STORE_URL, '_blank')}
       />
     );
   }

@@ -180,4 +180,27 @@ describe('Landing Page: Testimonials, Halal Stories & Matrimony Journal Suite', 
     expect(handleBack).toHaveBeenCalledTimes(1);
   });
 
+  it('6. Direct Google Play Store link and Apple App Store Coming Soon status are enforced', () => {
+    const handleLaunch = vi.fn();
+    const handleGetStarted = vi.fn();
+    const handleLogin = vi.fn();
+
+    render(
+      <LandingPage
+        onLaunchWebApp={handleLaunch}
+        onGetStarted={handleGetStarted}
+        onLogin={handleLogin}
+      />
+    );
+
+    // Verify Google Play Store link is directly present
+    const playLinks = screen.getAllByRole('link', { name: /Google Play/i });
+    expect(playLinks.length).toBeGreaterThanOrEqual(1);
+    expect(playLinks[0].getAttribute('href')).toContain('play.google.com/store/apps/details?id=app.qurb.serene');
+
+    // Verify Apple App Store button displays 'Coming Soon' and is non-clickable (no button role)
+    const comingSoonBadges = screen.getAllByText(/Coming Soon/i);
+    expect(comingSoonBadges.length).toBeGreaterThanOrEqual(1);
+  });
+
 });

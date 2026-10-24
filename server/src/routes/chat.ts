@@ -551,24 +551,8 @@ chatRouter.post('/:id/messages', async (c) => {
       }
     }
 
-    // 6. Autonomous AI Agent Responder for Seed Profiles (usr_seed_*)
-    if (recipientId && (recipientId.startsWith('usr_seed_') || recipientId.includes('seed'))) {
-      const aiPromise = processAiSeedResponse({
-        conversationId: targetConvId,
-        seedUserId: recipientId,
-        realUserId: senderId,
-        userMessageText: messageText,
-        senderName,
-        db: c.env.DB,
-        apiKey: c.env.GEMINI_API_KEY || (typeof process !== 'undefined' ? process.env?.GEMINI_API_KEY : '')
-      });
-
-      if (c.executionCtx?.waitUntil) {
-        c.executionCtx.waitUntil(aiPromise);
-      } else {
-        aiPromise.catch((err) => console.error('[AIChatAgent] Background dispatch error:', err));
-      }
-    }
+    // 6. Autonomous AI Agent: Auto-reply disabled per Admin configuration.
+    // Responses are managed and dispatched on one-click via Admin Portal ("Reply All").
 
     return c.json({
       success: true,

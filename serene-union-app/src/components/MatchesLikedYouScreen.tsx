@@ -37,13 +37,17 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
   const [activeTab, setActiveTab] = useState<TabType>('received');
   const [selectedProfile, setSelectedProfile] = useState<UserProfile | null>(null);
   
-  const [interestedProfiles, setInterestedProfiles] = useState<UserProfile[]>([]);
-  const [mutualMatches, setMutualMatches] = useState<UserProfile[]>([]);
-  const [sentLikes, setSentLikes] = useState<any[]>([]);
-  const [passedProfiles, setPassedProfiles] = useState<any[]>([]);
-  const [blockedProfiles, setBlockedProfiles] = useState<any[]>([]);
+  // Instant SWR cache initialization: loads immediately from local memory with 0ms delay
+  const initialCache = dbService.getCachedMatchesHub(currentUser.id);
+  const hasCachedData = initialCache.received.length > 0 || initialCache.mutual.length > 0 || initialCache.sentLikes.length > 0;
+
+  const [interestedProfiles, setInterestedProfiles] = useState<UserProfile[]>(() => initialCache.received);
+  const [mutualMatches, setMutualMatches] = useState<UserProfile[]>(() => initialCache.mutual);
+  const [sentLikes, setSentLikes] = useState<any[]>(() => initialCache.sentLikes);
+  const [passedProfiles, setPassedProfiles] = useState<any[]>(() => initialCache.passed);
+  const [blockedProfiles, setBlockedProfiles] = useState<any[]>(() => initialCache.blocked);
   
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(!hasCachedData);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const [isVip, setIsVip] = useState<boolean>(() => {
@@ -52,7 +56,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
   const [showUpgradeModal, setShowUpgradeModal] = useState<boolean>(false);
 
   const loadAllData = (isInitial: boolean = false) => {
-    if (isInitial) {
+    if (isInitial && !hasCachedData) {
       setIsLoading(true);
     }
     Promise.allSettled([
@@ -67,6 +71,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
         : { sentLikes: [], passed: [], blocked: [] };
 
       const likes = activity.sentLikes || [];
+      const passedList = activity.passed || [];
 
       // Auto-heal mutual matches from confirmed mutual likes if API response was lagged
       if ((!mutual || mutual.length === 0) && likes.some((l: any) => l.action === 'mutual_match')) {
@@ -100,61 +105,23 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
       setInterestedProfiles(prev => JSON.stringify(prev) === JSON.stringify(cleanReceived) ? prev : cleanReceived);
       setMutualMatches(prev => JSON.stringify(prev) === JSON.stringify(cleanMutual) ? prev : cleanMutual);
       setSentLikes(prev => JSON.stringify(prev) === JSON.stringify(likes) ? prev : likes);
-      const passedList = activity.passed || [];
       setPassedProfiles(prev => JSON.stringify(prev) === JSON.stringify(passedList) ? prev : passedList);
       setBlockedProfiles(prev => JSON.stringify(prev) === JSON.stringify(activity.blocked || []) ? prev : (activity.blocked || []));
 
-      // Auto-heal any placeholder records where name is unknown
-      const candidatesToHeal = [...likes, ...passedList].filter(
-        (l: any) => (!l.fullName || l.fullName === 'Candidate') && l.id
-      );
-      if (candidatesToHeal.length > 0) {
-        Promise.all(candidatesToHeal.map((c: any) => dbService.fetchUserProfile(c.id))).then(resolved => {
-          let hasUpdates = false;
-          const healedMap = new Map();
-          resolved.forEach(p => {
-            if (p && p.id && p.fullName && p.fullName !== 'Candidate') {
-              healedMap.set(p.id, p);
-              hasUpdates = true;
-            }
-          });
-          if (hasUpdates) {
-            setSentLikes(prev => prev.map(item => {
-              const healed = healedMap.get(item.id);
-              if (healed) {
-                return {
-                  ...item,
-                  fullName: healed.fullName,
-                  profession: healed.profession || item.profession,
-                  location: healed.location || item.location,
-                  photos: healed.photos && healed.photos.length > 0 ? healed.photos : item.photos,
-                  marriageTimeline: healed.marriageTimeline || item.marriageTimeline
-                };
-              }
-              return item;
-            }));
-            setPassedProfiles(prev => prev.map(item => {
-              const healed = healedMap.get(item.id);
-              if (healed) {
-                return {
-                  ...item,
-                  fullName: healed.fullName,
-                  profession: healed.profession || item.profession,
-                  location: healed.location || item.location,
-                  photos: healed.photos && healed.photos.length > 0 ? healed.photos : item.photos
-                };
-              }
-              return item;
-            }));
-          }
-        }).catch(() => {});
-      }
+      // Sync unified matches hub cache for instant future loads
+      try {
+        localStorage.setItem(`serene_matches_hub_${currentUser.id}`, JSON.stringify({
+          received: cleanReceived,
+          mutual: cleanMutual,
+          sentLikes: likes,
+          passed: passedList,
+          blocked: activity.blocked || []
+        }));
+      } catch {}
     }).catch(err => {
       console.warn('Notice: Background sync for matches completed with fallback:', err);
     }).finally(() => {
-      if (isInitial) {
-        setIsLoading(false);
-      }
+      setIsLoading(false);
     });
   };
 

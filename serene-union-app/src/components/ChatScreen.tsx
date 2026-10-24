@@ -217,6 +217,8 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
   const voiceRecorderRef = useRef<VoiceRecorder | null>(null);
   const recordingTimerRef = useRef<any>(null);
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
+  const burstPollingUntilRef = useRef<number>(0);
+  const syncD1MessagesRef = useRef<() => Promise<void>>(() => Promise.resolve());
 
 
 
@@ -383,7 +385,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
     }
   }, [activeConvId, activeConv?.otherUser?.fullName]);
 
-  // Live polling for messages & real-time photo reveal status from Cloudflare D1
+  // Live adaptive polling for messages & real-time photo reveal status from Cloudflare D1
   useEffect(() => {
     const targetRoomId = activeConv?.otherUser?.id 
       ? (`conv_${[currentUser.id, activeConv.otherUser.id].sort().join('_')}`)
@@ -402,11 +404,26 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
       } catch {}
     };
 
+    syncD1MessagesRef.current = syncD1Messages;
     syncD1Messages();
-    const pollInterval = setInterval(syncD1Messages, 3000);
+
+    // Adaptive polling: 1200ms burst interval for 15s after sending, 3200ms when idle
+    let timerId: any = null;
+    const scheduleNextPoll = () => {
+      const isBurst = Date.now() < burstPollingUntilRef.current;
+      const delay = isBurst ? 1200 : 3200;
+      timerId = setTimeout(async () => {
+        if (!isMounted) return;
+        await syncD1Messages();
+        if (isMounted) scheduleNextPoll();
+      }, delay);
+    };
+
+    scheduleNextPoll();
+
     return () => {
       isMounted = false;
-      clearInterval(pollInterval);
+      if (timerId) clearTimeout(timerId);
     };
   }, [activeConvId, activeConv?.id, activeConv?.otherUser?.id, currentUser.id]);
 
@@ -573,6 +590,9 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
           isViewOnce: mediaData.isViewOnce
         })
       });
+      // Trigger burst polling for instant live responsiveness
+      burstPollingUntilRef.current = Date.now() + 15000;
+      syncD1MessagesRef.current?.();
     } catch {}
   };
 
@@ -887,6 +907,9 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
           receiverId: activeConv.otherUser?.id
         })
       });
+      // Trigger burst polling for instant live responsiveness
+      burstPollingUntilRef.current = Date.now() + 15000;
+      syncD1MessagesRef.current?.();
     } catch {}
   };
 

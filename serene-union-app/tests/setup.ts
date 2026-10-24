@@ -85,6 +85,19 @@ if (!globalThis.fetch || !(globalThis.fetch as any)._isMock) {
         })
       };
     }
+    if (urlStr.includes('/matches/hub')) {
+      return {
+        ok: true,
+        json: async () => ({
+          success: true,
+          received: [],
+          mutual: [],
+          sentLikes: [],
+          passed: [],
+          blocked: []
+        })
+      };
+    }
     if (urlStr.includes('/matches/')) {
       return {
         ok: true,

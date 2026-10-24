@@ -66,23 +66,8 @@ matchesRouter.post('/action', async (c) => {
         `).bind(msgId, convId, senderId, introMessage).run();
       } catch {}
 
-      // 3b. Autonomous AI Agent Responder if recipient is a Seed Profile (usr_seed_*)
-      if (receiverId.startsWith('usr_seed_') || receiverId.includes('seed')) {
-        try {
-          c.executionCtx.waitUntil(
-            processAiSeedResponse({
-              conversationId: convId,
-              seedUserId: receiverId,
-              realUserId: senderId,
-              userMessageText: introMessage,
-              db: c.env.DB,
-              apiKey: c.env.GEMINI_API_KEY
-            }).catch(aiErr => console.error('[Matches DirectSalam AI error]', aiErr))
-          );
-        } catch (ctxErr) {
-          console.warn('[Matches DirectSalam AI ctx warning]:', ctxErr);
-        }
-      }
+      // 3b. Autonomous AI Agent: Auto-reply disabled per Admin configuration.
+      // Responses are managed and dispatched on one-click via Admin Portal ("Reply All").
 
       // 4. Dispatch D1 notification to receiver
       try {
@@ -221,6 +206,192 @@ matchesRouter.post('/reset-passed', async (c) => {
     return c.json({ success: true, message: 'Passed profiles reset successfully.' });
   } catch (err: any) {
     return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+// 1.5 Fast Unified Matches Hub API (Single round-trip for received, mutual, sentLikes, passed, blocked)
+matchesRouter.get('/hub', async (c) => {
+  try {
+    const userId = c.req.query('userId') || '';
+    if (!userId) {
+      return c.json({
+        success: true,
+        received: [],
+        mutual: [],
+        sentLikes: [],
+        passed: [],
+        blocked: []
+      });
+    }
+
+    // Run parallel queries across D1
+    const [receivedRes, mutualRes, sentLikesRes, passedRes, blockedRes] = await Promise.all([
+      // A. Received likes / Direct salams
+      c.env.DB.prepare(`
+        SELECT 
+          COALESCE(u.id, m.sender_id) as id,
+          u.phone, u.email,
+          COALESCE(u.full_name, 'Member') as fullName,
+          COALESCE(u.dob, '1998-01-01') as dob,
+          COALESCE(u.gender, 'other') as gender,
+          COALESCE(u.location, 'Global') as location,
+          u.city, u.country,
+          COALESCE(u.profession, 'Professional') as profession,
+          COALESCE(u.education, 'Graduate') as education,
+          u.university,
+          COALESCE(u.height, '180 cm') as height,
+          COALESCE(u.ethnicity, 'Global') as ethnicity,
+          COALESCE(u.marriage_timeline, 'within_1_year') as marriageTimeline,
+          COALESCE(u.bio, 'Seeking half my deen.') as bio,
+          COALESCE(u.blur_photos_by_default, 1) as blurPhotosByDefault,
+          m.action as matchAction,
+          m.created_at as likedAt
+        FROM matches_and_likes m
+        LEFT JOIN users u ON m.sender_id = u.id
+        WHERE m.receiver_id = ?
+          AND (m.action = 'liked' OR m.action = 'direct_salam')
+          AND m.sender_id NOT IN (SELECT blocked_id FROM blocked_users WHERE blocker_id = ?)
+          AND m.sender_id NOT IN (SELECT blocker_id FROM blocked_users WHERE blocked_id = ?)
+        ORDER BY m.created_at DESC
+        LIMIT 50
+      `).bind(userId, userId, userId).all(),
+
+      // B. Mutual Matches
+      c.env.DB.prepare(`
+        SELECT 
+          COALESCE(u.id, CASE WHEN m.sender_id = ? THEN m.receiver_id ELSE m.sender_id END) as id,
+          u.phone, u.email,
+          COALESCE(u.full_name, 'Match') as fullName,
+          COALESCE(u.dob, '1998-01-01') as dob,
+          COALESCE(u.gender, 'other') as gender,
+          COALESCE(u.location, 'Global') as location,
+          u.city, u.country,
+          COALESCE(u.profession, 'Professional') as profession,
+          COALESCE(u.education, 'Graduate') as education,
+          u.university,
+          COALESCE(u.height, '180 cm') as height,
+          COALESCE(u.marriage_timeline, 'within_1_year') as marriageTimeline,
+          COALESCE(u.bio, 'Connected on Qurb.') as bio,
+          COALESCE(u.blur_photos_by_default, 1) as blurPhotosByDefault,
+          m.created_at as matchedAt
+        FROM matches_and_likes m
+        LEFT JOIN users u ON u.id = CASE WHEN m.sender_id = ? THEN m.receiver_id ELSE m.sender_id END
+        WHERE (m.sender_id = ? OR m.receiver_id = ?)
+          AND m.action = 'mutual_match'
+          AND u.id NOT IN (SELECT blocked_id FROM blocked_users WHERE blocker_id = ?)
+          AND u.id NOT IN (SELECT blocker_id FROM blocked_users WHERE blocked_id = ?)
+        GROUP BY u.id
+        ORDER BY m.created_at DESC
+        LIMIT 50
+      `).bind(userId, userId, userId, userId, userId, userId).all(),
+
+      // C. Sent Likes
+      c.env.DB.prepare(`
+        SELECT 
+          COALESCE(u.id, m.receiver_id) as id,
+          COALESCE(u.full_name, 'Candidate') as fullName,
+          COALESCE(u.location, 'Global') as location,
+          COALESCE(u.profession, 'Professional') as profession,
+          COALESCE(u.marriage_timeline, 'within_1_year') as marriageTimeline,
+          m.action, m.created_at as actionTime
+        FROM matches_and_likes m
+        LEFT JOIN users u ON m.receiver_id = u.id
+        WHERE m.sender_id = ? AND (m.action = 'liked' OR m.action = 'mutual_match' OR m.action = 'direct_salam')
+          AND m.receiver_id NOT IN (SELECT blocked_id FROM blocked_users WHERE blocker_id = ?)
+          AND m.receiver_id NOT IN (SELECT blocker_id FROM blocked_users WHERE blocked_id = ?)
+        ORDER BY m.created_at DESC
+        LIMIT 60
+      `).bind(userId, userId, userId).all(),
+
+      // D. Passed Profiles
+      c.env.DB.prepare(`
+        SELECT 
+          COALESCE(u.id, m.receiver_id) as id,
+          COALESCE(u.full_name, 'Candidate') as fullName,
+          COALESCE(u.location, 'Global') as location,
+          COALESCE(u.profession, 'Professional') as profession,
+          m.created_at as actionTime
+        FROM matches_and_likes m
+        LEFT JOIN users u ON m.receiver_id = u.id
+        WHERE m.sender_id = ? AND m.action = 'passed'
+          AND m.receiver_id NOT IN (SELECT blocked_id FROM blocked_users WHERE blocker_id = ?)
+          AND m.receiver_id NOT IN (SELECT blocker_id FROM blocked_users WHERE blocked_id = ?)
+        ORDER BY m.created_at DESC
+        LIMIT 60
+      `).bind(userId, userId, userId).all(),
+
+      // E. Blocked Users
+      c.env.DB.prepare(`
+        SELECT 
+          COALESCE(u.id, b.blocked_id) as id,
+          COALESCE(u.full_name, 'Member') as fullName,
+          COALESCE(u.location, 'Global') as location,
+          COALESCE(b.reason, 'User requested block') as reason,
+          b.created_at as actionTime
+        FROM blocked_users b
+        LEFT JOIN users u ON b.blocked_id = u.id
+        WHERE b.blocker_id = ?
+        ORDER BY b.created_at DESC
+        LIMIT 50
+      `).bind(userId).all()
+    ]);
+
+    // Consolidate all unique user IDs to fetch photos in a single query
+    const allIds = new Set<string>();
+    (receivedRes.results || []).forEach((r: any) => allIds.add(r.id));
+    (mutualRes.results || []).forEach((r: any) => allIds.add(r.id));
+    (sentLikesRes.results || []).forEach((r: any) => allIds.add(r.id));
+    (passedRes.results || []).forEach((r: any) => allIds.add(r.id));
+
+    const idList = Array.from(allIds).filter(Boolean);
+    const photoMap: Record<string, string[]> = {};
+
+    if (idList.length > 0) {
+      const chunkSize = 50;
+      for (let i = 0; i < idList.length; i += chunkSize) {
+        const chunk = idList.slice(i, i + chunkSize);
+        const placeholders = chunk.map(() => '?').join(',');
+        const { results: photos } = await c.env.DB.prepare(`
+          SELECT user_id, photo_url FROM user_photos
+          WHERE user_id IN (${placeholders})
+          ORDER BY is_primary DESC, sort_order ASC
+        `).bind(...chunk).all();
+
+        (photos || []).forEach((p: any) => {
+          if (!photoMap[p.user_id]) photoMap[p.user_id] = [];
+          if (photoMap[p.user_id].length < 2) {
+            photoMap[p.user_id].push(p.photo_url);
+          }
+        });
+      }
+    }
+
+    const mapCandidate = (row: any) => {
+      const birthYear = new Date(row.dob || '1998-01-01').getFullYear();
+      const age = new Date().getFullYear() - (birthYear || 1998);
+      return {
+        ...row,
+        age: age || 26,
+        photos: photoMap[row.id] || []
+      };
+    };
+
+    return c.json({
+      success: true,
+      received: (receivedRes.results || []).map(mapCandidate),
+      mutual: (mutualRes.results || []).map(mapCandidate),
+      sentLikes: (sentLikesRes.results || []).map((row: any) => ({
+        ...row,
+        photos: photoMap[row.id] || []
+      })),
+      passed: (passedRes.results || []).map((row: any) => ({
+        ...row,
+        photos: photoMap[row.id] || []
+      })),
+      blocked: blockedRes.results || []
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
   }
 });
 

@@ -1332,6 +1332,112 @@ class DBService {
     return this.sendMatchAction(targetUserId, action, messageText, targetProfile, isMutualMatch);
   }
 
+  // Unified Matches Hub (Instant SWR cache + Single round-trip API)
+  getCachedMatchesHub(userId?: string): {
+    received: UserProfile[];
+    mutual: UserProfile[];
+    sentLikes: any[];
+    passed: any[];
+    blocked: any[];
+  } {
+    const uid = userId || this.getCurrentUser().id;
+    const cacheKey = `serene_matches_hub_${uid}`;
+
+    // 1. Unified hub cache
+    try {
+      const saved = localStorage.getItem(cacheKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          return {
+            received: Array.isArray(parsed.received) ? parsed.received : [],
+            mutual: Array.isArray(parsed.mutual) ? parsed.mutual : [],
+            sentLikes: Array.isArray(parsed.sentLikes) ? parsed.sentLikes : [],
+            passed: Array.isArray(parsed.passed) ? parsed.passed : [],
+            blocked: Array.isArray(parsed.blocked) ? parsed.blocked : []
+          };
+        }
+      }
+    } catch {}
+
+    // 2. Fall back to individual existing caches
+    let received: UserProfile[] = [];
+    let mutual: UserProfile[] = [];
+    try {
+      const savedRec = localStorage.getItem(`serene_liked_you_${uid}`);
+      if (savedRec) received = JSON.parse(savedRec) || [];
+    } catch {}
+    try {
+      const savedMut = localStorage.getItem(`serene_mutual_matches_${uid}`);
+      if (savedMut) mutual = JSON.parse(savedMut) || [];
+    } catch {}
+
+    const sentLikes = this.getUserLikesSent(uid);
+    const passed = this.getUserPassed(uid);
+    const blocked = this.getUserBlocked(uid);
+
+    return { received, mutual, sentLikes, passed, blocked };
+  }
+
+  async fetchMatchesHub(userId?: string): Promise<{
+    received: UserProfile[];
+    mutual: UserProfile[];
+    sentLikes: any[];
+    passed: any[];
+    blocked: any[];
+  }> {
+    const uid = userId || this.getCurrentUser().id;
+    const cacheKey = `serene_matches_hub_${uid}`;
+
+    try {
+      const res = await fetch(`${API_BASE}/matches/hub?userId=${encodeURIComponent(uid)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.success) {
+          const sanitizePhotos = (list: any[]) => {
+            if (!Array.isArray(list)) return [];
+            return list.map(item => ({
+              ...item,
+              photos: Array.isArray(item.photos)
+                ? item.photos.filter((p: string) => typeof p === 'string' && (!p.startsWith('data:') || p.length < 50000) && !p.includes('photo-1534528741775-53994a69daeb'))
+                : []
+            }));
+          };
+
+          const hubData = {
+            received: sanitizePhotos(data.received || []),
+            mutual: sanitizePhotos(data.mutual || []),
+            sentLikes: sanitizePhotos(data.sentLikes || []),
+            passed: sanitizePhotos(data.passed || []),
+            blocked: data.blocked || []
+          };
+
+          // Cache unified hub
+          try {
+            localStorage.setItem(cacheKey, JSON.stringify(hubData));
+          } catch (storageErr) {
+            console.warn('Storage quota notice for matches hub:', storageErr);
+          }
+
+          // Keep individual caches synced for 100% backward compatibility
+          try {
+            localStorage.setItem(`serene_liked_you_${uid}`, JSON.stringify(hubData.received));
+            localStorage.setItem(`serene_mutual_matches_${uid}`, JSON.stringify(hubData.mutual));
+            localStorage.setItem(`serene_likes_sent_${uid}`, JSON.stringify(hubData.sentLikes));
+            localStorage.setItem(`serene_passed_${uid}`, JSON.stringify(hubData.passed));
+            localStorage.setItem(`serene_blocked_${uid}`, JSON.stringify(hubData.blocked));
+          } catch {}
+
+          return hubData;
+        }
+      }
+    } catch (err) {
+      console.warn('Remote matches hub fetch notice, attempting cache fallback:', err);
+    }
+
+    return this.getCachedMatchesHub(uid);
+  }
+
   async fetchLikedYouCandidates(): Promise<UserProfile[]> {
     const user = this.getCurrentUser();
     const localKey = `serene_liked_you_${user.id}`;

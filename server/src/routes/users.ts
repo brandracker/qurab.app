@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import type { AppContext } from '../types';
-import { calculateDistanceKm, getBoundingBox } from '../utils/geo';
+import { calculateDistanceKm, getBoundingBox, getCityCentroid } from '../utils/geo';
 
 export const usersRouter = new Hono<AppContext>();
 
@@ -765,15 +765,22 @@ profilesRouter.get('/discover', async (c) => {
     let viewerLon: number | null = (queryLon !== null && !isNaN(queryLon)) ? queryLon : null;
 
     if (currentUserId) {
-      const userRow: any = await c.env.DB.prepare(`SELECT gender, latitude, longitude FROM users WHERE id = ?`).bind(currentUserId).first();
+      const userRow: any = await c.env.DB.prepare(`SELECT gender, latitude, longitude, city, location FROM users WHERE id = ?`).bind(currentUserId).first();
       if (!targetGender && userRow?.gender) {
         targetGender = userRow.gender.toLowerCase() === 'female' ? 'male' : (userRow.gender.toLowerCase() === 'male' ? 'female' : null);
       }
-      if (viewerLat === null && typeof userRow?.latitude === 'number') {
+      if (viewerLat === null && typeof userRow?.latitude === 'number' && userRow.latitude !== 0) {
         viewerLat = userRow.latitude;
       }
-      if (viewerLon === null && typeof userRow?.longitude === 'number') {
+      if (viewerLon === null && typeof userRow?.longitude === 'number' && userRow.longitude !== 0) {
         viewerLon = userRow.longitude;
+      }
+      if (viewerLat === null || viewerLon === null) {
+        const viewerCentroid = getCityCentroid(userRow?.city || userRow?.location);
+        if (viewerCentroid) {
+          viewerLat = viewerCentroid.lat;
+          viewerLon = viewerCentroid.lon;
+        }
       }
       try {
         await c.env.DB.prepare("UPDATE users SET last_active_at = datetime('now') WHERE id = ?").bind(currentUserId).run();
@@ -795,6 +802,40 @@ profilesRouter.get('/discover', async (c) => {
       : '';
     const genderFilter = targetGender ? `AND LOWER(u.gender) = ?` : '';
     const geoFilter = box ? `AND u.latitude BETWEEN ? AND ? AND u.longitude BETWEEN ? AND ?` : '';
+
+    // Task 04: Filters End-to-End (Sects, Practice Levels, City, Age Range)
+    const sectsParam = c.req.query('sects') || c.req.query('sect');
+    const practiceLevelsParam = c.req.query('practiceLevels') || c.req.query('practiceLevel');
+    const cityParam = c.req.query('city');
+    const minAgeParam = c.req.query('minAge') ? parseInt(c.req.query('minAge')!, 10) : null;
+    const maxAgeParam = c.req.query('maxAge') ? parseInt(c.req.query('maxAge')!, 10) : null;
+
+    // Task 03: Fast Batching (Limit & Offset)
+    const limitParam = c.req.query('limit') ? parseInt(c.req.query('limit')!, 10) : 25;
+    const offsetParam = c.req.query('offset') ? parseInt(c.req.query('offset')!, 10) : 0;
+    const limit = isNaN(limitParam) ? 25 : Math.max(1, Math.min(limitParam, 50));
+    const offset = isNaN(offsetParam) ? 0 : Math.max(0, offsetParam);
+    const fetchLimit = maxDistanceKm ? Math.min(limit * 2, 60) : limit;
+
+    const sectList = sectsParam ? sectsParam.split(',').map(s => s.trim().toLowerCase()).filter(Boolean) : [];
+    const sectFilter = sectList.length > 0 ? `AND LOWER(rp.sect) IN (${sectList.map(() => '?').join(',')})` : '';
+
+    const practiceList = practiceLevelsParam ? practiceLevelsParam.split(',').map(p => p.trim().toLowerCase()).filter(Boolean) : [];
+    const practiceFilter = practiceList.length > 0 ? `AND LOWER(rp.practice_level) IN (${practiceList.map(() => '?').join(',')})` : '';
+
+    const cityFilter = cityParam && cityParam.trim() ? `AND (LOWER(u.city) LIKE ? OR LOWER(u.location) LIKE ?)` : '';
+
+    let ageFilter = '';
+    const currentYear = new Date().getFullYear();
+    const ageParams: number[] = [];
+    if (minAgeParam && !isNaN(minAgeParam) && minAgeParam >= 18) {
+      ageFilter += ` AND CAST(substr(u.dob, 1, 4) AS INTEGER) <= ?`;
+      ageParams.push(currentYear - minAgeParam);
+    }
+    if (maxAgeParam && !isNaN(maxAgeParam) && maxAgeParam <= 80) {
+      ageFilter += ` AND CAST(substr(u.dob, 1, 4) AS INTEGER) >= ?`;
+      ageParams.push(currentYear - maxAgeParam);
+    }
 
     let seedProfilesEnabled = true;
     try {
@@ -847,8 +888,13 @@ profilesRouter.get('/discover', async (c) => {
         ${blockFilter}
         ${actionedFilter}
         ${genderFilter}
+        ${sectFilter}
+        ${practiceFilter}
+        ${cityFilter}
+        ${ageFilter}
       ${geoFilter}
       ORDER BY (CASE WHEN uw.spotlight_expires_at IS NOT NULL AND datetime(uw.spotlight_expires_at) > datetime('now') THEN 1 ELSE 0 END) DESC, (CASE WHEN u.voice_greeting_url IS NOT NULL AND u.voice_greeting_url != '' THEN 1 ELSE 0 END) DESC, u.is_vip DESC, u.created_at DESC
+      LIMIT ? OFFSET ?
     `;
 
     const bindParams: any[] = [currentUserId];
@@ -859,9 +905,17 @@ profilesRouter.get('/discover', async (c) => {
       bindParams.push(currentUserId);
     }
     if (targetGender) bindParams.push(targetGender);
+    if (sectList.length > 0) bindParams.push(...sectList);
+    if (practiceList.length > 0) bindParams.push(...practiceList);
+    if (cityFilter) {
+      const term = `%${cityParam!.trim().toLowerCase()}%`;
+      bindParams.push(term, term);
+    }
+    if (ageParams.length > 0) bindParams.push(...ageParams);
     if (box) {
       bindParams.push(box.minLat, box.maxLat, box.minLon, box.maxLon);
     }
+    bindParams.push(fetchLimit, offset);
 
     const stmt = c.env.DB.prepare(query).bind(...bindParams);
     const { results } = await stmt.all();
@@ -898,14 +952,24 @@ profilesRouter.get('/discover', async (c) => {
       const age = new Date().getFullYear() - (birthYear || 1998);
       const userPhotos = photoMap[row.id] || [];
 
+      let rowLat = typeof row.latitude === 'number' && row.latitude !== 0 ? row.latitude : null;
+      let rowLon = typeof row.longitude === 'number' && row.longitude !== 0 ? row.longitude : null;
+      if (rowLat === null || rowLon === null) {
+        const candidateCentroid = getCityCentroid(row.city || row.location);
+        if (candidateCentroid) {
+          rowLat = candidateCentroid.lat;
+          rowLon = candidateCentroid.lon;
+        }
+      }
+
       let distanceKm: number | null = null;
       if (
         viewerLat !== null && 
         viewerLon !== null && 
-        typeof row.latitude === 'number' && 
-        typeof row.longitude === 'number'
+        rowLat !== null && 
+        rowLon !== null
       ) {
-        distanceKm = calculateDistanceKm(viewerLat, viewerLon, row.latitude, row.longitude);
+        distanceKm = calculateDistanceKm(viewerLat, viewerLon, rowLat, rowLon);
       }
 
       // If maxDistance filter was specified, filter exact circular radius
@@ -923,8 +987,8 @@ profilesRouter.get('/discover', async (c) => {
         location: row.location || 'Global',
         city: row.city,
         country: row.country,
-        latitude: row.latitude,
-        longitude: row.longitude,
+        latitude: rowLat,
+        longitude: rowLon,
         distanceKm,
         profession: row.profession || 'Professional',
         education: row.education || 'Graduate',
@@ -997,7 +1061,8 @@ profilesRouter.get('/discover', async (c) => {
       return 0;
     });
 
-    return c.json({ success: true, count: formatted.length, profiles: formatted });
+    const finalProfiles = formatted.slice(0, limit);
+    return c.json({ success: true, count: finalProfiles.length, profiles: finalProfiles });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   }

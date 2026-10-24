@@ -27,12 +27,14 @@ export const ADMOB_CONFIG: AdMobConfig = {
 interface AdMobPluginInterface {
   showRewardedAd(options: { userId: string; rewardType: string }): Promise<{ rewarded: boolean; userId: string; rewardType: string; amount?: number }>;
   isAdReady(): Promise<{ ready: boolean }>;
+  prepareRewardedAd(): Promise<{ ready: boolean; buffered: boolean }>;
 }
 
 const AdMobNative = registerPlugin<AdMobPluginInterface>('AdMobPlugin');
 
 class AdMobService {
   private config: AdMobConfig = ADMOB_CONFIG;
+  private isPreparing: boolean = false;
 
   public getConfig(): AdMobConfig {
     return this.config;
@@ -43,6 +45,28 @@ class AdMobService {
    */
   public isNativeBridgeAvailable(): boolean {
     return Capacitor.isNativePlatform();
+  }
+
+  /**
+   * Pre-buffer Google AdMob rewarded ad just-in-time when user intent is detected
+   * (e.g. low remaining likes <= 3, opening upgrade/reward modal, 0 direct salams remaining).
+   * This maximizes show rate (60%-85%+) by preventing cold wait times without wasting requests.
+   */
+  public async prepareRewardedAd(): Promise<boolean> {
+    if (!Capacitor.isNativePlatform()) return false;
+    if (this.isPreparing) return false;
+    this.isPreparing = true;
+    try {
+      if (typeof AdMobNative.prepareRewardedAd === 'function') {
+        const res = await AdMobNative.prepareRewardedAd();
+        return Boolean(res?.ready);
+      }
+      return false;
+    } catch {
+      return false;
+    } finally {
+      this.isPreparing = false;
+    }
   }
 
   /**
@@ -61,13 +85,16 @@ class AdMobService {
   /**
    * Show native Google AdMob Fullscreen Rewarded Video Ad
    */
-  public async showRewardedAd(userId: string, rewardType: 'likes' | 'salam' | 'messages' | 'photo_unblur' = 'likes'): Promise<boolean> {
+  public async showRewardedAd(userId: string, rewardType: 'likes' | 'salam' | 'messages' | 'photo_unblur' | 'undo' = 'likes'): Promise<boolean> {
     if (!Capacitor.isNativePlatform()) return false;
 
     try {
       const res = await AdMobNative.showRewardedAd({ userId, rewardType });
       if (res?.rewarded) {
-        await this.claimReward(userId, rewardType);
+        // Fire-and-forget background sync to Cloudflare D1 so UI is not blocked
+        this.claimReward(userId, rewardType).catch(err => {
+          console.warn('Background reward claim notice:', err);
+        });
         return true;
       }
       return false;
@@ -80,7 +107,7 @@ class AdMobService {
   /**
    * Claim reward from Cloudflare D1 Backend
    */
-  public async claimReward(userId: string, rewardType: 'likes' | 'salam' | 'messages' | 'photo_unblur' = 'likes'): Promise<boolean> {
+  public async claimReward(userId: string, rewardType: 'likes' | 'salam' | 'messages' | 'photo_unblur' | 'undo' = 'likes'): Promise<boolean> {
     try {
       const res = await fetch(`${API_BASE}/wallet/reward-ad`, {
         method: 'POST',

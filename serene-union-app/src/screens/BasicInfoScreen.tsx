@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Country, State, type ICountry, type IState } from 'country-state-city';
 import { reverseGeocodeOffline } from '../utils/offlineGeo';
+import { detectDeviceLocation } from '../utils/geolocationHelper';
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
 import { dbService } from '../services/dbService';
@@ -363,6 +364,54 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
   const [locationStatus, setLocationStatus] = useState<string | null>(
     data?.latitude ? '📍 Accurate GPS coordinates active' : null
   );
+
+  // Task 08: Geolocation Silent Auto-Detect & Caching
+  useEffect(() => {
+    if (!coords.latitude && !data?.city && !data?.location) {
+      try {
+        const cached = localStorage.getItem('qurb_cached_location');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed?.latitude && parsed?.longitude) {
+            setCoords({ latitude: parsed.latitude, longitude: parsed.longitude });
+            if (parsed.countryCode) setSelectedCountryCode(parsed.countryCode);
+            if (parsed.stateCode) {
+              setSelectedStateCode(parsed.stateCode);
+              setIsCustomState(false);
+            }
+            if (parsed.cityName) {
+              setSelectedCityName(parsed.cityName);
+              setIsCustomCity(false);
+              setCustomCityText('');
+            }
+            setLocationStatus(`📍 Auto-detected: ${parsed.cityName || ''}, ${parsed.countryName || ''}`);
+            return;
+          }
+        }
+      } catch {}
+
+      // Silent non-blocking background detection
+      detectDeviceLocation().then(res => {
+        if (res?.latitude && res?.longitude) {
+          setCoords({ latitude: res.latitude, longitude: res.longitude });
+          if (res.countryCode) setSelectedCountryCode(res.countryCode);
+          if (res.stateCode) {
+            setSelectedStateCode(res.stateCode);
+            setIsCustomState(false);
+          }
+          if (res.cityName) {
+            setSelectedCityName(res.cityName);
+            setIsCustomCity(false);
+            setCustomCityText('');
+          }
+          try {
+            localStorage.setItem('qurb_cached_location', JSON.stringify(res));
+          } catch {}
+          setLocationStatus(`📍 Auto-detected: ${res.cityName || ''}, ${res.countryName || ''}`);
+        }
+      }).catch(() => {});
+    }
+  }, []);
 
   const handleDetectLocation = async () => {
     setIsLocating(true);

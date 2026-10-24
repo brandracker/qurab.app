@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Sparkles,
+  Database,
   Power,
   Copy,
   Check,
@@ -24,7 +24,7 @@ import {
   X,
   Maximize2,
   Bot,
-  Zap,
+  Send,
   Loader2
 } from 'lucide-react';
 import { API_BASE } from '../../../services/dbService';
@@ -123,7 +123,7 @@ export const SeedProfilesTab: React.FC<SeedProfilesTabProps> = ({ adminToken }) 
         setPendingChatsCount(data.remainingCount ?? 0);
         showToast(
           replied > 0
-            ? `⚡ Auto-replied to ${replied} pending chat${replied === 1 ? '' : 's'} with Gemini AI!`
+            ? `Auto-replied to ${replied} pending chat${replied === 1 ? '' : 's'} with Gemini AI!`
             : 'All seed chats & matches are already up-to-date!'
         );
         fetchSeedProfiles();
@@ -333,7 +333,7 @@ export const SeedProfilesTab: React.FC<SeedProfilesTabProps> = ({ adminToken }) 
           <div className="space-y-2">
             <div className="flex items-center space-x-3">
               <span className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-                <Sparkles className="w-5 h-5" />
+                <Database className="w-5 h-5" />
               </span>
               <h2 className="text-2xl font-bold text-white tracking-tight">
                 Pakistani Female Seed Profiles
@@ -471,7 +471,7 @@ export const SeedProfilesTab: React.FC<SeedProfilesTabProps> = ({ adminToken }) 
                   </>
                 ) : (
                   <>
-                    <Zap className="w-4 h-4" />
+                    <Send className="w-4 h-4" />
                     <span>Reply All ({pendingChatsCount})</span>
                   </>
                 )}

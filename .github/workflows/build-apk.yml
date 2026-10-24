@@ -38,7 +38,7 @@ jobs:
         working-directory: serene-union-app
         run: npm install
 
-      - name: Verify Frontend Test Suite (170 Tests)
+      - name: Verify Frontend Test Suite (201 Tests)
         working-directory: serene-union-app
         run: npm test
 
@@ -133,16 +133,18 @@ jobs:
         continue-on-error: true
         with:
           fail_on_unmatched_files: false
-          tag_name: v1.0.18
-          name: "Qurb v1.0.18 (User AAB, Client APK & Admin APK)"
+          tag_name: v1.0.19
+          name: "Qurb v1.0.19 (Release AAB, Client APK & Admin APK)"
           body: |
-            ### Qurb Matrimony v1.0.18 (Build 19)
-            - **Voice Messages**: High-fidelity Opus/WebM voice recording with waveform player.
-            - **Auto-Compressed Attachments**: Client-side canvas compression under 250KB for fast, zero-server-load uploads.
-            - **1-Time Show (View Once)**: Privacy and modesty shield for photos & videos with automatic expiration.
-            - **Custom Video Player**: Full play/pause controls, scrubbing bar, volume mute toggle, and full-screen view.
-            - **app-release.aab**: Production Signed Bundle ready for Google Play Console upload.
-            - **app-release.apk**: Production Signed APK for direct Android install.
+            ### Qurb Matrimony v1.0.19 (Build 20)
+            - **Optimistic Like Speed**: 0ms instant card transition without UI network delay.
+            - **Undo / Rewind Action**: Rewind previously swiped profiles (unlimited for Barakah VIP, 1 rewarded ad for standard users).
+            - **AdMob Rewarded Ad Cooldown Buffer**: 15s protection buffer preventing duplicate loop glitches and improving impression rate.
+            - **Pakistan City Centroids**: Dynamic distance calculation with GPS centroids for major Pakistani cities.
+            - **Foreground Push Suppression**: Native system banner suppression when active, replaced by soft in-app notifications.
+            - **Halal Initials Monogram Avatar**: Fallback for missing/404 profile photos.
+            - **app-release.aab**: Production Signed Android App Bundle (.aab) ready for Google Play Console upload.
+            - **app-release.apk**: Production Signed APK for direct device installation.
             - **Qurb-Admin.apk**: Standalone APK for Qurb Executive Admin Portal.
           files: |
             serene-union-app/android/app/build/outputs/apk/release/app-release.apk

@@ -333,7 +333,7 @@ authRouter.post('/google-login', async (c) => {
 // 6. Firebase Email Auth User Sync
 authRouter.post('/email-sync', async (c) => {
   try {
-    const { email, fullName, gender, firebaseUid, isSignUp } = await c.req.json();
+    const { email, fullName, gender, firebaseUid, isSignUp, photoUrl } = await c.req.json();
     if (!email) {
       return c.json({ success: false, error: 'Email is required' }, 400);
     }
@@ -379,8 +379,24 @@ authRouter.post('/email-sync', async (c) => {
       };
     }
 
+    // Direct Profile Picture auto-save from Facebook/Google
+    if (photoUrl && typeof photoUrl === 'string' && photoUrl.trim().length > 0) {
+      const cleanPhoto = photoUrl.trim();
+      const existingPhoto: any = await c.env.DB.prepare(`
+        SELECT id FROM user_photos WHERE user_id = ? LIMIT 1
+      `).bind(user.id).first();
+
+      if (!existingPhoto) {
+        const photoId = `p_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+        await c.env.DB.prepare(`
+          INSERT INTO user_photos (id, user_id, photo_url, is_primary, sort_order)
+          VALUES (?, ?, ?, 1, 1)
+        `).bind(photoId, user.id, cleanPhoto).run();
+      }
+    }
+
     const { results: photos } = await c.env.DB.prepare(`
-      SELECT photo_url FROM user_photos WHERE user_id = ? ORDER BY sort_order ASC
+      SELECT photo_url FROM user_photos WHERE user_id = ? ORDER BY is_primary DESC, sort_order ASC
     `).bind(user.id).all();
 
     const sessionToken = generateSessionToken(user.id);

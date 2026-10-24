@@ -19,6 +19,7 @@ import {
   X
 } from 'lucide-react';
 import { dbService } from '../services/dbService';
+import { walletService } from '../services/walletService';
 import { MembershipUpgradeModal } from './MembershipUpgradeModal';
 import { RewardedAdModal } from './RewardedAdModal';
 import type { UserProfile } from '../types';
@@ -57,9 +58,9 @@ export const SettingsPrivacy: React.FC<Props> = ({
     return Boolean(localStorage.getItem(`serene_vip_${currentUser.id}`) || currentUser.isVip);
   });
 
-  const getTodayLikeKey = () => `serene_likes_left_${currentUser.id}_${new Date().toISOString().slice(0, 10)}`;
+  const getLikeKey = () => `serene_likes_left_${currentUser.id}`;
   const [likesRemaining, setLikesRemaining] = useState<number>(() => {
-    const saved = localStorage.getItem(getTodayLikeKey());
+    const saved = localStorage.getItem(getLikeKey());
     return saved !== null ? parseInt(saved, 10) : 50;
   });
 
@@ -85,7 +86,7 @@ export const SettingsPrivacy: React.FC<Props> = ({
     window.addEventListener('serene_vip_updated', handleVipUpdate);
 
     const handleActivity = () => {
-      const saved = localStorage.getItem(getTodayLikeKey());
+      const saved = localStorage.getItem(walletService.getTodayLikeKey(currentUser.id));
       setLikesRemaining(saved !== null ? parseInt(saved, 10) : 50);
     };
     const handleLikes = (e: any) => {
@@ -541,7 +542,7 @@ export const SettingsPrivacy: React.FC<Props> = ({
               </button>
             </div>
             <div className="text-[10px] text-muted text-center pt-0.5">
-              Qurb Matrimony · Version 1.0.0 · <a href="https://qurb.app" target="_blank" rel="noreferrer" className="underline hover:text-primary">qurb.app</a>
+              Qurb Matrimony · Version 1.0.4 · <a href="https://qurb.app" target="_blank" rel="noreferrer" className="underline hover:text-primary">qurb.app</a>
             </div>
           </div>
 
@@ -582,7 +583,7 @@ export const SettingsPrivacy: React.FC<Props> = ({
           onRewardClaimed={() => {
             const nextLikes = likesRemaining + 10;
             setLikesRemaining(nextLikes);
-            localStorage.setItem(getTodayLikeKey(), nextLikes.toString());
+            localStorage.setItem(walletService.getTodayLikeKey(currentUser.id), nextLikes.toString());
             window.dispatchEvent(new CustomEvent('serene_activity_updated'));
           }}
         />

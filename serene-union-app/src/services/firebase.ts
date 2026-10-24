@@ -5,6 +5,7 @@ import {
   signInWithPhoneNumber, 
   type ConfirmationResult,
   GoogleAuthProvider,
+  FacebookAuthProvider,
   signInWithPopup,
   signInWithCredential,
   type UserCredential,
@@ -27,6 +28,7 @@ export const firebaseConfig = {
 };
 
 export const GOOGLE_CLIENT_ID = "865198689748-utp5e8o5g1445ja1hvnovot1l888vuhg.apps.googleusercontent.com";
+export const FACEBOOK_APP_ID = "1592317222033848";
 
 export const VAPID_KEY = "BGHcrtyFtJaBUbmCWaE7VMxekE2ucC8q_rnFlN7jAU7GuxEScNxK8B8LiqLTeu5KkwjLZqpjdcO_mpTU7Pbdt5c";
 
@@ -48,6 +50,17 @@ export const signInWithGoogleIdToken = async (idToken: string): Promise<UserCred
 export const signInWithGoogle = async (): Promise<UserCredential> => {
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
+  return await signInWithPopup(firebaseAuth, provider);
+};
+
+/**
+ * Sign in with Facebook using Firebase Auth Popup
+ */
+export const signInWithFacebook = async (): Promise<UserCredential> => {
+  const provider = new FacebookAuthProvider();
+  provider.addScope('email');
+  provider.addScope('public_profile');
+  provider.setCustomParameters({ display: 'popup' });
   return await signInWithPopup(firebaseAuth, provider);
 };
 

@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { UserProfile, FilterState } from '../types';
 import { dbService, API_BASE } from '../services/dbService';
+import { admobService } from '../services/admobService';
 import { notificationService } from '../services/notificationService';
 import { facebookEventsService } from '../services/facebookEventsService';
+import { ratingService } from '../services/ratingService';
 
 interface UseDiscoverFeedOptions {
   onOpenChat?: (convId: string) => void;
@@ -17,12 +19,12 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
     return Boolean(localStorage.getItem(`serene_vip_${currentUser.id}`) || currentUser.isVip);
   });
 
-  const getTodayLikeKey = useCallback(() => {
-    return `serene_likes_left_${currentUser.id}_${new Date().toISOString().slice(0, 10)}`;
+  const getLikeKey = useCallback(() => {
+    return `serene_likes_left_${currentUser.id}`;
   }, [currentUser.id]);
 
   const [likesRemaining, setLikesRemaining] = useState<number>(() => {
-    const saved = localStorage.getItem(getTodayLikeKey());
+    const saved = localStorage.getItem(getLikeKey());
     return saved !== null ? parseInt(saved, 10) : 50;
   });
 
@@ -31,17 +33,26 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
     return saved !== null ? parseInt(saved, 10) : 2;
   });
 
-  const [filters, setFilters] = useState<FilterState>({
-    minAge: 18,
-    maxAge: 65,
-    maxDistance: 0,
-    sects: [],
-    practiceLevels: [],
-    marriageTimelines: [],
-    languages: []
+  const [filters, setFilters] = useState<FilterState>(() => {
+    try {
+      const saved = localStorage.getItem('serene_filters_v2');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return {
+      minAge: 18,
+      maxAge: 65,
+      maxDistance: 0,
+      sects: [],
+      practiceLevels: [],
+      marriageTimelines: [],
+      languages: []
+    };
   });
 
-  const [profiles, setProfiles] = useState<UserProfile[]>(() => dbService.getDiscoverFeed(filters));
+  const [profiles, setProfiles] = useState<UserProfile[]>(() => {
+    const cached = dbService.getCachedDiscoverProfiles();
+    return dbService.getDiscoverFeed(filters, cached.length > 0 ? cached : undefined);
+  });
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -54,8 +65,10 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
   const [showSalamRefillModal, setShowSalamRefillModal] = useState<boolean>(false);
   const [salamModalProfile, setSalamModalProfile] = useState<UserProfile | null>(null);
   const [showRewardedAdModal, setShowRewardedAdModal] = useState<boolean>(false);
-  const [adRewardType, setAdRewardType] = useState<'likes' | 'salam'>('likes');
+  const [adRewardType, setAdRewardType] = useState<'likes' | 'salam' | 'undo'>('likes');
+  const [history, setHistory] = useState<UserProfile[]>([]);
   const [showVipModal, setShowVipModal] = useState<boolean>(false);
+  const [showRatingModal, setShowRatingModal] = useState<boolean>(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState<boolean>(false);
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState<boolean>(() => notificationService.hasUnread());
 
@@ -99,8 +112,12 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
         if (isMounted) setIsLoading(false);
       });
 
-    dbService.fetchLikesRemaining(currentUser.id).then(({ directSalams: s, isVip: v }) => {
+    dbService.fetchLikesRemaining(currentUser.id).then(({ likesRemaining: l, directSalams: s, isVip: v }) => {
       if (!isMounted) return;
+      if (typeof l === 'number') {
+        setLikesRemaining(l);
+        localStorage.setItem(getLikeKey(), l.toString());
+      }
       if (typeof s === 'number') setDirectSalams(s);
       if (typeof v === 'boolean') {
         setIsVip(v);
@@ -131,8 +148,18 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
     };
   }, []);
 
+  // Smart Just-In-Time Ad Preloading: Buffer rewarded video only when user is near quota exhaustion
+  useEffect(() => {
+    if (!isVip && (likesRemaining <= 3 || directSalams <= 0)) {
+      admobService.prepareRewardedAd().catch(() => {});
+    }
+  }, [likesRemaining, directSalams, isVip]);
+
   const handleApplyFilters = useCallback((newFilters: FilterState) => {
     setFilters(newFilters);
+    try {
+      localStorage.setItem('serene_filters_v2', JSON.stringify(newFilters));
+    } catch {}
     const searchSummary = [
       newFilters.practiceLevels?.length ? newFilters.practiceLevels.join('/') : '',
       newFilters.sects?.length ? newFilters.sects.join('/') : '',
@@ -150,53 +177,67 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
     });
   }, []);
 
-  const handleLike = useCallback(async (profile: UserProfile, e?: React.MouseEvent | React.TouchEvent) => {
+  const handleLike = useCallback((profile: UserProfile, e?: React.MouseEvent | React.TouchEvent) => {
     if (e) e.stopPropagation();
 
     // Check daily like limit for non-VIP users
     if (!isVip && likesRemaining <= 0) {
+      admobService.prepareRewardedAd().catch(() => {});
       setShowLikesLimitModal(true);
       return;
     }
 
+    // 0ms OPTIMISTIC UI: Instantly decrement like count locally
     if (!isVip) {
-      const res = await dbService.consumeDailyLike(currentUser.id);
-      setLikesRemaining(res.likesRemaining);
-      if (res.likesRemaining === 0) {
+      const nextLikes = Math.max(0, likesRemaining - 1);
+      setLikesRemaining(nextLikes);
+      if (nextLikes <= 3) {
+        admobService.prepareRewardedAd().catch(() => {});
+      }
+      if (nextLikes === 0) {
         setTimeout(() => setShowLikesLimitModal(true), 600);
       }
+      dbService.consumeDailyLike(currentUser.id).catch(err => {
+        console.warn('Silent consumeDailyLike background error:', err);
+      });
     }
 
     if (options?.onLikeProfile) {
       options.onLikeProfile(profile);
     }
 
-    // Immediately pop candidate from queue
+    // Save to undo history before removing
+    setHistory(prev => [profile, ...prev]);
+
+    // 0ms OPTIMISTIC UI: Immediately pop candidate from queue (0ms instant card pop)
     setProfiles(prev => prev.filter(p => p.id !== profile.id));
     setCurrentIndex(curr => Math.max(0, curr));
 
-    const result = await dbService.sendMatchAction(profile.id, 'liked', undefined, profile);
-    if (result.isMutual) {
-      setMatchedProfile(profile);
-      notificationService.addNotification({
-        type: 'match',
-        title: `Connected with ${profile.fullName.split(' ')[0]} 🎉`,
-        message: `You and ${profile.fullName} both expressed mutual interest. Chat is now unlocked!`,
-        actionLabel: 'Start Chat',
-        targetId: result.conversationId,
-        avatarUrl: profile.photos?.[0]
-      });
-    } else {
-      setToastMessage(`Interest expressed to ${profile.fullName.split(' ')[0]}. You will be notified when they connect!`);
-      setTimeout(() => setToastMessage(null), 3500);
-      notificationService.addNotification({
-        type: 'like',
-        title: 'Interest Expressed',
-        message: `You expressed matrimonial interest in ${profile.fullName}'s biodata.`,
-        actionLabel: 'View in Matches',
-        avatarUrl: profile.photos?.[0]
-      });
-    }
+    // Record positive action for smart in-app rating prompt
+    const isRatingMilestone = ratingService.recordPositiveAction();
+
+    // Async background matchmaking check (zero UI freeze)
+    dbService.sendMatchAction(profile.id, 'liked', undefined, profile).then(result => {
+      if (result.isMutual) {
+        setMatchedProfile(profile);
+        notificationService.addNotification({
+          type: 'match',
+          title: `Connected with ${profile.fullName.split(' ')[0]} 🎉`,
+          message: `You and ${profile.fullName} both expressed mutual interest. Chat is now unlocked!`,
+          actionLabel: 'Start Chat',
+          targetId: result.conversationId,
+          avatarUrl: profile.photos?.[0]
+        });
+      } else {
+        // Task 02: Silent Like (No annoying toast banner)
+        // Task 07: No outgoing self-notification clutter
+        if (isRatingMilestone) {
+          setTimeout(() => setShowRatingModal(true), 800);
+        }
+      }
+    }).catch(err => {
+      console.warn('Match action background error:', err);
+    });
   }, [isVip, likesRemaining, currentUser.id, options]);
 
   const handlePass = useCallback((profileId: string, e?: React.MouseEvent | React.TouchEvent) => {
@@ -207,10 +248,34 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
       }
     }
     const passTarget = profiles.find(p => p.id === profileId);
+    if (passTarget) {
+      setHistory(prev => [passTarget, ...prev]);
+    }
     dbService.sendMatchAction(profileId, 'passed', undefined, passTarget);
     setProfiles(prev => prev.filter(p => p.id !== profileId));
     setCurrentIndex(curr => Math.max(0, curr));
   }, [profiles]);
+
+  const handleUndo = useCallback(() => {
+    if (history.length === 0) return;
+    const lastProfile = history[0];
+    if (isVip) {
+      setProfiles(prev => [lastProfile, ...prev]);
+      setHistory(prev => prev.slice(1));
+      return;
+    }
+    admobService.prepareRewardedAd().catch(() => {});
+    setAdRewardType('undo');
+    setShowRewardedAdModal(true);
+  }, [history, isVip]);
+
+  const handleClaimAdUndo = useCallback(() => {
+    if (history.length === 0) return;
+    const lastProfile = history[0];
+    setProfiles(prev => [lastProfile, ...prev]);
+    setHistory(prev => prev.slice(1));
+    setShowRewardedAdModal(false);
+  }, [history]);
 
   const handleDirectSalam = useCallback(async (profile: UserProfile, e?: React.MouseEvent | React.TouchEvent) => {
     if (e) {
@@ -225,6 +290,7 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
     }
 
     if (directSalams <= 0) {
+      admobService.prepareRewardedAd().catch(() => {});
       setShowSalamRefillModal(true);
       return;
     }
@@ -250,7 +316,7 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
       avatarUrl: target.photos?.[0]
     });
 
-    setToastMessage(`Direct Salam sent to ${target.fullName.split(' ')[0]}! ✨`);
+    setToastMessage(`Direct Salam sent to ${target.fullName.split(' ')[0]}!`);
     setTimeout(() => setToastMessage(null), 3500);
 
     // Advance queue by removing candidate
@@ -269,21 +335,31 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
   const handleClaimAdLikes = useCallback(async () => {
     const nextLikes = likesRemaining + 10;
     setLikesRemaining(nextLikes);
-    localStorage.setItem(getTodayLikeKey(), nextLikes.toString());
+    localStorage.setItem(getLikeKey(), nextLikes.toString());
     setToastMessage('+10 Extra Discover Likes added! 🎉');
     setTimeout(() => setToastMessage(null), 3500);
 
     try {
-      await fetch(`${API_BASE}/wallet/reward-ad`, {
+      const res = await fetch(`${API_BASE}/wallet/reward-ad`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: currentUser.id, rewardType: 'likes' })
       });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && typeof data.likesRemaining === 'number') {
+          setLikesRemaining(data.likesRemaining);
+          localStorage.setItem(getLikeKey(), data.likesRemaining.toString());
+        }
+      }
     } catch {}
-  }, [likesRemaining, getTodayLikeKey, currentUser.id]);
+  }, [likesRemaining, getLikeKey, currentUser.id]);
 
   const handleResetFilters = useCallback(() => {
     setSearchQuery('');
+    try {
+      localStorage.removeItem('serene_filters_v2');
+    } catch {}
     dbService.resetPassedProfiles(currentUser.id);
     handleApplyFilters({
       minAge: 18,
@@ -331,6 +407,8 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
     setAdRewardType,
     showVipModal,
     setShowVipModal,
+    showRatingModal,
+    setShowRatingModal,
     showNotificationsModal,
     setShowNotificationsModal,
     hasUnreadNotifications,
@@ -339,6 +417,9 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
     handleApplyFilters,
     handleLike,
     handlePass,
+    handleUndo,
+    handleClaimAdUndo,
+    history,
     handleDirectSalam,
     handleConfirmDirectSalam,
     handleCloseDirectSalam,

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Search, 
+  RotateCcw,
   SlidersHorizontal, 
   Bell,
   CheckCircle2, 
@@ -41,6 +41,8 @@ import { NotificationsScreen } from '../screens/NotificationsScreen';
 import { CountryFlag } from '../utils/countryFlags';
 import { useDiscoverFeed } from '../hooks/useDiscoverFeed';
 import { DirectSalamModal } from './DirectSalamModal';
+import { RatingModal } from './RatingModal';
+import { ratingService } from '../services/ratingService';
 import { dbService } from '../services/dbService';
 
 interface Props {
@@ -72,8 +74,6 @@ export const DiscoverFeed: React.FC<Props> = ({
     directSalams,
     setDirectSalams,
     filters,
-    searchQuery,
-    setSearchQuery,
     isLoading,
     profiles,
     currentProfile,
@@ -96,6 +96,8 @@ export const DiscoverFeed: React.FC<Props> = ({
     setAdRewardType,
     showVipModal,
     setShowVipModal,
+    showRatingModal,
+    setShowRatingModal,
     showNotificationsModal,
     setShowNotificationsModal,
     hasUnreadNotifications,
@@ -103,12 +105,16 @@ export const DiscoverFeed: React.FC<Props> = ({
     handleApplyFilters,
     handleLike,
     handlePass,
+    handleUndo,
+    handleClaimAdUndo,
+    history,
     handleDirectSalam,
     handleClaimAdLikes,
     handleResetFilters
   } = useDiscoverFeed({ onOpenChat, onLikeProfile, onDirectSalam });
 
   const [currentPhotoIdx, setCurrentPhotoIdx] = useState<number>(0);
+  const [photoError, setPhotoError] = useState<boolean>(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<CardTab>('deen');
   const [selectedProfile, setSelectedProfile] = useState<UserProfile | null>(null);
@@ -155,9 +161,10 @@ export const DiscoverFeed: React.FC<Props> = ({
     };
   }, []);
 
-  // Reset photo index and stop voice on profile change
+  // Reset photo index, photo error, and stop voice on profile change
   useEffect(() => {
     setCurrentPhotoIdx(0);
+    setPhotoError(false);
     setIsDrawerOpen(false);
     stopVoice();
     if (currentProfile && onSelectProfile) {
@@ -225,26 +232,30 @@ export const DiscoverFeed: React.FC<Props> = ({
       onTouchEnd={handleTouchEnd}
     >
       {/* Floating Frosted Glass Header: Full-bleed edge-to-edge transparent overlay */}
-      <header className="w-full absolute top-0 inset-x-0 z-40 bg-gradient-to-b from-black/85 via-black/40 to-transparent px-3.5 pt-3 pb-6 flex items-center gap-2">
-        {/* Left: Clean Frosted Search Input */}
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/70 w-3.5 h-3.5" />
-          <input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-white/20 backdrop-blur-md border border-white/25 rounded-full py-1.5 pl-8 pr-7 text-xs text-white placeholder:text-white/70 focus:bg-black/60 focus:border-white/50 outline-none transition-all shadow-xs"
-            placeholder="Search candidates by city, profession..."
-            type="text"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/70 hover:text-white"
-            >
-              <X className="w-3 h-3" />
-            </button>
-          )}
+      <header className="w-full absolute top-0 inset-x-0 z-40 bg-gradient-to-b from-black/85 via-black/40 to-transparent px-3.5 pt-3 pb-6 flex items-center justify-between gap-2">
+        {/* Left: Luxury Qurb Brand Logo */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="font-serif font-black text-lg tracking-tight text-white flex items-center gap-1">
+            <Heart className="w-4 h-4 text-primary fill-primary" />
+            <span>Qurb</span>
+          </span>
         </div>
+
+        {/* Right Action Icons: Undo / Likes Pill / Bell / Filter */}
+        <div className="flex items-center gap-2">
+          {/* Glassy Undo / Rewind Button */}
+          <button
+            type="button"
+            onClick={handleUndo}
+            disabled={history.length === 0}
+            aria-label="Undo last candidate"
+            className={`w-8 h-8 flex items-center justify-center rounded-full bg-white/20 backdrop-blur-md border border-white/25 text-white hover:bg-white/30 transition-all shadow-xs relative shrink-0 ${
+              history.length === 0 ? 'opacity-35 cursor-not-allowed' : 'active:scale-95 cursor-pointer hover:border-white/40'
+            }`}
+            title={isVip ? "Undo last profile (VIP: Unlimited)" : "Watch 1 ad to undo last profile"}
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+          </button>
 
         {/* Live Daily Likes Counter / VIP Unlimited Badge */}
         {isVip ? (
@@ -303,6 +314,7 @@ export const DiscoverFeed: React.FC<Props> = ({
             <span className="w-2 h-2 bg-primary rounded-full absolute top-1 right-1 ring-2 ring-white" />
           )}
         </button>
+        </div>
       </header>
 
       {/* Action Toast Feedback */}
@@ -509,12 +521,19 @@ export const DiscoverFeed: React.FC<Props> = ({
         ) : (
           <div className="relative w-full h-full flex flex-col justify-between overflow-hidden bg-neutral-900 select-none">
             
-            {/* Full-bleed Story Background Photo */}
+            {/* Full-bleed Story Background Photo or Halal Initials Avatar */}
             <div className="absolute inset-0 z-0 bg-neutral-900 overflow-hidden">
-              {photos.length > 0 ? (
+              {!photoError && photos.length > 0 ? (
                 <img
                   alt={currentProfile.fullName}
                   src={photos[currentPhotoIdx] || photos[0]}
+                  onError={() => {
+                    if (currentPhotoIdx < photos.length - 1) {
+                      setCurrentPhotoIdx(prev => prev + 1);
+                    } else {
+                      setPhotoError(true);
+                    }
+                  }}
                   className={`w-full h-full object-cover transition-all duration-300 select-none pointer-events-none ${
                     currentProfile.blurPhotosByDefault && !currentProfile.photoRevealApproved
                       ? 'filter blur-3xl scale-110 opacity-70 brightness-95'
@@ -522,9 +541,28 @@ export const DiscoverFeed: React.FC<Props> = ({
                   }`}
                 />
               ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-emerald-950 via-teal-950 to-stone-950 text-white/50">
-                  <User className="w-24 h-24 opacity-30" />
-                  <span className="text-xs text-white/50 mt-2 font-medium">No Photos Uploaded</span>
+                <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-emerald-950 via-neutral-900 to-amber-950/80 text-white p-6 relative overflow-hidden select-none">
+                  {/* Subtle Islamic Geometric Ambient Circles */}
+                  <div className="absolute w-72 h-72 rounded-full border border-amber-400/10 pointer-events-none animate-pulse" />
+                  <div className="absolute w-52 h-52 rounded-full border border-emerald-400/15 pointer-events-none" />
+                  
+                  {/* Luxury Gold Monogram Ring */}
+                  <div className="relative w-28 h-28 rounded-full bg-gradient-to-tr from-amber-600/30 via-emerald-800/40 to-amber-500/20 border-2 border-amber-400/40 shadow-2xl flex items-center justify-center backdrop-blur-md mb-4">
+                    <span className="font-serif text-5xl font-bold text-amber-200 tracking-wider">
+                      {currentProfile.fullName?.charAt(0).toUpperCase() || 'Q'}
+                    </span>
+                    <span className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-emerald-600 border-2 border-neutral-900 flex items-center justify-center text-white text-xs shadow-md">
+                      ✓
+                    </span>
+                  </div>
+                  
+                  <h3 className="font-serif text-xl font-bold text-white tracking-wide text-center">
+                    {currentProfile.fullName}
+                  </h3>
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-[11px] text-amber-200/90 font-medium mt-2 backdrop-blur-md">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Verified Halal Candidate</span>
+                  </div>
                 </div>
               )}
 
@@ -635,8 +673,6 @@ export const DiscoverFeed: React.FC<Props> = ({
             {/* Bottom Surface: Minimal Overlay Info + Swipe Up Peek Handle */}
             <div 
               className="relative z-30 w-full bg-gradient-to-t from-black/95 via-black/75 to-transparent pt-12 pb-3 px-4 flex flex-col gap-2.5 pointer-events-auto"
-              onTouchStart={(e) => e.stopPropagation()}
-              onTouchEnd={(e) => e.stopPropagation()}
             >
               
               {/* Candidate Quick Headline: Name, Age, Location + Flag, Voice Greeting */}
@@ -734,6 +770,18 @@ export const DiscoverFeed: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => setIsDrawerOpen(true)}
+                onTouchStart={(e) => {
+                  touchStartY.current = e.touches[0].clientY;
+                }}
+                onTouchEnd={(e) => {
+                  if (touchStartY.current !== null) {
+                    const dy = e.changedTouches[0].clientY - touchStartY.current;
+                    if (dy < -20) {
+                      setIsDrawerOpen(true);
+                    }
+                  }
+                  touchStartY.current = null;
+                }}
                 className="w-full py-1 flex flex-col items-center justify-center text-white/80 hover:text-white transition-all active:scale-98 group cursor-pointer"
                 title="Swipe up or tap to read complete matrimonial details"
               >
@@ -1129,7 +1177,12 @@ export const DiscoverFeed: React.FC<Props> = ({
       {matchedProfile && (
         <MutualMatchModal
           profile={matchedProfile}
-          onClose={() => setMatchedProfile(null)}
+          onClose={() => {
+            setMatchedProfile(null);
+            if (ratingService.shouldShowRatingPrompt()) {
+              setTimeout(() => setShowRatingModal(true), 400);
+            }
+          }}
           onStartChat={() => {
             const newConv = dbService.createMatchConversation(matchedProfile);
             setMatchedProfile(null);
@@ -1137,6 +1190,13 @@ export const DiscoverFeed: React.FC<Props> = ({
           }}
         />
       )}
+
+      {/* In-App Halal Rating Modal */}
+      <RatingModal
+        isOpen={showRatingModal}
+        onClose={() => setShowRatingModal(false)}
+        userId={currentUser.id}
+      />
 
       {/* Daily Free Likes Reached Modal */}
       {showLikesLimitModal && (
@@ -1147,12 +1207,12 @@ export const DiscoverFeed: React.FC<Props> = ({
             </div>
             <div>
               <h3 className="font-serif text-lg font-bold text-on-surface">
-                {likesRemaining <= 0 ? 'Daily Likes Limit Reached' : `${likesRemaining} Likes Remaining`}
+                {likesRemaining <= 0 ? 'Likes Quota Reached' : `${likesRemaining} Likes Remaining`}
               </h3>
               <p className="text-xs text-secondary mt-1 leading-relaxed">
                 {likesRemaining <= 0 
-                  ? 'You have used your daily free likes. Watch a quick 15s sponsored ad to unlock +10 More Likes right now, or get unlimited likes with Barakah VIP!'
-                  : 'Want more likes today? Watch a quick 15s sponsored ad for +10 Extra Likes, or upgrade to VIP for unlimited daily likes.'}
+                  ? 'You have used your free likes quota. Watch a quick 15s sponsored ad to unlock +10 More Likes right now, or start a 7-day free trial of Barakah VIP for unlimited likes!'
+                  : 'Want more likes? Watch a quick 15s sponsored ad for +10 Extra Likes, or upgrade to VIP for unlimited likes.'}
               </p>
             </div>
 
@@ -1261,6 +1321,8 @@ export const DiscoverFeed: React.FC<Props> = ({
           onRewardClaimed={() => {
             if (adRewardType === 'likes') {
               handleClaimAdLikes();
+            } else if (adRewardType === 'undo') {
+              handleClaimAdUndo();
             } else {
               dbService.fetchLikesRemaining(currentUser.id).then((res: any) => {
                 if (typeof res?.directSalams === 'number') setDirectSalams(res.directSalams);

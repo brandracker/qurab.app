@@ -63,15 +63,18 @@ describe('UI & Button Interactions: Habitual Story Discover Feed & Biodata Drawe
     vi.spyOn(notificationService, 'syncLiveNotifications').mockImplementation(() => {});
   });
 
-  it('1. Renders top search bar, daily likes status, candidate story card, and country flag', async () => {
+  it('1. Renders top luxury Qurb header, Undo/Rewind button, daily likes status, candidate story card, and country flag', async () => {
     const handleOpenChat = vi.fn();
     render(<DiscoverFeed onOpenChat={handleOpenChat} />);
 
     // Wait for candidate card to render (displays first name and age: Maryam, 29)
     expect(await screen.findByText(/Maryam, 29/i)).toBeDefined();
 
-    // Verify Search Input
-    expect(screen.getByPlaceholderText(/Search candidates by city, profession/i)).toBeDefined();
+    // Verify Qurb Brand Logo
+    expect(screen.getByText(/Qurb/i)).toBeDefined();
+
+    // Verify Undo/Rewind Button
+    expect(screen.getByLabelText(/Undo last candidate/i)).toBeDefined();
 
     // Verify Likes left button
     expect(screen.getByText(/50 Left/i)).toBeDefined();
@@ -130,16 +133,23 @@ describe('UI & Button Interactions: Habitual Story Discover Feed & Biodata Drawe
     fireEvent.click(prevTapZone);
   });
 
-  it('4. Typing into search filters the discover feed', async () => {
+  it('4. Swipe-up touch gesture on peek handle opens full biodata drawer (Task 13)', async () => {
     const handleOpenChat = vi.fn();
     render(<DiscoverFeed onOpenChat={handleOpenChat} />);
 
     await screen.findByText(/Maryam, 29/i);
 
-    const searchInput = screen.getByPlaceholderText(/Search candidates by city, profession/i);
-    fireEvent.change(searchInput, { target: { value: 'Nonexistent City 999' } });
+    const swipeHandle = screen.getByText(/Swipe up for Full Biodata/i);
 
-    // Should show no matching profiles empty state
-    expect(await screen.findByText(/No Profiles Found/i)).toBeDefined();
+    // Simulate upward swipe gesture (touch start at Y=500, end at Y=450 -> dy = -50)
+    fireEvent.touchStart(swipeHandle, {
+      touches: [{ clientY: 500, clientX: 200 }]
+    });
+    fireEvent.touchEnd(swipeHandle, {
+      changedTouches: [{ clientY: 450, clientX: 200 }]
+    });
+
+    // Drawer should open and display Career Tab
+    expect(await screen.findByRole('button', { name: /Career/i })).toBeDefined();
   });
 });

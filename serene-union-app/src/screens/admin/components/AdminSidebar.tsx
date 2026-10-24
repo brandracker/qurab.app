@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, Radio, Calendar, Users, Image as ImageIcon, Sparkles } from 'lucide-react';
+import { Activity, Radio, Calendar, Users, Image as ImageIcon, Database } from 'lucide-react';
 import type { AdminTab } from '../types';
 
 interface AdminSidebarProps {
@@ -93,7 +93,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
               : 'text-slate-400 hover:bg-white/5 hover:text-white'
           }`}
         >
-          <Sparkles className="w-4 h-4 text-emerald-400" />
+          <Database className="w-4 h-4 text-emerald-400" />
           <span>Seed Profiles (65)</span>
         </button>
       </div>

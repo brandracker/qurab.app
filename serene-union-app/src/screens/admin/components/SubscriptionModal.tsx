@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Crown, Sparkles, CheckCircle2, ShieldCheck, Zap } from 'lucide-react';
+import { X, Crown, CheckCircle2, ShieldCheck, Send } from 'lucide-react';
 import type { CandidateUser } from '../types';
 
 interface SubscriptionModalProps {
@@ -84,7 +84,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
         {/* Plan / Tier Selection */}
         <div className="space-y-3">
           <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center space-x-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <Crown className="w-3.5 h-3.5 text-amber-400" />
             <span>Select Membership Tier</span>
           </label>
 
@@ -140,7 +140,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
         {/* Bonus Direct Salams to Credit */}
         <div className="space-y-2 pt-2">
           <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center space-x-1.5">
-            <Zap className="w-3.5 h-3.5 text-emerald-400" />
+            <Send className="w-3.5 h-3.5 text-emerald-400" />
             <span>Bonus Direct Salams to Credit</span>
           </label>
           <div className="grid grid-cols-4 gap-2">

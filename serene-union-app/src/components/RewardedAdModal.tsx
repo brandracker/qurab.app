@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Volume2, VolumeX, X, PlayCircle, Gift, CheckCircle2, ShieldCheck, HeartHandshake } from 'lucide-react';
+import { Volume2, VolumeX, X, PlayCircle, Gift, CheckCircle2, ShieldCheck, HeartHandshake, Clock } from 'lucide-react';
 import { admobService, ADMOB_CONFIG } from '../services/admobService';
 import { dbService } from '../services/dbService';
 import { backNavigationService } from '../services/backNavigationService';
 
 interface Props {
   userId: string;
-  rewardType?: 'likes' | 'salam' | 'messages' | 'photo_unblur';
+  rewardType?: 'likes' | 'salam' | 'messages' | 'photo_unblur' | 'undo';
   isOpen: boolean;
   onClose: () => void;
   onRewardClaimed: () => void;
@@ -17,6 +17,45 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes',
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [isClaiming, setIsClaiming] = useState<boolean>(false);
+
+  // Task 10: 15-second cooldown timer buffer
+  const [cooldownRemaining, setCooldownRemaining] = useState<number>(() => {
+    const lastStr = localStorage.getItem('qurb_ad_last_completed');
+    if (lastStr) {
+      const elapsed = Date.now() - parseInt(lastStr, 10);
+      if (elapsed < 15000) {
+        return Math.ceil((15000 - elapsed) / 1000);
+      }
+    }
+    return 0;
+  });
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const lastStr = localStorage.getItem('qurb_ad_last_completed');
+    if (lastStr) {
+      const elapsed = Date.now() - parseInt(lastStr, 10);
+      if (elapsed < 15000) {
+        setCooldownRemaining(Math.ceil((15000 - elapsed) / 1000));
+      } else {
+        setCooldownRemaining(0);
+      }
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (cooldownRemaining <= 0) return;
+    const cdTimer = setInterval(() => {
+      setCooldownRemaining(prev => {
+        if (prev <= 1) {
+          clearInterval(cdTimer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(cdTimer);
+  }, [cooldownRemaining]);
 
   const adsWatched = dbService.getAdsWatchedForSalam(userId);
   const currentStep = (adsWatched % 3) + 1;
@@ -37,23 +76,26 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes',
       return;
     }
 
-    // If on native Android, attempt real Google AdMob full-screen rewarded video
+    if (cooldownRemaining > 0) return;
+
+    // If on native Android, display full-screen Google AdMob rewarded video
     if (admobService.isNativeBridgeAvailable()) {
-      admobService.isAdReady().then((ready) => {
-        if (ready) {
-          admobService.showRewardedAd(userId, rewardType).then((rewarded) => {
-            if (rewarded) {
-              onRewardClaimed();
-              onClose();
-            }
-          }).catch(() => {
-            // Keep fallback countdown running
-          });
+      admobService.showRewardedAd(userId, rewardType).then((rewarded) => {
+        if (rewarded) {
+          try {
+            localStorage.setItem('qurb_ad_last_completed', Date.now().toString());
+          } catch {}
+          onRewardClaimed();
         }
-      }).catch(() => {});
+        onClose();
+      }).catch((err) => {
+        console.warn('Native AdMob display notice:', err);
+        onClose();
+      });
+      return;
     }
 
-    // Direct, reliable 5-second countdown (guaranteed to never block or hang)
+    // Web Fallback: Direct, reliable 5-second countdown for browsers where native AdMob is unavailable
     const timer = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
@@ -66,14 +108,48 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes',
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isOpen]);
+  }, [isOpen, userId, rewardType, cooldownRemaining, onClose, onRewardClaimed]);
 
   if (!isOpen) return null;
+
+  // Task 10: Cooldown overlay if user triggers ad within 15 seconds
+  if (cooldownRemaining > 0) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 font-sans select-none text-white backdrop-blur-xs animate-fade-in">
+        <div className="flex flex-col items-center gap-3 bg-neutral-900/95 p-6 rounded-3xl border border-white/20 shadow-2xl backdrop-blur-md max-w-sm text-center animate-scale-up">
+          <Clock className="w-10 h-10 text-amber-300 animate-pulse" />
+          <h4 className="font-serif text-base font-bold text-white">Video Reward Buffer Active</h4>
+          <p className="text-xs text-neutral-300 leading-relaxed">
+            Please wait <span className="font-bold text-amber-300 font-mono text-sm">{cooldownRemaining}s</span> before loading another video to ensure reward verification.
+          </p>
+          <button
+            onClick={onClose}
+            className="mt-3 px-6 py-2 rounded-full bg-white/20 hover:bg-white/30 text-xs font-semibold text-white border border-white/25 transition-all cursor-pointer"
+          >
+            Dismiss
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // On Native Android, show a sleek and clean transition overlay while AdMob Activity transitions
+  if (admobService.isNativeBridgeAvailable()) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 font-sans select-none text-white backdrop-blur-xs">
+        <div className="flex flex-col items-center gap-3 bg-white/10 p-6 rounded-3xl border border-white/20 shadow-2xl backdrop-blur-md">
+          <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs font-semibold text-white/90">Loading Google AdMob Sponsored Video...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleClaim = async () => {
     if (isClaiming) return;
     setIsClaiming(true);
     try {
+      localStorage.setItem('qurb_ad_last_completed', Date.now().toString());
       if (admobService.isNativeBridgeAvailable()) {
         await admobService.claimReward(userId, rewardType);
       } else {
@@ -97,6 +173,7 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes',
 
   const getRewardTitle = () => {
     if (rewardType === 'salam') return '+1 Direct Salam Pass';
+    if (rewardType === 'undo') return 'Unlock Profile Rewind';
     return '+10 Extra Discover Likes';
   };
 

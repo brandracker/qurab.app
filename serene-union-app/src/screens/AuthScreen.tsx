@@ -3,6 +3,7 @@ import { ArrowLeft, Mail, Eye, EyeOff, ArrowRight, AlertCircle, CheckCircle2 } f
 import { 
   signInWithGoogle, 
   signInWithGoogleIdToken, 
+  signInWithFacebook,
   GOOGLE_CLIENT_ID, 
   signUpWithEmail, 
   signInWithEmail, 
@@ -369,12 +370,18 @@ export const AuthScreen: React.FC<Props> = ({
     try {
       const creds = await signInWithGoogle();
       const fbUser = creds.user;
+      let photoUrl = fbUser.photoURL || '';
+      if (photoUrl && photoUrl.includes('googleusercontent.com') && photoUrl.includes('=s96-c')) {
+        photoUrl = photoUrl.replace('=s96-c', '=s720-c');
+      }
+
       const res = await fetch(`${API_BASE}/auth/email-sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: fbUser.email,
           fullName: fbUser.displayName || 'Google Member',
+          photoUrl,
           gender,
           firebaseUid: fbUser.uid,
           isSignUp: false
@@ -396,6 +403,52 @@ export const AuthScreen: React.FC<Props> = ({
       if (err.code !== 'auth/popup-closed-by-user') {
         const detail = err.code ? ` (${err.code.replace('auth/', '')})` : '';
         setErrorMsg(`Google Sign-In failed${detail}. Please try email & password.`);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Facebook 1-Click Sign-In
+  const handleFacebookSignIn = async () => {
+    setIsLoading(true);
+    setErrorMsg('');
+    try {
+      const creds = await signInWithFacebook();
+      const fbUser = creds.user;
+      let photoUrl = fbUser.photoURL || '';
+      if (photoUrl && photoUrl.includes('graph.facebook.com') && !photoUrl.includes('width=')) {
+        photoUrl += (photoUrl.includes('?') ? '&' : '?') + 'width=720&height=720';
+      }
+
+      const res = await fetch(`${API_BASE}/auth/email-sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: fbUser.email || `${fbUser.uid}@facebook.com`,
+          fullName: fbUser.displayName || 'Facebook Member',
+          photoUrl,
+          gender,
+          firebaseUid: fbUser.uid,
+          isSignUp: false
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        onAuthSuccess({
+          token: data.token,
+          user: data.user,
+          isNewUser: Boolean(data.user?.isNewUser)
+        });
+      } else {
+        setErrorMsg(data.error || 'Facebook authentication failed.');
+      }
+    } catch (err: any) {
+      console.error('Facebook Sign-In Error:', err);
+      if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
+        const detail = err.code ? ` (${err.code.replace('auth/', '')})` : '';
+        setErrorMsg(`Facebook Sign-In failed${detail}. Please try email or Google.`);
       }
     } finally {
       setIsLoading(false);
@@ -441,8 +494,9 @@ export const AuthScreen: React.FC<Props> = ({
               : 'Sign in to continue your matrimonial journey.'}
           </p>
 
-          {/* Google Sign-In Container (GSI Official on Web + Native Android) */}
-          <div className="w-full flex flex-col items-center justify-center mb-3.5 min-h-[44px]">
+          {/* Social Sign-In Buttons */}
+          <div className="w-full flex flex-col gap-2.5 mb-3.5 min-h-[44px]">
+            {/* Google Sign-In */}
             {!Capacitor.isNativePlatform() && (
               <div 
                 ref={googleBtnRef} 
@@ -454,7 +508,7 @@ export const AuthScreen: React.FC<Props> = ({
                 type="button"
                 onClick={handleGoogleSignIn}
                 disabled={isLoading}
-                className="w-full py-3 px-4 rounded-2xl bg-white border border-outline hover:border-primary/40 hover:bg-surface-variant/40 text-on-surface font-sans text-xs font-bold shadow-subtle transition-all flex items-center justify-center gap-2.5 active:scale-98 disabled:opacity-50 cursor-pointer"
+                className="w-full py-2.5 px-4 rounded-2xl bg-white border border-outline hover:border-primary/40 hover:bg-surface-variant/40 text-on-surface font-sans text-xs font-bold shadow-subtle transition-all flex items-center justify-center gap-2.5 active:scale-98 disabled:opacity-50 cursor-pointer"
               >
                 <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
@@ -465,6 +519,19 @@ export const AuthScreen: React.FC<Props> = ({
                 <span>Continue with Google</span>
               </button>
             )}
+
+            {/* Facebook Sign-In */}
+            <button
+              type="button"
+              onClick={handleFacebookSignIn}
+              disabled={isLoading}
+              className="w-full py-2.5 px-4 rounded-2xl bg-white border border-outline hover:border-[#1877F2]/40 hover:bg-[#1877F2]/5 text-on-surface font-sans text-xs font-bold shadow-subtle transition-all flex items-center justify-center gap-2.5 active:scale-98 disabled:opacity-50 cursor-pointer"
+            >
+              <svg className="w-4 h-4 shrink-0 fill-[#1877F2]" viewBox="0 0 24 24">
+                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+              </svg>
+              <span>Continue with Facebook</span>
+            </button>
           </div>
 
           {/* Divider */}

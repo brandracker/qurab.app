@@ -72,3 +72,40 @@ export function getBoundingBox(
     maxLon: Math.min(180, lon + deltaLon),
   };
 }
+
+export const PAKISTAN_CITY_CENTROIDS: Record<string, { lat: number; lon: number }> = {
+  karachi: { lat: 24.8607, lon: 67.0011 },
+  lahore: { lat: 31.5204, lon: 74.3587 },
+  islamabad: { lat: 33.6844, lon: 73.0479 },
+  rawalpindi: { lat: 33.5651, lon: 73.0169 },
+  faisalabad: { lat: 31.4504, lon: 73.1350 },
+  multan: { lat: 30.1575, lon: 71.5249 },
+  peshawar: { lat: 34.0151, lon: 71.5249 },
+  quetta: { lat: 30.1798, lon: 66.9750 },
+  sialkot: { lat: 32.4945, lon: 74.5229 },
+  gujranwala: { lat: 32.1877, lon: 74.1945 },
+  hyderabad: { lat: 25.3960, lon: 68.3578 },
+  bahawalpur: { lat: 29.3544, lon: 71.6911 },
+  sargodha: { lat: 32.0836, lon: 72.6711 },
+  abbottabad: { lat: 34.1688, lon: 73.2215 },
+  sukkur: { lat: 27.7052, lon: 68.8574 },
+  mardan: { lat: 34.1989, lon: 72.0450 },
+  gujrat: { lat: 32.5742, lon: 74.0754 },
+  sheikhupura: { lat: 31.7131, lon: 73.9783 },
+  jhelum: { lat: 32.9425, lon: 73.7257 },
+  sahiwal: { lat: 30.6682, lon: 73.1114 },
+  okara: { lat: 30.8138, lon: 73.4534 },
+  rahim_yar_khan: { lat: 28.4212, lon: 70.2989 }
+};
+
+export function getCityCentroid(cityName?: string | null): { lat: number; lon: number } | null {
+  if (!cityName || typeof cityName !== 'string') return null;
+  const clean = cityName.toLowerCase().replace(/[^a-z0-9]/g, ' ').trim();
+  for (const [key, coords] of Object.entries(PAKISTAN_CITY_CENTROIDS)) {
+    const keyNorm = key.replace(/_/g, ' ');
+    if (clean.includes(keyNorm) || clean.includes(key)) {
+      return coords;
+    }
+  }
+  return null;
+}

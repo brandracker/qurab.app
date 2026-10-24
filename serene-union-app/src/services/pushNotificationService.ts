@@ -1,10 +1,16 @@
 import { Capacitor } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { LocalNotifications } from '@capacitor/local-notifications';
+import { App as CapacitorApp } from '@capacitor/app';
 import { dbService, API_BASE } from './dbService';
 
 class PushNotificationService {
   private isInitialized = false;
+  private isForeground = true;
+
+  public getIsForeground(): boolean {
+    return this.isForeground;
+  }
 
   /**
    * Initializes Push Notifications & Local Notification Channels on native Android
@@ -18,6 +24,12 @@ class PushNotificationService {
     this.isInitialized = true;
 
     try {
+      // Track app active / background state for foreground suppression
+      CapacitorApp.addListener('appStateChange', (state) => {
+        this.isForeground = state.isActive;
+        console.log('[Push] App active state:', this.isForeground);
+      });
+
       // 1. Create Android Notification Channel with Sound & Vibration
       await PushNotifications.createChannel({
         id: 'qurb_messages',
@@ -61,15 +73,24 @@ class PushNotificationService {
         console.warn('[Push] Registration error notice:', error);
       });
 
-      // 5. Handle Foreground Push Notification
+      // 5. Handle Foreground Push Notification: Soft UI event only, suppress noisy native drawer banner
       PushNotifications.addListener('pushNotificationReceived', (notification) => {
-        console.log('[Push] Notification received in foreground:', notification);
+        console.log('[Push] Notification received (isForeground:', this.isForeground, '):', notification);
         const data = notification.data || {};
-        this.showLocalNotification(
-          notification.title || 'New Matrimonial Update 💖',
-          notification.body || 'You have a new update in Qurb.',
-          data.conversationId
+        
+        // Dispatch soft in-app event so UI badges, chats, and bells update in real-time
+        window.dispatchEvent(
+          new CustomEvent('qurb_push_received', { detail: { notification, isForeground: this.isForeground } })
         );
+
+        // Only show noisy system tray banner if app is currently in background
+        if (!this.isForeground) {
+          this.showLocalNotification(
+            notification.title || 'New Matrimonial Update 💖',
+            notification.body || 'You have a new update in Qurb.',
+            data.conversationId
+          );
+        }
       });
 
       // 6. Handle Tap on Push Notification
@@ -117,8 +138,9 @@ class PushNotificationService {
   /**
    * Displays an immediate native Android banner notification with sound
    */
-  async showLocalNotification(title: string, body: string, conversationId?: string): Promise<void> {
+  async showLocalNotification(title: string, body: string, conversationId?: string, force: boolean = false): Promise<void> {
     if (!Capacitor.isNativePlatform()) return;
+    if (this.isForeground && !force) return;
 
     try {
       await LocalNotifications.schedule({

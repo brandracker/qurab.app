@@ -147,4 +147,77 @@ describe('useDiscoverFeed Custom Hook Architecture & Wiring', () => {
     expect(result.current.filteredFeed.length).toBe(0);
     expect(result.current.currentProfile).toBeNull();
   });
+
+  it('6. handleLike executes optimistically at 0ms and is completely silent without toast banner (Task 01 & 02)', () => {
+    vi.spyOn(dbService, 'sendMatchAction').mockResolvedValue({ isMutual: false });
+
+    const { result } = renderHook(() => useDiscoverFeed());
+
+    expect(result.current.currentProfile?.id).toBe('usr_cand_ayesha');
+
+    // 0ms Optimistic check: Synchronous queue pop
+    act(() => {
+      result.current.handleLike(mockCandidateA);
+    });
+
+    // Candidate A must be instantly removed without awaiting network
+    expect(result.current.currentProfile?.id).toBe('usr_cand_hina');
+    expect(result.current.likesRemaining).toBe(49);
+    // Silent like: No irritating top toast banner
+    expect(result.current.toastMessage).toBeNull();
+    // Saved in history for Undo
+    expect(result.current.history[0]?.id).toBe('usr_cand_ayesha');
+  });
+
+  it('7. Undo/Rewind instantly restores previous candidate for VIP users (Task 11)', () => {
+    vi.spyOn(dbService, 'sendMatchAction').mockResolvedValue({ isMutual: false });
+
+    const { result } = renderHook(() => useDiscoverFeed());
+
+    act(() => {
+      result.current.setIsVip(true);
+      result.current.handlePass('usr_cand_ayesha');
+    });
+
+    expect(result.current.currentProfile?.id).toBe('usr_cand_hina');
+    expect(result.current.history.length).toBe(1);
+
+    // VIP Undo: 0ms instant restore
+    act(() => {
+      result.current.handleUndo();
+    });
+
+    expect(result.current.currentProfile?.id).toBe('usr_cand_ayesha');
+    expect(result.current.history.length).toBe(0);
+    expect(result.current.showRewardedAdModal).toBe(false);
+  });
+
+  it('8. Undo/Rewind triggers rewarded ad for free users and restores on claim (Task 11)', () => {
+    vi.spyOn(dbService, 'sendMatchAction').mockResolvedValue({ isMutual: false });
+
+    const { result } = renderHook(() => useDiscoverFeed());
+
+    act(() => {
+      result.current.handlePass('usr_cand_ayesha');
+    });
+
+    expect(result.current.currentProfile?.id).toBe('usr_cand_hina');
+
+    // Free User Undo: Prompts Rewarded Ad
+    act(() => {
+      result.current.handleUndo();
+    });
+
+    expect(result.current.showRewardedAdModal).toBe(true);
+    expect(result.current.adRewardType).toBe('undo');
+
+    // Claim Ad Undo
+    act(() => {
+      result.current.handleClaimAdUndo();
+    });
+
+    expect(result.current.showRewardedAdModal).toBe(false);
+    expect(result.current.currentProfile?.id).toBe('usr_cand_ayesha');
+  });
 });
+

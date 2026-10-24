@@ -207,17 +207,44 @@ class DBService {
     }
   }
 
+  getCachedDiscoverProfiles(): UserProfile[] {
+    try {
+      const cached = localStorage.getItem('serene_cached_discover_v2');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch {}
+    return [];
+  }
+
   async fetchLiveProfiles(filters?: FilterState): Promise<UserProfile[]> {
     try {
       const user = this.getCurrentUser();
       const targetGender = user.gender === 'female' ? 'male' : (user.gender === 'male' ? 'female' : '');
-      let queryParams = `userId=${encodeURIComponent(user.id || '')}&gender=${encodeURIComponent(user.gender || '')}&targetGender=${encodeURIComponent(targetGender)}`;
+      let queryParams = `userId=${encodeURIComponent(user.id || '')}&gender=${encodeURIComponent(user.gender || '')}&targetGender=${encodeURIComponent(targetGender)}&limit=25`;
       if (typeof user.latitude === 'number' && typeof user.longitude === 'number') {
         queryParams += `&lat=${user.latitude}&lon=${user.longitude}`;
+      } else if (user.city || user.location) {
+        queryParams += `&city=${encodeURIComponent(user.city || user.location || '')}`;
       }
       // Only filter by distance if maxDistance is explicitly set > 0
       if (filters?.maxDistance && filters.maxDistance > 0 && filters.maxDistance < 5000) {
         queryParams += `&maxDistance=${filters.maxDistance}`;
+      }
+      if (filters?.sects && filters.sects.length > 0) {
+        queryParams += `&sects=${encodeURIComponent(filters.sects.join(','))}`;
+      }
+      if (filters?.practiceLevels && filters.practiceLevels.length > 0) {
+        queryParams += `&practiceLevels=${encodeURIComponent(filters.practiceLevels.join(','))}`;
+      }
+      if (filters?.minAge && filters.minAge >= 18) {
+        queryParams += `&minAge=${filters.minAge}`;
+      }
+      if (filters?.maxAge && filters.maxAge <= 80) {
+        queryParams += `&maxAge=${filters.maxAge}`;
       }
 
       const endpoints = [
@@ -242,6 +269,7 @@ class DBService {
             }));
             this.memoryProfiles = activeProfiles;
             try {
+              localStorage.setItem('serene_cached_discover_v2', JSON.stringify(lightweightProfiles.slice(0, 25)));
               localStorage.setItem(this.profilesKey, JSON.stringify(lightweightProfiles));
             } catch (storageErr) {
               console.warn('Storage quota limit reached on mobile, keeping profiles in memory:', storageErr);
@@ -724,7 +752,7 @@ class DBService {
     return { success: true, directSalams: nextLocal };
   }
 
-  async claimAdReward(userId: string, rewardType: 'likes' | 'salam' | 'messages' | 'photo_unblur' = 'likes'): Promise<any> {
+  async claimAdReward(userId: string, rewardType: 'likes' | 'salam' | 'messages' | 'photo_unblur' | 'undo' = 'likes'): Promise<any> {
     try {
       const res = await fetch(`${API_BASE}/wallet/reward-ad`, {
         method: 'POST',
@@ -743,8 +771,7 @@ class DBService {
             window.dispatchEvent(new CustomEvent('serene_salam_ads_updated', { detail: { userId, adsWatched: data.adsWatchedForSalam } }));
           }
           if (typeof data.likesRemaining === 'number') {
-            const today = new Date().toISOString().slice(0, 10);
-            localStorage.setItem(`serene_likes_left_${userId}_${today}`, data.likesRemaining.toString());
+            localStorage.setItem(`serene_likes_left_${userId}`, data.likesRemaining.toString());
             window.dispatchEvent(new CustomEvent('serene_likes_updated', { detail: { userId, likesRemaining: data.likesRemaining } }));
           }
           return data;

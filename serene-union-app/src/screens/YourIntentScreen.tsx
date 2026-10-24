@@ -18,7 +18,9 @@ import {
   BadgeCheck,
   Clock,
   MapPin,
-  Sparkles
+  Coins,
+  Compass,
+  Scale
 } from 'lucide-react';
 import type { PartnerRequirements } from '../types';
 
@@ -454,7 +456,7 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
             {/* Income Bracket */}
             <div>
               <div className="flex items-center gap-1.5 mb-2">
-                <Sparkles className="w-3.5 h-3.5 text-[#FF2560]" />
+                <Coins className="w-3.5 h-3.5 text-[#FF2560]" />
                 <label className="text-xs font-bold text-slate-800">Annual Income Bracket</label>
               </div>
               <div className="flex flex-wrap gap-1.5">
@@ -509,7 +511,7 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
             {/* Interests & Hobbies */}
             <div>
               <div className="flex items-center gap-1.5 mb-2">
-                <Sparkles className="w-3.5 h-3.5 text-[#FF2560]" />
+                <Compass className="w-3.5 h-3.5 text-[#FF2560]" />
                 <label className="text-xs font-bold text-slate-800">Interests & Hobbies</label>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -661,7 +663,7 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
             {/* Mahr Philosophy */}
             <div>
               <div className="flex items-center gap-1.5 mb-2">
-                <Sparkles className="w-3.5 h-3.5 text-[#FF2560]" />
+                <Scale className="w-3.5 h-3.5 text-[#FF2560]" />
                 <label className="text-xs font-bold text-slate-800">Mahr Philosophy</label>
               </div>
               <div className="grid grid-cols-2 gap-2.5">
@@ -847,7 +849,7 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
             <div className="flex items-center justify-between">
               <div>
                 <strong className="text-xs font-bold block text-slate-900 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-[#FF2560]" />
+                  <Calendar className="w-3.5 h-3.5 text-[#FF2560]" />
                   <span>Target Age Range</span>
                 </strong>
                 <span className="text-[10px] text-slate-500">Compatible age boundaries</span>

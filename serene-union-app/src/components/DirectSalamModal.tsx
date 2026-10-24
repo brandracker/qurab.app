@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { Send } from 'lucide-react';
 import type { UserProfile } from '../types';
 import { facebookEventsService } from '../services/facebookEventsService';
 import { backNavigationService } from '../services/backNavigationService';
+import { admobService } from '../services/admobService';
 
 interface DirectSalamModalProps {
   candidate: UserProfile;
@@ -24,6 +26,12 @@ export const DirectSalamModal: React.FC<DirectSalamModalProps> = ({
 }) => {
   const [message, setMessage] = useState(GREETING_TEMPLATES[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (passesRemaining <= 1) {
+      admobService.prepareRewardedAd().catch(() => {});
+    }
+  }, [passesRemaining]);
 
   useEffect(() => {
     return backNavigationService.register(() => {
@@ -83,8 +91,8 @@ export const DirectSalamModal: React.FC<DirectSalamModalProps> = ({
               alt={candidate.fullName}
               className="w-16 h-16 rounded-2xl object-cover border-2 border-amber-400/60 shadow-md"
             />
-            <span className="absolute -bottom-1 -right-1 bg-emerald-500 text-white p-1 rounded-full text-[10px] shadow">
-              ✨
+            <span className="absolute -bottom-1 -right-1 bg-emerald-500 text-white p-1 rounded-full text-[10px] shadow flex items-center justify-center">
+              <Send className="w-2.5 h-2.5" />
             </span>
           </div>
 
@@ -183,7 +191,7 @@ export const DirectSalamModal: React.FC<DirectSalamModalProps> = ({
               ) : (
                 <>
                   <span>Send Blessed Salam</span>
-                  <span>✨</span>
+                  <Send className="w-4 h-4" />
                 </>
               )}
             </button>

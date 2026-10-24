@@ -6,7 +6,6 @@ import {
   Trash2, 
   ShieldAlert, 
   Heart, 
-  Sparkles, 
   UserCheck, 
   Coins,
   RefreshCw 
@@ -256,7 +255,7 @@ export const UserInspectModal: React.FC<UserInspectModalProps> = ({
               onClick={onOpenSubscription}
               className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-semibold cursor-pointer transition-all text-xs"
             >
-              <Sparkles className="w-3.5 h-3.5" />
+              <Crown className="w-3.5 h-3.5" />
               <span>Manage Subscription</span>
             </button>
           )}

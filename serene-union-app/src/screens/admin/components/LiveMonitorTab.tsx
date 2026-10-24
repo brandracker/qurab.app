@@ -11,7 +11,6 @@ import {
   Eye, 
   X, 
   Crown, 
-  Sparkles,
   ExternalLink,
   ChevronRight,
   Filter
@@ -321,7 +320,7 @@ export const LiveMonitorTab: React.FC<LiveMonitorTabProps> = ({
         >
           <div className="flex items-center justify-between text-slate-400 mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider group-hover:text-amber-300 transition">Messages Sent</span>
-            <Sparkles className="w-4 h-4 text-amber-400" />
+            <MessageSquare className="w-4 h-4 text-amber-400" />
           </div>
           <div className="text-3xl font-extrabold text-white font-serif flex items-center justify-between">
             <span>{data?.summary?.totalMessages ?? '—'}</span>
@@ -411,7 +410,7 @@ export const LiveMonitorTab: React.FC<LiveMonitorTabProps> = ({
                 : 'text-slate-400 hover:text-white hover:bg-white/5'
             }`}
           >
-            <Sparkles className="w-4 h-4" />
+            <MessageSquare className="w-4 h-4" />
             <span>Messages Stream ({recentMessages?.length || data?.summary?.totalMessages || 0})</span>
           </button>
         </div>
@@ -728,7 +727,7 @@ export const LiveMonitorTab: React.FC<LiveMonitorTabProps> = ({
 
           {filteredMessages.length === 0 ? (
             <div className="p-12 text-center rounded-3xl bg-[#0D1527] border border-white/10">
-              <Sparkles className="w-10 h-10 text-slate-600 mx-auto mb-3" />
+              <MessageSquare className="w-10 h-10 text-slate-600 mx-auto mb-3" />
               <h3 className="text-white font-medium text-sm">No Recent Messages</h3>
               <p className="text-xs text-slate-400 mt-1">
                 Recent messages will appear here as users chat in the application.

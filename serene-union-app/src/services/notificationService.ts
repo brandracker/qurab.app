@@ -2,7 +2,7 @@ import { dbService, API_BASE } from './dbService';
 
 export interface LiveNotification {
   id: string;
-  type: 'like' | 'match' | 'salam' | 'wali' | 'message' | 'system';
+  type: 'like' | 'match' | 'salam' | 'wali' | 'message' | 'system' | 'system_broadcast';
   title: string;
   message: string;
   time: string;
@@ -37,7 +37,11 @@ class NotificationService {
         const notifData = await notifRes.json();
         if (notifData.success && Array.isArray(notifData.notifications) && notifData.notifications.length > 0) {
           const map = new Map<string, LiveNotification>();
-          notifData.notifications.forEach((n: any) => map.set(n.id, n));
+          notifData.notifications.forEach((n: any) => {
+            // Task 07: Ignore any self-directed or self-sent like notification
+            if (n.type === 'like' && (n.targetId === user.id || n.senderId === user.id)) return;
+            map.set(n.id, n);
+          });
           existingNotifs.forEach(n => {
             if (!map.has(n.id)) map.set(n.id, n);
           });
@@ -86,6 +90,8 @@ class NotificationService {
 
       if (likesData.success && Array.isArray(likesData.candidates)) {
         for (const candidate of likesData.candidates) {
+          // Task 07: Guard against candidate being current user
+          if (!candidate || candidate.id === user.id) continue;
           const notifId = `notif_like_${candidate.id}`;
           const alreadyNotified = existingNotifs.some(
             n => n.id === notifId || (n.type === 'like' && n.targetId === candidate.id)
@@ -171,6 +177,11 @@ class NotificationService {
   addNotification(notif: Omit<LiveNotification, 'id' | 'timestamp' | 'read' | 'time'>): LiveNotification {
     const notifications = this.getNotifications();
     const user = dbService.getCurrentUser();
+
+    // Task 07: Ignore self-directed or self-generated like notification
+    if (notif.type === 'like' && (notif.targetId === user?.id || !notif.targetId)) {
+      return (notifications[0] || {}) as any;
+    }
 
     // Deterministic ID based on type and target
     let deterministicId = `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;

@@ -293,7 +293,7 @@ describe('Wallet, In-App Purchases & Rewarded Ads API Integration Tests', () => 
     expect(data.error).toContain('sessionId is required');
   });
 
-  it('15. Daily likes quota auto-resets across date changes (midnight rollover)', async () => {
+  it('15. Likes quota is persistent and does NOT reset across date changes (monetization architecture)', async () => {
     await app.request('/api/wallet/usr_test_onetime', { method: 'GET' }, env);
     for (let i = 0; i < 5; i++) {
       await app.request('/api/wallet/use-like', {
@@ -313,11 +313,36 @@ describe('Wallet, In-App Purchases & Rewarded Ads API Integration Tests', () => 
       UPDATE user_wallets SET last_likes_reset_date = '2025-01-01' WHERE user_id = 'usr_test_onetime'
     `).run();
 
-    // Query wallet on new date - must auto-reset to 50 daily likes!
+    // Query wallet on new date - must REMAIN persistent at 45 likes (NO free midnight refill!)
     walletRes = await app.request('/api/wallet/usr_test_onetime', { method: 'GET' }, env);
     walletData = await walletRes.json();
-    expect(walletData.wallet.likesRemaining).toBe(50);
-    expect(walletData.wallet.likesUsedToday).toBe(0);
+    expect(walletData.wallet.likesRemaining).toBe(45);
+    expect(walletData.wallet.likesUsedToday).toBe(5);
+
+    // Consume remaining 45 likes
+    await env.DB.prepare(`
+      UPDATE user_wallets SET likes_used_today = 50 WHERE user_id = 'usr_test_onetime'
+    `).run();
+
+    // Swiping when quota exhausted returns 403 error
+    const exhaustRes = await app.request('/api/wallet/use-like', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: 'usr_test_onetime' })
+    }, env);
+    expect(exhaustRes.status).toBe(403);
+    const exhaustData = await exhaustRes.json();
+    expect(exhaustData.error).toContain('Likes quota exhausted');
+
+    // Watching rewarded ad restores +10 likes
+    const adRes = await app.request('/api/wallet/reward-ad', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: 'usr_test_onetime', rewardType: 'likes' })
+    }, env);
+    expect(adRes.status).toBe(200);
+    const adData = await adRes.json();
+    expect(adData.likesRemaining).toBe(10);
   });
 });
 

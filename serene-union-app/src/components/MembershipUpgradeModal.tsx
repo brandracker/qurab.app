@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Crown, TrendingUp, PlayCircle, Wallet, CheckCircle2, X, Check, Hand } from 'lucide-react';
+import { Crown, TrendingUp, PlayCircle, Wallet, CheckCircle2, X, Check, Send } from 'lucide-react';
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { API_BASE, dbService } from '../services/dbService';
 import { facebookEventsService } from '../services/facebookEventsService';
 import { backNavigationService } from '../services/backNavigationService';
+import { admobService } from '../services/admobService';
 
 const GooglePlayBilling = registerPlugin<any>('GooglePlayBillingPlugin');
 
@@ -28,6 +29,7 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
 
   useEffect(() => {
     if (!isOpen) return;
+    admobService.prepareRewardedAd().catch(() => {});
     return backNavigationService.register(() => {
       onClose();
       return true;
@@ -49,12 +51,13 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
     {
       id: 'qurb_barakah_monthly',
       title: 'Qurb Barakah VIP Club',
-      tag: 'Most Popular',
+      tag: '7-Day Free Trial',
       price: '$2.99 / mo',
-      localPrice: 'PKR 830 / month',
-      description: 'Unlimited likes, See Who Liked You, 20 Direct Salams, 100% Ad-Free & Priority discovery ranking.',
+      localPrice: 'PKR 0 today · then PKR 830/mo',
+      description: 'Start with 7 days 100% free: Unlimited likes, Unlimited Undo / Rewind, See Who Liked You, 20 Direct Salams, Zero Ads & Top Priority.',
       Icon: Crown,
-      isSubscription: true
+      isSubscription: true,
+      hasFreeTrial: true
     },
     {
       id: 'qurb_direct_salam_20',
@@ -63,7 +66,7 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
       price: '$1.99',
       localPrice: 'PKR 550 (20 Passes)',
       description: 'Send 20 direct intro messages to candidates without waiting for a mutual match.',
-      Icon: Hand,
+      Icon: Send,
       isSubscription: false
     },
     {
@@ -352,14 +355,18 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
                 <span>
                   {isProcessing
                     ? 'Connecting to Google...'
-                    : Capacitor.isNativePlatform()
-                      ? `Google Play 1-Tap Buy (${currentItem.price})`
-                      : `Pay with Google Pay (${currentItem.price})`
+                    : currentItem.isSubscription
+                      ? 'Start 7-Day Free Trial ($0 Today)'
+                      : Capacitor.isNativePlatform()
+                        ? `Google Play 1-Tap Buy (${currentItem.price})`
+                        : `Pay with Google Pay (${currentItem.price})`
                   }
                 </span>
               </button>
               <p className="text-[10px] text-secondary text-center leading-tight">
-                Instant activation · 256-bit encrypted secure checkout via Google
+                {currentItem.isSubscription
+                  ? '7 days 100% free · Then PKR 830/month · Cancel anytime in Google Play Subscriptions'
+                  : 'Instant activation · 256-bit encrypted secure checkout via Google'}
               </p>
             </>
           )}

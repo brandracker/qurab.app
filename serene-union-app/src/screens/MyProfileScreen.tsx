@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 import type { UserProfile } from '../types';
 import { dbService } from '../services/dbService';
+import { walletService } from '../services/walletService';
 import { CompatibilityQuizModal } from '../components/CompatibilityQuizModal';
 import { MembershipUpgradeModal } from '../components/MembershipUpgradeModal';
 import { RewardedAdModal } from '../components/RewardedAdModal';
@@ -102,9 +103,9 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
     return () => window.removeEventListener('serene_vip_updated', handleVipUpdate);
   }, [user.id, user.isVip]);
 
-  const getTodayLikeKey = () => `serene_likes_left_${user.id}_${new Date().toISOString().slice(0, 10)}`;
+  const getLikeKey = () => `serene_likes_left_${user.id}`;
   const [likesRemaining, setLikesRemaining] = useState<number>(() => {
-    const saved = localStorage.getItem(getTodayLikeKey());
+    const saved = localStorage.getItem(getLikeKey());
     return saved !== null ? parseInt(saved, 10) : 50;
   });
 
@@ -185,7 +186,7 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
     };
 
     const handleActivity = () => {
-      const saved = localStorage.getItem(getTodayLikeKey());
+      const saved = localStorage.getItem(walletService.getTodayLikeKey(user.id));
       setLikesRemaining(saved !== null ? parseInt(saved, 10) : 50);
     };
     const handleLikes = (e: any) => {
@@ -1404,7 +1405,7 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
             if (adRewardType === 'likes') {
               const nextLikes = likesRemaining + 10;
               setLikesRemaining(nextLikes);
-              localStorage.setItem(getTodayLikeKey(), nextLikes.toString());
+              localStorage.setItem(walletService.getTodayLikeKey(user.id), nextLikes.toString());
               window.dispatchEvent(new CustomEvent('serene_activity_updated'));
             }
           }}

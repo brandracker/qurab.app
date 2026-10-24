@@ -26,6 +26,7 @@ import { LandingPage } from './components/LandingPage';
 import { AdminPortal } from './screens/admin/AdminPortal';
 import { backNavigationService } from './services/backNavigationService';
 import { pushNotificationService } from './services/pushNotificationService';
+import { AnnouncementModal } from './components/AnnouncementModal';
 
 type OnboardingStep = 
   | 'welcome' 
@@ -170,6 +171,22 @@ export const App: React.FC = () => {
 
   // Active User Profile State
   const [currentUser, setCurrentUser] = useState<UserProfile>(() => dbService.getCurrentUser());
+  const [activeAnnouncement, setActiveAnnouncement] = useState<{ id: string; title: string; message: string } | null>(null);
+
+  // Task 09: Check dynamic in-app announcements
+  useEffect(() => {
+    if (!currentUser.id || currentUser.id === 'usr_guest') return;
+    const checkAnnouncements = async () => {
+      try {
+        const notifs = await notificationService.syncLiveNotifications();
+        const broadcast = notifs.find(n => n.type === 'system_broadcast' && !localStorage.getItem(`qurb_seen_bc_${n.id}`));
+        if (broadcast) {
+          setActiveAnnouncement({ id: broadcast.id, title: broadcast.title, message: broadcast.message });
+        }
+      } catch {}
+    };
+    checkAnnouncements();
+  }, [currentUser.id]);
 
   // Global Real-time Chat Background Sync & Unread Tracking
   useEffect(() => {
@@ -976,6 +993,23 @@ export const App: React.FC = () => {
               })}
             </nav>
           </div>
+        )}
+
+        {/* Dynamic In-App Announcement Modal (Task 09) */}
+        {activeAnnouncement && (
+          <AnnouncementModal
+            isOpen={Boolean(activeAnnouncement)}
+            title={activeAnnouncement.title}
+            message={activeAnnouncement.message}
+            onClose={() => {
+              if (activeAnnouncement) {
+                try {
+                  localStorage.setItem(`qurb_seen_bc_${activeAnnouncement.id}`, 'true');
+                } catch {}
+                setActiveAnnouncement(null);
+              }
+            }}
+          />
         )}
       </div>
     </div>

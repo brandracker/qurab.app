@@ -46,21 +46,20 @@ public class AdMobPlugin extends Plugin {
 
         MobileAds.initialize(getContext(), initializationStatus -> {
             Log.d(TAG, "Google AdMob MobileAds initialized successfully with App ID: ca-app-pub-5486823026870276~3052992520");
-            preloadRewardedAd(null, null);
         });
     }
 
     private void preloadRewardedAd(final Runnable onSuccess, final Runnable onFailure) {
-        if (rewardedAd != null || isLoading) {
-            if (rewardedAd != null && onSuccess != null) onSuccess.run();
+        if (rewardedAd != null) {
+            if (onSuccess != null) onSuccess.run();
+            return;
+        }
+        if (isLoading) {
             return;
         }
 
         isLoading = true;
-        loadWithUnitId(LIVE_REWARDED_AD_UNIT_ID, onSuccess, () -> {
-            Log.d(TAG, "Live unit still warming up on AdMob servers. Preloading sample unit for instant test...");
-            loadWithUnitId(SAMPLE_REWARDED_AD_UNIT_ID, onSuccess, onFailure);
-        });
+        loadWithUnitId(LIVE_REWARDED_AD_UNIT_ID, onSuccess, onFailure);
     }
 
     private void loadWithUnitId(final String adUnitId, final Runnable onSuccess, final Runnable onFailure) {
@@ -94,6 +93,29 @@ public class AdMobPlugin extends Plugin {
         JSObject ret = new JSObject();
         ret.put("ready", rewardedAd != null);
         call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void prepareRewardedAd(final PluginCall call) {
+        if (rewardedAd != null) {
+            JSObject ret = new JSObject();
+            ret.put("ready", true);
+            ret.put("buffered", true);
+            call.resolve(ret);
+            return;
+        }
+
+        preloadRewardedAd(() -> {
+            JSObject ret = new JSObject();
+            ret.put("ready", true);
+            ret.put("buffered", true);
+            call.resolve(ret);
+        }, () -> {
+            JSObject ret = new JSObject();
+            ret.put("ready", false);
+            ret.put("buffered", false);
+            call.resolve(ret);
+        });
     }
 
     @PluginMethod
@@ -138,7 +160,6 @@ public class AdMobPlugin extends Plugin {
                 public void onAdFailedToShowFullScreenContent(@NonNull AdError adError) {
                     Log.e(TAG, "Google AdMob failed to show: " + adError.getMessage());
                     rewardedAd = null;
-                    preloadRewardedAd(null, null);
                     call.reject("AdMob failed to show: " + adError.getMessage());
                 }
 
@@ -146,7 +167,6 @@ public class AdMobPlugin extends Plugin {
                 public void onAdDismissedFullScreenContent() {
                     Log.d(TAG, "Google AdMob Ad dismissed by user. Earned: " + hasEarnedReward[0]);
                     rewardedAd = null;
-                    preloadRewardedAd(null, null);
 
                     JSObject ret = new JSObject();
                     ret.put("rewarded", hasEarnedReward[0]);

@@ -10,7 +10,9 @@ import {
   Users,
   Database,
   Globe,
-  Zap,
+  Activity,
+  Radio,
+  Cpu,
   Layers,
   HeartHandshake,
   BarChart3,
@@ -106,7 +108,7 @@ export const CaseStudyPage: React.FC<Props> = ({ onBackToLanding, onGetStarted }
     { metric: '12 Weeks', label: 'Concept to Live Launch', icon: Clock },
     { metric: '40+', label: 'API Endpoints Delivered', icon: Code2 },
     { metric: '30+', label: 'Premium UI Screens', icon: Palette },
-    { metric: '99.9%', label: 'Uptime on Cloudflare Edge', icon: Zap },
+    { metric: '99.9%', label: 'Uptime on Cloudflare Edge', icon: Activity },
     { metric: '< 50ms', label: 'Global API Response Time', icon: Rocket },
     { metric: '55+', label: 'Seed Profiles Generated', icon: Users },
   ];
@@ -408,7 +410,7 @@ export const CaseStudyPage: React.FC<Props> = ({ onBackToLanding, onGetStarted }
               { icon: Shield, title: 'Modesty Photo Shield', desc: 'Photos blurred by default on the public feed. Unblurred only through mutual 1-to-1 consent — never casual browsing.', color: 'text-emerald-600 bg-emerald-50' },
               { icon: Users, title: 'Wali Chaperone System', desc: 'Sisters can invite their father or guardian to oversee conversations, maintaining Islamic Adab from the very first message.', color: 'text-amber-600 bg-amber-50' },
               { icon: Mic, title: 'Voice Bio Greetings', desc: 'Spoken audio introductions let members evaluate tone, maturity, and sincerity before seeing photos — character first.', color: 'text-rose-600 bg-rose-50' },
-              { icon: Zap, title: 'Real-Time Presence', desc: 'Live heartbeat system tracks active members with second-level precision. "Online Now" badges show genuine availability.', color: 'text-blue-600 bg-blue-50' },
+              { icon: Radio, title: 'Real-Time Presence', desc: 'Live heartbeat system tracks active members with second-level precision. "Online Now" badges show genuine availability.', color: 'text-blue-600 bg-blue-50' },
               { icon: BarChart3, title: 'Admin Live Monitor', desc: 'Executive dashboard with interactive stat cards, real-time user radar, message streams, and content moderation tools.', color: 'text-violet-600 bg-violet-50' },
               { icon: Star, title: 'AI Seed Profiles', desc: '55+ authentic, AI-generated seed profiles with culturally accurate portraits to ensure a vibrant platform from day one.', color: 'text-cyan-600 bg-cyan-50' },
             ].map((feature) => {
@@ -493,7 +495,7 @@ export const CaseStudyPage: React.FC<Props> = ({ onBackToLanding, onGetStarted }
                   { label: 'Brand Identity', icon: Palette },
                   { label: 'Web & Mobile Dev', icon: Code2 },
                   { label: '3D Packaging', icon: Layers },
-                  { label: 'AI Integration', icon: Zap },
+                  { label: 'AI Integration', icon: Cpu },
                 ].map((svc) => {
                   const Icon = svc.icon;
                   return (

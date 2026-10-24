@@ -133,15 +133,13 @@ jobs:
         continue-on-error: true
         with:
           fail_on_unmatched_files: false
-          tag_name: v1.0.20
-          name: "Qurb v1.0.20 (Crash Fix - Release AAB, Client APK & Admin APK)"
+          tag_name: v1.0.21
+          name: "Qurb v1.0.21 (Build 22 - Discover Feed Fixes & Google Play Release)"
           body: |
-            ### Qurb Matrimony v1.0.20 (Build 21 - Critical Stability & Crash Fixes)
-            - **Female Profile / Biodata Auto-Close Fix**: Resolved hardware back button handler so opening candidate profile drawer does not trigger app exit.
-            - **Thread-Safe AdMob Loading**: Dispatched RewardedAd.load onto the Android main UI thread to prevent Google Play Services background thread exception crash.
-            - **Global React Error Boundary**: Safeguards candidate biodata and comparison modals from unhandled property errors or React unmounts.
-            - **Null-Safety Guards**: Safe parsing for dealbreakers, modesty, and family background fields.
-            - **Optimistic Like Speed & Rewind**: Retained instant swipe card animations and rewind functionality.
+            ### Qurb Matrimony v1.0.21 (Build 22 - Discover Feed Fixes & Performance)
+            - **Discover Feed Optimization**: Resolved empty feed conditions, improved candidate profile querying and client-side filtering.
+            - **Version Code 22 Update**: Successfully bumped versionCode to 22 for Google Play Console compatibility.
+            - **Crash Safeguards & Stability**: Thread-safe AdMob rewarded ads loading and React Error Boundary protection.
             - **app-release.aab**: Production Signed Android App Bundle (.aab) ready for Google Play Console upload.
             - **app-release.apk**: Production Signed APK for direct device installation.
             - **Qurb-Admin.apk**: Standalone APK for Qurb Executive Admin Portal.

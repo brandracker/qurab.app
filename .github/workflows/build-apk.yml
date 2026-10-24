@@ -133,16 +133,15 @@ jobs:
         continue-on-error: true
         with:
           fail_on_unmatched_files: false
-          tag_name: v1.0.19
-          name: "Qurb v1.0.19 (Release AAB, Client APK & Admin APK)"
+          tag_name: v1.0.20
+          name: "Qurb v1.0.20 (Crash Fix - Release AAB, Client APK & Admin APK)"
           body: |
-            ### Qurb Matrimony v1.0.19 (Build 20)
-            - **Optimistic Like Speed**: 0ms instant card transition without UI network delay.
-            - **Undo / Rewind Action**: Rewind previously swiped profiles (unlimited for Barakah VIP, 1 rewarded ad for standard users).
-            - **AdMob Rewarded Ad Cooldown Buffer**: 15s protection buffer preventing duplicate loop glitches and improving impression rate.
-            - **Pakistan City Centroids**: Dynamic distance calculation with GPS centroids for major Pakistani cities.
-            - **Foreground Push Suppression**: Native system banner suppression when active, replaced by soft in-app notifications.
-            - **Halal Initials Monogram Avatar**: Fallback for missing/404 profile photos.
+            ### Qurb Matrimony v1.0.20 (Build 21 - Critical Stability & Crash Fixes)
+            - **Female Profile / Biodata Auto-Close Fix**: Resolved hardware back button handler so opening candidate profile drawer does not trigger app exit.
+            - **Thread-Safe AdMob Loading**: Dispatched RewardedAd.load onto the Android main UI thread to prevent Google Play Services background thread exception crash.
+            - **Global React Error Boundary**: Safeguards candidate biodata and comparison modals from unhandled property errors or React unmounts.
+            - **Null-Safety Guards**: Safe parsing for dealbreakers, modesty, and family background fields.
+            - **Optimistic Like Speed & Rewind**: Retained instant swipe card animations and rewind functionality.
             - **app-release.aab**: Production Signed Android App Bundle (.aab) ready for Google Play Console upload.
             - **app-release.apk**: Production Signed APK for direct device installation.
             - **Qurb-Admin.apk**: Standalone APK for Qurb Executive Admin Portal.

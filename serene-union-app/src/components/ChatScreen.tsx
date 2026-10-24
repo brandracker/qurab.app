@@ -220,6 +220,12 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
   const burstPollingUntilRef = useRef<number>(0);
   const syncD1MessagesRef = useRef<() => Promise<void>>(() => Promise.resolve());
 
+  // WebSocket Live Real-Time & Typing Indicators
+  const [isPartnerTyping, setIsPartnerTyping] = useState<boolean>(false);
+  const wsRef = useRef<WebSocket | null>(null);
+  const isTypingSentRef = useRef<boolean>(false);
+  const typingTimeoutRef = useRef<any>(null);
+
 
 
   const formatChatTime = (timeStr?: string): string => {
@@ -424,6 +430,85 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
     return () => {
       isMounted = false;
       if (timerId) clearTimeout(timerId);
+    };
+  }, [activeConvId, activeConv?.id, activeConv?.otherUser?.id, currentUser.id]);
+
+  // Real-Time Cloudflare Durable Object WebSocket (Ultra-fast Turbo Layer)
+  useEffect(() => {
+    const targetRoomId = activeConv?.otherUser?.id 
+      ? (`conv_${[currentUser.id, activeConv.otherUser.id].sort().join('_')}`)
+      : (activeConv?.id || activeConvId);
+
+    if (!targetRoomId) return;
+
+    let ws: WebSocket | null = null;
+    let isCleanedUp = false;
+    let partnerTypingTimer: any = null;
+
+    try {
+      if (typeof window !== 'undefined' && typeof WebSocket !== 'undefined') {
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsBase = API_BASE.replace(/^https?:/, wsProtocol);
+        const wsUrl = `${wsBase}/conversations/${targetRoomId}/ws?userId=${currentUser.id}`;
+
+        ws = new WebSocket(wsUrl);
+        wsRef.current = ws;
+
+        ws.onopen = () => {
+          try { ws?.send(JSON.stringify({ type: 'ping' })); } catch {}
+        };
+
+        ws.onmessage = (event) => {
+          if (isCleanedUp) return;
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'new_message' && data.message) {
+              const incoming = data.message;
+              setRoomMessages(prev => {
+                if (prev.some(m => m.id === incoming.id)) return prev;
+                return [...prev, incoming];
+              });
+              // Sync local conversations cache
+              const convs = dbService.getConversations();
+              const current = convs.find(c => c.id === targetRoomId || (activeConv?.otherUser && c.otherUser?.id === activeConv.otherUser.id));
+              if (current) {
+                current.lastMessageText = incoming.text;
+                current.lastMessageSenderId = incoming.senderId;
+                current.lastMessageTime = incoming.timestamp;
+                localStorage.setItem('serene_real_conversations_v3', JSON.stringify(convs));
+                setConversations([...convs]);
+              }
+              setIsPartnerTyping(false);
+            } else if (data.type === 'typing') {
+              if (data.userId !== currentUser.id) {
+                setIsPartnerTyping(Boolean(data.isTyping));
+                if (partnerTypingTimer) clearTimeout(partnerTypingTimer);
+                if (data.isTyping) {
+                  partnerTypingTimer = setTimeout(() => setIsPartnerTyping(false), 3500);
+                }
+              }
+            } else if (data.type === 'photo_reveal') {
+              if (typeof data.isRevealed === 'boolean') {
+                setHasRevealedToPartner(data.isRevealed);
+              }
+            }
+          } catch {}
+        };
+
+        ws.onclose = () => {
+          wsRef.current = null;
+        };
+      }
+    } catch {}
+
+    return () => {
+      isCleanedUp = true;
+      if (partnerTypingTimer) clearTimeout(partnerTypingTimer);
+      if (ws) {
+        try { ws.close(); } catch {}
+      }
+      wsRef.current = null;
+      setIsPartnerTyping(false);
     };
   }, [activeConvId, activeConv?.id, activeConv?.otherUser?.id, currentUser.id]);
 
@@ -907,10 +992,36 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
           receiverId: activeConv.otherUser?.id
         })
       });
+      // Notify WebSocket peer that typing ended
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        isTypingSentRef.current = false;
+        try {
+          wsRef.current.send(JSON.stringify({ type: 'typing', isTyping: false, userId: user.id }));
+        } catch {}
+      }
       // Trigger burst polling for instant live responsiveness
       burstPollingUntilRef.current = Date.now() + 15000;
       syncD1MessagesRef.current?.();
     } catch {}
+  };
+
+  const handleTextInputChange = (val: string) => {
+    setInputText(val);
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      if (!isTypingSentRef.current && val.trim().length > 0) {
+        isTypingSentRef.current = true;
+        try {
+          wsRef.current.send(JSON.stringify({ type: 'typing', isTyping: true, userId: currentUser.id }));
+        } catch {}
+      }
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => {
+        isTypingSentRef.current = false;
+        try {
+          wsRef.current?.send(JSON.stringify({ type: 'typing', isTyping: false, userId: currentUser.id }));
+        } catch {}
+      }, 2500);
+    }
   };
 
   const handleConfirmBlock = async () => {
@@ -1484,6 +1595,20 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
           );
         })()}
 
+        {/* Live Partner Typing Indicator */}
+        {isPartnerTyping && (
+          <div className="flex items-center gap-2 px-3.5 py-1.5 text-xs text-secondary bg-surface-variant/90 border border-outline rounded-2xl w-fit animate-fade-in self-start mb-2 shadow-2xs">
+            <div className="flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce"></span>
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce [animation-delay:0.2s]"></span>
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce [animation-delay:0.4s]"></span>
+            </div>
+            <span className="text-[11px] font-medium text-on-surface">
+              {activeConv?.otherUser?.fullName?.split(' ')[0] || 'Partner'} is typing...
+            </span>
+          </div>
+        )}
+
         <div ref={chatBottomRef} />
       </main>
 
@@ -1560,7 +1685,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
             <input
               type="text"
               value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
+              onChange={(e) => handleTextInputChange(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleSendMessage();
               }}

@@ -12,6 +12,15 @@ database_id = "fcd8c8c6-94f1-46e1-a141-25728da9d520"
 binding = "MEDIA_BUCKET"
 bucket_name = "serene-union-media"
 
+[durable_objects]
+bindings = [
+  { name = "CHAT_ROOM", class_name = "ChatRoomDO" }
+]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["ChatRoomDO"]
+
 [vars]
 ENVIRONMENT = "production"
 GEMINI_API_KEY = "AIzaSyBqhvh6yaLxUXWHrPo5szZUdLAy7oQdY48"

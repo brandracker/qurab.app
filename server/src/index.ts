@@ -81,4 +81,6 @@ app.onError((err, c) => {
   return c.json({ success: false, error: err.message || 'Internal Server Error' }, 500);
 });
 
+export { ChatRoomDO } from './durable-objects/ChatRoomDO';
+
 export default app;

@@ -32,6 +32,25 @@ class MockAudio {
 }
 globalThis.Audio = MockAudio as any;
 
+// Mock WebSocket for JSDOM
+class MockWebSocket {
+  url: string;
+  readyState = 1;
+  onopen: any = null;
+  onmessage: any = null;
+  onerror: any = null;
+  onclose: any = null;
+  constructor(url: string) {
+    this.url = url;
+    setTimeout(() => { if (this.onopen) this.onopen({} as any); }, 0);
+  }
+  send = vi.fn();
+  close = vi.fn();
+}
+if (!globalThis.WebSocket) {
+  globalThis.WebSocket = MockWebSocket as any;
+}
+
 // Mock Element.prototype.scrollIntoView
 Element.prototype.scrollIntoView = vi.fn();
 

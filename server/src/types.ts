@@ -3,6 +3,7 @@ export type Bindings = {
   MEDIA_BUCKET: R2Bucket;
   ENVIRONMENT: string;
   GEMINI_API_KEY?: string;
+  CHAT_ROOM?: DurableObjectNamespace;
 };
 
 export type Variables = {

@@ -393,6 +393,39 @@ chatRouter.get('/:id/messages', async (c) => {
   }
 });
 
+// 3.5 Real-Time WebSocket Upgrade Endpoint for Active Chat Room
+chatRouter.get('/:id/ws', async (c) => {
+  const upgradeHeader = c.req.header('Upgrade');
+  if (!upgradeHeader || upgradeHeader.toLowerCase() !== 'websocket') {
+    return c.text('Expected Upgrade: websocket', 426);
+  }
+  if (!c.env.CHAT_ROOM) {
+    return c.text('Durable Objects not enabled in current environment', 503);
+  }
+
+  const rawConvId = c.req.param('id');
+  const userId = c.req.query('userId') || 'guest';
+  let targetRoomId = rawConvId;
+
+  // Normalize room ID if participants are present in the ID
+  if (rawConvId.startsWith('conv_')) {
+    const parts = rawConvId.replace('conv_', '').split('_');
+    if (parts.length === 2) {
+      targetRoomId = `conv_${parts.sort().join('_')}`;
+    }
+  }
+
+  const doId = c.env.CHAT_ROOM.idFromName(targetRoomId);
+  const roomStub = c.env.CHAT_ROOM.get(doId);
+
+  const url = new URL(c.req.url);
+  url.pathname = '/websocket';
+  url.searchParams.set('userId', userId);
+  url.searchParams.set('roomId', targetRoomId);
+
+  return roomStub.fetch(new Request(url.toString(), c.req.raw));
+});
+
 // 4. Send Message to a Conversation (Auto-ensures conversation exists with verified real partner)
 chatRouter.post('/:id/messages', async (c) => {
   try {
@@ -554,25 +587,50 @@ chatRouter.post('/:id/messages', async (c) => {
     // 6. Autonomous AI Agent: Auto-reply disabled per Admin configuration.
     // Responses are managed and dispatched on one-click via Admin Portal ("Reply All").
 
+    const msgObj = {
+      id: msgId,
+      senderId,
+      senderName: senderName || 'Member',
+      text: messageText,
+      mediaUrl: mediaUrl || null,
+      mediaType: mediaType || null,
+      mediaDuration: typeof mediaDuration === 'number' ? mediaDuration : null,
+      fileName: fileName || null,
+      fileSize: typeof fileSize === 'number' ? fileSize : null,
+      isViewOnce: Boolean(isViewOnce),
+      isOpened: false,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      isRead: true,
+      waliNotified: true
+    };
+
+    // 7. Real-Time Broadcast via Durable Object WebSockets
+    if (c.env.CHAT_ROOM) {
+      try {
+        const doId = c.env.CHAT_ROOM.idFromName(targetConvId);
+        const roomStub = c.env.CHAT_ROOM.get(doId);
+        const broadcastPromise = roomStub.fetch('http://internal/broadcast', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'new_message',
+            conversationId: targetConvId,
+            message: msgObj
+          })
+        }).catch(() => {});
+
+        if (c.executionCtx && typeof c.executionCtx.waitUntil === 'function') {
+          c.executionCtx.waitUntil(broadcastPromise);
+        }
+      } catch (wsErr) {
+        console.warn('[WebSocket] Broadcast notice:', wsErr);
+      }
+    }
+
     return c.json({
       success: true,
       messageId: msgId,
-      message: {
-        id: msgId,
-        senderId,
-        senderName: senderName || 'Member',
-        text: messageText,
-        mediaUrl: mediaUrl || null,
-        mediaType: mediaType || null,
-        mediaDuration: typeof mediaDuration === 'number' ? mediaDuration : null,
-        fileName: fileName || null,
-        fileSize: typeof fileSize === 'number' ? fileSize : null,
-        isViewOnce: Boolean(isViewOnce),
-        isOpened: false,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        isRead: true,
-        waliNotified: true
-      }
+      message: msgObj
     });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
@@ -662,6 +720,31 @@ chatRouter.post('/:id/photo-reveal', async (c) => {
         WHERE id = ? OR id = ?
       `).bind(statusMsg, targetConvId, rawConvId).run();
     } catch {}
+
+    // Real-Time Broadcast via Durable Object WebSockets
+    if (c.env.CHAT_ROOM) {
+      try {
+        const doId = c.env.CHAT_ROOM.idFromName(targetConvId);
+        const roomStub = c.env.CHAT_ROOM.get(doId);
+        const broadcastPromise = roomStub.fetch('http://internal/broadcast', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'photo_reveal',
+            conversationId: targetConvId,
+            ownerId,
+            viewerId,
+            isRevealed: Boolean(isRevealed),
+            statusMsg,
+            messageId: msgId
+          })
+        }).catch(() => {});
+
+        if (c.executionCtx && typeof c.executionCtx.waitUntil === 'function') {
+          c.executionCtx.waitUntil(broadcastPromise);
+        }
+      } catch {}
+    }
 
     return c.json({
       success: true,

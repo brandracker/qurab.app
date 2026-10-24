@@ -95,7 +95,7 @@ export const FilterModal: React.FC<Props> = ({ filters: initialFilters, onClose,
             <input
               type="range"
               min="18"
-              max="60"
+              max="65"
               value={filters.maxAge}
               onChange={(e) => setFilters(prev => ({ ...prev, maxAge: Number(e.target.value) }))}
               className="w-full accent-primary h-2 bg-surface-variant rounded-lg cursor-pointer"
@@ -107,13 +107,14 @@ export const FilterModal: React.FC<Props> = ({ filters: initialFilters, onClose,
             <div className="flex justify-between items-center mb-2">
               <h3 className="font-serif text-xs font-bold text-on-surface">Maximum Distance</h3>
               <span className="text-xs font-bold text-primary bg-pastel-rose px-2.5 py-0.5 rounded-full border border-pastel-rose-border">
-                {filters.maxDistance} miles
+                {filters.maxDistance === 0 ? 'All Pakistan / Worldwide' : `${filters.maxDistance} miles`}
               </span>
             </div>
             <input
               type="range"
-              min="5"
-              max="200"
+              min="0"
+              max="500"
+              step="5"
               value={filters.maxDistance}
               onChange={(e) => setFilters(prev => ({ ...prev, maxDistance: Number(e.target.value) }))}
               className="w-full accent-primary h-2 bg-surface-variant rounded-lg cursor-pointer"

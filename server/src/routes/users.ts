@@ -763,6 +763,7 @@ profilesRouter.get('/discover', async (c) => {
 
     let viewerLat: number | null = (queryLat !== null && !isNaN(queryLat)) ? queryLat : null;
     let viewerLon: number | null = (queryLon !== null && !isNaN(queryLon)) ? queryLon : null;
+    const queryViewerCity = c.req.query('viewerCity');
 
     if (currentUserId) {
       const userRow: any = await c.env.DB.prepare(`SELECT gender, latitude, longitude, city, location FROM users WHERE id = ?`).bind(currentUserId).first();
@@ -776,7 +777,7 @@ profilesRouter.get('/discover', async (c) => {
         viewerLon = userRow.longitude;
       }
       if (viewerLat === null || viewerLon === null) {
-        const viewerCentroid = getCityCentroid(userRow?.city || userRow?.location);
+        const viewerCentroid = getCityCentroid(userRow?.city || userRow?.location || queryViewerCity);
         if (viewerCentroid) {
           viewerLat = viewerCentroid.lat;
           viewerLon = viewerCentroid.lon;
@@ -785,6 +786,14 @@ profilesRouter.get('/discover', async (c) => {
       try {
         await c.env.DB.prepare("UPDATE users SET last_active_at = datetime('now') WHERE id = ?").bind(currentUserId).run();
       } catch {}
+    } else if (viewerLat === null || viewerLon === null) {
+      if (queryViewerCity) {
+        const viewerCentroid = getCityCentroid(queryViewerCity);
+        if (viewerCentroid) {
+          viewerLat = viewerCentroid.lat;
+          viewerLon = viewerCentroid.lon;
+        }
+      }
     }
 
     // Determine bounding box if maxDistance is specified

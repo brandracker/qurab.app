@@ -184,7 +184,7 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
     setCurrentIndex(0);
     dbService.fetchLiveProfiles(newFilters).then(live => {
       if (live && live.length > 0) {
-        setProfiles(dbService.getDiscoverFeed(newFilters));
+        setProfiles(dbService.getDiscoverFeed(newFilters, live));
       }
     });
   }, []);
@@ -367,12 +367,13 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
     } catch {}
   }, [likesRemaining, getLikeKey, currentUser.id]);
 
-  const handleResetFilters = useCallback(() => {
+  const handleResetFilters = useCallback(async () => {
     setSearchQuery('');
     try {
       localStorage.removeItem('serene_filters_v2');
+      localStorage.removeItem('serene_cached_discover_v2');
     } catch {}
-    dbService.resetPassedProfiles(currentUser.id);
+    await dbService.resetPassedProfiles(currentUser.id);
     handleApplyFilters({
       minAge: 18,
       maxAge: 65,

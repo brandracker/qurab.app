@@ -228,7 +228,8 @@ class DBService {
       if (typeof user.latitude === 'number' && typeof user.longitude === 'number') {
         queryParams += `&lat=${user.latitude}&lon=${user.longitude}`;
       } else if (user.city || user.location) {
-        queryParams += `&city=${encodeURIComponent(user.city || user.location || '')}`;
+        // Pass viewerCity so backend computes real distance without restricting candidate locations
+        queryParams += `&viewerCity=${encodeURIComponent(user.city || user.location || '')}`;
       }
       // Only filter by distance if maxDistance is explicitly set > 0
       if (filters?.maxDistance && filters.maxDistance > 0 && filters.maxDistance < 5000) {
@@ -966,16 +967,19 @@ class DBService {
     });
   }
 
-  resetPassedProfiles(userId: string): void {
+  async resetPassedProfiles(userId: string): Promise<boolean> {
     try {
       localStorage.removeItem(`serene_passed_${userId}`);
       window.dispatchEvent(new CustomEvent('serene_activity_updated'));
-      fetch(`${API_BASE}/matches/reset-passed`, {
+      const res = await fetch(`${API_BASE}/matches/reset-passed`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId })
-      }).catch(() => {});
-    } catch {}
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
   }
 
 

@@ -59,25 +59,30 @@ public class GooglePlayBillingPlugin extends Plugin implements PurchasesUpdatedL
     private void connectToGooglePlay(@Nullable final Runnable onConnected) {
         if (billingClient == null) return;
 
-        billingClient.startConnection(new BillingClientStateListener() {
-            @Override
-            public void onBillingSetupFinished(@NonNull BillingResult billingResult) {
-                if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
-                    Log.d(TAG, "Google Play BillingClient successfully connected!");
-                    isClientReady = true;
-                    if (onConnected != null) onConnected.run();
-                } else {
-                    Log.w(TAG, "Billing setup response: " + billingResult.getDebugMessage());
+        try {
+            billingClient.startConnection(new BillingClientStateListener() {
+                @Override
+                public void onBillingSetupFinished(@NonNull BillingResult billingResult) {
+                    if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+                        Log.d(TAG, "Google Play BillingClient successfully connected!");
+                        isClientReady = true;
+                        if (onConnected != null) onConnected.run();
+                    } else {
+                        Log.w(TAG, "Billing setup response: " + billingResult.getDebugMessage());
+                        isClientReady = false;
+                    }
+                }
+
+                @Override
+                public void onBillingServiceDisconnected() {
+                    Log.w(TAG, "BillingClient disconnected. Will reconnect on next call.");
                     isClientReady = false;
                 }
-            }
-
-            @Override
-            public void onBillingServiceDisconnected() {
-                Log.w(TAG, "BillingClient disconnected. Will reconnect on next call.");
-                isClientReady = false;
-            }
-        });
+            });
+        } catch (Exception e) {
+            Log.e(TAG, "Error connecting to Google Play Billing: " + e.getMessage());
+            isClientReady = false;
+        }
     }
 
     @PluginMethod
@@ -157,12 +162,29 @@ public class GooglePlayBillingPlugin extends Plugin implements PurchasesUpdatedL
                     .setProductDetailsParamsList(list)
                     .build();
 
-            getActivity().runOnUiThread(() -> {
-                BillingResult result = billingClient.launchBillingFlow(getActivity(), flowParams);
-                if (result.getResponseCode() != BillingClient.BillingResponseCode.OK) {
-                    Log.e(TAG, "Launch billing flow error: " + result.getDebugMessage());
+            final android.app.Activity activity = getActivity();
+            if (activity == null) {
+                if (activePurchaseCall != null) {
+                    activePurchaseCall.reject("Android Activity is unavailable");
+                    activePurchaseCall = null;
+                }
+                return;
+            }
+
+            activity.runOnUiThread(() -> {
+                try {
+                    BillingResult result = billingClient.launchBillingFlow(activity, flowParams);
+                    if (result.getResponseCode() != BillingClient.BillingResponseCode.OK) {
+                        Log.e(TAG, "Launch billing flow error: " + result.getDebugMessage());
+                        if (activePurchaseCall != null) {
+                            activePurchaseCall.reject("Unable to open Google Play payment: " + result.getDebugMessage());
+                            activePurchaseCall = null;
+                        }
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "Exception during launchBillingFlow: " + e.getMessage());
                     if (activePurchaseCall != null) {
-                        activePurchaseCall.reject("Unable to open Google Play payment: " + result.getDebugMessage());
+                        activePurchaseCall.reject("Exception launching Google Play billing: " + e.getMessage());
                         activePurchaseCall = null;
                     }
                 }

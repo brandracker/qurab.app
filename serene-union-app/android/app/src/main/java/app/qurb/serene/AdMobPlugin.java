@@ -44,9 +44,13 @@ public class AdMobPlugin extends Plugin {
         if (isInitializing) return;
         isInitializing = true;
 
-        MobileAds.initialize(getContext(), initializationStatus -> {
-            Log.d(TAG, "Google AdMob MobileAds initialized successfully with App ID: ca-app-pub-5486823026870276~3052992520");
-        });
+        try {
+            MobileAds.initialize(getContext(), initializationStatus -> {
+                Log.d(TAG, "Google AdMob MobileAds initialized successfully with App ID: ca-app-pub-5486823026870276~3052992520");
+            });
+        } catch (Exception e) {
+            Log.e(TAG, "Exception during MobileAds.initialize: " + e.getMessage());
+        }
     }
 
     private void preloadRewardedAd(final Runnable onSuccess, final Runnable onFailure) {
@@ -55,6 +59,7 @@ public class AdMobPlugin extends Plugin {
             return;
         }
         if (isLoading) {
+            if (onFailure != null) onFailure.run();
             return;
         }
 

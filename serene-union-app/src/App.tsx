@@ -28,6 +28,8 @@ import { AdminPortal } from './screens/admin/AdminPortal';
 import { backNavigationService } from './services/backNavigationService';
 import { pushNotificationService } from './services/pushNotificationService';
 import { AnnouncementModal } from './components/AnnouncementModal';
+import { TrialPromoModal } from './components/TrialPromoModal';
+import { MembershipUpgradeModal } from './components/MembershipUpgradeModal';
 
 type OnboardingStep = 
   | 'welcome' 
@@ -181,6 +183,21 @@ export const App: React.FC = () => {
   // Active User Profile State
   const [currentUser, setCurrentUser] = useState<UserProfile>(() => dbService.getCurrentUser());
   const [activeAnnouncement, setActiveAnnouncement] = useState<{ id: string; title: string; message: string } | null>(null);
+  const [showTrialPromo, setShowTrialPromo] = useState<boolean>(false);
+  const [showVipUpgradeModal, setShowVipUpgradeModal] = useState<boolean>(false);
+
+  // 7-Day Free Trial Promo Placeholder (Start of App / Post-Login)
+  useEffect(() => {
+    if (currentStep === 'main_app' && currentUser?.id && currentUser.id !== 'usr_guest' && !currentUser.isVip) {
+      const dismissed = sessionStorage.getItem('qurb_trial_promo_dismissed');
+      if (!dismissed) {
+        const timer = setTimeout(() => {
+          setShowTrialPromo(true);
+        }, 1200);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [currentStep, currentUser?.id, currentUser?.isVip]);
 
   // Task 09: Check dynamic in-app announcements
   useEffect(() => {
@@ -1041,6 +1058,43 @@ export const App: React.FC = () => {
                   localStorage.setItem(`qurb_seen_bc_${activeAnnouncement.id}`, 'true');
                 } catch {}
                 setActiveAnnouncement(null);
+              }
+            }}
+          />
+        )}
+
+        {/* 7-Day Free Trial Promo Placeholder Modal */}
+        {showTrialPromo && (
+          <TrialPromoModal
+            isOpen={showTrialPromo}
+            onClose={() => {
+              try {
+                sessionStorage.setItem('qurb_trial_promo_dismissed', 'true');
+              } catch {}
+              setShowTrialPromo(false);
+            }}
+            onStartTrial={() => {
+              try {
+                sessionStorage.setItem('qurb_trial_promo_dismissed', 'true');
+              } catch {}
+              setShowTrialPromo(false);
+              setShowVipUpgradeModal(true);
+            }}
+          />
+        )}
+
+        {/* Membership Upgrade / 7-Day Free Trial Flow */}
+        {showVipUpgradeModal && (
+          <MembershipUpgradeModal
+            userId={currentUser.id}
+            isOpen={showVipUpgradeModal}
+            onClose={() => setShowVipUpgradeModal(false)}
+            onPurchaseSuccess={(productId) => {
+              if (productId === 'serene_barakah_monthly' || productId === 'qurb_barakah_monthly') {
+                setCurrentUser(prev => ({ ...prev, isVip: true }));
+                try {
+                  localStorage.setItem(`serene_vip_${currentUser.id}`, 'true');
+                } catch {}
               }
             }}
           />

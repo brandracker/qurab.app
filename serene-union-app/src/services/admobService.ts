@@ -115,7 +115,22 @@ class AdMobService {
         body: JSON.stringify({ userId, rewardType, placementId: this.config.rewardedAdUnitId })
       });
       const data = await res.json();
-      return Boolean(data.success);
+      if (data.success) {
+        if (typeof data.directSalams === 'number') {
+          localStorage.setItem(`serene_salams_left_${userId}`, data.directSalams.toString());
+          window.dispatchEvent(new CustomEvent('serene_salams_updated', { detail: { userId, directSalams: data.directSalams } }));
+        }
+        if (typeof data.adsWatchedForSalam === 'number') {
+          localStorage.setItem(`serene_salam_ads_${userId}`, data.adsWatchedForSalam.toString());
+          window.dispatchEvent(new CustomEvent('serene_salam_ads_updated', { detail: { userId, adsWatched: data.adsWatchedForSalam } }));
+        }
+        if (typeof data.likesRemaining === 'number') {
+          localStorage.setItem(`serene_likes_left_${userId}`, data.likesRemaining.toString());
+          window.dispatchEvent(new CustomEvent('serene_likes_updated', { detail: { userId, likesRemaining: data.likesRemaining } }));
+        }
+        return true;
+      }
+      return false;
     } catch (err) {
       console.warn('AdMob reward claim error:', err);
       return false;

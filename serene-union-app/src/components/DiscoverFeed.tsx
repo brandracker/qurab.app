@@ -73,7 +73,7 @@ export const DiscoverFeed: React.FC<Props> = ({
     setIsVip,
     likesRemaining,
     directSalams,
-    setDirectSalams,
+    adsWatchedForSalam,
     filters,
     isLoading,
     profiles,
@@ -245,8 +245,7 @@ export const DiscoverFeed: React.FC<Props> = ({
       <header className="w-full absolute top-0 inset-x-0 z-40 bg-gradient-to-b from-black/85 via-black/40 to-transparent px-3.5 pt-3 pb-6 flex items-center justify-between gap-2">
         {/* Left: Luxury Qurb Brand Logo */}
         <div className="flex items-center gap-1.5 shrink-0">
-          <span className="font-serif font-black text-lg tracking-tight text-white flex items-center gap-1">
-            <Heart className="w-4 h-4 text-primary fill-primary" />
+          <span className="font-serif font-black text-xl tracking-tight text-white flex items-center">
             <span>Qurb</span>
           </span>
         </div>
@@ -833,9 +832,9 @@ export const DiscoverFeed: React.FC<Props> = ({
                   <Hand className="w-4 h-4 text-emerald-300" />
                   <span>Direct Salam</span>
                   <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold ${
-                    directSalams > 0 ? 'bg-emerald-500 text-white' : 'bg-white/30 text-white/80'
+                    directSalams > 0 ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white shadow-xs'
                   }`}>
-                    {directSalams} Left
+                    {directSalams > 0 ? `${directSalams} Left` : `${adsWatchedForSalam % 3}/3 Ads`}
                   </span>
                 </button>
 
@@ -1292,8 +1291,42 @@ export const DiscoverFeed: React.FC<Props> = ({
                 No Direct Salam Passes Left
               </h3>
               <p className="text-xs text-secondary mt-1 leading-relaxed">
-                Direct Salam lets you reach out directly to candidates without waiting for a mutual match. Watch 3 short ads to earn 1 free pass, or get 20 passes with Barakah VIP!
+                Direct Salam lets you reach out directly to candidates without waiting for a mutual match. Watch <strong>3 short ads</strong> to earn <strong>1 free pass</strong>!
               </p>
+            </div>
+
+            {/* 3-Step Ads Progress Visualizer */}
+            <div className="w-full bg-surface-variant/70 border border-outline rounded-2xl p-3 flex flex-col items-center gap-2">
+              <div className="flex items-center justify-between w-full text-[11px] font-bold text-on-surface">
+                <span className="flex items-center gap-1">
+                  <span>Ad Progress:</span>
+                  <span className="text-primary font-mono">{adsWatchedForSalam % 3} of 3 Watched</span>
+                </span>
+                <span className="text-[10px] text-emerald-700 bg-emerald-100 font-bold px-2 py-0.5 rounded-full border border-emerald-300">
+                  {3 - (adsWatchedForSalam % 3)} more to unlock 🎁
+                </span>
+              </div>
+              <div className="flex items-center justify-center gap-3 w-full pt-1">
+                {[1, 2, 3].map((step) => {
+                  const currentDone = adsWatchedForSalam % 3;
+                  const isDone = step <= currentDone;
+                  const isCurrent = step === currentDone + 1;
+                  return (
+                    <div
+                      key={step}
+                      className={`flex items-center justify-center text-xs font-bold rounded-full transition-all ${
+                        isDone
+                          ? 'w-8 h-8 bg-emerald-500 text-white shadow-2xs'
+                          : isCurrent
+                          ? 'w-8 h-8 bg-primary text-white ring-2 ring-primary/40 shadow-xs animate-pulse'
+                          : 'w-8 h-8 bg-white border border-outline text-secondary'
+                      }`}
+                    >
+                      {isDone ? '✓' : step === 3 ? '🎁' : step}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="w-full space-y-2 pt-1">
@@ -1303,7 +1336,7 @@ export const DiscoverFeed: React.FC<Props> = ({
                   setAdRewardType('salam');
                   setShowRewardedAdModal(true);
                 }}
-                className="w-full py-3 rounded-full bg-primary text-white text-xs font-bold shadow-brand hover:bg-primary-dark active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                className="w-full py-3 rounded-full bg-primary text-white text-xs font-bold shadow-brand hover:bg-primary-dark active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <PlayCircle className="w-4 h-4" />
                 <span>Watch Ads (Earn Free Pass)</span>
@@ -1314,7 +1347,7 @@ export const DiscoverFeed: React.FC<Props> = ({
                   setShowSalamRefillModal(false);
                   setShowVipModal(true);
                 }}
-                className="w-full py-2.5 rounded-full bg-pastel-amber text-pastel-amber-text border border-pastel-amber-border hover:bg-pastel-amber/80 text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+                className="w-full py-2.5 rounded-full bg-pastel-amber text-pastel-amber-text border border-pastel-amber-border hover:bg-pastel-amber/80 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Crown className="w-4 h-4 text-pastel-amber-text" />
                 <span>Get Barakah VIP (20 Salams Included)</span>
@@ -1322,7 +1355,7 @@ export const DiscoverFeed: React.FC<Props> = ({
 
               <button
                 onClick={() => setShowSalamRefillModal(false)}
-                className="text-[11px] text-secondary hover:text-on-surface pt-1"
+                className="text-[11px] text-secondary hover:text-on-surface pt-1 cursor-pointer"
               >
                 Cancel
               </button>
@@ -1344,8 +1377,14 @@ export const DiscoverFeed: React.FC<Props> = ({
             } else if (adRewardType === 'undo') {
               handleClaimAdUndo();
             } else {
-              dbService.fetchLikesRemaining(currentUser.id).then((res: any) => {
-                if (typeof res?.directSalams === 'number') setDirectSalams(res.directSalams);
+              dbService.claimAdReward(currentUser.id, 'salam').then(() => {
+                const nextWatched = (adsWatchedForSalam % 3) + 1;
+                if (nextWatched >= 3) {
+                  setToastMessage("🎉 3 Ads completed! +1 Direct Salam Pass added!");
+                } else {
+                  setToastMessage(`Ad ${nextWatched}/3 completed! Watch ${3 - nextWatched} more for a free pass.`);
+                }
+                setTimeout(() => setToastMessage(null), 4000);
               });
             }
           }}

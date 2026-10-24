@@ -13,7 +13,7 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   onPurchaseSuccess: (productId: string) => void;
-  onWatchAdClicked: () => void;
+  onWatchAdClicked?: () => void;
 }
 
 export const MembershipUpgradeModal: React.FC<Props> = ({
@@ -264,7 +264,7 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
                 type="button"
                 onClick={() => {
                   onClose();
-                  onWatchAdClicked();
+                  if (onWatchAdClicked) onWatchAdClicked();
                 }}
                 className="w-full p-3 rounded-2xl bg-white border border-dashed border-primary hover:bg-pastel-rose flex items-center justify-between text-left transition-all shadow-subtle"
               >

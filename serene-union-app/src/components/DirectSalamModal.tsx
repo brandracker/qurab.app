@@ -102,7 +102,7 @@ export const DirectSalamModal: React.FC<DirectSalamModalProps> = ({
                 Direct Salam Pass
               </span>
               <span className="text-[11px] text-secondary">
-                {passesRemaining} {passesRemaining === 1 ? 'pass' : 'passes'} left
+                {passesRemaining} {passesRemaining === 1 ? 'pass' : 'passes'} left · (3 Ads = +1 Pass)
               </span>
             </div>
             <h2 id="direct-salam-title" className="text-lg font-bold text-on-surface mt-1">

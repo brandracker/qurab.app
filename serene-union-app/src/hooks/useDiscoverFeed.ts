@@ -33,6 +33,10 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
     return saved !== null ? parseInt(saved, 10) : 2;
   });
 
+  const [adsWatchedForSalam, setAdsWatchedForSalam] = useState<number>(() => {
+    return dbService.getAdsWatchedForSalam(currentUser.id);
+  });
+
   const [filters, setFilters] = useState<FilterState>(() => {
     try {
       const saved = localStorage.getItem('serene_filters_v2');
@@ -112,13 +116,14 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
         if (isMounted) setIsLoading(false);
       });
 
-    dbService.fetchLikesRemaining(currentUser.id).then(({ likesRemaining: l, directSalams: s, isVip: v }) => {
+    dbService.fetchLikesRemaining(currentUser.id).then(({ likesRemaining: l, directSalams: s, isVip: v, adsWatchedForSalam: a }) => {
       if (!isMounted) return;
       if (typeof l === 'number') {
         setLikesRemaining(l);
         localStorage.setItem(getLikeKey(), l.toString());
       }
       if (typeof s === 'number') setDirectSalams(s);
+      if (typeof a === 'number') setAdsWatchedForSalam(a);
       if (typeof v === 'boolean') {
         setIsVip(v);
         localStorage.setItem(`serene_vip_${currentUser.id}`, String(v));
@@ -140,11 +145,18 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
         setDirectSalams(e.detail.directSalams);
       }
     };
+    const handleSalamAdsUpdate = (e: any) => {
+      if (typeof e.detail?.adsWatched === 'number') {
+        setAdsWatchedForSalam(e.detail.adsWatched);
+      }
+    };
     window.addEventListener('serene_likes_updated', handleLikesUpdate);
     window.addEventListener('serene_salams_updated', handleSalamsUpdate);
+    window.addEventListener('serene_salam_ads_updated', handleSalamAdsUpdate);
     return () => {
       window.removeEventListener('serene_likes_updated', handleLikesUpdate);
       window.removeEventListener('serene_salams_updated', handleSalamsUpdate);
+      window.removeEventListener('serene_salam_ads_updated', handleSalamAdsUpdate);
     };
   }, []);
 
@@ -379,6 +391,8 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
     likesRemaining,
     directSalams,
     setDirectSalams,
+    adsWatchedForSalam,
+    setAdsWatchedForSalam,
     filters,
     searchQuery,
     setSearchQuery,

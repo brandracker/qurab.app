@@ -815,6 +815,7 @@ profilesRouter.get('/discover', async (c) => {
     // Task 04: Filters End-to-End (Sects, Practice Levels, City, Age Range)
     const sectsParam = c.req.query('sects') || c.req.query('sect');
     const practiceLevelsParam = c.req.query('practiceLevels') || c.req.query('practiceLevel');
+    const filterCityParam = c.req.query('filterCity');
     const cityParam = c.req.query('city');
     const minAgeParam = c.req.query('minAge') ? parseInt(c.req.query('minAge')!, 10) : null;
     const maxAgeParam = c.req.query('maxAge') ? parseInt(c.req.query('maxAge')!, 10) : null;
@@ -832,7 +833,10 @@ profilesRouter.get('/discover', async (c) => {
     const practiceList = practiceLevelsParam ? practiceLevelsParam.split(',').map(p => p.trim().toLowerCase()).filter(Boolean) : [];
     const practiceFilter = practiceList.length > 0 ? `AND LOWER(rp.practice_level) IN (${practiceList.map(() => '?').join(',')})` : '';
 
-    const cityFilter = cityParam && cityParam.trim() ? `AND (LOWER(u.city) LIKE ? OR LOWER(u.location) LIKE ?)` : '';
+    // Backward Compatibility: Legacy mobile apps sent viewer's own location as &city=...
+    // Only apply candidate city restriction if filterCity is explicitly passed, or unauthenticated guest query
+    const shouldFilterCity = Boolean(filterCityParam && filterCityParam.trim()) || (!currentUserId && Boolean(cityParam && cityParam.trim()));
+    const cityFilter = shouldFilterCity ? `AND (LOWER(u.city) LIKE ? OR LOWER(u.location) LIKE ?)` : '';
 
     let ageFilter = '';
     const currentYear = new Date().getFullYear();
@@ -917,7 +921,8 @@ profilesRouter.get('/discover', async (c) => {
     if (sectList.length > 0) bindParams.push(...sectList);
     if (practiceList.length > 0) bindParams.push(...practiceList);
     if (cityFilter) {
-      const term = `%${cityParam!.trim().toLowerCase()}%`;
+      const citySearch = filterCityParam || cityParam;
+      const term = `%${citySearch!.trim().toLowerCase()}%`;
       bindParams.push(term, term);
     }
     if (ageParams.length > 0) bindParams.push(...ageParams);

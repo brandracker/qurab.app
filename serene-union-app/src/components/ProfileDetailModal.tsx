@@ -54,8 +54,9 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const currentUser = dbService.getCurrentUser();
-  const isRevealedToMe = Boolean(profile.isPhotoRevealed) || dbService.isPhotoRevealedTo(profile.id, currentUser.id);
-  const isUnblurred = !profile.blurPhotosByDefault || isRevealedToMe || Boolean(profile.photoRevealApproved);
+  const currentUserId = currentUser?.id || 'usr_guest';
+  const isRevealedToMe = Boolean(profile?.isPhotoRevealed) || (profile?.id ? dbService.isPhotoRevealedTo(profile.id, currentUserId) : false);
+  const isUnblurred = !profile?.blurPhotosByDefault || isRevealedToMe || Boolean(profile?.photoRevealApproved);
   const [showCompatibilityModal, setShowCompatibilityModal] = useState<boolean>(false);
 
   useEffect(() => {
@@ -103,7 +104,7 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || !profile) return null;
 
 
   const photos = (profile.photos || []).filter(
@@ -444,7 +445,9 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
                   </div>
                   <div className="min-w-0">
                     <span className="text-[10px] text-pastel-mint-text font-medium block">Modesty Style</span>
-                    <strong className="text-on-surface text-[11px] block truncate capitalize">{rel?.modestyPractice?.replace('_', ' ') || 'Modest'}</strong>
+                    <strong className="text-on-surface text-[11px] block truncate capitalize">
+                      {typeof rel?.modestyPractice === 'string' ? rel.modestyPractice.replace('_', ' ') : 'Modest'}
+                    </strong>
                   </div>
                 </div>
 
@@ -702,7 +705,7 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
                         halal_diet: { label: 'Strictly Halal Diet', emoji: '🍽️' },
                         family_involvement: { label: 'Early Wali Involvement', emoji: '🛡️' }
                       };
-                      const item = labels[db] || { label: db.replace(/_/g, ' '), emoji: '🔒' };
+                      const item = labels[db] || { label: typeof db === 'string' ? db.replace(/_/g, ' ') : String(db), emoji: '🔒' };
                       return (
                         <span key={idx} className="bg-white text-rose-700 px-2 py-0.5 rounded-xl text-[10px] font-bold border border-rose-200 shadow-2xs flex items-center gap-1.5">
                           <span>{item.emoji}</span>

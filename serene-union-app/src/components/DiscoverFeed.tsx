@@ -43,6 +43,7 @@ import { useDiscoverFeed } from '../hooks/useDiscoverFeed';
 import { DirectSalamModal } from './DirectSalamModal';
 import { RatingModal } from './RatingModal';
 import { ratingService } from '../services/ratingService';
+import { backNavigationService } from '../services/backNavigationService';
 import { dbService } from '../services/dbService';
 
 interface Props {
@@ -171,6 +172,15 @@ export const DiscoverFeed: React.FC<Props> = ({
       onSelectProfile(currentProfile);
     }
   }, [currentProfile?.id, onSelectProfile]);
+
+  // Intercept Android hardware back button when biodata drawer is open so it closes drawer instead of exiting app
+  useEffect(() => {
+    if (!isDrawerOpen) return;
+    return backNavigationService.register(() => {
+      setIsDrawerOpen(false);
+      return true;
+    });
+  }, [isDrawerOpen]);
 
   const photos = currentProfile?.photos || [];
 
@@ -680,7 +690,7 @@ export const DiscoverFeed: React.FC<Props> = ({
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <h2 className="text-2xl sm:text-3xl font-serif font-bold text-white leading-tight drop-shadow-md truncate flex items-center gap-1.5">
-                      <span>{currentProfile.fullName.split(' ')[0]}, {currentProfile.age}</span>
+                      <span>{(currentProfile.fullName || 'Candidate').split(' ')[0]}, {currentProfile.age}</span>
                       {currentProfile.isVip && (
                         <Crown className="w-4 h-4 text-amber-400 fill-amber-400 shrink-0" />
                       )}
@@ -968,7 +978,9 @@ export const DiscoverFeed: React.FC<Props> = ({
                             </div>
                             <div className="min-w-0">
                               <span className="text-[9px] text-pastel-mint-text font-bold uppercase block truncate">Modesty / Attire</span>
-                              <strong className="text-on-surface text-xs capitalize truncate block">{currentProfile.religiousProfile?.modestyPractice?.replace('_', ' ') || 'Modest'}</strong>
+                              <strong className="text-on-surface text-xs capitalize truncate block">
+                                {typeof currentProfile.religiousProfile?.modestyPractice === 'string' ? currentProfile.religiousProfile.modestyPractice.replace('_', ' ') : 'Modest'}
+                              </strong>
                             </div>
                           </div>
                         </div>
@@ -1002,7 +1014,9 @@ export const DiscoverFeed: React.FC<Props> = ({
                             </div>
                             <div className="min-w-0">
                               <span className="text-[9px] text-pastel-sky-text font-bold uppercase block truncate">Work Setup</span>
-                              <strong className="text-on-surface capitalize text-xs truncate block">{currentProfile.workArrangement?.replace('_', ' ') || 'Full-Time'}</strong>
+                              <strong className="text-on-surface capitalize text-xs truncate block">
+                                {typeof currentProfile.workArrangement === 'string' ? currentProfile.workArrangement.replace('_', ' ') : 'Full-Time'}
+                              </strong>
                             </div>
                           </div>
 
@@ -1012,7 +1026,9 @@ export const DiscoverFeed: React.FC<Props> = ({
                             </div>
                             <div className="min-w-0">
                               <span className="text-[9px] text-pastel-sky-text font-bold uppercase block truncate">Income Bracket</span>
-                              <strong className="text-on-surface text-xs capitalize truncate block">{currentProfile.incomeBracket ? currentProfile.incomeBracket.replace('_', ' ') : 'Professional'}</strong>
+                              <strong className="text-on-surface text-xs capitalize truncate block">
+                                {typeof currentProfile.incomeBracket === 'string' ? currentProfile.incomeBracket.replace('_', ' ') : 'Professional'}
+                              </strong>
                             </div>
                           </div>
                         </div>
@@ -1029,7 +1045,9 @@ export const DiscoverFeed: React.FC<Props> = ({
                             </div>
                             <div className="min-w-0">
                               <span className="text-[9px] text-pastel-sand-text font-bold uppercase block truncate">Living</span>
-                              <strong className="text-primary capitalize text-xs truncate block">{currentProfile.livingPreference?.replace('_', ' ') || 'Independent'}</strong>
+                              <strong className="text-primary capitalize text-xs truncate block">
+                                {typeof currentProfile.livingPreference === 'string' ? currentProfile.livingPreference.replace('_', ' ') : 'Independent'}
+                              </strong>
                             </div>
                           </div>
 
@@ -1039,7 +1057,9 @@ export const DiscoverFeed: React.FC<Props> = ({
                             </div>
                             <div className="min-w-0">
                               <span className="text-[9px] text-pastel-sand-text font-bold uppercase block truncate">Marital Status</span>
-                              <strong className="text-on-surface text-xs capitalize truncate block">{currentProfile.maritalStatus ? currentProfile.maritalStatus.replace('_', ' ') : 'Never Married'}</strong>
+                              <strong className="text-on-surface text-xs capitalize truncate block">
+                                {typeof currentProfile.maritalStatus === 'string' ? currentProfile.maritalStatus.replace('_', ' ') : 'Never Married'}
+                              </strong>
                             </div>
                           </div>
 
@@ -1085,7 +1105,7 @@ export const DiscoverFeed: React.FC<Props> = ({
                             {currentProfile.hobbies.map((h, i) => (
                               <span key={i} className="bg-pastel-rose text-primary text-[10px] font-bold px-3 py-1 rounded-full border border-pastel-rose-border shadow-2xs flex items-center gap-1">
                                 <Bookmark className="w-2.5 h-2.5 text-primary" />
-                                <span>{h.replace(/[^\w\s()-]/gi, '').trim()}</span>
+                                <span>{typeof h === 'string' ? h.replace(/[^\w\s()-]/gi, '').trim() : String(h)}</span>
                               </span>
                             ))}
                           </div>

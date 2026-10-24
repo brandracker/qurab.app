@@ -63,24 +63,41 @@ public class AdMobPlugin extends Plugin {
     }
 
     private void loadWithUnitId(final String adUnitId, final Runnable onSuccess, final Runnable onFailure) {
-        AdRequest adRequest = new AdRequest.Builder().build();
+        final Activity activity = getActivity();
+        if (activity == null) {
+            isLoading = false;
+            if (onFailure != null) onFailure.run();
+            return;
+        }
 
-        RewardedAd.load(getContext(), adUnitId, adRequest, new RewardedAdLoadCallback() {
-            @Override
-            public void onAdLoaded(@NonNull RewardedAd ad) {
-                rewardedAd = ad;
-                isLoading = false;
-                Log.d(TAG, "Google AdMob Rewarded Video successfully loaded: " + adUnitId);
-                if (onSuccess != null) {
-                    onSuccess.run();
-                }
-            }
+        activity.runOnUiThread(() -> {
+            try {
+                AdRequest adRequest = new AdRequest.Builder().build();
 
-            @Override
-            public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
-                rewardedAd = null;
+                RewardedAd.load(activity, adUnitId, adRequest, new RewardedAdLoadCallback() {
+                    @Override
+                    public void onAdLoaded(@NonNull RewardedAd ad) {
+                        rewardedAd = ad;
+                        isLoading = false;
+                        Log.d(TAG, "Google AdMob Rewarded Video successfully loaded: " + adUnitId);
+                        if (onSuccess != null) {
+                            onSuccess.run();
+                        }
+                    }
+
+                    @Override
+                    public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
+                        rewardedAd = null;
+                        isLoading = false;
+                        Log.w(TAG, "Google AdMob unit failed to load (" + adUnitId + "): " + loadAdError.getMessage());
+                        if (onFailure != null) {
+                            onFailure.run();
+                        }
+                    }
+                });
+            } catch (Exception e) {
                 isLoading = false;
-                Log.w(TAG, "Google AdMob unit failed to load (" + adUnitId + "): " + loadAdError.getMessage());
+                Log.e(TAG, "Exception during RewardedAd.load: " + e.getMessage());
                 if (onFailure != null) {
                     onFailure.run();
                 }

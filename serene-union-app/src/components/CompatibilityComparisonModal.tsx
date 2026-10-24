@@ -10,10 +10,12 @@ interface Props {
 }
 
 export const CompatibilityComparisonModal: React.FC<Props> = ({ currentUser, profile, isOpen, onClose }) => {
-  if (!isOpen) return null;
+  if (!isOpen || !profile) return null;
 
+  const currentId = currentUser?.id || 'usr_guest';
+  const profileId = profile?.id || 'candidate';
   // Stable seed calculation based on IDs
-  const seed = (currentUser.id + profile.id).split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const seed = (currentId + profileId).split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
   const deenScore = 88 + (seed % 10);
   const financeScore = 82 + ((seed * 3) % 15);
   const familyScore = 85 + ((seed * 7) % 12);
@@ -58,7 +60,7 @@ export const CompatibilityComparisonModal: React.FC<Props> = ({ currentUser, pro
                 {overallScore}% Match
               </h3>
               <p className="text-xs text-secondary mt-0.5 max-w-[220px]">
-                High values alignment with {profile.fullName.split(' ')[0]}
+                High values alignment with {(profile.fullName || 'Candidate').split(' ')[0]}
               </p>
             </div>
             <div className="w-14 h-14 rounded-2xl bg-primary text-white flex items-center justify-center font-serif text-xl font-bold shadow-brand">

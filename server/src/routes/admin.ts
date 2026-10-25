@@ -1854,11 +1854,22 @@ adminRouter.get('/ai-agent/status', async (c) => {
       }
     } catch {}
 
+    let apiKey = c.env.GEMINI_API_KEY || '';
+    try {
+      const keyRow = await c.env.DB.prepare("SELECT value FROM system_settings WHERE key = 'gemini_api_key'").first();
+      if (keyRow?.value) {
+        apiKey = keyRow.value;
+      }
+    } catch {}
+
+    const maskedKey = apiKey ? `${apiKey.slice(0, 6)}...${apiKey.slice(-4)}` : null;
     const seedCount = await c.env.DB.prepare("SELECT COUNT(*) as c FROM users WHERE is_seed = 1").first();
 
     return c.json({
       success: true,
       enabled,
+      hasApiKey: Boolean(apiKey),
+      maskedKey,
       model: 'gemini-2.5-flash',
       activeSeedProfiles: Number(seedCount?.c || 0)
     });
@@ -1899,6 +1910,60 @@ adminRouter.post('/ai-agent/toggle', async (c) => {
   }
 });
 
+// 22b. AI Agent Configure Gemini API Key
+adminRouter.post('/ai-agent/config', async (c) => {
+  try {
+    const { apiKey } = await c.req.json();
+    if (!apiKey || typeof apiKey !== 'string' || apiKey.trim().length < 10) {
+      return c.json({ success: false, error: 'Valid Gemini API key required.' }, 400);
+    }
+
+    const cleanKey = apiKey.trim();
+
+    // Verify key with quick test call
+    try {
+      const testRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${cleanKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: 'Ping' }] }],
+          generationConfig: { maxOutputTokens: 10 }
+        })
+      });
+      if (!testRes.ok) {
+        const errData: any = await testRes.json().catch(() => ({}));
+        const errMsg = errData.error?.message || `HTTP ${testRes.status}`;
+        return c.json({ success: false, error: `Google API rejected key: ${errMsg}` }, 400);
+      }
+    } catch (testErr: any) {
+      return c.json({ success: false, error: `Connection to Gemini failed: ${testErr.message}` }, 400);
+    }
+
+    await c.env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS system_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+
+    await c.env.DB.prepare(`
+      INSERT INTO system_settings (key, value, updated_at) 
+      VALUES ('gemini_api_key', ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP
+    `).bind(cleanKey).run();
+
+    return c.json({
+      success: true,
+      hasApiKey: true,
+      maskedKey: `${cleanKey.slice(0, 6)}...${cleanKey.slice(-4)}`,
+      message: 'Gemini API Key successfully verified and saved!'
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
 // 23. AI Agent Pending Chats Count (Unread Salams & Matches)
 adminRouter.get('/ai-agent/pending-count', async (c) => {
   try {
@@ -1921,7 +1986,14 @@ adminRouter.post('/ai-agent/catchup', async (c) => {
     } catch {}
 
     const limit = body?.limit || 50;
-    const apiKey = c.env.GEMINI_API_KEY;
+
+    let apiKey = c.env.GEMINI_API_KEY;
+    try {
+      const keyRow = await c.env.DB.prepare("SELECT value FROM system_settings WHERE key = 'gemini_api_key'").first();
+      if (keyRow?.value) {
+        apiKey = keyRow.value;
+      }
+    } catch {}
 
     const result = await processCatchupReplies(c.env.DB, apiKey, { limit });
     const remainingCount = await getPendingCatchupCount(c.env.DB);

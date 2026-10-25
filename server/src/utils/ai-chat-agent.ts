@@ -66,7 +66,8 @@ export function buildSystemPrompt(
   persona: PersonaType,
   turnCount: number,
   userMessage: string,
-  userProvidedBio: boolean
+  userProvidedBio: boolean,
+  conversationHistory?: string
 ): string {
   const prof = (profile.profession || '').toLowerCase();
   const uni = profile.university ? `at ${profile.university}` : '';
@@ -137,11 +138,12 @@ TURN 2 (USER EVADED / DID NOT SHARE BIODATA):
     }
   } else {
     turnDirective = `
-TURN 3 (FINAL EXIT & WRAP-UP):
-- Politely conclude the conversation.
-- State that you have noted their details and will share them with your parents/walidain.
-- Add a polite closing: "Maine details ammi abbu ke sath share karni hain. Best wishes aapki search ke liye. Allah hafiz."
-- Do NOT ask any more questions, and do NOT mention any external links or apps.
+TURN 3 (FINAL EXIT & DISCUSSION CLOSE):
+- You MUST gracefully WRAP UP and CLOSE the discussion in this message!
+- Politely state that you have noted their details and will share/discuss them with your parents/ammi abbu for their decision.
+- Wish them the best for their marriage search and wrap up with "Allah Hafiz".
+- Example style: "W/salam. Maine aapki details note kar li hain aur ammi abbu se discuss karungi. Aapki rishta search ke liye meri taraf se best wishes. Allah Hafiz."
+- STRICT RULE: Do NOT ask any questions. Do NOT invite further conversation. Wrap up politely.
 - Keep response concise (1 to 2 complete natural sentences). Always finish your sentence completely.`;
   }
 
@@ -170,7 +172,8 @@ CRITICAL RULES:
 
 ${turnDirective}
 
-User's incoming message:
+${conversationHistory ? `CONVERSATION SO FAR:\n${conversationHistory}\n` : ''}
+User's latest message:
 "${userMessage}"
 
 Generate ONLY your direct chat response in Roman Urdu:`;
@@ -179,7 +182,7 @@ Generate ONLY your direct chat response in Roman Urdu:`;
 export async function generateGeminiReply(prompt: string, apiKey: string): Promise<string | null> {
   if (!apiKey) return null;
 
-  const models = ['models/gemini-flash-latest', 'models/gemini-2.5-flash', 'models/gemini-flash-lite-latest'];
+  const models = ['models/gemini-2.5-flash', 'models/gemini-flash-latest', 'models/gemini-flash-lite-latest'];
 
   for (const model of models) {
     const url = `https://generativelanguage.googleapis.com/v1beta/${model}:generateContent?key=${apiKey}`;
@@ -191,8 +194,9 @@ export async function generateGeminiReply(prompt: string, apiKey: string): Promi
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
-            temperature: 0.85,
-            maxOutputTokens: 1000
+            temperature: 0.7,
+            maxOutputTokens: 1000,
+            thinkingConfig: { thinkingBudget: 0 }
           }
         })
       });
@@ -404,11 +408,50 @@ export async function processAiSeedResponse(options: ProcessAiSeedChatOptions): 
     };
 
     const persona = determinePersona(profileContext);
-    const userSharedBio = hasBiodataClues(userMessageText);
+
+    // 2c. Fetch recent conversation history so Gemini understands previous context
+    let conversationHistory = '';
+    let historyText = '';
+    try {
+      const historyRows: any = await db.prepare(`
+        SELECT sender_id, sender_name, text, created_at
+        FROM chat_messages
+        WHERE conversation_id = ? AND sender_id != 'system'
+        ORDER BY created_at ASC
+        LIMIT 10
+      `).bind(conversationId).all();
+
+      const messages = historyRows?.results || [];
+      if (messages.length > 0) {
+        historyText = messages.map((m: any) => m.text || '').join(' ');
+        conversationHistory = messages.map((m: any) => {
+          const isSeed = m.sender_id === seedUserId || (m.sender_id && m.sender_id.startsWith('usr_seed_'));
+          const senderLabel = isSeed ? `${profileContext.fullName.split(' ')[0]} (Candidate)` : 'User';
+          return `${senderLabel}: "${m.text}"`;
+        }).join('\n');
+      }
+    } catch (e) {
+      console.warn('[AIChatAgent] Error fetching history:', e);
+    }
+
+    const userSharedBio = hasBiodataClues(userMessageText) || hasBiodataClues(historyText);
 
     // 3. Generate response via Gemini or Fallback
-    const prompt = buildSystemPrompt(profileContext, persona, currentTurnCount, userMessageText, userSharedBio);
-    const key = apiKey || process.env.GEMINI_API_KEY || '';
+    const prompt = buildSystemPrompt(profileContext, persona, currentTurnCount, userMessageText, userSharedBio, conversationHistory);
+    
+    // Resolve API key: parameter -> system_settings -> process.env
+    let key = apiKey || '';
+    if (!key) {
+      try {
+        const row: any = await db.prepare("SELECT value FROM system_settings WHERE key = 'gemini_api_key'").first();
+        if (row?.value) {
+          key = row.value;
+        }
+      } catch {}
+    }
+    if (!key && typeof process !== 'undefined') {
+      key = process.env.GEMINI_API_KEY || '';
+    }
 
     let generatedReply = await generateGeminiReply(prompt, key);
     if (!generatedReply) {
@@ -470,6 +513,7 @@ export async function getPendingCatchupCount(db: any): Promise<number> {
       SELECT COUNT(*) as count
       FROM conversations c
       WHERE (c.participant_one LIKE 'usr_seed_%' OR c.participant_two LIKE 'usr_seed_%')
+        AND (SELECT COUNT(*) FROM chat_messages WHERE conversation_id = c.id AND sender_id LIKE 'usr_seed_%') < 3
         AND (
           (SELECT sender_id FROM chat_messages WHERE conversation_id = c.id AND sender_id != 'system' ORDER BY created_at DESC LIMIT 1) NOT LIKE 'usr_seed_%'
           OR (SELECT sender_id FROM chat_messages WHERE conversation_id = c.id AND sender_id != 'system' ORDER BY created_at DESC LIMIT 1) IS NULL
@@ -489,6 +533,20 @@ export async function processCatchupReplies(
 ): Promise<{ repliedCount: number; processedConvs: string[] }> {
   const limit = options.limit || 50;
 
+  // Resolve API key
+  let resolvedKey = apiKey || '';
+  if (!resolvedKey) {
+    try {
+      const row: any = await db.prepare("SELECT value FROM system_settings WHERE key = 'gemini_api_key'").first();
+      if (row?.value) {
+        resolvedKey = row.value;
+      }
+    } catch {}
+  }
+  if (!resolvedKey && typeof process !== 'undefined') {
+    resolvedKey = process.env.GEMINI_API_KEY || '';
+  }
+
   try {
     const { results } = await db.prepare(`
       SELECT c.id, c.participant_one, c.participant_two, c.last_message_text, c.last_message_sender_id,
@@ -497,6 +555,7 @@ export async function processCatchupReplies(
         (SELECT COUNT(*) FROM chat_messages WHERE conversation_id = c.id AND sender_id LIKE 'usr_seed_%') as seed_replies
       FROM conversations c
       WHERE (c.participant_one LIKE 'usr_seed_%' OR c.participant_two LIKE 'usr_seed_%')
+        AND (SELECT COUNT(*) FROM chat_messages WHERE conversation_id = c.id AND sender_id LIKE 'usr_seed_%') < 3
         AND (
           (SELECT sender_id FROM chat_messages WHERE conversation_id = c.id AND sender_id != 'system' ORDER BY created_at DESC LIMIT 1) NOT LIKE 'usr_seed_%'
           OR (SELECT sender_id FROM chat_messages WHERE conversation_id = c.id AND sender_id != 'system' ORDER BY created_at DESC LIMIT 1) IS NULL
@@ -538,7 +597,7 @@ export async function processCatchupReplies(
             realUserId,
             userMessageText: userMsg,
             db,
-            apiKey,
+            apiKey: resolvedKey,
             delayMs: 0
           });
 

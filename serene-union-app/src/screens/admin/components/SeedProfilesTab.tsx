@@ -49,6 +49,11 @@ export const SeedProfilesTab: React.FC<SeedProfilesTabProps> = ({ adminToken }) 
   const [previewProfile, setPreviewProfile] = useState<SeedProfile | null>(null);
   const [aiEnabled, setAiEnabled] = useState<boolean>(true);
   const [togglingAi, setTogglingAi] = useState<boolean>(false);
+  const [hasApiKey, setHasApiKey] = useState<boolean>(false);
+  const [maskedKey, setMaskedKey] = useState<string | null>(null);
+  const [showKeyModal, setShowKeyModal] = useState<boolean>(false);
+  const [apiKeyInput, setApiKeyInput] = useState<string>('');
+  const [savingKey, setSavingKey] = useState<boolean>(false);
   const [pendingChatsCount, setPendingChatsCount] = useState<number>(0);
   const [catchingUp, setCatchingUp] = useState<boolean>(false);
 
@@ -87,10 +92,43 @@ export const SeedProfilesTab: React.FC<SeedProfilesTabProps> = ({ adminToken }) 
         headers: { Authorization: `Bearer ${adminToken}` }
       });
       const data = await res.json();
-      if (data.success && typeof data.enabled === 'boolean') {
-        setAiEnabled(data.enabled);
+      if (data.success) {
+        if (typeof data.enabled === 'boolean') setAiEnabled(data.enabled);
+        if (typeof data.hasApiKey === 'boolean') setHasApiKey(data.hasApiKey);
+        if (data.maskedKey) setMaskedKey(data.maskedKey);
       }
     } catch (e) {}
+  };
+
+  const handleSaveApiKey = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!apiKeyInput.trim()) return;
+    try {
+      setSavingKey(true);
+      const res = await fetch(`${API_BASE}/admin/ai-agent/config`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${adminToken}`
+        },
+        body: JSON.stringify({ apiKey: apiKeyInput.trim() })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setHasApiKey(true);
+        setMaskedKey(data.maskedKey);
+        setShowKeyModal(false);
+        setApiKeyInput('');
+        showToast('Gemini API Key successfully verified and saved!');
+        fetchPendingCount();
+      } else {
+        showToast(`Key error: ${data.error || 'Failed to verify key'}`);
+      }
+    } catch (err: any) {
+      showToast('Error connecting to server');
+    } finally {
+      setSavingKey(false);
+    }
   };
 
   const fetchPendingCount = async () => {
@@ -403,19 +441,32 @@ export const SeedProfilesTab: React.FC<SeedProfilesTabProps> = ({ adminToken }) 
                 </div>
               </div>
 
-              <button
-                onClick={handleToggleAi}
-                disabled={togglingAi}
-                className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${
-                  aiEnabled
-                    ? 'bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-500/30'
-                    : 'bg-slate-700 hover:bg-slate-600 text-slate-200'
-                }`}
-                title="Toggle AI Agent Auto-Replies for all seed profiles"
-              >
-                <Bot className="w-4 h-4" />
-                <span>{aiEnabled ? 'Mute AI' : 'Enable AI'}</span>
-              </button>
+              <div className="flex items-center space-x-1.5">
+                <button
+                  onClick={handleToggleAi}
+                  disabled={togglingAi}
+                  className={`flex items-center space-x-2 px-3 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${
+                    aiEnabled
+                      ? 'bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-500/30'
+                      : 'bg-slate-700 hover:bg-slate-600 text-slate-200'
+                  }`}
+                  title="Toggle AI Agent Auto-Replies for all seed profiles"
+                >
+                  <Bot className="w-4 h-4" />
+                  <span>{aiEnabled ? 'Mute AI' : 'Enable AI'}</span>
+                </button>
+                <button
+                  onClick={() => setShowKeyModal(true)}
+                  className={`p-2.5 rounded-xl border transition-all cursor-pointer ${
+                    hasApiKey
+                      ? 'bg-purple-500/10 border-purple-500/30 text-purple-400 hover:bg-purple-500/20'
+                      : 'bg-amber-500/10 border-amber-500/40 text-amber-400 hover:bg-amber-500/20 animate-pulse'
+                  }`}
+                  title={hasApiKey ? `Gemini Key Active: ${maskedKey || 'Configured'}` : 'Configure Gemini API Key'}
+                >
+                  <Key className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
             {/* AI Auto-Reply to Pending Salams & Matches Button */}
@@ -934,6 +985,81 @@ export const SeedProfilesTab: React.FC<SeedProfilesTabProps> = ({ adminToken }) 
           </div>
         </div>
       )}
+
+      {/* Gemini API Key Configuration Modal */}
+      {showKeyModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-md bg-[#0F172A] border border-purple-500/30 rounded-3xl p-6 shadow-2xl">
+            <button
+              onClick={() => setShowKeyModal(false)}
+              className="absolute top-4 right-4 p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center space-x-3 mb-4">
+              <span className="p-2.5 rounded-2xl bg-purple-500/15 text-purple-400 border border-purple-500/30">
+                <Key className="w-5 h-5" />
+              </span>
+              <div>
+                <h3 className="text-lg font-bold text-white">Gemini AI Configuration</h3>
+                <p className="text-xs text-slate-400">Gemini 2.5 Flash API Key for Seed Auto-Replies</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveApiKey} className="space-y-4">
+              {maskedKey && (
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 flex items-center justify-between">
+                  <span>Current Active Key:</span>
+                  <code className="font-mono font-bold">{maskedKey}</code>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  Enter New Google Gemini API Key
+                </label>
+                <input
+                  type="password"
+                  value={apiKeyInput}
+                  onChange={(e) => setApiKeyInput(e.target.value)}
+                  placeholder="Paste your Gemini API key (AQ... or AIza...)"
+                  className="w-full px-4 py-3 rounded-xl bg-slate-900 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-purple-500 transition"
+                  required
+                />
+                <p className="text-[11px] text-slate-400 mt-1.5">
+                  Stored directly and securely in Cloudflare D1. Never committed to GitHub or leaked publicly.
+                </p>
+              </div>
+
+              <div className="flex items-center space-x-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowKeyModal(false)}
+                  className="flex-1 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-semibold transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingKey || !apiKeyInput.trim()}
+                  className="flex-1 flex items-center justify-center space-x-2 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition disabled:opacity-50 cursor-pointer shadow-lg shadow-purple-600/30"
+                >
+                  {savingKey ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Verifying...</span>
+                    </>
+                  ) : (
+                    <span>Verify & Save Key</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+

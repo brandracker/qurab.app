@@ -150,7 +150,7 @@ describe('Matches LEFT JOIN Resilience, Instant Match & Guest Migration Tests', 
     expect(migrateData.success).toBe(true);
 
     // Verify likes now belong to sampleBrotherUser
-    const likeRow: any = await env.DB.prepare(`SELECT * FROM matches_and_likes WHERE sender_id = ?`).bind(sampleBrotherUser.id).first();
+    const likeRow: any = await env.DB.prepare(`SELECT * FROM matches_and_likes WHERE sender_id = ? AND action = 'liked'`).bind(sampleBrotherUser.id).first();
     expect(likeRow).toBeDefined();
     expect(likeRow.receiver_id).toBe(sampleSisterUser.id);
 

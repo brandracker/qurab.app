@@ -72,6 +72,7 @@ export class MockD1Database {
         is_banned BOOLEAN DEFAULT 0,
         ban_reason TEXT DEFAULT NULL,
         fcm_token TEXT DEFAULT NULL,
+        last_active_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
@@ -247,10 +248,22 @@ export class MockD1Database {
 
       CREATE INDEX IF NOT EXISTS idx_users_gender_created ON users(gender, created_at);
       CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+      CREATE INDEX IF NOT EXISTS idx_users_last_active ON users(last_active_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_users_gender_seed ON users(gender, is_seed);
       CREATE INDEX IF NOT EXISTS idx_user_photos_user_id ON user_photos(user_id, sort_order);
+      CREATE INDEX IF NOT EXISTS idx_user_photos_user_primary ON user_photos(user_id, is_primary DESC);
       CREATE INDEX IF NOT EXISTS idx_matches_sender_receiver ON matches_and_likes(sender_id, receiver_id);
+      CREATE INDEX IF NOT EXISTS idx_matches_sender_action ON matches_and_likes(sender_id, action);
+      CREATE INDEX IF NOT EXISTS idx_matches_receiver_action ON matches_and_likes(receiver_id, action);
+      CREATE INDEX IF NOT EXISTS idx_matches_created_at ON matches_and_likes(created_at);
       CREATE INDEX IF NOT EXISTS idx_conversations_p1_p2 ON conversations(participant_one, participant_two);
-      CREATE INDEX IF NOT EXISTS idx_conversations_last_msg ON conversations(last_message_time);
+      CREATE INDEX IF NOT EXISTS idx_conversations_p1 ON conversations(participant_one, last_message_time DESC);
+      CREATE INDEX IF NOT EXISTS idx_conversations_p2 ON conversations(participant_two, last_message_time DESC);
+      CREATE INDEX IF NOT EXISTS idx_conversations_last_msg ON conversations(last_message_time DESC);
+      CREATE INDEX IF NOT EXISTS idx_chat_messages_conv_created ON chat_messages(conversation_id, created_at ASC);
+      CREATE INDEX IF NOT EXISTS idx_chat_messages_sender ON chat_messages(sender_id);
+      CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON chat_messages(created_at);
       CREATE INDEX IF NOT EXISTS idx_religious_profiles_user ON religious_profiles(user_id);
       CREATE INDEX IF NOT EXISTS idx_wali_details_user ON wali_details(user_id);
     `);

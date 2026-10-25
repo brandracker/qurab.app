@@ -382,13 +382,21 @@ export async function processAiSeedResponse(options: ProcessAiSeedChatOptions): 
     // DO NOT send another message! Wait for the human user to reply first.
     try {
       const lastMsg: any = await db.prepare(`
-        SELECT sender_id FROM chat_messages
+        SELECT sender_id, text FROM chat_messages
         WHERE conversation_id = ? AND sender_id != 'system'
-        ORDER BY created_at DESC LIMIT 1
+        ORDER BY created_at DESC, rowid DESC LIMIT 1
       `).bind(conversationId).first();
 
       if (lastMsg && (lastMsg.sender_id.startsWith('usr_seed_') || lastMsg.sender_id.includes('seed'))) {
-        return { replied: false, reason: 'already_responded_awaiting_user_reply' };
+        const lastHumanMsg: any = await db.prepare(`
+          SELECT text FROM chat_messages
+          WHERE conversation_id = ? AND sender_id = ?
+          ORDER BY created_at DESC, rowid DESC LIMIT 1
+        `).bind(conversationId, realUserId).first();
+
+        if (!lastHumanMsg || lastHumanMsg.text === userMessageText) {
+          return { replied: false, reason: 'already_responded_awaiting_user_reply' };
+        }
       }
     } catch {}
 

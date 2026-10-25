@@ -178,6 +178,7 @@ adminRouter.get('/cities', async (c) => {
       LIMIT 100
     `).all();
 
+    c.header('Cache-Control', 'public, max-age=600, stale-while-revalidate=3600');
     return c.json({
       success: true,
       cities: citiesRes?.results || []

@@ -151,7 +151,18 @@ photosRouter.get('/media/:fileId', async (c) => {
     const fallbackMime = isImage ? (ext === 'jpg' ? 'image/jpeg' : `image/${ext}`) : 'audio/webm';
     headers.set('Content-Type', object.httpMetadata?.contentType || fallbackMime);
     headers.set('Accept-Ranges', 'bytes');
-    headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=86400');
+    
+    // ETag & Conditional 304 Not Modified
+    const etag = object.httpEtag || `"${fileId}"`;
+    headers.set('ETag', etag);
+
+    const clientEtag = c.req.header('if-none-match');
+    if (clientEtag && (clientEtag === etag || clientEtag === `W/${etag}`)) {
+      return new Response(null, { status: 304, headers });
+    }
+
+    // Media & Photos are content-addressed immutable files: Cache permanently for 1 year
+    headers.set('Cache-Control', 'public, max-age=31536000, immutable');
     headers.set('Access-Control-Allow-Origin', '*');
     headers.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
 

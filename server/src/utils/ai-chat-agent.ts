@@ -322,6 +322,7 @@ export interface ProcessAiSeedChatOptions {
   db: any;
   apiKey?: string;
   delayMs?: number; // Optional delay, default is realistic 15000-30000ms
+  skipKillSwitch?: boolean; // When true (e.g. manual admin trigger), bypasses global killswitch
 }
 
 export async function processAiSeedResponse(options: ProcessAiSeedChatOptions): Promise<{
@@ -333,13 +334,15 @@ export async function processAiSeedResponse(options: ProcessAiSeedChatOptions): 
   const { conversationId, seedUserId, realUserId, userMessageText, db, apiKey } = options;
 
   try {
-    // 0. Global Admin Kill-Switch Check
-    try {
-      const setting: any = await db.prepare("SELECT value FROM system_settings WHERE key = 'ai_agent_enabled'").first();
-      if (setting && (setting.value === '0' || setting.value === 'false' || setting.value === 'disabled')) {
-        return { replied: false, reason: 'ai_agent_disabled_by_admin' };
-      }
-    } catch {}
+    // 0. Global Admin Kill-Switch Check (bypassed on manual admin catchup)
+    if (!options.skipKillSwitch) {
+      try {
+        const setting: any = await db.prepare("SELECT value FROM system_settings WHERE key = 'ai_agent_enabled'").first();
+        if (setting && (setting.value === '0' || setting.value === 'false' || setting.value === 'disabled')) {
+          return { replied: false, reason: 'ai_agent_disabled_by_admin' };
+        }
+      } catch {}
+    }
 
     // 1. Fetch seed user profile details & verify individual seed_active status
     const seedUser: any = await db.prepare(`
@@ -598,7 +601,8 @@ export async function processCatchupReplies(
             userMessageText: userMsg,
             db,
             apiKey: resolvedKey,
-            delayMs: 0
+            delayMs: 0,
+            skipKillSwitch: true
           });
 
           if (result.replied) {

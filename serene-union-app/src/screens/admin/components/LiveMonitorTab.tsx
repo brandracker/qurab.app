@@ -171,7 +171,7 @@ export const LiveMonitorTab: React.FC<LiveMonitorTabProps> = ({
     if (!data?.liveUsers) return [];
     let list = data.liveUsers;
     if (userOnlineFilter === 'online') {
-      list = list.filter(u => u.status === 'online');
+      list = list.filter(u => u.status === 'online' || (typeof u.secondsAgo === 'number' && u.secondsAgo <= 600));
     }
     if (!searchQuery.trim()) return list;
     const q = searchQuery.toLowerCase();

@@ -302,7 +302,7 @@ adminRouter.get('/live-activity', async (c) => {
         SELECT COUNT(*) as c FROM users 
         WHERE (is_banned = 0 OR is_banned IS NULL)
           AND (is_seed = 0 OR is_seed IS NULL)
-          AND last_active_at >= datetime('now', '-10 minutes')
+          AND COALESCE(last_active_at, created_at) >= datetime('now', '-10 minutes')
       `).first();
       onlineUsersCount = Number(onRes?.c || 0);
 
@@ -343,7 +343,7 @@ adminRouter.get('/live-activity', async (c) => {
       WHERE (u.is_banned = 0 OR u.is_banned IS NULL)
         AND (u.is_seed = 0 OR u.is_seed IS NULL)
       ORDER BY COALESCE(u.last_active_at, u.created_at) DESC
-      LIMIT 60
+      LIMIT 100
     `).all();
 
     // Fetch primary photos for all users in liveUsers
@@ -373,12 +373,12 @@ adminRouter.get('/live-activity', async (c) => {
       let status: 'online' | 'away' | 'recent' | 'offline' = 'offline';
       let currentAction = 'Offline';
 
-      if (sec <= 300) {
+      if (sec <= 600) {
         status = 'online';
-        currentAction = 'Active in app now';
-      } else if (sec <= 900) {
+        currentAction = sec <= 120 ? 'Active in app now' : `Active ${Math.round(sec / 60)}m ago`;
+      } else if (sec <= 1800) {
         status = 'away';
-        currentAction = `Active ${Math.round(sec / 60)}m ago`;
+        currentAction = `Away (${Math.round(sec / 60)}m ago)`;
       } else if (sec <= 86400) {
         status = 'recent';
         currentAction = `Active ${Math.round(sec / 3600)}h ago`;

@@ -40,8 +40,16 @@ export const AdminPortal: React.FC = () => {
   });
 
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
+  const [dailyInitialDate, setDailyInitialDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
   const [isLoading, setIsLoading] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
+
+  const handleSelectTabWithDate = (tab: AdminTab, dateStr?: string) => {
+    if (dateStr) {
+      setDailyInitialDate(dateStr);
+    }
+    setActiveTab(tab);
+  };
 
   // Dashboard Data
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -483,6 +491,8 @@ export const AdminPortal: React.FC = () => {
     );
   }
 
+
+
   return (
     <div className="min-h-screen bg-[#090D16] text-slate-100 flex flex-col font-sans selection:bg-[#FF2560]/30 selection:text-white">
       {/* Toast Notification */}
@@ -513,7 +523,7 @@ export const AdminPortal: React.FC = () => {
             <OverviewTab
               stats={stats}
               onRefresh={fetchStats}
-              onSelectTab={setActiveTab}
+              onSelectTab={handleSelectTabWithDate}
             />
           )}
 
@@ -521,6 +531,7 @@ export const AdminPortal: React.FC = () => {
             <DailyActivityTab
               adminToken={adminToken}
               onInspectUser={handleInspectUser}
+              initialDate={dailyInitialDate}
             />
           )}
 

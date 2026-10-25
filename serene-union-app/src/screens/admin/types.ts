@@ -226,6 +226,15 @@ export interface SeedProfile {
   createdAt?: string;
 }
 
+export interface DailyBreakdownItem {
+  date: string;
+  signups: number;
+  male: number;
+  female: number;
+  matches?: number;
+  messages?: number;
+}
+
 export interface DashboardStats {
   totalUsers: number;
   maleUsers: number;
@@ -240,6 +249,21 @@ export interface DashboardStats {
     today: number;
     thisWeek: number;
     thisMonth: number;
+    dates?: {
+      todayDate: string;
+      weekStart: string;
+      monthStart: string;
+    };
+    dailyBreakdown?: DailyBreakdownItem[];
+    selectedDate?: string;
+    selectedDateStats?: {
+      date: string;
+      signups: number;
+      male: number;
+      female: number;
+      matches?: number;
+      messages?: number;
+    };
   };
   topCities: { city: string; count: number }[];
   systemStatus: string;

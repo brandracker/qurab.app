@@ -25,14 +25,23 @@ import type {
 interface DailyActivityTabProps {
   adminToken: string;
   onInspectUser?: (userId: string) => void;
+  initialDate?: string;
 }
 
 export const DailyActivityTab: React.FC<DailyActivityTabProps> = ({
   adminToken,
-  onInspectUser
+  onInspectUser,
+  initialDate
 }) => {
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
-  const [selectedDate, setSelectedDate] = useState<string>(todayStr);
+  const [selectedDate, setSelectedDate] = useState<string>(initialDate || todayStr);
+
+  useEffect(() => {
+    if (initialDate) {
+      setSelectedDate(initialDate);
+    }
+  }, [initialDate]);
+
   const [data, setData] = useState<DailyActivityResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');

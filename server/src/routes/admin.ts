@@ -229,6 +229,12 @@ adminRouter.get('/dashboard/stats', async (c) => {
     let todaySignups = 0;
     let weekSignups = 0;
     let monthSignups = 0;
+    let dailyBreakdown: any[] = [];
+    let selectedDateStats: any = null;
+    const nowIso = new Date().toISOString();
+    const todayStr = nowIso.split('T')[0];
+    const targetDate = c.req.query('date') || todayStr;
+
     try {
       const todayRes = await c.env.DB.prepare("SELECT COUNT(*) as c FROM users WHERE date(created_at) = date('now') AND (is_seed = 0 OR is_seed IS NULL)").first();
       todaySignups = Number(todayRes?.c || 0);
@@ -238,6 +244,54 @@ adminRouter.get('/dashboard/stats', async (c) => {
 
       const monthRes = await c.env.DB.prepare("SELECT COUNT(*) as c FROM users WHERE created_at >= datetime('now', '-30 days') AND (is_seed = 0 OR is_seed IS NULL)").first();
       monthSignups = Number(monthRes?.c || 0);
+
+      // Date-wise daily breakdown for past 14 days
+      const breakdownRes = await c.env.DB.prepare(`
+        SELECT 
+          date(created_at) as date, 
+          COUNT(*) as signups, 
+          SUM(CASE WHEN gender = 'male' THEN 1 ELSE 0 END) as male, 
+          SUM(CASE WHEN gender = 'female' THEN 1 ELSE 0 END) as female 
+        FROM users 
+        WHERE created_at >= datetime('now', '-30 days') 
+          AND (is_seed = 0 OR is_seed IS NULL) 
+        GROUP BY date(created_at) 
+        ORDER BY date DESC 
+        LIMIT 14
+      `).all();
+      dailyBreakdown = (breakdownRes?.results || []).map((row: any) => ({
+        date: row.date,
+        signups: Number(row.signups || 0),
+        male: Number(row.male || 0),
+        female: Number(row.female || 0)
+      }));
+
+      // Stats for selected date
+      const selUserRes = await c.env.DB.prepare(`
+        SELECT 
+          COUNT(*) as signups,
+          SUM(CASE WHEN gender = 'male' THEN 1 ELSE 0 END) as male,
+          SUM(CASE WHEN gender = 'female' THEN 1 ELSE 0 END) as female
+        FROM users 
+        WHERE date(created_at) = ? AND (is_seed = 0 OR is_seed IS NULL)
+      `).bind(targetDate).first();
+
+      const selMatchRes = await c.env.DB.prepare(`
+        SELECT COUNT(*) as c FROM matches_and_likes WHERE date(created_at) = ?
+      `).bind(targetDate).first();
+
+      const selMsgRes = await c.env.DB.prepare(`
+        SELECT COUNT(*) as c FROM chat_messages WHERE date(created_at) = ?
+      `).bind(targetDate).first();
+
+      selectedDateStats = {
+        date: targetDate,
+        signups: Number(selUserRes?.signups || 0),
+        male: Number(selUserRes?.male || 0),
+        female: Number(selUserRes?.female || 0),
+        matches: Number(selMatchRes?.c || 0),
+        messages: Number(selMsgRes?.c || 0)
+      };
     } catch {}
 
     // Top 5 populated cities (real organic users only)
@@ -278,7 +332,15 @@ adminRouter.get('/dashboard/stats', async (c) => {
         growth: {
           today: todaySignups,
           thisWeek: weekSignups,
-          thisMonth: monthSignups
+          thisMonth: monthSignups,
+          dates: {
+            todayDate: todayStr,
+            weekStart: new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0],
+            monthStart: new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]
+          },
+          dailyBreakdown,
+          selectedDate: targetDate,
+          selectedDateStats
         },
         topCities,
         systemStatus: 'healthy',

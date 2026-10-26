@@ -21,6 +21,7 @@ import { NotificationsScreen } from './screens/NotificationsScreen';
 import { dbService, API_BASE } from './services/dbService';
 import { notificationService } from './services/notificationService';
 import { facebookEventsService } from './services/facebookEventsService';
+import { referralService } from './services/referralService';
 import { Capacitor } from '@capacitor/core';
 import { LandingPage, PLAY_STORE_URL } from './components/LandingPage';
 import { isLocalEnvironment } from './services/apiConfig';
@@ -528,6 +529,26 @@ export const App: React.FC = () => {
       window.removeEventListener('app_stripe_callback', handleNativeStripeCallback);
     };
   }, [currentUser.id]);
+
+  // Capture incoming referral link / code and claim if user is authenticated
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const refCode = params.get('ref') || params.get('referral');
+      if (refCode && refCode.trim()) {
+        localStorage.setItem('qurb_referral_pending_code', refCode.trim());
+      }
+    } catch {}
+
+    const pendingRef = localStorage.getItem('qurb_referral_pending_code');
+    if (pendingRef && currentUser?.id && currentUser.id !== 'usr_guest' && pendingRef !== currentUser.id) {
+      referralService.claimCode(currentUser.id, pendingRef).then(res => {
+        if (res.success) {
+          localStorage.removeItem('qurb_referral_pending_code');
+        }
+      }).catch(() => {});
+    }
+  }, [currentUser?.id]);
 
 
   // Onboarding In-Progress Data (persisted in draft)

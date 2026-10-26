@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Crown, TrendingUp, PlayCircle, Wallet, CheckCircle2, X, Check, Send } from 'lucide-react';
+import { Crown, TrendingUp, PlayCircle, Wallet, CheckCircle2, X, Check, Send, Gift } from 'lucide-react';
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { API_BASE, dbService } from '../services/dbService';
 import { facebookEventsService } from '../services/facebookEventsService';
 import { backNavigationService } from '../services/backNavigationService';
 import { admobService } from '../services/admobService';
+import { ReferralHubModal } from './ReferralHubModal';
 
 const GooglePlayBilling = registerPlugin<any>('GooglePlayBillingPlugin');
 
@@ -14,6 +15,7 @@ interface Props {
   onClose: () => void;
   onPurchaseSuccess: (productId: string) => void;
   onWatchAdClicked?: () => void;
+  onOpenReferral?: () => void;
 }
 
 export const MembershipUpgradeModal: React.FC<Props> = ({
@@ -21,11 +23,13 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
   isOpen,
   onClose,
   onPurchaseSuccess,
-  onWatchAdClicked
+  onWatchAdClicked,
+  onOpenReferral
 }) => {
   const [selectedProduct, setSelectedProduct] = useState<string>('qurb_barakah_monthly');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [purchaseStep, setPurchaseStep] = useState<'selection' | 'google_play_sheet' | 'success'>('selection');
+  const [showReferralModal, setShowReferralModal] = useState<boolean>(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -278,6 +282,38 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
                 <span className="text-xs font-bold text-primary bg-pastel-rose px-2.5 py-0.5 rounded-full border border-pastel-rose-border">Free</span>
               </button>
             </div>
+
+            {/* Free Referral Alternative */}
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  if (onOpenReferral) {
+                    onClose();
+                    onOpenReferral();
+                  } else {
+                    setShowReferralModal(true);
+                  }
+                }}
+                className="w-full p-3 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-300 hover:from-emerald-100/70 hover:to-teal-100/70 flex items-center justify-between text-left transition-all shadow-subtle group"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
+                    <Gift className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h5 className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+                      <span>Invite Friends (1 Month VIP Free)</span>
+                      <Crown className="w-3 h-3 text-amber-500 fill-amber-400" />
+                    </h5>
+                    <p className="text-[10px] text-emerald-700">Invite 30 genuine friends to earn 1 month Barakah VIP free</p>
+                  </div>
+                </div>
+                <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-300 shadow-xs">
+                  0 PKR
+                </span>
+              </button>
+            </div>
           </div>
         )}
 
@@ -392,6 +428,17 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
           )}
         </div>
       </div>
+
+      <ReferralHubModal
+        userId={userId}
+        isOpen={showReferralModal}
+        onClose={() => setShowReferralModal(false)}
+        onVipUnlocked={() => {
+          onPurchaseSuccess('qurb_barakah_monthly');
+          setShowReferralModal(false);
+          onClose();
+        }}
+      />
     </div>
   );
 };

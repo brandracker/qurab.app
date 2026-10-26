@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, Radio, Calendar, Users, Image as ImageIcon, Database } from 'lucide-react';
+import { Activity, Radio, Calendar, Users, Image as ImageIcon, Database, Gift } from 'lucide-react';
 import type { AdminTab } from '../types';
 
 interface AdminSidebarProps {
@@ -95,6 +95,18 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         >
           <Database className="w-4 h-4 text-emerald-400" />
           <span>Seed Profiles (65)</span>
+        </button>
+
+        <button
+          onClick={() => onSelectTab('referrals')}
+          className={`flex items-center space-x-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all whitespace-nowrap cursor-pointer ${
+            activeTab === 'referrals'
+              ? 'bg-gradient-to-r from-emerald-600 to-teal-700 text-white shadow-lg shadow-emerald-500/30'
+              : 'text-slate-400 hover:bg-white/5 hover:text-white'
+          }`}
+        >
+          <Gift className="w-4 h-4 text-emerald-400" />
+          <span>Invites & Referrals</span>
         </button>
       </div>
 

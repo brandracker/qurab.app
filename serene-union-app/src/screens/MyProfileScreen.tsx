@@ -37,7 +37,9 @@ import {
   Loader2,
   Hand,
   TrendingUp,
-  Sliders
+  Sliders,
+  Gift,
+  ChevronRight
 } from 'lucide-react';
 import type { UserProfile } from '../types';
 import { dbService } from '../services/dbService';
@@ -46,6 +48,7 @@ import { CompatibilityQuizModal } from '../components/CompatibilityQuizModal';
 import { MembershipUpgradeModal } from '../components/MembershipUpgradeModal';
 import { RewardedAdModal } from '../components/RewardedAdModal';
 import { EditProfileModal } from '../components/EditProfileModal';
+import { ReferralHubModal } from '../components/ReferralHubModal';
 
 interface Props {
   user: UserProfile;
@@ -84,6 +87,7 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
 
   const [showQuizModal, setShowQuizModal] = useState<boolean>(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState<boolean>(false);
+  const [showReferralModal, setShowReferralModal] = useState<boolean>(false);
   const [showAdModal, setShowAdModal] = useState<boolean>(false);
   const [adRewardType, setAdRewardType] = useState<'likes' | 'salam' | 'messages' | 'photo_unblur'>('likes');
   const [isVip, setIsVip] = useState<boolean>(() => {
@@ -602,6 +606,37 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
           )}
         </div>
 
+        {/* REFERRAL PERK BANNER: 30 Invites -> 1 Month Free VIP */}
+        <div className="rounded-3xl p-4 bg-gradient-to-r from-emerald-900 via-emerald-800 to-teal-900 text-white shadow-md border border-emerald-700/60 flex items-center justify-between gap-3 relative overflow-hidden group">
+          <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-white/5 to-transparent pointer-events-none" />
+          
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-11 h-11 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0 shadow-inner group-hover:scale-105 transition-transform">
+              <Gift className="w-5 h-5 text-amber-300" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[9px] font-bold uppercase tracking-wider text-amber-300 bg-amber-400/20 px-2 py-0.5 rounded-full border border-amber-300/30">
+                  Free 1-Month VIP Perk
+                </span>
+              </div>
+              <h3 className="font-serif text-sm font-bold text-white truncate mt-0.5">
+                Invite Friends & Unlock Free VIP
+              </h3>
+              <p className="text-[10px] text-emerald-100/80 leading-tight">
+                Invite 30 genuine friends to earn 1 month Barakah VIP 100% Free!
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setShowReferralModal(true)}
+            className="bg-amber-400 hover:bg-amber-300 active:scale-95 text-emerald-950 text-xs font-bold px-3.5 py-2 rounded-full shadow-md transition-all shrink-0 flex items-center gap-1"
+          >
+            <span>Invite</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
 
         <div className="bg-white rounded-3xl overflow-hidden shadow-card border border-outline flex flex-col">
           {/* Main Photo Banner */}
@@ -1434,6 +1469,20 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
             if (onProfileUpdated) {
               onProfileUpdated(updated);
             }
+          }}
+        />
+      )}
+
+      {/* Referral Hub & 30-Friend Milestone Modal */}
+      {showReferralModal && (
+        <ReferralHubModal
+          userId={user.id}
+          isOpen={showReferralModal}
+          onClose={() => setShowReferralModal(false)}
+          onVipUnlocked={() => {
+            setIsVip(true);
+            localStorage.setItem(`serene_vip_${user.id}`, 'true');
+            window.dispatchEvent(new CustomEvent('serene_vip_updated', { detail: { userId: user.id } }));
           }}
         />
       )}

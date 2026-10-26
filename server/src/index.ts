@@ -11,6 +11,7 @@ import { compatibilityRouter } from './routes/compatibility';
 import { walletRouter } from './routes/wallet';
 import { notificationsRouter } from './routes/notifications';
 import { adminRouter } from './routes/admin';
+import { referralsRouter } from './routes/referrals';
 
 const app = new Hono<AppContext>();
 
@@ -70,6 +71,7 @@ app.route('/api/compatibility', compatibilityRouter);
 app.route('/api/wallet', walletRouter);
 app.route('/api/notifications', notificationsRouter);
 app.route('/api/admin', adminRouter);
+app.route('/api/referrals', referralsRouter);
 
 // Global 404 & Error Handler
 app.notFound((c) => {

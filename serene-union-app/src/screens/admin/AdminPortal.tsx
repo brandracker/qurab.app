@@ -10,6 +10,7 @@ import { LiveMonitorTab } from './components/LiveMonitorTab';
 import { UserDirectoryTab } from './components/UserDirectoryTab';
 import { PhotoModerationTab } from './components/PhotoModerationTab';
 import { SeedProfilesTab } from './components/SeedProfilesTab';
+import { ReferralsTab } from './components/ReferralsTab';
 import { UserInspectModal } from './components/UserInspectModal';
 import { BroadcastModal } from './components/BroadcastModal';
 import { SubscriptionModal } from './components/SubscriptionModal';
@@ -610,6 +611,10 @@ export const AdminPortal: React.FC = () => {
 
           {activeTab === 'seeds' && adminToken && (
             <SeedProfilesTab adminToken={adminToken} />
+          )}
+
+          {activeTab === 'referrals' && adminToken && (
+            <ReferralsTab adminToken={adminToken} onShowToast={showToast} />
           )}
         </main>
       </div>

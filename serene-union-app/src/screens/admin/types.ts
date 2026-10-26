@@ -1,4 +1,4 @@
-export type AdminTab = 'overview' | 'live' | 'daily' | 'users' | 'photos' | 'seeds';
+export type AdminTab = 'overview' | 'live' | 'daily' | 'users' | 'photos' | 'seeds' | 'referrals';
 
 export interface DailyUserItem {
   id: string;

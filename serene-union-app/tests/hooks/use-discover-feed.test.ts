@@ -219,5 +219,26 @@ describe('useDiscoverFeed Custom Hook Architecture & Wiring', () => {
     expect(result.current.showRewardedAdModal).toBe(false);
     expect(result.current.currentProfile?.id).toBe('usr_cand_ayesha');
   });
+
+  it('9. handleLike triggers 0ms instant mutual match celebration when candidate already liked user', () => {
+    localStorage.setItem(`serene_liked_you_${mockUser.id}`, JSON.stringify([mockCandidateA]));
+
+    const { result } = renderHook(() => useDiscoverFeed());
+
+    expect(result.current.matchedProfile).toBeNull();
+
+    act(() => {
+      result.current.handleLike(mockCandidateA);
+    });
+
+    // 0ms Synchronous Mutual Match Modal Trigger without waiting for network:
+    expect(result.current.matchedProfile?.id).toBe(mockCandidateA.id);
+    expect(result.current.currentProfile?.id).toBe(mockCandidateB.id);
+
+    // Verify candidate was added to mutual matches cache
+    const mutuals = JSON.parse(localStorage.getItem(`serene_mutual_matches_${mockUser.id}`) || '[]');
+    expect(mutuals.some((m: any) => m.id === mockCandidateA.id)).toBe(true);
+  });
 });
+
 

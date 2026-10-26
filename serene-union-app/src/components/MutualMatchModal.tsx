@@ -23,12 +23,22 @@ export const MutualMatchModal: React.FC<Props> = ({ profile, currentUser: propUs
   }, [onClose]);
 
   useEffect(() => {
-    confetti({
-      particleCount: 80,
-      spread: 70,
-      origin: { y: 0.6 },
-      colors: ['#FF2560', '#FF4D7D', '#FFF0F3', '#ffffff']
-    });
+    // Defer confetti by 120ms to let modal paint smoothly without GPU compositor lag or blank screen flicker
+    const timer = setTimeout(() => {
+      try {
+        confetti({
+          particleCount: 70,
+          spread: 60,
+          origin: { y: 0.6 },
+          colors: ['#FF2560', '#FF4D7D', '#FFF0F3', '#ffffff'],
+          disableForReducedMotion: true
+        });
+      } catch (e) {
+        console.warn('Confetti animation suppressed:', e);
+      }
+    }, 120);
+
+    return () => clearTimeout(timer);
   }, []);
 
   const myPhoto = currentUser?.photos && currentUser.photos.length > 0 && currentUser.photos[0]
@@ -40,7 +50,7 @@ export const MutualMatchModal: React.FC<Props> = ({ profile, currentUser: propUs
     : null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs px-4 animate-fade-in select-none text-on-surface">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 px-4 animate-fade-in select-none text-on-surface">
       <div className="w-full max-w-[420px] bg-white rounded-[36px] p-6 sm:p-7 shadow-2xl border border-outline flex flex-col items-center text-center relative overflow-hidden animate-slide-up">
         {/* Header Badge */}
         <div className="bg-pastel-rose border border-pastel-rose-border text-primary px-4 py-1.5 rounded-full font-sans text-xs font-bold tracking-wider uppercase mb-3 flex items-center gap-1.5 shadow-subtle">
@@ -85,7 +95,7 @@ export const MutualMatchModal: React.FC<Props> = ({ profile, currentUser: propUs
                   className={`w-full h-full object-cover ${profile.blurPhotosByDefault && !profile.photoRevealApproved ? 'filter blur-md' : ''}`}
                 />
                 {profile.blurPhotosByDefault && !profile.photoRevealApproved && (
-                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center backdrop-blur-xs">
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                     <EyeOff className="w-5 h-5 text-white" />
                   </div>
                 )}

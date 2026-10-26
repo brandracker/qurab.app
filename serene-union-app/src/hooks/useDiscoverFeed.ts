@@ -221,6 +221,25 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
     // Save to undo history before removing
     setHistory(prev => [profile, ...prev]);
 
+    // 0ms OPTIMISTIC MUTUAL MATCH CHECK:
+    // Check if this candidate is a seed profile (auto-mutual) or already liked the current user
+    const isSeed = profile.id.startsWith('usr_seed_') || profile.id.includes('seed');
+    let hasLikedCurrentUser = false;
+    try {
+      const likedYou = JSON.parse(localStorage.getItem(`serene_liked_you_${currentUser.id}`) || '[]');
+      hasLikedCurrentUser = Array.isArray(likedYou) && likedYou.some((p: any) => p.id === profile.id);
+    } catch {}
+    if (!hasLikedCurrentUser) {
+      try {
+        const hub = JSON.parse(localStorage.getItem(`serene_matches_hub_${currentUser.id}`) || '{}');
+        if (Array.isArray(hub.received) && hub.received.some((p: any) => p.id === profile.id)) {
+          hasLikedCurrentUser = true;
+        }
+      } catch {}
+    }
+
+    const isOptimisticMutual = isSeed || hasLikedCurrentUser;
+
     // 0ms OPTIMISTIC UI: Immediately pop candidate from queue (0ms instant card pop)
     setProfiles(prev => prev.filter(p => p.id !== profile.id));
     setCurrentIndex(curr => Math.max(0, curr));
@@ -228,28 +247,68 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
     // Record positive action for smart in-app rating prompt
     const isRatingMilestone = ratingService.recordPositiveAction();
 
-    // Async background matchmaking check (zero UI freeze)
-    dbService.sendMatchAction(profile.id, 'liked', undefined, profile).then(result => {
-      if (result.isMutual) {
-        setMatchedProfile(profile);
-        notificationService.addNotification({
-          type: 'match',
-          title: `Connected with ${profile.fullName.split(' ')[0]} 🎉`,
-          message: `You and ${profile.fullName} both expressed mutual interest. Chat is now unlocked!`,
-          actionLabel: 'Start Chat',
-          targetId: result.conversationId,
-          avatarUrl: profile.photos?.[0]
-        });
-      } else {
-        // Task 02: Silent Like (No annoying toast banner)
-        // Task 07: No outgoing self-notification clutter
-        if (isRatingMilestone) {
-          setTimeout(() => setShowRatingModal(true), 800);
+    if (isOptimisticMutual) {
+      // 0ms INSTANT MUTUAL MATCH CELEBRATION (No blank screen, No 2-second network stall)
+      setMatchedProfile(profile);
+
+      // Pre-warm local conversation & mutual matches cache at 0ms
+      const convId = `conv_${[currentUser.id, profile.id].sort().join('_')}`;
+      try {
+        dbService.createMatchConversation(profile);
+      } catch {}
+
+      const mutualKey = `serene_mutual_matches_${currentUser.id}`;
+      try {
+        const savedMutual = JSON.parse(localStorage.getItem(mutualKey) || '[]');
+        if (!savedMutual.some((m: any) => m.id === profile.id)) {
+          savedMutual.unshift(profile);
+          localStorage.setItem(mutualKey, JSON.stringify(savedMutual));
         }
-      }
-    }).catch(err => {
-      console.warn('Match action background error:', err);
-    });
+      } catch {}
+
+      try {
+        const likedYouKey = `serene_liked_you_${currentUser.id}`;
+        const savedLikedYou = JSON.parse(localStorage.getItem(likedYouKey) || '[]');
+        localStorage.setItem(likedYouKey, JSON.stringify(savedLikedYou.filter((p: any) => p.id !== profile.id)));
+      } catch {}
+
+      notificationService.addNotification({
+        type: 'match',
+        title: `Connected with ${profile.fullName.split(' ')[0]} 🎉`,
+        message: `You and ${profile.fullName} both expressed mutual interest. Chat is now unlocked!`,
+        actionLabel: 'Start Chat',
+        targetId: convId,
+        avatarUrl: profile.photos?.[0]
+      });
+
+      // Background network sync (guaranteed mutual flag)
+      dbService.sendMatchAction(profile.id, 'liked', undefined, profile, true).catch(err => {
+        console.warn('Optimistic match action background error:', err);
+      });
+    } else {
+      // Standard candidate - check server in background
+      dbService.sendMatchAction(profile.id, 'liked', undefined, profile).then(result => {
+        if (result.isMutual) {
+          setMatchedProfile(profile);
+          notificationService.addNotification({
+            type: 'match',
+            title: `Connected with ${profile.fullName.split(' ')[0]} 🎉`,
+            message: `You and ${profile.fullName} both expressed mutual interest. Chat is now unlocked!`,
+            actionLabel: 'Start Chat',
+            targetId: result.conversationId,
+            avatarUrl: profile.photos?.[0]
+          });
+        } else {
+          // Task 02: Silent Like (No annoying toast banner)
+          // Task 07: No outgoing self-notification clutter
+          if (isRatingMilestone) {
+            setTimeout(() => setShowRatingModal(true), 800);
+          }
+        }
+      }).catch(err => {
+        console.warn('Match action background error:', err);
+      });
+    }
   }, [isVip, likesRemaining, currentUser.id, options]);
 
   const handlePass = useCallback((profileId: string, e?: React.MouseEvent | React.TouchEvent) => {
@@ -315,9 +374,9 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
     const target = salamModalProfile;
     setSalamModalProfile(null);
 
-    await dbService.consumeDirectSalam(currentUser.id);
+    // Instant local consumption & conversation creation
+    dbService.consumeDirectSalam(currentUser.id).catch(() => {});
     const conv = dbService.createMatchConversation(target, customMessage);
-    await dbService.sendMatchAction(target.id, 'direct_salam', customMessage, target);
 
     notificationService.addNotification({
       type: 'salam',
@@ -331,13 +390,18 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
     setToastMessage(`Direct Salam sent to ${target.fullName.split(' ')[0]}!`);
     setTimeout(() => setToastMessage(null), 3500);
 
-    // Advance queue by removing candidate
+    // 0ms Optimistic UI: Advance queue by removing candidate
     setProfiles(prev => prev.filter(p => p.id !== target.id));
     setCurrentIndex(curr => Math.max(0, curr));
 
     if (options?.onOpenChat) {
       options.onOpenChat(conv.id);
     }
+
+    // Sync to backend
+    await dbService.sendMatchAction(target.id, 'direct_salam', customMessage, target).catch(err => {
+      console.warn('Direct Salam background sync error:', err);
+    });
   }, [salamModalProfile, currentUser.id, options]);
 
   const handleCloseDirectSalam = useCallback(() => {

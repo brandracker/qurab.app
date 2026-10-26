@@ -147,7 +147,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
   }, []);
 
 
-  const handleInstantMatch = async (candidate: UserProfile) => {
+  const handleInstantMatch = (candidate: UserProfile) => {
     // 1. Immediately and smoothly transition profile to Mutual Matches
     setInterestedProfiles(prev => prev.filter(p => p.id !== candidate.id));
     setMutualMatches(prev => {
@@ -172,10 +172,8 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
       }
     } catch {}
 
-    // 2. Transmit to server with guaranteed mutual match creation
-    const res = await dbService.sendMatchAction(candidate.id, 'liked', undefined, candidate, true);
-    
-    const convId = res.conversationId || `conv_${[currentUser.id, candidate.id].sort().join('_')}`;
+    // 0ms INSTANT CONVERSATION & NAVIGATION (Zero blank screen, Zero network freeze)
+    const convId = `conv_${[currentUser.id, candidate.id].sort().join('_')}`;
     const newConv = dbService.createMatchConversation(candidate);
 
     const candidateName = candidate.fullName || 'Member';
@@ -189,12 +187,18 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
       avatarUrl: candidate.photos?.[0]
     });
 
+    // Navigate to chat immediately at 0ms
     onOpenChat(convId || newConv.id);
+
+    // 2. Transmit to server asynchronously in background with guaranteed mutual match flag
+    dbService.sendMatchAction(candidate.id, 'liked', undefined, candidate, true).catch(err => {
+      console.warn('Background instant match sync error:', err);
+    });
   };
 
 
-  const handlePassCandidate = async (candidate: UserProfile) => {
-    await dbService.sendMatchAction(candidate.id, 'passed', undefined, candidate);
+  const handlePassCandidate = (candidate: UserProfile) => {
+    // 0ms Optimistic removal
     setInterestedProfiles(prev => prev.filter(p => p.id !== candidate.id));
 
     const localKey = `serene_liked_you_${currentUser.id}`;
@@ -207,6 +211,11 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
     const candidateFirstName = (candidate.fullName || 'Candidate').split(' ')[0];
     setToastMessage(`Passed on ${candidateFirstName}. Moved to your Passed History.`);
     setTimeout(() => setToastMessage(null), 3500);
+
+    // Background sync to server
+    dbService.sendMatchAction(candidate.id, 'passed', undefined, candidate).catch(err => {
+      console.warn('Background pass sync error:', err);
+    });
   };
 
   const handleUndoPass = async (targetId: string, name: string) => {

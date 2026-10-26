@@ -246,7 +246,13 @@ export class WebRtcService {
 
   // --- Step 1: Start an Outgoing Call (Initiator / Caller) ---
   public async startCall(partnerId: string, partnerInfo: CallerInfo, callType: CallType, currentUserInfo: CallerInfo) {
-    if (this.currentCallState !== 'idle') return;
+    if (this.currentCallState !== 'idle') {
+      if (this.currentCallState === 'ended') {
+        this.cleanup();
+      } else {
+        return;
+      }
+    }
 
     this.currentPartnerId = partnerId;
     this.currentPartnerInfo = partnerInfo;
@@ -485,18 +491,10 @@ export class WebRtcService {
 
       const constraints: MediaStreamConstraints = {
         audio: {
-          echoCancellation: { ideal: true },
-          noiseSuppression: { ideal: true },
-          autoGainControl: { ideal: true },
-          channelCount: 1, // Mono eliminates stereo room-phase echo
-          sampleRate: 48000,
-          // Chromium & WebRTC AEC processing flags
-          googEchoCancellation: true,
-          googAutoGainControl: true,
-          googNoiseSuppression: true,
-          googHighpassFilter: true,
-          googTypingNoiseDetection: true
-        } as any,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        },
         video: video ? {
           facingMode: this.isFrontCamera ? 'user' : 'environment',
           width: { ideal: 640 },
@@ -514,33 +512,20 @@ export class WebRtcService {
       if (video) {
         return this.setupLocalMedia(false);
       }
-      return null;
+      // Ultimate audio fallback for devices with strict AEC flags
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        this.localStream = stream;
+        this.notifyStreams();
+        return stream;
+      } catch (fallbackErr) {
+        console.error('Basic audio fallback also failed:', fallbackErr);
+        return null;
+      }
     }
   }
 
-  private applyBandwidthLimits() {
-    if (!this.peerConnection) return;
-    try {
-      const senders = this.peerConnection.getSenders();
-      senders.forEach(sender => {
-        if (sender.track?.kind === 'video') {
-          const params = sender.getParameters();
-          if (!params.encodings || params.encodings.length === 0) {
-            params.encodings = [{}];
-          }
-          params.encodings[0].maxBitrate = 600000; // 600 kbps for smooth 4G video without packet drops
-          sender.setParameters(params).catch(() => {});
-        } else if (sender.track?.kind === 'audio') {
-          const params = sender.getParameters();
-          if (!params.encodings || params.encodings.length === 0) {
-            params.encodings = [{}];
-          }
-          params.encodings[0].maxBitrate = 64000; // 64 kbps HD voice
-          sender.setParameters(params).catch(() => {});
-        }
-      });
-    } catch {}
-  }
+
 
   private async createPeerConnectionAndOffer() {
     this.initPeerConnection();
@@ -552,7 +537,6 @@ export class WebRtcService {
         offerToReceiveVideo: this.currentCallType === 'video'
       });
       await this.peerConnection.setLocalDescription(offer);
-      this.applyBandwidthLimits();
 
       this.sendSignal({
         type: 'call_signal',
@@ -584,7 +568,6 @@ export class WebRtcService {
 
       const answer = await this.peerConnection.createAnswer();
       await this.peerConnection.setLocalDescription(answer);
-      this.applyBandwidthLimits();
 
       this.sendSignal({
         type: 'call_signal',

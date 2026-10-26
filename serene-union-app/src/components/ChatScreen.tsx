@@ -481,6 +481,19 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
     let pingInterval: any = null;
 
     try {
+      // Register WebRTC signal sender immediately so calling signals can be dispatched as soon as WS is ready
+      webRtcService.init(currentUser.id, (payload) => {
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+          try {
+            wsRef.current.send(JSON.stringify(payload));
+          } catch (e) {
+            console.error('Failed to send call signal:', e);
+          }
+        } else {
+          console.warn('WebSocket not open yet when sending call signal:', payload.signal);
+        }
+      });
+
       if (typeof window !== 'undefined' && typeof WebSocket !== 'undefined') {
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsBase = API_BASE.replace(/^https?:/, wsProtocol);
@@ -497,13 +510,6 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
               try { wsRef.current.send(JSON.stringify({ type: 'ping' })); } catch {}
             }
           }, 20000);
-          webRtcService.init(currentUser.id, (payload) => {
-            if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-              try {
-                wsRef.current.send(JSON.stringify(payload));
-              } catch {}
-            }
-          });
         };
 
         ws.onmessage = (event) => {

@@ -42,47 +42,7 @@ public class MainActivity extends BridgeActivity {
             settings.setJavaScriptCanOpenWindowsAutomatically(true);
 
             final AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-            getBridge().getWebView().addJavascriptInterface(new Object() {
-                @JavascriptInterface
-                public void setCallMode(boolean inCall) {
-                    runOnUiThread(() -> {
-                        if (audioManager != null) {
-                            try {
-                                if (inCall) {
-                                    audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
-                                } else {
-                                    audioManager.setSpeakerphoneOn(false);
-                                    audioManager.setMode(AudioManager.MODE_NORMAL);
-                                }
-                            } catch (Exception ignored) {}
-                        }
-                    });
-                }
-
-                @JavascriptInterface
-                public void setSpeakerphoneOn(boolean on) {
-                    runOnUiThread(() -> {
-                        if (audioManager != null) {
-                            try {
-                                if (audioManager.getMode() != AudioManager.MODE_IN_COMMUNICATION) {
-                                    audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
-                                }
-                                audioManager.setSpeakerphoneOn(on);
-                            } catch (Exception ignored) {}
-                        }
-                    });
-                }
-
-                @JavascriptInterface
-                public boolean isSpeakerphoneOn() {
-                    if (audioManager != null) {
-                        try {
-                            return audioManager.isSpeakerphoneOn();
-                        } catch (Exception ignored) {}
-                    }
-                    return false;
-                }
-            }, "AndroidAudioBridge");
+            getBridge().getWebView().addJavascriptInterface(new AndroidAudioBridge(this, audioManager), "AndroidAudioBridge");
 
             getBridge().getWebView().setWebChromeClient(new BridgeWebChromeClient(getBridge()) {
                 @Override
@@ -139,6 +99,60 @@ public class MainActivity extends BridgeActivity {
                     }, 600);
                 }
             }
+        }
+    }
+
+    public static class AndroidAudioBridge {
+        private final BridgeActivity activity;
+        private final AudioManager audioManager;
+
+        public AndroidAudioBridge(BridgeActivity activity, AudioManager audioManager) {
+            this.activity = activity;
+            this.audioManager = audioManager;
+        }
+
+        @JavascriptInterface
+        public void setCallMode(boolean inCall) {
+            if (activity != null) {
+                activity.runOnUiThread(() -> {
+                    if (audioManager != null) {
+                        try {
+                            if (inCall) {
+                                audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+                            } else {
+                                audioManager.setSpeakerphoneOn(false);
+                                audioManager.setMode(AudioManager.MODE_NORMAL);
+                            }
+                        } catch (Exception ignored) {}
+                    }
+                });
+            }
+        }
+
+        @JavascriptInterface
+        public void setSpeakerphoneOn(boolean on) {
+            if (activity != null) {
+                activity.runOnUiThread(() -> {
+                    if (audioManager != null) {
+                        try {
+                            if (audioManager.getMode() != AudioManager.MODE_IN_COMMUNICATION) {
+                                audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+                            }
+                            audioManager.setSpeakerphoneOn(on);
+                        } catch (Exception ignored) {}
+                    }
+                });
+            }
+        }
+
+        @JavascriptInterface
+        public boolean isSpeakerphoneOn() {
+            if (audioManager != null) {
+                try {
+                    return audioManager.isSpeakerphoneOn();
+                } catch (Exception ignored) {}
+            }
+            return false;
         }
     }
 }

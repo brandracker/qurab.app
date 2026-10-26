@@ -133,13 +133,14 @@ jobs:
         continue-on-error: true
         with:
           fail_on_unmatched_files: false
-          tag_name: v1.0.22
-          name: "Qurb v1.0.22 (Build 23 - WebRTC Audio & Video Calling Release)"
+          tag_name: v1.0.23
+          name: "Qurb v1.0.23 (Build 24 - WhatsApp-Style Instant Camera & Luxury Calling HUD)"
           body: |
-            ### Qurb Matrimony v1.0.22 (Build 23 - WebRTC Audio & Video Calling)
-            - **WebRTC Audio & Video Calling Engine**: High-fidelity, low-latency peer-to-peer audio and video calling.
-            - **Initiator Pays (VIP Gated)**: Call initiation is gated for Barakah VIP members; all receivers (free & sisters) attend 100% free with complete modesty consent.
-            - **In-App Call HUD & Controls**: Full-screen call modal, picture-in-picture local camera preview, mute, speaker, and camera flip controls.
+            ### Qurb Matrimony v1.0.23 (Build 24 - WhatsApp-Style Instant Camera & Luxury Calling HUD)
+            - **WhatsApp-Style Instant Front Camera**: Camera immediately activates in under 0.1s during outgoing ringing for a seamless pre-call preview.
+            - **Android WebView WebRTC Bridge**: Enabled `BridgeWebChromeClient.onPermissionRequest` and `setMediaPlaybackRequiresUserGesture(false)` in `MainActivity.java` so camera and video render natively without black screens.
+            - **Luxury Dark Glassmorphic HUD**: High-end calling interface with acoustic pulsating radar orbs, floating control dock (Mute, Speaker, Camera Flip, Video Off, End Call), and draggable/tap-cycling Picture-in-Picture.
+            - **Upgraded Incoming Call Interface**: Verified matrimonial badges, pulsating acoustic rings, and distinct 1-tap Voice vs Video acceptance buttons.
             - **app-release.apk**: Production Signed APK for direct device installation & testing.
             - **app-release.aab**: Production Signed Android App Bundle (.aab) ready for Google Play Console.
           files: |

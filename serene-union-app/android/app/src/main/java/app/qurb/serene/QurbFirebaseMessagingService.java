@@ -35,17 +35,17 @@ public class QurbFirebaseMessagingService extends MessagingService {
     @Override
     public void onMessageReceived(@NonNull RemoteMessage remoteMessage) {
         Map<String, String> data = remoteMessage.getData();
-        Log.d(TAG, "FCM message received. Data keys: " + (data != null ? data.keySet() : "null"));
+        Log.d(TAG, "FCM message received. Data: " + data);
 
         if (data != null && "incoming_call".equals(data.get("type"))) {
-            handleIncomingCall(data);
+            handleIncomingCall(remoteMessage, data);
         } else {
             // Forward regular messages, matches, and notifications to Capacitor
             super.onMessageReceived(remoteMessage);
         }
     }
 
-    private void handleIncomingCall(Map<String, String> data) {
+    private void handleIncomingCall(@NonNull RemoteMessage remoteMessage, Map<String, String> data) {
         String callerName = data.get("callerName");
         if (callerName == null || callerName.trim().isEmpty()) {
             callerName = "Match Candidate";
@@ -179,9 +179,9 @@ public class QurbFirebaseMessagingService extends MessagingService {
 
         // Also notify Capacitor plugin in case WebView is active in memory
         try {
-            PushNotificationsPlugin.sendRemoteMessage(new RemoteMessage.Builder("fcm").setData(data).build());
+            PushNotificationsPlugin.sendRemoteMessage(remoteMessage);
         } catch (Exception e) {
-            Log.w(TAG, "Notice sending remote message to Capacitor: " + e.getMessage());
+            Log.w(TAG, "Notice forwarding remote message to Capacitor: " + e.getMessage());
         }
     }
 }

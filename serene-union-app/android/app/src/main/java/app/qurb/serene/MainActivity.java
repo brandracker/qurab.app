@@ -99,12 +99,6 @@ public class MainActivity extends BridgeActivity {
         }
     }
 
-    @Override
-    protected void onNewIntent(Intent intent) {
-        super.onNewIntent(intent);
-        setIntent(intent);
-        handleDeepLink(intent);
-    }
 
     private void handleDeepLink(Intent intent) {
         if (intent == null || intent.getData() == null) return;

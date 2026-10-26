@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   ArrowLeft, CheckCheck, Send, Heart, MessageCircle, FileText, Ban, 
   MoreVertical, Eye, EyeOff, ShieldCheck, Paperclip, Mic, Play, Pause, 
-  Trash2, X, Download, File, Loader2, Volume2, VolumeX, Maximize2
+  Trash2, X, Download, File, Loader2, Volume2, VolumeX, Maximize2,
+  Phone, Video
 } from 'lucide-react';
 import type { Conversation, ChatMessage, UserProfile } from '../types';
 
@@ -14,6 +15,10 @@ import {
   formatBytes, 
   formatSeconds 
 } from '../utils/mediaCompressor';
+import { webRtcService, type CallState, type CallType, type CallerInfo } from '../services/webRtcService';
+import { IncomingCallModal } from './calling/IncomingCallModal';
+import { ActiveCallModal } from './calling/ActiveCallModal';
+import { MembershipUpgradeModal } from './MembershipUpgradeModal';
 
 interface ChatVideoPlayerProps {
   src: string;
@@ -225,6 +230,35 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
   const wsRef = useRef<WebSocket | null>(null);
   const isTypingSentRef = useRef<boolean>(false);
   const typingTimeoutRef = useRef<any>(null);
+
+  // WebRTC Audio & Video Calling State
+  const [callState, setCallState] = useState<CallState>('idle');
+  const [incomingCaller, setIncomingCaller] = useState<CallerInfo | null>(null);
+  const [activeCallType, setActiveCallType] = useState<CallType>('audio');
+  const [activeCallPartner, setActiveCallPartner] = useState<CallerInfo | null>(null);
+  const [showVipModalForCalling, setShowVipModalForCalling] = useState<boolean>(false);
+
+  // Subscribe to WebRTC Calling Engine
+  useEffect(() => {
+    const unsub = webRtcService.subscribe((state, data) => {
+      setCallState(state);
+      if (state === 'incoming_ringing' && data?.caller) {
+        setIncomingCaller(data.caller);
+        setActiveCallType(data.callType || 'audio');
+      } else if (state === 'outgoing_calling' && data?.partner) {
+        setActiveCallPartner(data.partner);
+        setActiveCallType(data.callType || 'audio');
+      } else if (state === 'connected' && data?.partner) {
+        setActiveCallPartner(data.partner);
+        setActiveCallType(data.callType || 'audio');
+      } else if (state === 'ended' || state === 'idle') {
+        setIncomingCaller(null);
+        if (state === 'idle') setActiveCallPartner(null);
+      }
+    });
+
+    return () => { unsub(); };
+  }, []);
 
 
 
@@ -456,6 +490,13 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
 
         ws.onopen = () => {
           try { ws?.send(JSON.stringify({ type: 'ping' })); } catch {}
+          webRtcService.init(currentUser.id, (payload) => {
+            if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+              try {
+                wsRef.current.send(JSON.stringify(payload));
+              } catch {}
+            }
+          });
         };
 
         ws.onmessage = (event) => {
@@ -491,6 +532,8 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
               if (typeof data.isRevealed === 'boolean') {
                 setHasRevealedToPartner(data.isRevealed);
               }
+            } else if (data.type === 'call_signal') {
+              webRtcService.handleIncomingSignal(data);
             }
           } catch {}
         };
@@ -511,6 +554,37 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
       setIsPartnerTyping(false);
     };
   }, [activeConvId, activeConv?.id, activeConv?.otherUser?.id, currentUser.id]);
+
+  // Initiate WebRTC Call (VIP Gated for Caller, Free for Receiver)
+  const handleStartCall = (type: CallType) => {
+    if (!activeConv?.otherUser) return;
+    if (!currentUser.isVip) {
+      setShowVipModalForCalling(true);
+      return;
+    }
+
+    const partnerInfo: CallerInfo = {
+      id: activeConv.otherUser.id,
+      fullName: activeConv.otherUser.fullName,
+      gender: activeConv.otherUser.gender,
+      city: activeConv.otherUser.city || activeConv.otherUser.location || 'Pakistan',
+      photoUrl: activeConv.otherUser.photos?.[0],
+      isVip: Boolean(activeConv.otherUser.isVip)
+    };
+
+    const currentUserInfo: CallerInfo = {
+      id: currentUser.id,
+      fullName: currentUser.fullName,
+      gender: currentUser.gender,
+      city: currentUser.location || 'Pakistan',
+      photoUrl: currentUser.photos?.[0],
+      isVip: Boolean(currentUser.isVip)
+    };
+
+    setActiveCallPartner(partnerInfo);
+    setActiveCallType(type);
+    webRtcService.startCall(activeConv.otherUser.id, partnerInfo, type, currentUserInfo);
+  };
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -1276,8 +1350,36 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
           </div>
         </div>
 
-        {/* Action Controls: Biodata Button & 3-Dots Kebab Menu */}
+        {/* Action Controls: Call Buttons, Biodata Button & 3-Dots Kebab Menu */}
         <div className="flex items-center gap-1.5 shrink-0 relative">
+          {/* Audio Call Button */}
+          <button
+            type="button"
+            onClick={() => handleStartCall('audio')}
+            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-95 cursor-pointer ${
+              currentUser.isVip 
+                ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 border border-emerald-500/20' 
+                : 'bg-surface-variant hover:bg-outline text-secondary border border-outline'
+            }`}
+            title={currentUser.isVip ? "Audio Call (VIP)" : "Audio Call (Requires Barakah VIP)"}
+          >
+            <Phone className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Video Call Button */}
+          <button
+            type="button"
+            onClick={() => handleStartCall('video')}
+            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-95 cursor-pointer ${
+              currentUser.isVip 
+                ? 'bg-sky-500/10 hover:bg-sky-500/20 text-sky-600 border border-sky-500/20' 
+                : 'bg-surface-variant hover:bg-outline text-secondary border border-outline'
+            }`}
+            title={currentUser.isVip ? "Video Call (VIP)" : "Video Call (Requires Barakah VIP)"}
+          >
+            <Video className="w-3.5 h-3.5" />
+          </button>
+
           <button
             onClick={() => setSelectedProfile(activeConv.otherUser)}
             className="text-xs text-primary font-bold bg-pastel-rose hover:bg-pastel-rose/80 px-3 py-1.5 rounded-full border border-pastel-rose-border transition-all flex items-center gap-1.5 shadow-2xs active:scale-95"
@@ -2015,6 +2117,39 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
             )}
           </div>
         </div>
+      )}
+
+      {/* WebRTC Audio & Video Calling Modals */}
+      <IncomingCallModal
+        isOpen={callState === 'incoming_ringing'}
+        caller={incomingCaller}
+        callType={activeCallType}
+      />
+
+      <ActiveCallModal
+        isOpen={callState === 'outgoing_calling' || callState === 'connected'}
+        callState={callState}
+        callType={activeCallType}
+        partner={activeCallPartner || (activeConv?.otherUser ? {
+          id: activeConv.otherUser.id,
+          fullName: activeConv.otherUser.fullName,
+          gender: activeConv.otherUser.gender,
+          city: activeConv.otherUser.city || activeConv.otherUser.location || 'Pakistan',
+          photoUrl: activeConv.otherUser.photos?.[0],
+          isVip: Boolean(activeConv.otherUser.isVip)
+        } : null)}
+      />
+
+      {showVipModalForCalling && (
+        <MembershipUpgradeModal
+          userId={currentUser.id}
+          isOpen={showVipModalForCalling}
+          onClose={() => setShowVipModalForCalling(false)}
+          onPurchaseSuccess={() => {
+            setShowVipModalForCalling(false);
+            currentUser.isVip = true;
+          }}
+        />
       )}
     </div>
   );

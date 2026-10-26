@@ -52,6 +52,18 @@ export class ChatRoomDO {
               type: 'new_message',
               message: data.message
             }));
+          } else if (data.type === 'call_signal') {
+            // Forward WebRTC Calling signals (initiate, ringing, accept, reject, ice, end)
+            this.broadcast(server, JSON.stringify({
+              type: 'call_signal',
+              signal: data.signal,
+              senderId: data.senderId || userId,
+              targetUserId: data.targetUserId,
+              callType: data.callType || 'audio',
+              callerInfo: data.callerInfo || null,
+              payload: data.payload || null,
+              timestamp: Date.now()
+            }));
           }
         } catch {}
       });

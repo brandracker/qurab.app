@@ -25,8 +25,31 @@ public class MainActivity extends BridgeActivity {
             com.facebook.FacebookSdk.setAdvertiserIDCollectionEnabled(true);
             com.facebook.appevents.AppEventsLogger.activateApp(getApplication());
         } catch (Exception ignored) {}
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true);
+            setTurnScreenOn(true);
+        }
+        getWindow().addFlags(
+            android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON |
+            android.view.WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD |
+            android.view.WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED |
+            android.view.WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+        );
+
         handleDeepLink(getIntent());
         setupWebRtcMediaPermissions();
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true);
+            setTurnScreenOn(true);
+        }
+        handleDeepLink(intent);
     }
 
     @Override

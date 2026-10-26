@@ -1,6 +1,8 @@
 // Qurb (Serene Union) — Production WebRTC Calling Engine
 // Handles P2P Audio/Video negotiation, ICE traversal, media tracks, and acoustic feedback.
 
+import { API_BASE } from './apiConfig';
+
 declare global {
   interface Window {
     AndroidAudioBridge?: {
@@ -276,7 +278,7 @@ export class WebRtcService {
       this.endCall('No answer');
     }, 40000);
 
-    // Send initiate signal to partner over WebSocket
+    // Send initiate signal to partner over WebSocket (instant in-room peer)
     this.sendSignal({
       type: 'call_signal',
       signal: 'initiate',
@@ -285,6 +287,23 @@ export class WebRtcService {
       callType,
       callerInfo: currentUserInfo
     });
+
+    // High-Priority Remote Call Wakeup via REST/FCM (wakes up receiver even if phone is locked or app is in background)
+    try {
+      fetch(`${API_BASE}/conversations/call/initiate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          callerId: this.currentUserId || currentUserInfo.id,
+          recipientId: partnerId,
+          callType,
+          callerInfo: currentUserInfo,
+          conversationId: `conv_${[this.currentUserId || currentUserInfo.id, partnerId].sort().join('_')}`
+        })
+      }).catch(err => {
+        console.warn('Call initiate push notification notice:', err);
+      });
+    } catch {}
   }
 
   // --- Step 2: Handle Incoming Signals from Partner ---

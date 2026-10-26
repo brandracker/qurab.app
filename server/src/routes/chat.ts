@@ -758,3 +758,48 @@ chatRouter.post('/:id/photo-reveal', async (c) => {
     return c.json({ success: false, error: error.message }, 500);
   }
 });
+
+// 5. High-Priority Remote VoIP Call Wakeup via FCM (WhatsApp-Style Background & Lock Screen Wakeup)
+chatRouter.post('/call/initiate', async (c) => {
+  try {
+    const { callerId, recipientId, callType, callerInfo, conversationId } = await c.req.json();
+    if (!callerId || !recipientId) {
+      return c.json({ success: false, error: 'callerId and recipientId required' }, 400);
+    }
+
+    const recipientUser: any = await c.env.DB.prepare(
+      "SELECT fcm_token, full_name FROM users WHERE id = ?"
+    ).bind(recipientId).first();
+
+    if (recipientUser?.fcm_token) {
+      const callerFirstName = callerInfo?.fullName?.split(' ')[0] || 'Match Candidate';
+      const callTypeName = callType === 'video' ? 'Video Call 📹' : 'Audio Call 📞';
+      const convId = conversationId || `conv_${[callerId, recipientId].sort().join('_')}`;
+
+      // High-priority FCM push notification
+      c.executionCtx.waitUntil(
+        sendFcmNotification(c.env, {
+          token: recipientUser.fcm_token,
+          title: `Incoming ${callTypeName}`,
+          body: `${callerFirstName} is calling you on Qurb...`,
+          data: {
+            type: 'incoming_call',
+            callType: callType || 'audio',
+            callerId: callerId,
+            callerName: callerInfo?.fullName || 'Match Candidate',
+            callerCity: callerInfo?.city || 'Pakistan',
+            callerPhoto: callerInfo?.photoUrl || '',
+            callerGender: callerInfo?.gender || '',
+            callerVip: callerInfo?.isVip ? 'true' : 'false',
+            conversationId: convId,
+            timestamp: String(Date.now())
+          }
+        })
+      );
+    }
+
+    return c.json({ success: true, message: 'Call push notification queued' });
+  } catch (err: any) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});

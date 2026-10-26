@@ -30,6 +30,7 @@ import { pushNotificationService } from './services/pushNotificationService';
 import { AnnouncementModal } from './components/AnnouncementModal';
 import { TrialPromoModal } from './components/TrialPromoModal';
 import { MembershipUpgradeModal } from './components/MembershipUpgradeModal';
+import { webRtcService, type CallerInfo, type CallType } from './services/webRtcService';
 
 type OnboardingStep = 
   | 'welcome' 
@@ -284,9 +285,42 @@ export const App: React.FC = () => {
       }
     };
 
+    const handleIncomingCallPushEvent = (e: any) => {
+      const data = e.detail;
+      if (!data || !data.callerId) return;
+
+      const callerInfo: CallerInfo = {
+        id: data.callerId,
+        fullName: data.callerName || 'Match Candidate',
+        gender: data.callerGender || 'female',
+        city: data.callerCity || 'Pakistan',
+        photoUrl: data.callerPhoto || undefined,
+        isVip: data.callerVip === 'true'
+      };
+
+      if (data.conversationId) {
+        setActiveConvId(data.conversationId);
+        setActiveTab('chat');
+        setShowNotifications(false);
+      }
+
+      webRtcService.handleIncomingSignal({
+        type: 'call_signal',
+        signal: 'initiate',
+        senderId: data.callerId,
+        targetUserId: currentUser.id,
+        callType: (data.callType as CallType) || 'audio',
+        callerInfo
+      });
+    };
+
     window.addEventListener('qurb_open_chat', handleOpenChatEvent);
-    return () => window.removeEventListener('qurb_open_chat', handleOpenChatEvent);
-  }, []);
+    window.addEventListener('qurb_incoming_call_push', handleIncomingCallPushEvent);
+    return () => {
+      window.removeEventListener('qurb_open_chat', handleOpenChatEvent);
+      window.removeEventListener('qurb_incoming_call_push', handleIncomingCallPushEvent);
+    };
+  }, [currentUser.id]);
 
   useEffect(() => {
     if (currentUser?.id && currentUser.id !== 'usr_guest') {

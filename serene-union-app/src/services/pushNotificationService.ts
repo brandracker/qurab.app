@@ -30,7 +30,7 @@ class PushNotificationService {
         console.log('[Push] App active state:', this.isForeground);
       });
 
-      // 1. Create Android Notification Channel with Sound & Vibration
+      // 1. Create Android Notification Channels (Messages & Incoming Calls)
       await PushNotifications.createChannel({
         id: 'qurb_messages',
         name: 'Messages & Matches',
@@ -43,6 +43,20 @@ class PushNotificationService {
         lightColor: '#FF2560'
       }).catch(err => {
         console.warn('[Push] Channel creation notice:', err);
+      });
+
+      await PushNotifications.createChannel({
+        id: 'qurb_calls',
+        name: 'Incoming Calls',
+        description: 'Full-screen incoming audio and video calls',
+        importance: 5,
+        visibility: 1,
+        sound: 'default',
+        vibration: true,
+        lights: true,
+        lightColor: '#10B981'
+      }).catch(err => {
+        console.warn('[Push] Call channel creation notice:', err);
       });
 
       // 2. Request Notification Permissions (Android 13+ POST_NOTIFICATIONS)
@@ -73,11 +87,32 @@ class PushNotificationService {
         console.warn('[Push] Registration error notice:', error);
       });
 
-      // 5. Handle Foreground Push Notification: Soft UI event only, suppress noisy native drawer banner
+      // 5. Handle Foreground & Background Push Notification
       PushNotifications.addListener('pushNotificationReceived', (notification) => {
         console.log('[Push] Notification received (isForeground:', this.isForeground, '):', notification);
         const data = notification.data || {};
         
+        // WhatsApp-Style Incoming Call Push
+        if (data.type === 'incoming_call') {
+          window.dispatchEvent(
+            new CustomEvent('qurb_incoming_call_push', { detail: data })
+          );
+
+          LocalNotifications.schedule({
+            notifications: [
+              {
+                id: 999999,
+                title: notification.title || `Incoming ${data.callType === 'video' ? 'Video' : 'Audio'} Call 📞`,
+                body: notification.body || `${data.callerName || 'Match'} is calling you on Qurb...`,
+                channelId: 'qurb_calls',
+                extra: data,
+                sound: 'default'
+              }
+            ]
+          }).catch(() => {});
+          return;
+        }
+
         // Dispatch soft in-app event so UI badges, chats, and bells update in real-time
         window.dispatchEvent(
           new CustomEvent('qurb_push_received', { detail: { notification, isForeground: this.isForeground } })
@@ -97,7 +132,11 @@ class PushNotificationService {
       PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
         console.log('[Push] Action performed on notification:', notification);
         const data = notification.notification.data || {};
-        if (data.conversationId) {
+        if (data.type === 'incoming_call') {
+          window.dispatchEvent(
+            new CustomEvent('qurb_incoming_call_push', { detail: data })
+          );
+        } else if (data.conversationId) {
           window.dispatchEvent(
             new CustomEvent('qurb_open_chat', { detail: { conversationId: data.conversationId } })
           );
@@ -107,7 +146,11 @@ class PushNotificationService {
       // 7. Handle Tap on Local Notification
       LocalNotifications.addListener('localNotificationActionPerformed', (notification) => {
         const extra = notification.notification.extra || {};
-        if (extra.conversationId) {
+        if (extra.type === 'incoming_call') {
+          window.dispatchEvent(
+            new CustomEvent('qurb_incoming_call_push', { detail: extra })
+          );
+        } else if (extra.conversationId) {
           window.dispatchEvent(
             new CustomEvent('qurb_open_chat', { detail: { conversationId: extra.conversationId } })
           );

@@ -1,6 +1,16 @@
 // Qurb (Serene Union) — Production WebRTC Calling Engine
 // Handles P2P Audio/Video negotiation, ICE traversal, media tracks, and acoustic feedback.
 
+declare global {
+  interface Window {
+    AndroidAudioBridge?: {
+      setCallMode: (inCall: boolean) => void;
+      setSpeakerphoneOn: (on: boolean) => void;
+      isSpeakerphoneOn: () => boolean;
+    };
+  }
+}
+
 export type CallState = 'idle' | 'outgoing_calling' | 'incoming_ringing' | 'connected' | 'ended';
 export type CallType = 'audio' | 'video';
 
@@ -93,9 +103,39 @@ export class WebRtcService {
 
   private notifyState(state: CallState, data?: any) {
     this.currentCallState = state;
+    if (state === 'connected') {
+      this.setCallMode(true);
+      if (this.currentCallType === 'video') {
+        this.setSpeakerphoneOn(true);
+      } else {
+        this.setSpeakerphoneOn(false);
+      }
+    } else if (state === 'ended' || state === 'idle') {
+      this.setCallMode(false);
+    }
     this.listeners.forEach(cb => {
       try { cb(state, data); } catch {}
     });
+  }
+
+  public setSpeakerphoneOn(on: boolean) {
+    try {
+      if (typeof window !== 'undefined' && window.AndroidAudioBridge) {
+        window.AndroidAudioBridge.setSpeakerphoneOn(on);
+      }
+    } catch (e) {
+      console.warn('Native speakerphone control error:', e);
+    }
+  }
+
+  public setCallMode(inCall: boolean) {
+    try {
+      if (typeof window !== 'undefined' && window.AndroidAudioBridge) {
+        window.AndroidAudioBridge.setCallMode(inCall);
+      }
+    } catch (e) {
+      console.warn('Native call mode control error:', e);
+    }
   }
 
   private notifyStreams() {
@@ -445,10 +485,18 @@ export class WebRtcService {
 
       const constraints: MediaStreamConstraints = {
         audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        },
+          echoCancellation: { ideal: true },
+          noiseSuppression: { ideal: true },
+          autoGainControl: { ideal: true },
+          channelCount: 1, // Mono eliminates stereo room-phase echo
+          sampleRate: 48000,
+          // Chromium & WebRTC AEC processing flags
+          googEchoCancellation: true,
+          googAutoGainControl: true,
+          googNoiseSuppression: true,
+          googHighpassFilter: true,
+          googTypingNoiseDetection: true
+        } as any,
         video: video ? {
           facingMode: this.isFrontCamera ? 'user' : 'environment',
           width: { ideal: 640 },
@@ -470,6 +518,30 @@ export class WebRtcService {
     }
   }
 
+  private applyBandwidthLimits() {
+    if (!this.peerConnection) return;
+    try {
+      const senders = this.peerConnection.getSenders();
+      senders.forEach(sender => {
+        if (sender.track?.kind === 'video') {
+          const params = sender.getParameters();
+          if (!params.encodings || params.encodings.length === 0) {
+            params.encodings = [{}];
+          }
+          params.encodings[0].maxBitrate = 600000; // 600 kbps for smooth 4G video without packet drops
+          sender.setParameters(params).catch(() => {});
+        } else if (sender.track?.kind === 'audio') {
+          const params = sender.getParameters();
+          if (!params.encodings || params.encodings.length === 0) {
+            params.encodings = [{}];
+          }
+          params.encodings[0].maxBitrate = 64000; // 64 kbps HD voice
+          sender.setParameters(params).catch(() => {});
+        }
+      });
+    } catch {}
+  }
+
   private async createPeerConnectionAndOffer() {
     this.initPeerConnection();
     if (!this.peerConnection) return;
@@ -480,6 +552,7 @@ export class WebRtcService {
         offerToReceiveVideo: this.currentCallType === 'video'
       });
       await this.peerConnection.setLocalDescription(offer);
+      this.applyBandwidthLimits();
 
       this.sendSignal({
         type: 'call_signal',
@@ -511,6 +584,7 @@ export class WebRtcService {
 
       const answer = await this.peerConnection.createAnswer();
       await this.peerConnection.setLocalDescription(answer);
+      this.applyBandwidthLimits();
 
       this.sendSignal({
         type: 'call_signal',
@@ -659,6 +733,7 @@ export class WebRtcService {
     this.currentPartnerInfo = null;
     this.isMuted = false;
     this.isVideoEnabled = true;
+    this.setCallMode(false);
     this.notifyStreams();
   }
 }

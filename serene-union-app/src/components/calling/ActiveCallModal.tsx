@@ -22,7 +22,7 @@ export const ActiveCallModal: React.FC<ActiveCallModalProps> = ({
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [isVideoOn, setIsVideoOn] = useState<boolean>(callType === 'video');
   const [isFrontCam, setIsFrontCam] = useState<boolean>(true);
-  const [isSpeakerOn, setIsSpeakerOn] = useState<boolean>(true);
+  const [isSpeakerOn, setIsSpeakerOn] = useState<boolean>(callType === 'video');
   const [pipPosition, setPipPosition] = useState<'top-right' | 'top-left' | 'bottom-right'>('top-right');
   const [isRemoteVideoActive, setIsRemoteVideoActive] = useState<boolean>(false);
 
@@ -116,7 +116,9 @@ export const ActiveCallModal: React.FC<ActiveCallModalProps> = ({
   };
 
   const handleToggleSpeaker = () => {
-    setIsSpeakerOn(prev => !prev);
+    const nextSpeakerState = !isSpeakerOn;
+    setIsSpeakerOn(nextSpeakerState);
+    webRtcService.setSpeakerphoneOn(nextSpeakerState);
   };
 
   const cyclePipPosition = () => {

@@ -478,6 +478,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
     let ws: WebSocket | null = null;
     let isCleanedUp = false;
     let partnerTypingTimer: any = null;
+    let pingInterval: any = null;
 
     try {
       if (typeof window !== 'undefined' && typeof WebSocket !== 'undefined') {
@@ -490,6 +491,12 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
 
         ws.onopen = () => {
           try { ws?.send(JSON.stringify({ type: 'ping' })); } catch {}
+          if (pingInterval) clearInterval(pingInterval);
+          pingInterval = setInterval(() => {
+            if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+              try { wsRef.current.send(JSON.stringify({ type: 'ping' })); } catch {}
+            }
+          }, 20000);
           webRtcService.init(currentUser.id, (payload) => {
             if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
               try {
@@ -547,6 +554,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
     return () => {
       isCleanedUp = true;
       if (partnerTypingTimer) clearTimeout(partnerTypingTimer);
+      if (pingInterval) clearInterval(pingInterval);
       if (ws) {
         try { ws.close(); } catch {}
       }

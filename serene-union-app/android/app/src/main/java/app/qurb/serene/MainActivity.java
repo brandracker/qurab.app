@@ -1,8 +1,11 @@
 package app.qurb.serene;
 
+import android.content.Context;
 import android.content.Intent;
+import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Bundle;
+import android.webkit.JavascriptInterface;
 import android.webkit.PermissionRequest;
 import android.webkit.WebSettings;
 import com.getcapacitor.BridgeActivity;
@@ -37,6 +40,49 @@ public class MainActivity extends BridgeActivity {
             WebSettings settings = getBridge().getWebView().getSettings();
             settings.setMediaPlaybackRequiresUserGesture(false);
             settings.setJavaScriptCanOpenWindowsAutomatically(true);
+
+            final AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+            getBridge().getWebView().addJavascriptInterface(new Object() {
+                @JavascriptInterface
+                public void setCallMode(boolean inCall) {
+                    runOnUiThread(() -> {
+                        if (audioManager != null) {
+                            try {
+                                if (inCall) {
+                                    audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+                                } else {
+                                    audioManager.setSpeakerphoneOn(false);
+                                    audioManager.setMode(AudioManager.MODE_NORMAL);
+                                }
+                            } catch (Exception ignored) {}
+                        }
+                    });
+                }
+
+                @JavascriptInterface
+                public void setSpeakerphoneOn(boolean on) {
+                    runOnUiThread(() -> {
+                        if (audioManager != null) {
+                            try {
+                                if (audioManager.getMode() != AudioManager.MODE_IN_COMMUNICATION) {
+                                    audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+                                }
+                                audioManager.setSpeakerphoneOn(on);
+                            } catch (Exception ignored) {}
+                        }
+                    });
+                }
+
+                @JavascriptInterface
+                public boolean isSpeakerphoneOn() {
+                    if (audioManager != null) {
+                        try {
+                            return audioManager.isSpeakerphoneOn();
+                        } catch (Exception ignored) {}
+                    }
+                    return false;
+                }
+            }, "AndroidAudioBridge");
 
             getBridge().getWebView().setWebChromeClient(new BridgeWebChromeClient(getBridge()) {
                 @Override

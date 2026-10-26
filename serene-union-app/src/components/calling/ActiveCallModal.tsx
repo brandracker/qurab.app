@@ -24,33 +24,22 @@ export const ActiveCallModal: React.FC<ActiveCallModalProps> = ({
   const [isFrontCam, setIsFrontCam] = useState<boolean>(true);
   const [isSpeakerOn, setIsSpeakerOn] = useState<boolean>(true);
   const [pipPosition, setPipPosition] = useState<'top-right' | 'top-left' | 'bottom-right'>('top-right');
+  const [isRemoteVideoActive, setIsRemoteVideoActive] = useState<boolean>(false);
 
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
   const outgoingPreviewVideoRef = useRef<HTMLVideoElement | null>(null);
 
-  // Sync streams with video elements
+  // Sync streams with video and audio elements
   useEffect(() => {
     if (!isOpen) {
       setDurationSecs(0);
+      setIsRemoteVideoActive(false);
       return;
     }
 
-    // Immediately attach current streams if already acquired
-    const curLocal = webRtcService.getLocalStream();
-    const curRemote = webRtcService.getRemoteStream();
-
-    if (localVideoRef.current && curLocal) {
-      localVideoRef.current.srcObject = curLocal;
-    }
-    if (outgoingPreviewVideoRef.current && curLocal) {
-      outgoingPreviewVideoRef.current.srcObject = curLocal;
-    }
-    if (remoteVideoRef.current && curRemote) {
-      remoteVideoRef.current.srcObject = curRemote;
-    }
-
-    const unsubStreams = webRtcService.subscribeStreams((localStream, remoteStream) => {
+    const attachStreams = (localStream: MediaStream | null, remoteStream: MediaStream | null) => {
       if (localVideoRef.current && localStream) {
         localVideoRef.current.srcObject = localStream;
       }
@@ -59,7 +48,25 @@ export const ActiveCallModal: React.FC<ActiveCallModalProps> = ({
       }
       if (remoteVideoRef.current && remoteStream) {
         remoteVideoRef.current.srcObject = remoteStream;
+        remoteVideoRef.current.play().catch(() => {});
       }
+      if (remoteAudioRef.current && remoteStream) {
+        remoteAudioRef.current.srcObject = remoteStream;
+        remoteAudioRef.current.play().catch(() => {});
+      }
+      if (remoteStream) {
+        const vTracks = remoteStream.getVideoTracks();
+        setIsRemoteVideoActive(vTracks.length > 0 && vTracks.some(t => t.enabled));
+      } else {
+        setIsRemoteVideoActive(false);
+      }
+    };
+
+    // Immediately attach current streams if already acquired
+    attachStreams(webRtcService.getLocalStream(), webRtcService.getRemoteStream());
+
+    const unsubStreams = webRtcService.subscribeStreams((localStream, remoteStream) => {
+      attachStreams(localStream, remoteStream);
     });
 
     return () => {
@@ -141,15 +148,61 @@ export const ActiveCallModal: React.FC<ActiveCallModalProps> = ({
         </div>
       )}
 
-      {/* ----------------- 2. VIDEO CALL: CONNECTED REMOTE VIDEO ----------------- */}
+      {/* Dedicated Global Audio Playback Element for WebRTC audio tracks */}
+      <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
+
+      {/* ----------------- 2. VIDEO CALL: CONNECTED REMOTE VIDEO & LUXURY PLACEHOLDER ----------------- */}
       {callType === 'video' && isConnected && (
-        <div className="absolute inset-0 bg-black flex items-center justify-center">
+        <div className="absolute inset-0 bg-[#070B14] flex items-center justify-center overflow-hidden">
+          {/* Ambient Lighting Orbs */}
+          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-80 h-80 rounded-full bg-sky-500/10 blur-[100px] pointer-events-none" />
+          <div className="absolute bottom-1/4 left-1/2 -translate-x-1/2 w-72 h-72 rounded-full bg-emerald-500/10 blur-[90px] pointer-events-none" />
+
+          {/* Actual Remote Video Element */}
           <video
             ref={remoteVideoRef}
             autoPlay
             playsInline
-            className="w-full h-full object-cover"
+            onPlaying={() => setIsRemoteVideoActive(true)}
+            onPause={() => setIsRemoteVideoActive(false)}
+            onEnded={() => setIsRemoteVideoActive(false)}
+            className={`w-full h-full object-cover transition-opacity duration-500 ${
+              isRemoteVideoActive ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            }`}
           />
+
+          {/* Luxury Video Call Placeholder (Displays when video feed is loading or camera is paused) */}
+          {!isRemoteVideoActive && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-6 space-y-6 z-10 animate-fade-in select-none">
+              <div className="relative">
+                {/* Concentric Ambient Pulse Rings */}
+                <div className="absolute inset-0 -m-6 rounded-full border-2 border-emerald-500/30 animate-ping opacity-50" />
+                <div className="absolute inset-0 -m-12 rounded-full border border-sky-400/20 animate-pulse" />
+
+                {/* Partner Centerpiece Avatar Card */}
+                <div className="w-36 h-36 sm:w-44 sm:h-44 rounded-full overflow-hidden border-4 border-emerald-400/60 shadow-[0_0_50px_rgba(16,185,129,0.3)] bg-slate-900 relative">
+                  {partner.photoUrl ? (
+                    <img src={partner.photoUrl} alt={partner.fullName} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-5xl font-serif text-white bg-gradient-to-tr from-slate-900 to-slate-800">
+                      {partner.fullName?.charAt(0) || 'M'}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="text-center space-y-2">
+                <h3 className="text-2xl sm:text-3xl font-extrabold text-white font-serif tracking-tight drop-shadow-md">
+                  {partner.fullName}
+                </h3>
+                <div className="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/15 backdrop-blur-md shadow-lg text-xs">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                  <span className="text-emerald-300 font-medium tracking-wide">Connecting video stream...</span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Subtle gradient scrim */}
           <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/75 pointer-events-none" />
         </div>
@@ -272,13 +325,15 @@ export const ActiveCallModal: React.FC<ActiveCallModalProps> = ({
             autoPlay
             playsInline
             muted
-            className="w-full h-full object-cover"
+            className={`w-full h-full object-cover transition-opacity duration-300 ${isVideoOn ? 'opacity-100' : 'opacity-0'}`}
             style={{ transform: isFrontCam ? 'scaleX(-1)' : 'none' }}
           />
           {!isVideoOn && (
-            <div className="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center text-[10px] text-slate-400">
-              <VideoOff className="w-5 h-5 mb-1 text-rose-400" />
-              <span>Camera Off</span>
+            <div className="absolute inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-2 text-center select-none">
+              <div className="w-8 h-8 rounded-full bg-white/10 border border-white/15 flex items-center justify-center mb-1 shadow-inner">
+                <VideoOff className="w-4 h-4 text-rose-400" />
+              </div>
+              <span className="text-[9px] text-slate-300 font-medium">Camera Off</span>
             </div>
           )}
           <div className="absolute bottom-1.5 left-2 px-1.5 py-0.5 rounded-md bg-black/60 text-[9px] text-white/80 font-semibold backdrop-blur-xs">

@@ -25,17 +25,34 @@ export interface CallSignalPayload {
 }
 
 const ICE_SERVERS: RTCIceServer[] = [
+  // Google Public STUN
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
   { urls: 'stun:stun2.l.google.com:19302' },
-  { urls: 'stun:stun3.l.google.com:19302' },
-  { urls: 'stun:stun4.l.google.com:19302' }
+  // OpenRelay Public STUN & TURN (Metered WebRTC Project for Symmetric NAT / 4G Mobile Data)
+  { urls: 'stun:stun.relay.metered.ca:80' },
+  {
+    urls: 'turn:standard.relay.metered.ca:80',
+    username: 'openrelayproject',
+    credential: 'openrelayproject'
+  },
+  {
+    urls: 'turn:standard.relay.metered.ca:443',
+    username: 'openrelayproject',
+    credential: 'openrelayproject'
+  },
+  {
+    urls: 'turn:standard.relay.metered.ca:443?transport=tcp',
+    username: 'openrelayproject',
+    credential: 'openrelayproject'
+  }
 ];
 
 export class WebRtcService {
   private peerConnection: RTCPeerConnection | null = null;
   private localStream: MediaStream | null = null;
   private remoteStream: MediaStream | null = null;
+  private iceCandidateQueue: RTCIceCandidateInit[] = [];
   
   private currentCallState: CallState = 'idle';
   private currentCallType: CallType = 'audio';
@@ -318,15 +335,25 @@ export class WebRtcService {
         // Caller receives SDP answer from Receiver
         if (this.peerConnection && payload.payload?.sdp) {
           await this.peerConnection.setRemoteDescription(new RTCSessionDescription(payload.payload.sdp));
+          await this.processPendingIceCandidates();
         }
         break;
       }
 
       case 'ice_candidate': {
-        if (this.peerConnection && payload.payload?.candidate) {
-          try {
-            await this.peerConnection.addIceCandidate(new RTCIceCandidate(payload.payload.candidate));
-          } catch {}
+        const candidate = payload.payload?.candidate;
+        if (candidate) {
+          if (this.peerConnection && this.peerConnection.remoteDescription && this.peerConnection.remoteDescription.type) {
+            try {
+              await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+            } catch (err) {
+              console.warn('Queuing ICE candidate after add failed:', err);
+              this.iceCandidateQueue.push(candidate);
+            }
+          } else {
+            // Buffer candidate until setRemoteDescription completes
+            this.iceCandidateQueue.push(candidate);
+          }
         }
         break;
       }
@@ -355,7 +382,10 @@ export class WebRtcService {
     this.notifyState('connected', { partner: this.currentPartnerInfo, callType: this.currentCallType });
     this.playTone(523, 784, 0.25);
 
-    // Send accept signal to caller
+    // 1. Acquire local mic / camera FIRST so tracks are 100% active before caller creates SDP offer!
+    await this.setupLocalMedia(withVideo);
+
+    // 2. Send accept signal to caller now that local media is fully prepared
     this.sendSignal({
       type: 'call_signal',
       signal: 'accept',
@@ -364,9 +394,6 @@ export class WebRtcService {
       callType: this.currentCallType,
       payload: { withVideo }
     });
-
-    // Acquire local mic / camera
-    await this.setupLocalMedia(withVideo);
   }
 
   // --- Step 4: Reject Incoming Call (Receiver) ---
@@ -470,11 +497,18 @@ export class WebRtcService {
   }
 
   private async handleRemoteOffer(sdp: RTCSessionDescriptionInit) {
+    // Safety check: ensure localStream is acquired before initPeerConnection attaches tracks
+    if (!this.localStream) {
+      await this.setupLocalMedia(this.currentCallType === 'video');
+    }
+
     this.initPeerConnection();
     if (!this.peerConnection) return;
 
     try {
       await this.peerConnection.setRemoteDescription(new RTCSessionDescription(sdp));
+      await this.processPendingIceCandidates();
+
       const answer = await this.peerConnection.createAnswer();
       await this.peerConnection.setLocalDescription(answer);
 
@@ -490,6 +524,20 @@ export class WebRtcService {
       this.notifyState('connected', { partner: this.currentPartnerInfo, callType: this.currentCallType });
     } catch (err) {
       console.error('Error handling remote offer / creating answer:', err);
+    }
+  }
+
+  private async processPendingIceCandidates() {
+    if (!this.peerConnection || !this.peerConnection.remoteDescription) return;
+    while (this.iceCandidateQueue.length > 0) {
+      const candidate = this.iceCandidateQueue.shift();
+      if (candidate) {
+        try {
+          await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch (err) {
+          console.warn('Error processing queued ICE candidate:', err);
+        }
+      }
     }
   }
 
@@ -606,6 +654,7 @@ export class WebRtcService {
     }
 
     this.remoteStream = null;
+    this.iceCandidateQueue = [];
     this.currentPartnerId = null;
     this.currentPartnerInfo = null;
     this.isMuted = false;

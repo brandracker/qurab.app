@@ -247,10 +247,20 @@ export interface DashboardStats {
   totalConversations: number;
   growth: {
     today: number;
+    yesterday?: number;
+    yesterdayStats?: {
+      date: string;
+      signups: number;
+      male: number;
+      female: number;
+    };
+    diffFromYesterday?: number;
+    diffPctFromYesterday?: number;
     thisWeek: number;
     thisMonth: number;
     dates?: {
       todayDate: string;
+      yesterdayDate?: string;
       weekStart: string;
       monthStart: string;
     };

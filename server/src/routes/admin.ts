@@ -267,6 +267,15 @@ adminRouter.get('/dashboard/stats', async (c) => {
         female: Number(row.female || 0)
       }));
 
+      // Previous Day (Yesterday) Calculation
+      const yesterdayStr = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+      const yesterdayRow = dailyBreakdown.find((d: any) => d.date === yesterdayStr);
+      const yesterdaySignups = yesterdayRow ? Number(yesterdayRow.signups || 0) : 0;
+      const yesterdayMale = yesterdayRow ? Number(yesterdayRow.male || 0) : 0;
+      const yesterdayFemale = yesterdayRow ? Number(yesterdayRow.female || 0) : 0;
+      const diffFromYesterday = todaySignups - yesterdaySignups;
+      const diffPctFromYesterday = yesterdaySignups > 0 ? Number(((diffFromYesterday / yesterdaySignups) * 100).toFixed(1)) : 0;
+
       // Stats for selected date
       const selUserRes = await c.env.DB.prepare(`
         SELECT 
@@ -317,6 +326,14 @@ adminRouter.get('/dashboard/stats', async (c) => {
     const maleRatio = total > 0 ? Math.round((male / total) * 100) : 0;
     const femaleRatio = total > 0 ? Math.round((female / total) * 100) : 0;
 
+    const yesterdayStr = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+    const yesterdayRow = dailyBreakdown.find((d: any) => d.date === yesterdayStr);
+    const yesterdaySignups = yesterdayRow ? Number(yesterdayRow.signups || 0) : 0;
+    const yesterdayMale = yesterdayRow ? Number(yesterdayRow.male || 0) : 0;
+    const yesterdayFemale = yesterdayRow ? Number(yesterdayRow.female || 0) : 0;
+    const diffFromYesterday = todaySignups - yesterdaySignups;
+    const diffPctFromYesterday = yesterdaySignups > 0 ? Number(((diffFromYesterday / yesterdaySignups) * 100).toFixed(1)) : 0;
+
     return c.json({
       success: true,
       stats: {
@@ -332,10 +349,20 @@ adminRouter.get('/dashboard/stats', async (c) => {
         pendingWalis: pendingWaliCount,
         growth: {
           today: todaySignups,
+          yesterday: yesterdaySignups,
+          yesterdayStats: {
+            date: yesterdayStr,
+            signups: yesterdaySignups,
+            male: yesterdayMale,
+            female: yesterdayFemale
+          },
+          diffFromYesterday,
+          diffPctFromYesterday,
           thisWeek: weekSignups,
           thisMonth: monthSignups,
           dates: {
             todayDate: todayStr,
+            yesterdayDate: yesterdayStr,
             weekStart: new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0],
             monthStart: new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]
           },

@@ -13,7 +13,9 @@ import {
   Sparkles,
   ExternalLink,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  TrendingUp,
+  TrendingDown
 } from 'lucide-react';
 import type { DashboardStats, DailyBreakdownItem } from '../types';
 
@@ -76,6 +78,49 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ stats, onRefresh, onSe
       { date: todayIso, signups: stats?.growth?.today ?? 0, male: Math.round((stats?.growth?.today ?? 0) * 0.8), female: Math.round((stats?.growth?.today ?? 0) * 0.2) }
     ];
   }, [stats?.growth, todayIso]);
+
+  // Specific Day-over-Day Rows & Comparisons
+  const todayRow = useMemo(() => {
+    const found = dailyList.find(d => d.date === todayIso);
+    if (found) return found;
+    return {
+      date: todayIso,
+      signups: stats?.growth?.today ?? 0,
+      male: Math.round((stats?.growth?.today ?? 0) * 0.8),
+      female: Math.round((stats?.growth?.today ?? 0) * 0.2)
+    };
+  }, [dailyList, todayIso, stats?.growth?.today]);
+
+  const yesterdayRow = useMemo(() => {
+    const found = dailyList.find(d => d.date === yesterdayIso);
+    if (found) return found;
+    if (stats?.growth?.yesterdayStats) return stats.growth.yesterdayStats;
+    return {
+      date: yesterdayIso,
+      signups: stats?.growth?.yesterday ?? 0,
+      male: Math.round((stats?.growth?.yesterday ?? 0) * 0.8),
+      female: Math.round((stats?.growth?.yesterday ?? 0) * 0.2)
+    };
+  }, [dailyList, yesterdayIso, stats?.growth?.yesterday, stats?.growth?.yesterdayStats]);
+
+  const diffSignups = useMemo(() => {
+    if (stats?.growth?.diffFromYesterday !== undefined) {
+      return stats.growth.diffFromYesterday;
+    }
+    return (todayRow?.signups ?? 0) - (yesterdayRow?.signups ?? 0);
+  }, [stats?.growth?.diffFromYesterday, todayRow?.signups, yesterdayRow?.signups]);
+
+  const diffPct = useMemo(() => {
+    if (stats?.growth?.diffPctFromYesterday !== undefined) {
+      return stats.growth.diffPctFromYesterday;
+    }
+    const ySignups = yesterdayRow?.signups ?? 0;
+    if (ySignups === 0) return 0;
+    return Number(((diffSignups / ySignups) * 100).toFixed(1));
+  }, [stats?.growth?.diffPctFromYesterday, diffSignups, yesterdayRow?.signups]);
+
+  const brotherDiff = (todayRow?.male ?? 0) - (yesterdayRow?.male ?? 0);
+  const sisterDiff = (todayRow?.female ?? 0) - (yesterdayRow?.female ?? 0);
 
   const selectedDateRow = useMemo(() => {
     return dailyList.find(d => d.date === selectedFilterDate);
@@ -204,20 +249,35 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ stats, onRefresh, onSe
 
             {/* 3 Main Period Cards with Exact Date Display */}
             <div className="grid grid-cols-3 gap-3">
-              {/* Today Card */}
+              {/* Today Card with Day-over-Day delta badge */}
               <button
                 type="button"
                 onClick={() => setSelectedFilterDate(todayIso)}
-                className={`p-3 rounded-2xl text-center border transition-all cursor-pointer ${
+                className={`p-3 rounded-2xl text-center border transition-all cursor-pointer flex flex-col justify-between ${
                   selectedFilterDate === todayIso
                     ? 'bg-sky-500/15 border-sky-500/50 shadow-lg shadow-sky-500/10'
                     : 'bg-white/[0.02] border-white/5 hover:border-white/20'
                 }`}
               >
-                <div className="text-[10px] uppercase font-bold text-sky-400 tracking-wider">Today</div>
-                <div className="text-[11px] text-slate-400 font-mono mt-0.5">{todayLabel}</div>
-                <div className="text-xl font-extrabold text-white mt-1">+{stats?.growth?.today ?? 0}</div>
-                <div className="text-[10px] text-slate-400 mt-0.5">New Members</div>
+                <div>
+                  <div className="text-[10px] uppercase font-bold text-sky-400 tracking-wider">Today</div>
+                  <div className="text-[11px] text-slate-400 font-mono mt-0.5">{todayLabel}</div>
+                  <div className="text-xl font-extrabold text-white mt-1">+{todayRow?.signups ?? 0}</div>
+                </div>
+
+                <div className="mt-2 pt-1 border-t border-white/5">
+                  {(yesterdayRow?.signups ?? 0) > 0 ? (
+                    <div className={`text-[10px] font-bold inline-flex items-center space-x-0.5 px-1.5 py-0.5 rounded-md ${
+                      diffSignups >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-300'
+                    }`}>
+                      {diffSignups >= 0 ? <TrendingUp className="w-2.5 h-2.5 mr-0.5" /> : <TrendingDown className="w-2.5 h-2.5 mr-0.5" />}
+                      <span>{diffSignups >= 0 ? `+${diffSignups}` : `${diffSignups}`} ({diffSignups >= 0 ? `+${diffPct}%` : `${diffPct}%`})</span>
+                    </div>
+                  ) : (
+                    <span className="text-[10px] text-slate-400">New Members</span>
+                  )}
+                  <div className="text-[9px] text-slate-500 mt-0.5">vs Kal ({yesterdayRow?.signups ?? 0})</div>
+                </div>
               </button>
 
               {/* Last 7 Days Card */}
@@ -233,7 +293,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ stats, onRefresh, onSe
                 <div className="text-[10px] uppercase font-bold text-slate-300 tracking-wider">Last 7 Days</div>
                 <div className="text-[11px] text-slate-400 font-mono mt-0.5">{weekRangeLabel}</div>
                 <div className="text-xl font-extrabold text-white mt-1">+{stats?.growth?.thisWeek ?? 0}</div>
-                <div className="text-[10px] text-slate-400 mt-0.5">Past 7 Days</div>
+                <div className="text-[10px] text-slate-400 mt-2">Past 7 Days</div>
               </button>
 
               {/* Last 30 Days Card */}
@@ -245,8 +305,129 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ stats, onRefresh, onSe
                 <div className="text-[10px] uppercase font-bold text-slate-300 tracking-wider">Last 30 Days</div>
                 <div className="text-[11px] text-slate-400 font-mono mt-0.5">{monthRangeLabel}</div>
                 <div className="text-xl font-extrabold text-white mt-1">+{stats?.growth?.thisMonth ?? 0}</div>
-                <div className="text-[10px] text-slate-400 mt-0.5">Past Month</div>
+                <div className="text-[10px] text-slate-400 mt-2">Past Month</div>
               </button>
+            </div>
+
+            {/* Dedicated Day-over-Day Comparison Banner (Today vs Yesterday / Aaj vs Kal) */}
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-[#0c1322] via-[#0F172A] to-[#0c1322] border border-sky-500/30 shadow-xl space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <div className="p-1.5 rounded-lg bg-sky-500/20 text-sky-400">
+                    <Sparkles className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-white tracking-wide">
+                      Day-over-Day Comparison (Aaj vs Kal)
+                    </h4>
+                    <p className="text-[10px] text-slate-400">
+                      Comparing Today ({formatShortDate(todayIso)}) with Yesterday ({formatShortDate(yesterdayIso)})
+                    </p>
+                  </div>
+                </div>
+
+                <div className={`px-2.5 py-1 rounded-full text-xs font-bold inline-flex items-center space-x-1 border ${
+                  diffSignups >= 0 
+                    ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' 
+                    : 'bg-rose-500/15 border-rose-500/30 text-rose-300'
+                }`}>
+                  {diffSignups >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                  <span>{diffSignups >= 0 ? `+${diffPct}% Higher` : `${diffPct}% vs Yesterday`}</span>
+                </div>
+              </div>
+
+              {/* 2-Column Comparison Grid: Today vs Yesterday */}
+              <div className="grid grid-cols-2 gap-3">
+                {/* Today Column */}
+                <div 
+                  onClick={() => setSelectedFilterDate(todayIso)}
+                  className={`p-3 rounded-xl border transition-all cursor-pointer ${
+                    selectedFilterDate === todayIso 
+                      ? 'bg-sky-500/15 border-sky-500/40' 
+                      : 'bg-white/[0.03] border-white/5 hover:border-white/20'
+                  }`}
+                >
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-sky-400">Today (Aaj)</span>
+                    <span className="text-[10px] text-slate-400 font-mono">{formatShortDate(todayIso)}</span>
+                  </div>
+                  <div className="flex items-baseline space-x-2 mt-1">
+                    <span className="text-2xl font-black text-white">+{todayRow?.signups ?? 0}</span>
+                    <span className="text-[10px] text-slate-400">signups</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1 text-[11px] pt-1.5 mt-1 border-t border-white/5">
+                    <span className="text-sky-300 font-medium">👨 {todayRow?.male ?? 0} brothers</span>
+                    <span className="text-[#FF4D7D] font-medium">👩 {todayRow?.female ?? 0} sisters</span>
+                  </div>
+                </div>
+
+                {/* Yesterday Column */}
+                <div 
+                  onClick={() => setSelectedFilterDate(yesterdayIso)}
+                  className={`p-3 rounded-xl border transition-all cursor-pointer ${
+                    selectedFilterDate === yesterdayIso 
+                      ? 'bg-sky-500/15 border-sky-500/40' 
+                      : 'bg-white/[0.02] border-white/5 hover:border-white/20'
+                  }`}
+                >
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-slate-300">Yesterday (Kal)</span>
+                    <span className="text-[10px] text-slate-400 font-mono">{formatShortDate(yesterdayIso)}</span>
+                  </div>
+                  <div className="flex items-baseline space-x-2 mt-1">
+                    <span className="text-2xl font-black text-slate-300">+{yesterdayRow?.signups ?? 0}</span>
+                    <span className="text-[10px] text-slate-400">signups</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1 text-[11px] pt-1.5 mt-1 border-t border-white/5">
+                    <span className="text-slate-400">👨 {yesterdayRow?.male ?? 0} brothers</span>
+                    <span className="text-slate-400">👩 {yesterdayRow?.female ?? 0} sisters</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom Quick Audit & Insights */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-white/5 text-[11px]">
+                <div className="flex items-center space-x-3 text-slate-400">
+                  <span>
+                    Net Change: <strong className={diffSignups >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
+                      {diffSignups >= 0 ? `+${diffSignups}` : `${diffSignups}`} profiles
+                    </strong>
+                  </span>
+                  <span>•</span>
+                  <span>
+                    Brothers: <strong className={brotherDiff >= 0 ? 'text-sky-400' : 'text-slate-400'}>
+                      {brotherDiff >= 0 ? `+${brotherDiff}` : `${brotherDiff}`}
+                    </strong>
+                  </span>
+                  <span>•</span>
+                  <span>
+                    Sisters: <strong className={sisterDiff >= 0 ? 'text-[#FF4D7D]' : 'text-slate-400'}>
+                      {sisterDiff >= 0 ? `+${sisterDiff}` : `${sisterDiff}`}
+                    </strong>
+                  </span>
+                </div>
+
+                {onSelectTab && (
+                  <div className="flex items-center space-x-2">
+                    <button
+                      type="button"
+                      onClick={() => onSelectTab('daily', yesterdayIso)}
+                      className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 text-[10px] font-semibold transition-all cursor-pointer"
+                    >
+                      <span>Kal ka Audit ({yesterdayRow?.signups ?? 0})</span>
+                      <ChevronRight className="w-3 h-3" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onSelectTab('daily', todayIso)}
+                      className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-sky-500 hover:bg-sky-400 text-white text-[10px] font-semibold transition-all cursor-pointer"
+                    >
+                      <span>Aaj ka Audit ({todayRow?.signups ?? 0})</span>
+                      <ChevronRight className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Quick Date Selector & Inspector Bar */}
@@ -447,7 +628,21 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ stats, onRefresh, onSe
 
                       {/* Signups Count */}
                       <td className="py-3.5 px-4 font-extrabold text-white text-sm">
-                        +{item.signups}
+                        <div className="flex items-center space-x-1.5">
+                          <span>+{item.signups}</span>
+                          {isToday && (yesterdayRow?.signups ?? 0) > 0 && (
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                              diffSignups >= 0 ? 'bg-emerald-500/15 text-emerald-400' : 'bg-rose-500/15 text-rose-300'
+                            }`}>
+                              {diffSignups >= 0 ? `▲ +${diffPct}%` : `▼ ${diffPct}%`}
+                            </span>
+                          )}
+                          {isYesterday && (
+                            <span className="text-[10px] font-medium text-slate-500">
+                              (Benchmark)
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       {/* Visual Growth Velocity Bar */}

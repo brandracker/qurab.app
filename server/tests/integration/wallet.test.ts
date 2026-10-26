@@ -344,6 +344,115 @@ describe('Wallet, In-App Purchases & Rewarded Ads API Integration Tests', () => 
     const adData = await adRes.json();
     expect(adData.likesRemaining).toBe(10);
   });
+
+  it('17. Google Play purchase with 7-day trial sets 7-day expiry and credits Barakah VIP', async () => {
+    const payload = {
+      userId: 'usr_test_wallet_2',
+      productId: 'qurb_barakah_monthly',
+      purchaseToken: 'gp_token_trial_7d',
+      amountCents: 0,
+      currency: 'USD',
+      isTrial: true,
+      durationDays: 7
+    };
+
+    const res = await app.request('/api/wallet/purchase-google-play', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }, env);
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.subscriptionExpiry).toBeDefined();
+
+    // Verify wallet reflects 7 days remaining
+    const getRes = await app.request('/api/wallet/usr_test_wallet_2', { method: 'GET' }, env);
+    const getData = await getRes.json();
+    expect(getData.wallet.isVip).toBe(true);
+    expect(getData.wallet.subscriptionTier).toBe('barakah_vip');
+    expect(getData.wallet.daysRemaining).toBeLessThanOrEqual(7);
+    expect(getData.wallet.daysRemaining).toBeGreaterThanOrEqual(6);
+  });
+
+  it('18. Expired subscription automatically downgrades user to free tier upon GET /api/wallet/:userId', async () => {
+    // Manually set an expired subscription in database (expired yesterday)
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    await env.DB.prepare(`
+      INSERT INTO user_wallets (user_id, subscription_tier, subscription_expiry, daily_messages_quota)
+      VALUES ('usr_test_wallet_3', 'barakah_vip', ?, 9999)
+      ON CONFLICT(user_id) DO UPDATE SET 
+        subscription_tier = 'barakah_vip', 
+        subscription_expiry = excluded.subscription_expiry,
+        daily_messages_quota = 9999
+    `).bind(yesterday).run();
+
+    await env.DB.prepare("UPDATE users SET is_vip = 1 WHERE id = 'usr_test_wallet_3'").run();
+
+    // Query wallet: auto-expiration should downgrade immediately
+    const res = await app.request('/api/wallet/usr_test_wallet_3', { method: 'GET' }, env);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.wallet.isVip).toBe(false);
+    expect(data.wallet.subscriptionTier).toBe('free');
+    expect(data.wallet.dailyMessagesQuota).toBe(15);
+
+    // Verify users table is also updated
+    const userRow = await env.DB.prepare("SELECT is_vip FROM users WHERE id = 'usr_test_wallet_3'").first();
+    expect(userRow.is_vip).toBe(0);
+  });
+
+  it('19. Google Play RTDN Webhook revokes VIP on SUBSCRIPTION_EXPIRED (type 13)', async () => {
+    // 1. Give active VIP
+    await app.request('/api/wallet/purchase-google-play', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: 'usr_test_wallet_1',
+        productId: 'qurb_barakah_monthly',
+        purchaseToken: 'gp_token_rtdn_test',
+        amountCents: 299,
+        currency: 'USD'
+      })
+    }, env);
+
+    // Verify VIP active
+    let check = await app.request('/api/wallet/usr_test_wallet_1', { method: 'GET' }, env);
+    let checkData = await check.json();
+    expect(checkData.wallet.isVip).toBe(true);
+
+    // 2. Google Cloud Pub/Sub sends notificationType 13 (EXPIRED)
+    const pubsubPayload = {
+      message: {
+        data: Buffer.from(JSON.stringify({
+          version: '1.0',
+          packageName: 'app.qurb.serene',
+          subscriptionNotification: {
+            notificationType: 13,
+            purchaseToken: 'gp_token_rtdn_test',
+            subscriptionId: 'qurb_barakah_monthly'
+          }
+        })).toString('base64')
+      }
+    };
+
+    const webhookRes = await app.request('/api/wallet/google-play/webhook', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(pubsubPayload)
+    }, env);
+
+    expect(webhookRes.status).toBe(200);
+    const webhookData = await webhookRes.json();
+    expect(webhookData.success).toBe(true);
+
+    // 3. User should now be revoked to free tier
+    check = await app.request('/api/wallet/usr_test_wallet_1', { method: 'GET' }, env);
+    checkData = await check.json();
+    expect(checkData.wallet.isVip).toBe(false);
+    expect(checkData.wallet.subscriptionTier).toBe('free');
+  });
 });
 
 

@@ -309,7 +309,8 @@ export const AdminPortal: React.FC = () => {
     tier: string,
     directSalams: number,
     isVip: boolean,
-    resetQuotas: boolean
+    resetQuotas: boolean,
+    durationDays?: number | 'lifetime'
   ) => {
     setIsSubmittingSubscription(true);
     try {
@@ -319,7 +320,7 @@ export const AdminPortal: React.FC = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${adminToken}`
         },
-        body: JSON.stringify({ tier, directSalams, isVip, resetQuotas })
+        body: JSON.stringify({ tier, directSalams, isVip, resetQuotas, durationDays })
       });
       const data = await res.json();
       if (data.success) {
@@ -329,6 +330,8 @@ export const AdminPortal: React.FC = () => {
           wallet: data.wallet || {
             ...(u.wallet || {}),
             subscription_tier: tier,
+            subscription_expiry: data.subscriptionExpiry,
+            daysRemaining: data.daysRemaining,
             direct_salams_balance: (u.wallet?.direct_salams_balance ?? (isVip ? 20 : 2)) + directSalams
           }
         } : u));
@@ -340,6 +343,8 @@ export const AdminPortal: React.FC = () => {
             wallet: data.wallet || {
               ...(prev?.wallet || {}),
               subscription_tier: tier,
+              subscription_expiry: data.subscriptionExpiry,
+              daysRemaining: data.daysRemaining,
               direct_salams_balance: (prev?.wallet?.direct_salams_balance ?? (isVip ? 20 : 2)) + directSalams
             }
           }));

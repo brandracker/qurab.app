@@ -3,6 +3,7 @@ import type { AppContext } from '../types';
 import { hashPassword } from '../utils/crypto';
 import { ensureSeedProfiles, SEED_PASSWORD } from '../utils/seedData';
 import { getPendingCatchupCount, processCatchupReplies } from '../utils/ai-chat-agent';
+import { calculateSubscriptionExpiry, syncAndValidateSubscription } from '../utils/subscription';
 
 export const adminRouter = new Hono<AppContext>();
 
@@ -43,6 +44,9 @@ async function ensureAdminTableAndSeed(db: any) {
     } catch {}
     try {
       await db.prepare("ALTER TABLE users ADD COLUMN last_active_at DATETIME").run();
+    } catch {}
+    try {
+      await db.prepare("ALTER TABLE user_wallets ADD COLUMN subscription_expiry DATETIME DEFAULT NULL").run();
     } catch {}
 
     try {
@@ -831,8 +835,18 @@ adminRouter.get('/users/:id', async (c) => {
     
     let wallet: any = null;
     try {
+      const subValidation = await syncAndValidateSubscription(c.env.DB, id);
       wallet = await c.env.DB.prepare('SELECT * FROM user_wallets WHERE user_id = ?').bind(id).first();
-    } catch {}
+      if (wallet) {
+        wallet.isVip = subValidation.isVip;
+        wallet.daysRemaining = subValidation.daysRemaining;
+      }
+      user.is_vip = subValidation.isVip ? 1 : 0;
+    } catch {
+      try {
+        wallet = await c.env.DB.prepare('SELECT * FROM user_wallets WHERE user_id = ?').bind(id).first();
+      } catch {}
+    }
 
     return c.json({
       success: true,
@@ -929,13 +943,17 @@ adminRouter.post('/users/:id/vip', async (c) => {
 adminRouter.post('/users/:id/subscription', async (c) => {
   try {
     const id = c.req.param('id');
-    const { tier, directSalams, isVip, resetQuotas } = await c.req.json();
+    const { tier, directSalams, isVip, resetQuotas, durationDays, expiryDate } = await c.req.json();
 
     const isVipActive = isVip !== undefined ? Boolean(isVip) : (tier === 'barakah_vip');
     const vipVal = isVipActive ? 1 : 0;
     const subTier = isVipActive ? 'barakah_vip' : 'free';
     const msgQuota = isVipActive ? 9999 : 15;
     const bonusSalams = Number(directSalams) || 0;
+
+    const expiryDateIso = isVipActive 
+      ? calculateSubscriptionExpiry(durationDays !== undefined ? durationDays : (expiryDate ?? 30))
+      : null;
 
     // 1. Update users table
     await c.env.DB.prepare(`
@@ -944,14 +962,15 @@ adminRouter.post('/users/:id/subscription', async (c) => {
       WHERE id = ?
     `).bind(vipVal, id).run();
 
-    // 2. Atomically sync user_wallets
+    // 2. Atomically sync user_wallets with subscription_expiry
     try {
       await c.env.DB.prepare(`
-        INSERT INTO user_wallets (user_id, subscription_tier, daily_messages_quota, direct_salams_balance)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO user_wallets (user_id, subscription_tier, daily_messages_quota, direct_salams_balance, subscription_expiry)
+        VALUES (?, ?, ?, ?, ?)
         ON CONFLICT(user_id) DO UPDATE SET 
           subscription_tier = excluded.subscription_tier,
           daily_messages_quota = excluded.daily_messages_quota,
+          subscription_expiry = excluded.subscription_expiry,
           direct_salams_balance = CASE 
             WHEN ? > 0 THEN user_wallets.direct_salams_balance + ? 
             WHEN ? = 0 AND ? = 1 AND user_wallets.direct_salams_balance < 20 THEN 20
@@ -960,7 +979,7 @@ adminRouter.post('/users/:id/subscription', async (c) => {
           likes_used_today = CASE WHEN ? = 1 THEN 0 ELSE user_wallets.likes_used_today END,
           messages_sent_today = CASE WHEN ? = 1 THEN 0 ELSE user_wallets.messages_sent_today END
       `).bind(
-        id, subTier, msgQuota, Math.max(2, bonusSalams),
+        id, subTier, msgQuota, Math.max(2, bonusSalams), expiryDateIso,
         bonusSalams, bonusSalams,
         bonusSalams, vipVal,
         resetQuotas ? 1 : 0, resetQuotas ? 1 : 0
@@ -974,17 +993,25 @@ adminRouter.post('/users/:id/subscription', async (c) => {
       updatedWallet = await c.env.DB.prepare('SELECT * FROM user_wallets WHERE user_id = ?').bind(id).first();
     } catch {}
 
+    const now = Date.now();
+    const daysRemaining = expiryDateIso 
+      ? Math.max(1, Math.ceil((new Date(expiryDateIso).getTime() - now) / (1000 * 60 * 60 * 24)))
+      : (isVipActive ? null : 0);
+
     return c.json({
       success: true,
       message: `User subscription successfully updated to ${subTier}`,
       isVip: Boolean(vipVal),
       tier: subTier,
+      subscriptionExpiry: expiryDateIso,
+      daysRemaining,
       wallet: updatedWallet
     });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   }
 });
+
 
 // 7.2 Switch User Gender with Islamic Safe Interaction Reset
 adminRouter.post('/users/:id/gender', async (c) => {

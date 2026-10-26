@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Crown, CheckCircle2, ShieldCheck, Send } from 'lucide-react';
+import { X, Crown, CheckCircle2, ShieldCheck, Send, Clock } from 'lucide-react';
 import type { CandidateUser } from '../types';
 
 interface SubscriptionModalProps {
@@ -10,7 +10,8 @@ interface SubscriptionModalProps {
     tier: string,
     directSalams: number,
     isVip: boolean,
-    resetQuotas: boolean
+    resetQuotas: boolean,
+    durationDays?: number | 'lifetime'
   ) => Promise<void>;
   isSubmitting?: boolean;
 }
@@ -26,14 +27,17 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
   const currentIsVip = Boolean(user.is_vip);
   const currentTier = user.wallet?.subscription_tier || (currentIsVip ? 'barakah_vip' : 'free');
   const currentSalams = user.wallet?.direct_salams_balance ?? (currentIsVip ? 20 : 2);
+  const currentExpiry = user.wallet?.subscription_expiry;
+  const daysRemaining = user.wallet?.daysRemaining;
 
   const [selectedTier, setSelectedTier] = useState<string>(currentTier === 'barakah_vip' ? 'barakah_vip' : 'free');
+  const [durationDays, setDurationDays] = useState<number | 'lifetime'>(30);
   const [salamsToAdd, setSalamsToAdd] = useState<number>(0);
   const [resetQuotas, setResetQuotas] = useState<boolean>(true);
 
   const handleSave = async () => {
     const isVip = selectedTier === 'barakah_vip';
-    await onUpdateSubscription(user.id, selectedTier, salamsToAdd, isVip, resetQuotas);
+    await onUpdateSubscription(user.id, selectedTier, salamsToAdd, isVip, resetQuotas, durationDays);
     onClose();
   };
 
@@ -79,6 +83,16 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
               {currentSalams} Salams Available
             </span>
           </div>
+          {currentIsVip && (
+            <div className="col-span-2 pt-2 border-t border-white/5 flex items-center justify-between text-[11px]">
+              <span className="text-slate-400">Current Expiry:</span>
+              <span className="font-medium text-amber-300">
+                {currentExpiry 
+                  ? `${new Date(currentExpiry).toLocaleDateString()} (${daysRemaining !== undefined && daysRemaining !== null ? `${daysRemaining} days left` : 'active'})`
+                  : 'Permanent / Lifetime VIP (No expiry)'}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Plan / Tier Selection */}
@@ -111,6 +125,37 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                 </p>
               </div>
             </button>
+
+            {selectedTier === 'barakah_vip' && (
+              <div className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-2xl space-y-2 animate-fade-in">
+                <label className="text-xs font-bold uppercase tracking-wider text-amber-300 flex items-center space-x-1.5">
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>VIP Duration / Period</span>
+                </label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {[
+                    { label: '7 Days Trial', val: 7 },
+                    { label: '1 Month (30d)', val: 30 },
+                    { label: '3 Months (90d)', val: 90 },
+                    { label: '1 Year (365d)', val: 365 },
+                    { label: 'Permanent', val: 'lifetime' as const }
+                  ].map((item) => (
+                    <button
+                      key={String(item.val)}
+                      type="button"
+                      onClick={() => setDurationDays(item.val)}
+                      className={`py-2 px-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer text-center ${
+                        durationDays === item.val
+                          ? 'bg-amber-500/25 border-amber-500 text-amber-300 shadow'
+                          : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <button
               type="button"

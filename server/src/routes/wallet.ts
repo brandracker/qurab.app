@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import type { AppContext } from '../types';
+import { calculateSubscriptionExpiry, syncAndValidateSubscription } from '../utils/subscription';
 
 export const walletRouter = new Hono<AppContext>();
 
@@ -99,10 +100,18 @@ walletRouter.get('/:userId', async (c) => {
       }
     }
 
-    const isVip = wallet.subscription_tier === 'barakah_vip' || wallet.subscription_tier === 'vip';
+    // Auto-validate and sync subscription expiry atomically
+    const subStatus = await syncAndValidateSubscription(c.env.DB, userId);
+    const isVip = subStatus.isVip;
+    const currentTier = subStatus.tier;
+    if (subStatus.isExpired) {
+      wallet.daily_messages_quota = 15;
+      wallet.subscription_tier = 'free';
+    }
     const quota = wallet.daily_likes_quota ?? 50;
     const used = wallet.likes_used_today ?? 0;
     const likesRemaining = isVip ? 9999 : Math.max(0, quota - used);
+    const dailyMessagesQuota = isVip ? (wallet.daily_messages_quota || 9999) : (wallet.daily_messages_quota ?? 15);
 
     return c.json({
       success: true,
@@ -110,12 +119,14 @@ walletRouter.get('/:userId', async (c) => {
         userId: wallet.user_id,
         directSalams: wallet.direct_salams_balance ?? 0,
         adsWatchedForSalam: wallet.ads_watched_for_salam ?? 0,
-        dailyMessagesQuota: wallet.daily_messages_quota,
+        dailyMessagesQuota,
         messagesSentToday: wallet.messages_sent_today,
         dailyLikesQuota: quota,
         likesUsedToday: used,
         likesRemaining,
-        subscriptionTier: wallet.subscription_tier,
+        subscriptionTier: currentTier,
+        subscriptionExpiry: subStatus.subscriptionExpiry,
+        daysRemaining: subStatus.daysRemaining,
         isVip,
         isSpotlightActive,
         spotlightExpiresAt: wallet.spotlight_expires_at || null
@@ -238,7 +249,7 @@ walletRouter.post('/use-direct-salam', async (c) => {
 // 2. Process Google Play In-App Purchase
 walletRouter.post('/purchase-google-play', async (c) => {
   try {
-    const { userId, productId, purchaseToken, amountCents, currency } = await c.req.json();
+    const { userId, productId, purchaseToken, amountCents, currency, durationDays, isTrial } = await c.req.json();
     if (!userId || !productId) {
       return c.json({ success: false, error: 'userId and productId are required' }, 400);
     }
@@ -249,6 +260,8 @@ walletRouter.post('/purchase-google-play', async (c) => {
       INSERT INTO in_app_purchases (id, user_id, platform, product_id, purchase_token, amount_cents, currency, status)
       VALUES (?, ?, 'google_play', ?, ?, ?, ?, 'completed')
     `).bind(purchaseId, userId, productId, purchaseToken || `sim_token_${Date.now()}`, amountCents || 199, currency || 'USD').run();
+
+    let expiryIso: string | null = null;
 
     if (productId === 'qurb_direct_salam_20' || productId === 'serene_direct_salam_20' || productId === 'serene_direct_salam_5' || productId === 'qurb_direct_salam_5') {
       await c.env.DB.prepare(`
@@ -264,22 +277,30 @@ walletRouter.post('/purchase-google-play', async (c) => {
         ON CONFLICT(user_id) DO UPDATE SET is_spotlight_active = 1, spotlight_expires_at = ?
       `).bind(userId, expiresAt, expiresAt).run();
     } else if (productId === 'qurb_barakah_monthly' || productId === 'serene_barakah_monthly') {
+      const trialDays = (isTrial || durationDays === 7 || durationDays === '7') ? 7 : (durationDays || 30);
+      expiryIso = calculateSubscriptionExpiry(trialDays);
+
       await c.env.DB.prepare(`
-        UPDATE users SET is_vip = 1 WHERE id = ?
+        UPDATE users SET is_vip = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?
       `).bind(userId).run();
 
       await c.env.DB.prepare(`
-        INSERT INTO user_wallets (user_id, subscription_tier, direct_salams_balance, daily_messages_quota)
-        VALUES (?, 'barakah_vip', 20, 9999)
-        ON CONFLICT(user_id) DO UPDATE SET subscription_tier = 'barakah_vip', daily_messages_quota = 9999, direct_salams_balance = direct_salams_balance + 20
-      `).bind(userId).run();
+        INSERT INTO user_wallets (user_id, subscription_tier, direct_salams_balance, daily_messages_quota, subscription_expiry)
+        VALUES (?, 'barakah_vip', 20, 9999, ?)
+        ON CONFLICT(user_id) DO UPDATE SET 
+          subscription_tier = 'barakah_vip', 
+          daily_messages_quota = 9999, 
+          subscription_expiry = excluded.subscription_expiry,
+          direct_salams_balance = direct_salams_balance + 20
+      `).bind(userId, expiryIso).run();
     }
 
     return c.json({
       success: true,
       message: 'Google Play purchase verified & credited successfully!',
       purchaseId,
-      productId
+      productId,
+      subscriptionExpiry: expiryIso
     });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
@@ -473,15 +494,21 @@ walletRouter.post('/stripe/verify-session', async (c) => {
       `).bind(purchaseId, userId, productId, session.id, session.amount_total || 299, session.currency || 'usd').run();
 
       if (productId === 'qurb_barakah_monthly' || productId === 'serene_barakah_monthly') {
+        const expiryIso = calculateSubscriptionExpiry(31);
+
         await c.env.DB.prepare(`
-          UPDATE users SET is_vip = 1 WHERE id = ?
+          UPDATE users SET is_vip = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?
         `).bind(userId).run();
 
         await c.env.DB.prepare(`
-          INSERT INTO user_wallets (user_id, subscription_tier, direct_salams_balance, daily_messages_quota)
-          VALUES (?, 'barakah_vip', 20, 9999)
-          ON CONFLICT(user_id) DO UPDATE SET subscription_tier = 'barakah_vip', daily_messages_quota = 9999, direct_salams_balance = direct_salams_balance + 20
-        `).bind(userId).run();
+          INSERT INTO user_wallets (user_id, subscription_tier, direct_salams_balance, daily_messages_quota, subscription_expiry)
+          VALUES (?, 'barakah_vip', 20, 9999, ?)
+          ON CONFLICT(user_id) DO UPDATE SET 
+            subscription_tier = 'barakah_vip', 
+            daily_messages_quota = 9999, 
+            subscription_expiry = excluded.subscription_expiry,
+            direct_salams_balance = direct_salams_balance + 20
+        `).bind(userId, expiryIso).run();
       } else if (productId === 'qurb_spotlight_boost_24h' || productId === 'serene_spotlight_boost_24h') {
         const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
         await c.env.DB.prepare(`
@@ -516,5 +543,57 @@ walletRouter.post('/stripe/verify-session', async (c) => {
     return c.json({ success: false, error: err.message }, 500);
   }
 });
+
+// 6. Google Play Real-Time Developer Notifications (RTDN Webhook via Cloud Pub/Sub)
+walletRouter.post('/google-play/webhook', async (c) => {
+  try {
+    const body: any = await c.req.json();
+    let notificationData: any = null;
+
+    if (body?.message?.data) {
+      try {
+        const decodedStr = Buffer.from(body.message.data, 'base64').toString('utf8');
+        notificationData = JSON.parse(decodedStr);
+      } catch {}
+    } else if (body?.subscriptionNotification) {
+      notificationData = body;
+    }
+
+    const subNotification = notificationData?.subscriptionNotification;
+    if (subNotification) {
+      const { notificationType, purchaseToken } = subNotification;
+      const purchase: any = await c.env.DB.prepare(
+        'SELECT user_id FROM in_app_purchases WHERE purchase_token = ? OR id LIKE ? ORDER BY created_at DESC LIMIT 1'
+      ).bind(purchaseToken, `%${purchaseToken}%`).first();
+
+      const userId = purchase?.user_id;
+      if (userId) {
+        // Types: 1: RECOVERED, 2: RENEWED, 3: CANCELED (active till expiry), 5: ON_HOLD, 12: REVOKED, 13: EXPIRED
+        if (notificationType === 13 || notificationType === 12 || notificationType === 5) {
+          await c.env.DB.prepare("UPDATE users SET is_vip = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(userId).run();
+          await c.env.DB.prepare(`
+            UPDATE user_wallets 
+            SET subscription_tier = 'free', daily_messages_quota = 15 
+            WHERE user_id = ?
+          `).bind(userId).run();
+        } else if (notificationType === 2 || notificationType === 1) {
+          const newExpiry = calculateSubscriptionExpiry(30);
+          await c.env.DB.prepare("UPDATE users SET is_vip = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(userId).run();
+          await c.env.DB.prepare(`
+            UPDATE user_wallets 
+            SET subscription_tier = 'barakah_vip', daily_messages_quota = 9999, subscription_expiry = ? 
+            WHERE user_id = ?
+          `).bind(newExpiry, userId).run();
+        }
+      }
+    }
+
+    return c.json({ success: true, received: true });
+  } catch (err: any) {
+    console.warn('Google Play RTDN webhook notice:', err);
+    return c.json({ success: false, error: err.message }, 200);
+  }
+});
+
 
 

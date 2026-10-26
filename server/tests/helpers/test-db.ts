@@ -183,13 +183,15 @@ export class MockD1Database {
         daily_messages_quota INTEGER DEFAULT 15,
         messages_sent_today INTEGER DEFAULT 0,
         subscription_tier TEXT DEFAULT 'free',
+        subscription_expiry DATETIME DEFAULT NULL,
         is_spotlight_active BOOLEAN DEFAULT 0,
         spotlight_expires_at TEXT DEFAULT NULL,
         ads_watched_for_salam INTEGER DEFAULT 0,
         daily_likes_quota INTEGER DEFAULT 50,
         likes_used_today INTEGER DEFAULT 0,
         last_likes_reset_date TEXT DEFAULT '',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
 
       CREATE TABLE IF NOT EXISTS notifications (

@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { AppContext } from '../types';
 import { calculateDistanceKm, getBoundingBox, getCityCentroid } from '../utils/geo';
+import { syncAndValidateSubscription } from '../utils/subscription';
 
 export const usersRouter = new Hono<AppContext>();
 
@@ -347,6 +348,14 @@ usersRouter.get('/:id', async (c) => {
       SELECT photo_url FROM user_photos WHERE user_id = ? ORDER BY sort_order ASC
     `).bind(userId).all();
 
+    let isVip = Boolean(user.is_vip);
+    try {
+      if (isVip) {
+        const subValidation = await syncAndValidateSubscription(c.env.DB, userId);
+        isVip = subValidation.isVip;
+      }
+    } catch {}
+
     const birthYear = user.dob ? new Date(user.dob).getFullYear() : 1998;
     const age = new Date().getFullYear() - (birthYear || 1998);
 
@@ -396,7 +405,7 @@ usersRouter.get('/:id', async (c) => {
         marriageTimeline: user.marriage_timeline || 'within_1_year',
         blurPhotosByDefault: Boolean(user.blur_photos_by_default),
         profileVisibility: user.profile_visibility || 'all_users',
-        isVip: Boolean(user.is_vip),
+        isVip,
         isProfileCompleted: Boolean(user.is_profile_completed),
         accountStatus: user.account_status || 'active',
         voiceGreetingUrl: user.voice_greeting_url || undefined,

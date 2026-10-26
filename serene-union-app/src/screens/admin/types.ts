@@ -346,6 +346,8 @@ export interface CandidateUser {
   } | null;
   wallet?: {
     subscription_tier?: string;
+    subscription_expiry?: string | null;
+    daysRemaining?: number | null;
     direct_salams_balance?: number;
     daily_messages_quota?: number;
     is_spotlight_active?: number | boolean;

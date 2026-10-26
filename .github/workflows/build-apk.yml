@@ -133,15 +133,14 @@ jobs:
         continue-on-error: true
         with:
           fail_on_unmatched_files: false
-          tag_name: v1.0.25
-          name: "Qurb v1.0.25 (Build 26 - Hardware VoIP Noise Cancellation & Smart Speakerphone)"
+          tag_name: v1.0.30
+          name: "Qurb v1.0.30 (Build 31 - Subscription Auto-Expiry & 7-Day Trial Engine)"
           body: |
-            ### Qurb Matrimony v1.0.25 (Build 26 - Hardware VoIP Noise Cancellation & Smart Speakerphone)
-            - **Hardware VoIP Echo Cancellation**: Enabled `AudioManager.MODE_IN_COMMUNICATION` bridge on Android native layer to activate device DSP chip acoustic echo canceler (AEC) and noise suppression (NS).
-            - **Smart Hardware Speakerphone Routing**: Added physical `setSpeakerphoneOn` bridge. Video calls default to loudspeaker; voice calls default to private earpiece speaker, with full interactive bottom dock toggle on all Android brands.
-            - **WebRTC Studio Audio Constraints**: Enforced mono channel capture (`channelCount: 1`), highpass filtering, and studio echo cancellation flags to eliminate room reverb and phasing artifacts.
-            - **4G Adaptive Bitrate Cap**: Optimized video encoding to 600 kbps and audio to 64 kbps to eliminate packet loss and stuttering on mobile data networks.
-            - **WebSocket Heartbeat Keep-Alive**: Added automated 20-second ping interval during chat & calling to prevent Cloudflare Worker idle disconnects.
+            ### Qurb Matrimony v1.0.30 (Build 31 - Subscription Auto-Expiry & 7-Day Trial Engine)
+            - **Subscription Auto-Expiration Engine**: Automatic downgrade of expired VIP subscriptions to standard free tier with 15-message daily limit.
+            - **Google Play 7-Day Free Trial Support**: Synchronized 7-day expiry calculations directly from Google Play tokens.
+            - **Google Play RTDN Webhook**: Instant cancellation, renewal, and expiry processing via Cloud Pub/Sub webhook.
+            - **Admin Portal Subscription Duration Manager**: Support for 7-day, 30-day, 90-day, 365-day, and Lifetime VIP assignment.
             - **app-release.apk**: Production Signed APK for direct device installation & testing.
             - **app-release.aab**: Production Signed Android App Bundle (.aab) ready for Google Play Console.
           files: |

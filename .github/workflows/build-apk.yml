@@ -133,14 +133,14 @@ jobs:
         continue-on-error: true
         with:
           fail_on_unmatched_files: false
-          tag_name: v1.0.30
-          name: "Qurb v1.0.30 (Build 31 - Subscription Auto-Expiry & 7-Day Trial Engine)"
+          tag_name: v1.0.31
+          name: "Qurb v1.0.31 (Build 32 - Full-Screen WhatsApp Incoming Calls & In-Chat Call Logs)"
           body: |
-            ### Qurb Matrimony v1.0.30 (Build 31 - Subscription Auto-Expiry & 7-Day Trial Engine)
-            - **Subscription Auto-Expiration Engine**: Automatic downgrade of expired VIP subscriptions to standard free tier with 15-message daily limit.
-            - **Google Play 7-Day Free Trial Support**: Synchronized 7-day expiry calculations directly from Google Play tokens.
-            - **Google Play RTDN Webhook**: Instant cancellation, renewal, and expiry processing via Cloud Pub/Sub webhook.
-            - **Admin Portal Subscription Duration Manager**: Support for 7-day, 30-day, 90-day, 365-day, and Lifetime VIP assignment.
+            ### Qurb Matrimony v1.0.31 (Build 32 - Full-Screen WhatsApp Incoming Calls & In-Chat Call Logs)
+            - **WhatsApp-Style Incoming Call Screen (Lockscreen Wakeup)**: Native Android QurbFirebaseMessagingService with WakeLock and FullScreenIntent displays incoming call screen and rings phone over lockscreen.
+            - **In-Chat Call History Logs**: Completed, missed, and declined voice & video calls automatically post formatted call log cards in chat with durations and quick "Call Back" action buttons.
+            - **High-Priority VoIP FCM Channel**: Google FCM push messages routed through dedicated `qurb_calls` channel with maximum notification priority and ringtone sound attributes.
+            - **Auto-Subscription Downgrade Engine**: Expired VIP subscriptions seamlessly transition to standard free tier.
             - **app-release.apk**: Production Signed APK for direct device installation & testing.
             - **app-release.aab**: Production Signed Android App Bundle (.aab) ready for Google Play Console.
           files: |

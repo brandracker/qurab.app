@@ -104,13 +104,18 @@ export interface ChatMessage {
   isRead: boolean;
   waliNotified: boolean;
   mediaUrl?: string;
-  mediaType?: 'audio' | 'image' | 'video' | 'file';
+  mediaType?: 'audio' | 'image' | 'video' | 'file' | 'call_log';
   mediaDuration?: number;
   fileName?: string;
   fileSize?: number;
   isViewOnce?: boolean;
   isOpened?: boolean;
   openedAt?: string;
+  callDetails?: {
+    callType: 'audio' | 'video';
+    status: 'completed' | 'missed' | 'declined';
+    durationSeconds: number;
+  };
 }
 
 export interface Conversation {

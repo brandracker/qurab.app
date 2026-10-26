@@ -1093,6 +1093,89 @@ class DBService {
     };
   }
 
+  async recordCallMessage(
+    conversationId: string,
+    callerId: string,
+    callerName: string,
+    callType: 'audio' | 'video',
+    status: 'completed' | 'missed' | 'declined',
+    durationSecs: number = 0
+  ): Promise<ChatMessage> {
+    const formatDuration = (s: number) => {
+      if (s <= 0) return '';
+      const m = Math.floor(s / 60);
+      const rem = s % 60;
+      if (m > 0 && rem > 0) return `${m}m ${rem}s`;
+      if (m > 0) return `${m}m`;
+      return `${rem}s`;
+    };
+
+    let text = '';
+    const durStr = formatDuration(durationSecs);
+    const callLabel = callType === 'video' ? 'Video Call' : 'Audio Call';
+    const icon = callType === 'video' ? '📹' : '📞';
+
+    if (status === 'completed') {
+      text = `${icon} ${callLabel} (${durStr || 'Connected'})`;
+    } else if (status === 'missed') {
+      text = `${icon} Missed ${callLabel}`;
+    } else if (status === 'declined') {
+      text = `${icon} Declined ${callLabel}`;
+    } else {
+      text = `${icon} ${callLabel}`;
+    }
+
+    const msg: ChatMessage = {
+      id: 'msg_call_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+      senderId: callerId,
+      senderName: callerName || 'Member',
+      text,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      isRead: true,
+      waliNotified: true,
+      mediaType: 'call_log',
+      mediaDuration: durationSecs,
+      callDetails: {
+        callType,
+        status,
+        durationSeconds: durationSecs
+      }
+    };
+
+    const conversations = this.getConversations();
+    const conv = conversations.find(c => c.id === conversationId || (c.participantOne && c.participantTwo && conversationId.includes(c.participantOne) && conversationId.includes(c.participantTwo)));
+    if (conv) {
+      if (!conv.messages) conv.messages = [];
+      conv.messages.push(msg);
+      conv.lastMessageText = text;
+      conv.lastMessageSenderId = callerId;
+      conv.lastMessageTime = msg.timestamp;
+      conv.lastMessageTimestamp = Date.now();
+      localStorage.setItem(this.conversationsKey, JSON.stringify(conversations));
+      window.dispatchEvent(new CustomEvent('serene_conversations_updated'));
+    }
+
+    // Persist to Cloudflare D1 Backend
+    try {
+      await fetch(`${API_BASE}/conversations/${conversationId}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: msg.id,
+          senderId: callerId,
+          senderName: callerName,
+          text: msg.text,
+          mediaType: 'call_log',
+          mediaDuration: durationSecs
+        })
+      });
+    } catch (err) {
+      console.warn('Failed to persist call log message:', err);
+    }
+
+    return msg;
+  }
+
   addWali(waliData: { name: string; phone: string; relationship: string }): void {
     const user = this.getCurrentUser();
     user.wali = {

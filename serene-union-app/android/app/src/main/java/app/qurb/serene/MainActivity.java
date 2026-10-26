@@ -101,7 +101,49 @@ public class MainActivity extends BridgeActivity {
 
 
     private void handleDeepLink(Intent intent) {
-        if (intent == null || intent.getData() == null) return;
+        if (intent == null) return;
+
+        // Dismiss incoming call notification if app opened
+        try {
+            android.app.NotificationManager nm = (android.app.NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm != null) {
+                nm.cancel(999999);
+            }
+        } catch (Exception ignored) {}
+
+        // Handle incoming call action or extras
+        if ("incoming_call".equals(intent.getStringExtra("type")) || "app.qurb.serene.ACTION_INCOMING_CALL".equals(intent.getAction())) {
+            String callerId = intent.getStringExtra("callerId");
+            String callerName = intent.getStringExtra("callerName");
+            String callType = intent.getStringExtra("callType");
+            String callerPhoto = intent.getStringExtra("callerPhoto");
+            String conversationId = intent.getStringExtra("conversationId");
+            String callAction = intent.getStringExtra("call_action");
+
+            String safeName = callerName != null ? callerName.replace("'", "\\'") : "Match Candidate";
+            String safeId = callerId != null ? callerId : "";
+            String safeType = callType != null ? callType : "audio";
+            String safePhoto = callerPhoto != null ? callerPhoto : "";
+            String safeConv = conversationId != null ? conversationId : "";
+            String safeAction = callAction != null ? callAction : "view";
+
+            String js = "window.dispatchEvent(new CustomEvent('qurb_incoming_call_push', { detail: { " +
+                "type: 'incoming_call'," +
+                "callerId: '" + safeId + "'," +
+                "callerName: '" + safeName + "'," +
+                "callType: '" + safeType + "'," +
+                "callerPhoto: '" + safePhoto + "'," +
+                "conversationId: '" + safeConv + "'," +
+                "callAction: '" + safeAction + "'" +
+                "} }));";
+            if (getBridge() != null && getBridge().getWebView() != null) {
+                getBridge().getWebView().postDelayed(() -> {
+                    getBridge().getWebView().evaluateJavascript(js, null);
+                }, 800);
+            }
+        }
+
+        if (intent.getData() == null) return;
         Uri data = intent.getData();
         String uriString = data.toString();
         if ("qurb".equalsIgnoreCase(data.getScheme()) || (uriString != null && uriString.contains("stripe_status="))) {

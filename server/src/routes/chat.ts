@@ -782,6 +782,8 @@ chatRouter.post('/call/initiate', async (c) => {
           token: recipientUser.fcm_token,
           title: `Incoming ${callTypeName}`,
           body: `${callerFirstName} is calling you on Qurb...`,
+          channelId: 'qurb_calls',
+          isCall: true,
           data: {
             type: 'incoming_call',
             callType: callType || 'audio',

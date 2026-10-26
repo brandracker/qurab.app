@@ -3,7 +3,7 @@ import {
   ArrowLeft, CheckCheck, Send, Heart, MessageCircle, FileText, Ban, 
   MoreVertical, Eye, EyeOff, ShieldCheck, Paperclip, Mic, Play, Pause, 
   Trash2, X, Download, File, Loader2, Volume2, VolumeX, Maximize2,
-  Phone, Video
+  Phone, Video, PhoneCall, PhoneOff
 } from 'lucide-react';
 import type { Conversation, ChatMessage, UserProfile } from '../types';
 
@@ -296,7 +296,14 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
     });
 
     const handleConversationsUpdate = () => {
-      setConversations([...dbService.getConversations()]);
+      const convs = dbService.getConversations();
+      setConversations([...convs]);
+      if (activeConvId) {
+        const cur = convs.find(c => c.id === activeConvId || (c.otherUser && activeConvId.includes(c.otherUser.id)));
+        if (cur?.messages) {
+          setRoomMessages([...cur.messages]);
+        }
+      }
     };
 
     window.addEventListener('serene_conversations_updated', handleConversationsUpdate);
@@ -1691,6 +1698,75 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                         </div>
                         <Download className="w-3.5 h-3.5 shrink-0 opacity-80" />
                       </a>
+                    ) : msg.mediaType === 'call_log' ? (
+                      /* 5. WhatsApp-Style VoIP Call Log Bubble */
+                      <div className="flex items-center gap-3 py-1 px-1 min-w-[210px]">
+                        <div className={`w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 shadow-xs ${
+                          msg.text.toLowerCase().includes('missed')
+                            ? (isMe ? 'bg-white/20 text-white' : 'bg-rose-100 text-rose-600 border border-rose-200')
+                            : isMe 
+                              ? 'bg-white/20 text-white' 
+                              : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                        }`}>
+                          {msg.text.toLowerCase().includes('video') ? (
+                            <Video className="w-4 h-4" />
+                          ) : msg.text.toLowerCase().includes('missed') ? (
+                            <PhoneOff className="w-4 h-4" />
+                          ) : (
+                            <PhoneCall className="w-4 h-4" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0 text-left">
+                          <p className={`font-bold text-xs truncate ${
+                            msg.text.toLowerCase().includes('missed') && !isMe
+                              ? 'text-rose-600 font-extrabold'
+                              : (isMe ? 'text-white' : 'text-on-surface')
+                          }`}>
+                            {(() => {
+                              const isVideo = msg.text.toLowerCase().includes('video');
+                              const isMissed = msg.text.toLowerCase().includes('missed');
+                              const isDeclined = msg.text.toLowerCase().includes('declined');
+                              if (isMissed) {
+                                return isMe ? `Unanswered ${isVideo ? 'Video' : 'Audio'} Call` : `Missed ${isVideo ? 'Video' : 'Audio'} Call`;
+                              }
+                              if (isDeclined) {
+                                return `Declined ${isVideo ? 'Video' : 'Audio'} Call`;
+                              }
+                              return isMe ? `Outgoing ${isVideo ? 'Video' : 'Audio'} Call` : `Incoming ${isVideo ? 'Video' : 'Audio'} Call`;
+                            })()}
+                          </p>
+                          <p className={`text-[11px] font-medium flex items-center gap-1.5 ${isMe ? 'text-white/80' : 'text-secondary'}`}>
+                            {msg.mediaDuration && msg.mediaDuration > 0 ? (
+                              <span>{formatSeconds(msg.mediaDuration)}</span>
+                            ) : (
+                              <span>{msg.text.toLowerCase().includes('missed') ? 'No answer' : 'Call ended'}</span>
+                            )}
+                          </p>
+                        </div>
+                        {/* Quick Call Back Button */}
+                        {activeConv?.otherUser && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const isVideo = msg.text.toLowerCase().includes('video');
+                              handleStartCall(isVideo ? 'video' : 'audio');
+                            }}
+                            className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-transform active:scale-95 shadow-2xs ${
+                              isMe 
+                                ? 'bg-white text-primary hover:bg-white/90' 
+                                : 'bg-primary text-white hover:bg-primary-dark'
+                            }`}
+                            title="Call back"
+                          >
+                            {msg.text.toLowerCase().includes('video') ? (
+                              <Video className="w-3.5 h-3.5" />
+                            ) : (
+                              <Phone className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        )}
+                      </div>
                     ) : (
                       /* Standard Text Message */
                       <p>{msg.text}</p>

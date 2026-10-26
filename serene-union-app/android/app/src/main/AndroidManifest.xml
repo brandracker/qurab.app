@@ -68,6 +68,24 @@
         <meta-data
             android:name="com.facebook.sdk.AdvertiserIDCollectionEnabled"
             android:value="true"/>
+
+        <!-- High-Priority Native VoIP Incoming Call Service & Full-Screen Waker -->
+        <service
+            android:name=".QurbFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter android:priority="100">
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <!-- BroadcastReceiver for Notification Call Actions (Decline) -->
+        <receiver
+            android:name=".CallDismissReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="app.qurb.serene.ACTION_DECLINE_CALL" />
+            </intent-filter>
+        </receiver>
     </application>
 
     <!-- Permissions -->

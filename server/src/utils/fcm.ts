@@ -8,6 +8,8 @@ interface FcmPayload {
   title: string;
   body: string;
   data?: Record<string, string>;
+  channelId?: string;
+  isCall?: boolean;
 }
 
 // Convert PEM private key to CryptoKey
@@ -109,6 +111,8 @@ export async function sendFcmNotification(env: any, payload: FcmPayload): Promis
     const projectId = serviceAccount.project_id || 'marriage-app-1ca27';
     const accessToken = await getGoogleAccessToken(serviceAccount);
 
+    const targetChannel = payload.channelId || (payload.isCall ? 'qurb_calls' : 'qurb_messages');
+
     const fcmMessage = {
       message: {
         token: payload.token,
@@ -119,10 +123,11 @@ export async function sendFcmNotification(env: any, payload: FcmPayload): Promis
         android: {
           priority: 'high',
           notification: {
-            channel_id: 'qurb_messages',
+            channel_id: targetChannel,
             sound: 'default',
             click_action: 'FCM_PLUGIN_ACTIVITY',
-            default_vibrate_timings: true
+            default_vibrate_timings: true,
+            notification_priority: payload.isCall ? 'PRIORITY_MAX' : 'PRIORITY_HIGH'
           }
         },
         data: payload.data || {}

@@ -2,6 +2,7 @@
 // Handles P2P Audio/Video negotiation, ICE traversal, media tracks, and acoustic feedback.
 
 import { API_BASE } from './apiConfig';
+import { dbService } from './dbService';
 
 declare global {
   interface Window {
@@ -84,6 +85,11 @@ export class WebRtcService {
   private ringToneInterval: any = null;
   private callTimeoutTimer: any = null;
 
+  private isInitiator: boolean = false;
+  private activeCallerInfo: CallerInfo | null = null;
+  private callConnectedTime: number | null = null;
+  private hasLoggedCall: boolean = false;
+
   constructor() {
     // Lazy AudioContext initialization on first user interaction
   }
@@ -106,6 +112,9 @@ export class WebRtcService {
   private notifyState(state: CallState, data?: any) {
     this.currentCallState = state;
     if (state === 'connected') {
+      if (!this.callConnectedTime) {
+        this.callConnectedTime = Date.now();
+      }
       this.setCallMode(true);
       if (this.currentCallType === 'video') {
         this.setSpeakerphoneOn(true);
@@ -262,6 +271,10 @@ export class WebRtcService {
     this.isMuted = false;
     this.isVideoEnabled = callType === 'video';
     this.isFrontCamera = true;
+    this.isInitiator = true;
+    this.activeCallerInfo = currentUserInfo;
+    this.callConnectedTime = null;
+    this.hasLoggedCall = false;
 
     // WhatsApp-Style: Immediately open camera preview before & during ringing!
     if (callType === 'video') {
@@ -334,6 +347,10 @@ export class WebRtcService {
           city: 'Global'
         };
         this.currentCallType = payload.callType;
+        this.isInitiator = false;
+        this.activeCallerInfo = payload.callerInfo || null;
+        this.callConnectedTime = null;
+        this.hasLoggedCall = false;
         this.notifyState('incoming_ringing', { caller: this.currentPartnerInfo, callType: payload.callType });
         this.playRingtone();
 
@@ -382,7 +399,7 @@ export class WebRtcService {
         if (this.callTimeoutTimer) clearTimeout(this.callTimeoutTimer);
         this.playTone(400, 200, 0.4); // Descending reject tone
         const reason = payload.payload?.reason || 'declined';
-        this.cleanup();
+        this.cleanup(reason);
         this.notifyState('ended', { reason });
         setTimeout(() => this.notifyState('idle'), 2500);
         break;
@@ -427,7 +444,7 @@ export class WebRtcService {
         this.stopRingtone();
         if (this.callTimeoutTimer) clearTimeout(this.callTimeoutTimer);
         this.playTone(500, 250, 0.3);
-        this.cleanup();
+        this.cleanup('call_ended_by_partner');
         this.notifyState('ended', { reason: 'call_ended_by_partner' });
         setTimeout(() => this.notifyState('idle'), 2500);
         break;
@@ -474,7 +491,7 @@ export class WebRtcService {
         payload: { reason }
       });
     }
-    this.cleanup();
+    this.cleanup(reason);
     this.notifyState('ended', { reason });
     setTimeout(() => this.notifyState('idle'), 1500);
   }
@@ -496,7 +513,7 @@ export class WebRtcService {
     }
 
     this.playTone(500, 250, 0.3);
-    this.cleanup();
+    this.cleanup(reason);
     this.notifyState('ended', { reason });
     setTimeout(() => this.notifyState('idle'), 2000);
   }
@@ -712,7 +729,46 @@ export class WebRtcService {
     }
   }
 
-  private cleanup() {
+  private triggerCallHistoryLog(reason: string = 'ended') {
+    if (this.hasLoggedCall) return;
+    this.hasLoggedCall = true;
+
+    const partnerId = this.currentPartnerId;
+    const currentId = this.currentUserId;
+    if (!partnerId || !currentId) return;
+
+    const conversationId = `conv_${[currentId, partnerId].sort().join('_')}`;
+    const isConnected = Boolean(this.callConnectedTime);
+    const durationSecs = this.callConnectedTime 
+      ? Math.max(1, Math.floor((Date.now() - this.callConnectedTime) / 1000))
+      : 0;
+
+    let status: 'completed' | 'missed' | 'declined' = 'missed';
+    if (isConnected) {
+      status = 'completed';
+    } else if (reason.includes('decline') || reason.includes('reject') || reason.includes('busy')) {
+      status = 'declined';
+    } else {
+      status = 'missed';
+    }
+
+    // Initiator records the call log into the chat conversation
+    if (this.isInitiator) {
+      const callerId = currentId;
+      const callerName = this.activeCallerInfo?.fullName || 'Member';
+      dbService.recordCallMessage(
+        conversationId,
+        callerId,
+        callerName,
+        this.currentCallType,
+        status,
+        durationSecs
+      ).catch(err => console.warn('Call message log error:', err));
+    }
+  }
+
+  private cleanup(reason: string = 'ended') {
+    this.triggerCallHistoryLog(reason);
     this.stopRingtone();
     if (this.callTimeoutTimer) {
       clearTimeout(this.callTimeoutTimer);
@@ -737,6 +793,8 @@ export class WebRtcService {
     this.isVideoEnabled = true;
     this.setCallMode(false);
     this.notifyStreams();
+    this.callConnectedTime = null;
+    this.hasLoggedCall = false;
   }
 }
 

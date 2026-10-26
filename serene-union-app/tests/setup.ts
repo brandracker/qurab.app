@@ -47,9 +47,7 @@ class MockWebSocket {
   send = vi.fn();
   close = vi.fn();
 }
-if (!globalThis.WebSocket) {
-  globalThis.WebSocket = MockWebSocket as any;
-}
+globalThis.WebSocket = MockWebSocket as any;
 
 // Mock Element.prototype.scrollIntoView
 Element.prototype.scrollIntoView = vi.fn();

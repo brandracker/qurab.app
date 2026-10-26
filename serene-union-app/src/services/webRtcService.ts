@@ -107,6 +107,14 @@ export class WebRtcService {
     return this.isVideoEnabled;
   }
 
+  public getLocalStream(): MediaStream | null {
+    return this.localStream;
+  }
+
+  public getRemoteStream(): MediaStream | null {
+    return this.remoteStream;
+  }
+
   // Sound Synthesizer via Web Audio API (100% offline, zero missing file errors)
   private playRingtone() {
     this.stopRingtone();
@@ -190,6 +198,13 @@ export class WebRtcService {
     this.isVideoEnabled = callType === 'video';
     this.isFrontCamera = true;
 
+    // WhatsApp-Style: Immediately open camera preview before & during ringing!
+    if (callType === 'video') {
+      await this.setupLocalMedia(true);
+    } else {
+      await this.setupLocalMedia(false);
+    }
+
     this.notifyState('outgoing_calling', { partner: partnerInfo, callType });
     this.playRingtone();
 
@@ -269,9 +284,13 @@ export class WebRtcService {
         if (!acceptedWithVideo) {
           this.currentCallType = 'audio';
           this.isVideoEnabled = false;
+          if (this.localStream) {
+            this.localStream.getVideoTracks().forEach(t => { t.enabled = false; t.stop(); });
+          }
+        } else if (!this.localStream) {
+          await this.setupLocalMedia(true);
         }
 
-        await this.setupLocalMedia(this.currentCallType === 'video');
         await this.createPeerConnectionAndOffer();
         break;
       }

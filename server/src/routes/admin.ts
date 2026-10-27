@@ -1305,26 +1305,26 @@ adminRouter.post('/broadcast', async (c) => {
       return c.json({ success: false, error: 'Title and message are required for broadcast' }, 400);
     }
 
-    // Fetch all user IDs
-    const usersRes = await c.env.DB.prepare('SELECT id FROM users').all();
-    const usersList = usersRes?.results || [];
+    const batchId = Date.now().toString();
+    const result: any = await c.env.DB.prepare(`
+      INSERT OR IGNORE INTO notifications (id, user_id, type, title, message, is_read, created_at)
+      SELECT 
+        'notif_bc_' || u.id || '_' || ?,
+        u.id,
+        'system_broadcast',
+        ?,
+        ?,
+        0,
+        CURRENT_TIMESTAMP
+      FROM users u
+    `).bind(batchId, title.trim(), message.trim()).run();
 
-    let count = 0;
-    for (const u of usersList) {
-      try {
-        const notifId = `notif_bc_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-        await c.env.DB.prepare(`
-          INSERT INTO notifications (id, user_id, type, title, message, is_read)
-          VALUES (?, ?, 'system_broadcast', ?, ?, 0)
-        `).bind(notifId, u.id, title.trim(), message.trim()).run();
-        count++;
-      } catch {}
-    }
+    const deliveredCount = result?.meta?.changes ?? (usersList.length || 0);
 
     return c.json({
       success: true,
-      message: `Broadcast delivered to ${count} members successfully`,
-      deliveredCount: count
+      message: `Broadcast delivered to ${deliveredCount} members successfully`,
+      deliveredCount
     });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);

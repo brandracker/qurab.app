@@ -36,6 +36,7 @@ import { IncomingCallModal } from './components/calling/IncomingCallModal';
 import { ActiveCallModal } from './components/calling/ActiveCallModal';
 import { versionCheckService, type VersionPolicy } from './services/versionCheckService';
 import { HardUpdateModal } from './components/HardUpdateModal';
+import { googlePlayUpdateService } from './services/googlePlayUpdateService';
 
 type OnboardingStep = 
   | 'welcome' 
@@ -197,6 +198,16 @@ export const App: React.FC = () => {
   useEffect(() => {
     const checkAppVersion = async () => {
       try {
+        // 1. Google Play Official In-App Update API (Native Android)
+        if (Capacitor.isNativePlatform()) {
+          googlePlayUpdateService.checkAppUpdate().then(info => {
+            if (info?.isUpdateAvailable && info?.isImmediateAllowed) {
+              googlePlayUpdateService.startImmediateUpdate().catch(() => {});
+            }
+          }).catch(() => {});
+        }
+
+        // 2. Server-driven Version Policy & Hard Lock Gate
         const policy = await versionCheckService.checkVersion();
         if (policy?.forceUpdateRequired) {
           setHardUpdateData(policy);

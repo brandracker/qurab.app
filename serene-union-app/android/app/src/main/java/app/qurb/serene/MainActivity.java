@@ -18,6 +18,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(GooglePlayBillingPlugin.class);
         registerPlugin(GoogleAuthPlugin.class);
         registerPlugin(FacebookEventsPlugin.class);
+        registerPlugin(AppUpdatePlugin.class);
         super.onCreate(savedInstanceState);
         try {
             com.facebook.FacebookSdk.setAutoInitEnabled(true);

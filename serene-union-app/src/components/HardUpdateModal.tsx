@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ShieldAlert, ExternalLink, RefreshCw, Sparkles, CheckCircle2 } from 'lucide-react';
 import { backNavigationService } from '../services/backNavigationService';
+import { googlePlayUpdateService } from '../services/googlePlayUpdateService';
 
 interface Props {
   isOpen: boolean;
@@ -32,7 +33,12 @@ export const HardUpdateModal: React.FC<Props> = ({
 
   if (!isOpen) return null;
 
-  const handleOpenPlayStore = () => {
+  const handleOpenPlayStore = async () => {
+    if (googlePlayUpdateService.isNativeAndroid()) {
+      const launched = await googlePlayUpdateService.startImmediateUpdate();
+      if (launched) return;
+    }
+
     try {
       const marketUri = 'market://details?id=app.qurb.serene';
       window.open(marketUri, '_system') || window.open(playStoreUrl, '_blank', 'noopener,noreferrer');

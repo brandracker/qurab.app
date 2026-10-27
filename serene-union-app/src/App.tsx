@@ -255,13 +255,18 @@ export const App: React.FC = () => {
     };
 
     syncLiveChats();
-    const chatPollInterval = setInterval(syncLiveChats, 15000);
+    const chatPollInterval = setInterval(() => {
+      // Pause background D1 queries when app is minimized or tab is in background
+      if (typeof document !== 'undefined' && document.hidden) return;
+      syncLiveChats();
+    }, 20000);
 
     // Real-time Presence Heartbeat
     dbService.sendHeartbeat(currentUser.id);
     const heartbeatInterval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
       dbService.sendHeartbeat(currentUser.id);
-    }, 45000);
+    }, 60000);
 
     window.addEventListener('serene_conversations_updated', updateChatUnread);
     window.addEventListener('focus', syncLiveChats);
@@ -359,7 +364,8 @@ export const App: React.FC = () => {
     const handleVipUpdate = (e: any) => {
       const targetUserId = e.detail?.userId;
       if (!targetUserId || targetUserId === currentUser.id) {
-        setCurrentUser(prev => ({ ...prev, isVip: true }));
+        const nextVip = e.detail?.isVip !== undefined ? Boolean(e.detail.isVip) : true;
+        setCurrentUser(prev => ({ ...prev, isVip: nextVip }));
       }
     };
     const handleProfileUpdate = (e: any) => {

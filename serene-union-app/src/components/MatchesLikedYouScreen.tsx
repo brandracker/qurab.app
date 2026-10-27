@@ -52,7 +52,8 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const [isVip, setIsVip] = useState<boolean>(() => {
-    return Boolean(localStorage.getItem(`serene_vip_${currentUser.id}`) || currentUser.isVip);
+    const vipVal = localStorage.getItem(`serene_vip_${currentUser.id}`);
+    return vipVal !== null ? vipVal === 'true' : Boolean(currentUser.isVip);
   });
   const [showUpgradeModal, setShowUpgradeModal] = useState<boolean>(false);
 
@@ -127,8 +128,15 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
     
     // Background silent events listener without screen flicker or spinner
     const handleSync = () => loadAllData(false);
+    const handleVipUpdate = (e: any) => {
+      const targetUserId = e.detail?.userId;
+      if (!targetUserId || targetUserId === currentUser.id) {
+        setIsVip(e.detail?.isVip !== undefined ? Boolean(e.detail.isVip) : true);
+      }
+    };
     window.addEventListener('serene_activity_updated', handleSync);
     window.addEventListener('serene_block_updated', handleSync);
+    window.addEventListener('serene_vip_updated', handleVipUpdate);
 
     // Live background silent polling (25s interval)
     const pollInterval = setInterval(() => {
@@ -139,8 +147,9 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
       clearInterval(pollInterval);
       window.removeEventListener('serene_activity_updated', handleSync);
       window.removeEventListener('serene_block_updated', handleSync);
+      window.removeEventListener('serene_vip_updated', handleVipUpdate);
     };
-  }, []);
+  }, [currentUser.id]);
 
 
   const handleInstantMatch = (candidate: UserProfile) => {

@@ -331,6 +331,8 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
 
     let isMounted = true;
     const pollConversations = async () => {
+      // Pause D1 queries if app is in background or phone locked
+      if (typeof document !== 'undefined' && document.hidden) return;
       try {
         const liveList = await dbService.fetchLiveConversations();
         if (isMounted && liveList) {
@@ -339,7 +341,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
       } catch {}
     };
 
-    const interval = setInterval(pollConversations, 5000);
+    const interval = setInterval(pollConversations, 8000);
     return () => {
       isMounted = false;
       clearInterval(interval);
@@ -512,13 +514,18 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
     // WebSocket-first Zero Polling: When WebSocket is OPEN, pause background HTTP polling completely
     let timerId: any = null;
     const scheduleNextPoll = () => {
+      // Pause D1 polling if browser or mobile app is in background
+      if (typeof document !== 'undefined' && document.hidden) {
+        timerId = setTimeout(scheduleNextPoll, 10000);
+        return;
+      }
       if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        // WebSocket is actively streaming messages, check back in 12s only for heartbeat
-        timerId = setTimeout(scheduleNextPoll, 12000);
+        // WebSocket is actively streaming real-time messages via DO; check back in 25s only as safety fallback
+        timerId = setTimeout(scheduleNextPoll, 25000);
         return;
       }
       const isBurst = Date.now() < burstPollingUntilRef.current;
-      const delay = isBurst ? 1500 : 4000;
+      const delay = isBurst ? 2000 : 5000;
       timerId = setTimeout(async () => {
         if (!isMounted) return;
         await syncD1Messages();

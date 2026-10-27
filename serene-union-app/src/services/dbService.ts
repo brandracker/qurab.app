@@ -525,8 +525,11 @@ class DBService {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (localStorage.getItem(`serene_vip_${parsed.id}`) === 'true') {
+        const vipVal = localStorage.getItem(`serene_vip_${parsed.id}`);
+        if (vipVal === 'true') {
           parsed.isVip = true;
+        } else if (vipVal === 'false') {
+          parsed.isVip = false;
         }
         localStorage.setItem(this.userKey, JSON.stringify(parsed));
         return parsed;
@@ -1720,7 +1723,30 @@ class DBService {
               const remotePhotos = Array.isArray(item.photos) && item.photos.length > 0 ? item.photos : [];
               const existingPhotos = Array.isArray(existing?.photos) && existing.photos.length > 0 ? existing.photos : [];
               const profPhotos = Array.isArray(matchedProf?.photos) && matchedProf.photos.length > 0 ? matchedProf.photos : [];
-              const seedFallbackPhotos = item.id.startsWith('seed_') ? [`/seeds/${item.id}.jpg`] : [];
+              const resolveSeedFallbackPhoto = (id: string): string[] => {
+                if (!id) return [];
+                if (id.startsWith('usr_seed_pk_male_')) {
+                  const num = id.replace('usr_seed_pk_male_', '').replace(/^0+/, '') || '1';
+                  return [`/seeds/seed_male_${num}.jpg`];
+                }
+                if (id.startsWith('usr_seed_pk_female_')) {
+                  const num = id.replace('usr_seed_pk_female_', '').replace(/^0+/, '') || '1';
+                  return [`/seeds/seed_female_${num}.jpg`];
+                }
+                if (id.startsWith('seed_male_')) {
+                  const num = id.replace('seed_male_', '').replace(/^0+/, '') || '1';
+                  return [`/seeds/seed_male_${num}.jpg`];
+                }
+                if (id.startsWith('seed_female_')) {
+                  const num = id.replace('seed_female_', '').replace(/^0+/, '') || '1';
+                  return [`/seeds/seed_female_${num}.jpg`];
+                }
+                if (id.startsWith('seed_')) {
+                  return [`/seeds/${id}.jpg`];
+                }
+                return [];
+              };
+              const seedFallbackPhotos = resolveSeedFallbackPhoto(item.id);
 
               const candidatePhotos = remotePhotos.length > 0
                 ? remotePhotos
@@ -1993,6 +2019,11 @@ class DBService {
               ? new Date(rc.lastMessageTime).getTime() 
               : (existing?.lastMessageTimestamp || Date.now());
 
+            const msgsToSet = existing?.messages && existing.messages.length > 0 ? existing.messages : (rc.messages || []);
+            if (Array.isArray(rc.messages) && rc.messages.length > 0) {
+              this.setCachedRoomMessages(rc.id, rc.messages);
+            }
+
             convMap.set(rc.id, {
               id: rc.id,
               participantOne: rc.participantOne,
@@ -2005,7 +2036,7 @@ class DBService {
               unreadCount: typeof rc.unreadCount === 'number' ? rc.unreadCount : (existing?.unreadCount || 0),
               waliName: rc.waliName || existing?.waliName,
               status: rc.status || existing?.status || 'active',
-              messages: existing?.messages && existing.messages.length > 0 ? existing.messages : (rc.messages || []),
+              messages: msgsToSet,
               isPhotoRevealed,
               hasRevealedToPartner
             });
@@ -2022,6 +2053,12 @@ class DBService {
                 const sanitizedPhotos = Array.isArray(rawPhotos)
                   ? rawPhotos.filter((p: string) => typeof p === 'string' && !p.includes('photo-1534528741775-53994a69daeb'))
                   : [];
+                const matchTime = (m as any).actionTime || (m as any).created_at || (m as any).createdAt;
+                const matchTimestamp = matchTime ? new Date(matchTime).getTime() : 0;
+                const formattedTime = (matchTimestamp > 0 && !isNaN(matchTimestamp))
+                  ? new Date(matchTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                  : 'Matched';
+
                 convMap.set(convId, {
                   id: convId,
                   participantOne: user.id,
@@ -2029,8 +2066,8 @@ class DBService {
                   otherUser: { ...m, photos: sanitizedPhotos },
                   lastMessageText: 'You matched! Start with Bismillah.',
                   lastMessageSenderId: 'system',
-                  lastMessageTime: 'Just now',
-                  lastMessageTimestamp: Date.now(),
+                  lastMessageTime: formattedTime,
+                  lastMessageTimestamp: matchTimestamp,
                   unreadCount: 0,
                   waliName: m.wali?.name,
                   status: 'active',

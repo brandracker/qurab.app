@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { UserProfile, FilterState } from '../types';
 import { dbService, API_BASE } from '../services/dbService';
-import { admobService } from '../services/admobService';
 import { notificationService } from '../services/notificationService';
 import { facebookEventsService } from '../services/facebookEventsService';
 import { ratingService } from '../services/ratingService';
@@ -18,7 +17,8 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
   const currentUser = dbService.getCurrentUser();
 
   const [isVip, setIsVip] = useState<boolean>(() => {
-    return Boolean(localStorage.getItem(`serene_vip_${currentUser.id}`) || currentUser.isVip);
+    const vipVal = localStorage.getItem(`serene_vip_${currentUser.id}`);
+    return vipVal !== null ? vipVal === 'true' : Boolean(currentUser.isVip);
   });
 
   const getLikeKey = useCallback(() => {
@@ -169,22 +169,24 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
         setAdsWatchedForSalam(e.detail.adsWatched);
       }
     };
+    const handleVipUpdate = (e: any) => {
+      const targetUserId = e.detail?.userId;
+      if (!targetUserId || targetUserId === currentUser.id) {
+        setIsVip(e.detail?.isVip !== undefined ? Boolean(e.detail.isVip) : true);
+      }
+    };
     window.addEventListener('serene_likes_updated', handleLikesUpdate);
     window.addEventListener('serene_salams_updated', handleSalamsUpdate);
     window.addEventListener('serene_salam_ads_updated', handleSalamAdsUpdate);
+    window.addEventListener('serene_vip_updated', handleVipUpdate);
     return () => {
       window.removeEventListener('serene_likes_updated', handleLikesUpdate);
       window.removeEventListener('serene_salams_updated', handleSalamsUpdate);
       window.removeEventListener('serene_salam_ads_updated', handleSalamAdsUpdate);
+      window.removeEventListener('serene_vip_updated', handleVipUpdate);
     };
-  }, []);
+  }, [currentUser.id]);
 
-  // Smart Just-In-Time Ad Preloading: Buffer rewarded video only when user is near quota exhaustion
-  useEffect(() => {
-    if (!isVip && (likesRemaining <= 3 || directSalams <= 0)) {
-      admobService.prepareRewardedAd().catch(() => {});
-    }
-  }, [likesRemaining, directSalams, isVip]);
 
   const handleApplyFilters = useCallback((newFilters: FilterState) => {
     setFilters(newFilters);
@@ -219,7 +221,6 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
 
     // Check daily like limit for non-VIP users
     if (!isVip && likesRemaining <= 0) {
-      admobService.prepareRewardedAd().catch(() => {});
       setShowLikesLimitModal(true);
       return;
     }
@@ -228,9 +229,6 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
     if (!isVip) {
       const nextLikes = Math.max(0, likesRemaining - 1);
       setLikesRemaining(nextLikes);
-      if (nextLikes <= 3) {
-        admobService.prepareRewardedAd().catch(() => {});
-      }
       if (nextLikes === 0) {
         setTimeout(() => setShowLikesLimitModal(true), 600);
       }
@@ -359,7 +357,6 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
       setHistory(prev => prev.slice(1));
       return;
     }
-    admobService.prepareRewardedAd().catch(() => {});
     setAdRewardType('undo');
     setShowRewardedAdModal(true);
   }, [history, isVip]);
@@ -391,7 +388,6 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
     }
 
     if (directSalams <= 0) {
-      admobService.prepareRewardedAd().catch(() => {});
       setShowSalamRefillModal(true);
       return;
     }

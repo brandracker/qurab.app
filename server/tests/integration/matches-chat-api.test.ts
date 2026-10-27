@@ -111,6 +111,71 @@ describe('Matches, Chat, Wali & Monetization API Integration Tests', () => {
     expect(getMsgData.messages[0].text).toBe('Assalamu Alaikum wa Rahmatullah!');
   });
 
+  it('POST /api/conversations/:id/messages handles idempotency on duplicate retry without double incrementing unread count', async () => {
+    // 1. Create conversation
+    const convRes = await app.request('/api/conversations/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        participantOne: sampleBrotherUser.id,
+        participantTwo: sampleSisterUser.id
+      })
+    }, env);
+    const convId = (await convRes.json()).conversationId;
+
+    const retryMsgId = 'msg_idempotent_test_123';
+
+    // 2. Send message 1st time
+    const res1 = await app.request(`/api/conversations/${convId}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: retryMsgId,
+        senderId: sampleBrotherUser.id,
+        receiverId: sampleSisterUser.id,
+        senderName: sampleBrotherUser.full_name,
+        text: 'Test message for idempotency'
+      })
+    }, env);
+
+    expect(res1.status).toBe(200);
+    const data1 = await res1.json();
+    expect(data1.success).toBe(true);
+    expect(data1.messageId).toBe(retryMsgId);
+
+    // Verify unread count was incremented to 1
+    const conv1 = await env.DB.prepare('SELECT unread_count_p1, unread_count_p2, participant_one, participant_two FROM conversations WHERE id = ?').bind(convId).first();
+    const unreadAfterFirst = conv1.participant_one === sampleSisterUser.id ? conv1.unread_count_p1 : conv1.unread_count_p2;
+    expect(unreadAfterFirst).toBe(1);
+
+    // 3. Send the exact same message a 2nd time (simulating a mobile network retry)
+    const res2 = await app.request(`/api/conversations/${convId}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: retryMsgId,
+        senderId: sampleBrotherUser.id,
+        receiverId: sampleSisterUser.id,
+        senderName: sampleBrotherUser.full_name,
+        text: 'Test message for idempotency'
+      })
+    }, env);
+
+    expect(res2.status).toBe(200);
+    const data2 = await res2.json();
+    expect(data2.success).toBe(true);
+    expect(data2.isDuplicate).toBe(true);
+
+    // Verify chat_messages has exactly 1 record, NOT 2
+    const { results: msgs } = await env.DB.prepare('SELECT id FROM chat_messages WHERE id = ?').bind(retryMsgId).all();
+    expect(msgs).toHaveLength(1);
+
+    // Verify unread count did NOT increment again
+    const conv2 = await env.DB.prepare('SELECT unread_count_p1, unread_count_p2, participant_one, participant_two FROM conversations WHERE id = ?').bind(convId).first();
+    const unreadAfterSecond = conv2.participant_one === sampleSisterUser.id ? conv2.unread_count_p1 : conv2.unread_count_p2;
+    expect(unreadAfterSecond).toBe(1);
+  });
+
   it('POST /api/wali/invite creates a verified Wali observer chaperone record', async () => {
     const res = await app.request('/api/wali/invite', {
       method: 'POST',

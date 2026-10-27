@@ -18,7 +18,7 @@ walletRouter.get('/unity-s2s-callback', async (c) => {
       await c.env.DB.prepare(`
         INSERT INTO user_wallets (user_id, daily_messages_quota, daily_likes_quota, likes_used_today)
         VALUES (?, 40, 60, 0)
-        ON CONFLICT(user_id) DO UPDATE SET daily_messages_quota = daily_messages_quota + 10, daily_likes_quota = daily_likes_quota + 10
+        ON CONFLICT(user_id) DO UPDATE SET daily_messages_quota = daily_messages_quota + 10, daily_likes_quota = daily_likes_quota + 10, likes_used_today = MAX(0, likes_used_today - 10)
       `).bind(userId).run();
     } else if (rewardType === 'salam') {
       const wallet: any = await c.env.DB.prepare(`
@@ -323,8 +323,8 @@ walletRouter.post('/reward-ad', async (c) => {
     if (effectiveReward === 'likes') {
       await c.env.DB.prepare(`
         INSERT INTO user_wallets (user_id, daily_messages_quota, daily_likes_quota, likes_used_today)
-        VALUES (?, 40, 60, 0)
-        ON CONFLICT(user_id) DO UPDATE SET daily_messages_quota = daily_messages_quota + 10, daily_likes_quota = daily_likes_quota + 10
+        VALUES (?, 40, 50, 0)
+        ON CONFLICT(user_id) DO UPDATE SET daily_messages_quota = daily_messages_quota + 10, likes_used_today = MAX(0, likes_used_today - 10)
       `).bind(userId).run();
     } else if (effectiveReward === 'messages') {
       await c.env.DB.prepare(`

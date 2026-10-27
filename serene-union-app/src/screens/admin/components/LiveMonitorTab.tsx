@@ -103,6 +103,9 @@ export const LiveMonitorTab: React.FC<LiveMonitorTabProps> = ({
     if (!autoRefresh) return;
 
     const timer = setInterval(() => {
+      // Pause countdown and background D1 polling when tab is inactive or hidden
+      if (typeof document !== 'undefined' && document.hidden) return;
+
       setSecondsUntilRefresh((prev) => {
         if (prev <= 1) {
           fetchLiveActivity(true);

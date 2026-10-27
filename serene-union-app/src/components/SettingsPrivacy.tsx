@@ -55,7 +55,8 @@ export const SettingsPrivacy: React.FC<Props> = ({
   const isDeactivated = currentUser.accountStatus === 'deactivated' || profileVisibility === 'hidden';
 
   const [isVip, setIsVip] = useState<boolean>(() => {
-    return Boolean(localStorage.getItem(`serene_vip_${currentUser.id}`) || currentUser.isVip);
+    const vipVal = localStorage.getItem(`serene_vip_${currentUser.id}`);
+    return vipVal !== null ? vipVal === 'true' : Boolean(currentUser.isVip);
   });
 
   const getLikeKey = () => `serene_likes_left_${currentUser.id}`;
@@ -69,7 +70,8 @@ export const SettingsPrivacy: React.FC<Props> = ({
   });
 
   useEffect(() => {
-    setIsVip(Boolean(localStorage.getItem(`serene_vip_${currentUser.id}`) || currentUser.isVip));
+    const vipVal = localStorage.getItem(`serene_vip_${currentUser.id}`);
+    setIsVip(vipVal !== null ? vipVal === 'true' : Boolean(currentUser.isVip));
     
     dbService.fetchLikesRemaining(currentUser.id).then(({ likesRemaining: liveRem, isVip: liveVip, directSalams: liveSalams }) => {
       setLikesRemaining(liveRem);
@@ -80,7 +82,7 @@ export const SettingsPrivacy: React.FC<Props> = ({
     const handleVipUpdate = (e: any) => {
       const targetUserId = e.detail?.userId;
       if (!targetUserId || targetUserId === currentUser.id) {
-        setIsVip(true);
+        setIsVip(e.detail?.isVip !== undefined ? Boolean(e.detail.isVip) : true);
       }
     };
     window.addEventListener('serene_vip_updated', handleVipUpdate);

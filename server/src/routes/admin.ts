@@ -384,47 +384,76 @@ adminRouter.get('/dashboard/stats', async (c) => {
   }
 });
 
+// Cache for live-activity summary counters to eliminate repeated table counts (20s TTL)
+let cachedLiveSummary: {
+  timestamp: number;
+  data: {
+    onlineUsersCount: number;
+    activeUsersTodayCount: number;
+    totalConversationsCount: number;
+    totalMessagesCount: number;
+    messagesTodayCount: number;
+  };
+} | null = null;
+
 // 3. Live Platform Radar & Real-Time Activity (Active Users & Live Conversations)
 adminRouter.get('/live-activity', async (c) => {
   try {
-    // A. Live summary metrics (100% Strictly Real Organic Users)
+    // A. Live summary metrics (Cached for 20s to drastically reduce repetitive D1 rows read)
     let onlineUsersCount = 0;
     let activeUsersTodayCount = 0;
-    try {
-      // 1. Real human users online in the last 10 minutes
-      const onRes = await c.env.DB.prepare(`
-        SELECT COUNT(*) as c FROM users 
-        WHERE (is_banned = 0 OR is_banned IS NULL)
-          AND (is_seed = 0 OR is_seed IS NULL)
-          AND COALESCE(last_active_at, created_at) >= datetime('now', '-10 minutes')
-      `).first();
-      onlineUsersCount = Number(onRes?.c || 0);
-
-      // 2. Real human users active today
-      const todayRes = await c.env.DB.prepare(`
-        SELECT COUNT(*) as c FROM users 
-        WHERE (is_banned = 0 OR is_banned IS NULL)
-          AND (is_seed = 0 OR is_seed IS NULL)
-          AND date(COALESCE(last_active_at, created_at)) = date('now')
-      `).first();
-      activeUsersTodayCount = Number(todayRes?.c || 0);
-    } catch {}
-
     let totalConversationsCount = 0;
-    try {
-      const convRes = await c.env.DB.prepare('SELECT COUNT(*) as c FROM conversations').first();
-      totalConversationsCount = Number(convRes?.c || 0);
-    } catch {}
-
     let totalMessagesCount = 0;
     let messagesTodayCount = 0;
-    try {
-      const msgRes = await c.env.DB.prepare('SELECT COUNT(*) as c FROM chat_messages').first();
-      totalMessagesCount = Number(msgRes?.c || 0);
 
-      const msgTodayRes = await c.env.DB.prepare("SELECT COUNT(*) as c FROM chat_messages WHERE date(created_at) = date('now')").first();
-      messagesTodayCount = Number(msgTodayRes?.c || 0);
-    } catch {}
+    const now = Date.now();
+    if (cachedLiveSummary && now - cachedLiveSummary.timestamp < 20000) {
+      onlineUsersCount = cachedLiveSummary.data.onlineUsersCount;
+      activeUsersTodayCount = cachedLiveSummary.data.activeUsersTodayCount;
+      totalConversationsCount = cachedLiveSummary.data.totalConversationsCount;
+      totalMessagesCount = cachedLiveSummary.data.totalMessagesCount;
+      messagesTodayCount = cachedLiveSummary.data.messagesTodayCount;
+    } else {
+      try {
+        // 1. Real human users online in the last 10 minutes
+        const onRes = await c.env.DB.prepare(`
+          SELECT COUNT(*) as c FROM users 
+          WHERE (is_banned = 0 OR is_banned IS NULL)
+            AND (is_seed = 0 OR is_seed IS NULL)
+            AND COALESCE(last_active_at, created_at) >= datetime('now', '-10 minutes')
+        `).first();
+        onlineUsersCount = Number(onRes?.c || 0);
+
+        // 2. Real human users active today
+        const todayRes = await c.env.DB.prepare(`
+          SELECT COUNT(*) as c FROM users 
+          WHERE (is_banned = 0 OR is_banned IS NULL)
+            AND (is_seed = 0 OR is_seed IS NULL)
+            AND date(COALESCE(last_active_at, created_at)) = date('now')
+        `).first();
+        activeUsersTodayCount = Number(todayRes?.c || 0);
+
+        const convRes = await c.env.DB.prepare('SELECT COUNT(*) as c FROM conversations').first();
+        totalConversationsCount = Number(convRes?.c || 0);
+
+        const msgRes = await c.env.DB.prepare('SELECT COUNT(*) as c FROM chat_messages').first();
+        totalMessagesCount = Number(msgRes?.c || 0);
+
+        const msgTodayRes = await c.env.DB.prepare("SELECT COUNT(*) as c FROM chat_messages WHERE date(created_at) = date('now')").first();
+        messagesTodayCount = Number(msgTodayRes?.c || 0);
+
+        cachedLiveSummary = {
+          timestamp: now,
+          data: {
+            onlineUsersCount,
+            activeUsersTodayCount,
+            totalConversationsCount,
+            totalMessagesCount,
+            messagesTodayCount
+          }
+        };
+      } catch {}
+    }
 
     // B. Live / Active Real Users (Strictly real members ordered by most recent activity)
     const { results: rawUsers } = await c.env.DB.prepare(`

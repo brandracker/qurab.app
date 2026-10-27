@@ -4,7 +4,6 @@ import { Capacitor, registerPlugin } from '@capacitor/core';
 import { API_BASE, dbService } from '../services/dbService';
 import { facebookEventsService } from '../services/facebookEventsService';
 import { backNavigationService } from '../services/backNavigationService';
-import { admobService } from '../services/admobService';
 import { ReferralHubModal } from './ReferralHubModal';
 
 const GooglePlayBilling = registerPlugin<any>('GooglePlayBillingPlugin');
@@ -33,7 +32,6 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
 
   useEffect(() => {
     if (!isOpen) return;
-    admobService.prepareRewardedAd().catch(() => {});
     return backNavigationService.register(() => {
       onClose();
       return true;
@@ -41,7 +39,8 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
   }, [isOpen, onClose]);
 
   useEffect(() => {
-    const handleVipUpdated = () => {
+    const handleVipUpdated = (e: any) => {
+      if (e?.detail?.isVip === false) return;
       onPurchaseSuccess('qurb_barakah_monthly');
       onClose();
     };

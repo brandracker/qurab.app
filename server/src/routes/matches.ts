@@ -369,11 +369,21 @@ matchesRouter.get('/hub', async (c) => {
       if (existingPhotos && existingPhotos.length > 0) return existingPhotos;
       if (!id) return [];
       if (id.startsWith('seed_female_') || id.startsWith('seed_male_')) {
-        return [`/seeds/${id}.jpg`];
+        const normalized = id.replace(/_0+(\d+)/, '_$1');
+        return [`/seeds/${normalized}.jpg`];
       }
       if (id.startsWith('usr_seed_pk_')) {
-        const num = parseInt(id.replace('usr_seed_pk_', ''), 10);
-        return [`/seeds/seed_female_${num}.jpg`];
+        const rest = id.replace('usr_seed_pk_', '');
+        if (rest.startsWith('male_')) {
+          const num = parseInt(rest.replace('male_', ''), 10);
+          return [`/seeds/seed_male_${isNaN(num) ? 1 : num}.jpg`];
+        }
+        if (rest.startsWith('female_')) {
+          const num = parseInt(rest.replace('female_', ''), 10);
+          return [`/seeds/seed_female_${isNaN(num) ? 1 : num}.jpg`];
+        }
+        const num = parseInt(rest, 10);
+        return [`/seeds/seed_female_${isNaN(num) ? 1 : num}.jpg`];
       }
       return [];
     };
@@ -718,11 +728,21 @@ matchesRouter.get('/activity', async (c) => {
       if (photoUrl) return [photoUrl];
       if (!id) return [];
       if (id.startsWith('seed_female_') || id.startsWith('seed_male_')) {
-        return [`/seeds/${id}.jpg`];
+        const normalized = id.replace(/_0+(\d+)/, '_$1');
+        return [`/seeds/${normalized}.jpg`];
       }
       if (id.startsWith('usr_seed_pk_')) {
-        const num = parseInt(id.replace('usr_seed_pk_', ''), 10);
-        return [`/seeds/seed_female_${num}.jpg`];
+        const rest = id.replace('usr_seed_pk_', '');
+        if (rest.startsWith('male_')) {
+          const num = parseInt(rest.replace('male_', ''), 10);
+          return [`/seeds/seed_male_${isNaN(num) ? 1 : num}.jpg`];
+        }
+        if (rest.startsWith('female_')) {
+          const num = parseInt(rest.replace('female_', ''), 10);
+          return [`/seeds/seed_female_${isNaN(num) ? 1 : num}.jpg`];
+        }
+        const num = parseInt(rest, 10);
+        return [`/seeds/seed_female_${isNaN(num) ? 1 : num}.jpg`];
       }
       return [];
     };

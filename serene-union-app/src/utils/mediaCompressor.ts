@@ -188,15 +188,16 @@ export function getThumbnailUrl(originalUrl?: string, thumbnailUrl?: string): st
   const clean = originalUrl.trim();
 
   // 1. Seed photos resolution: map /seeds/seed_female_1.jpg -> /seeds/thumbs/seed_female_1.webp
-  if (clean.includes('/seeds/') && !clean.includes('/seeds/thumbs/')) {
-    return clean.replace('/seeds/', '/seeds/thumbs/').replace(/\.(jpe?g|png)$/i, '.webp');
+  if (clean.includes('/seeds/')) {
+    // Normalize leading zeros if present, e.g., seed_female_01.jpg -> seed_female_1
+    const normalized = clean.replace(/_0+(\d+)\./, '_$1.');
+    if (!normalized.includes('/seeds/thumbs/')) {
+      return normalized.replace('/seeds/', '/seeds/thumbs/').replace(/\.(jpe?g|png)$/i, '.webp');
+    }
+    return normalized.replace(/\.(jpe?g|png)$/i, '.webp');
   }
 
-  // 2. Cloudflare R2 user photos resolution
-  if (clean.includes('/api/photos/media/') && !clean.includes('/thumb_')) {
-    return clean.replace('/api/photos/media/', '/api/photos/media/thumb_');
-  }
-
+  // 2. Cloudflare R2 user photos: served directly (already compressed to <250KB on upload)
   return clean;
 }
 

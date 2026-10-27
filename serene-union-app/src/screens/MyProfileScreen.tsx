@@ -92,16 +92,18 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
   const [showAdModal, setShowAdModal] = useState<boolean>(false);
   const [adRewardType, setAdRewardType] = useState<'likes' | 'salam' | 'messages' | 'photo_unblur'>('likes');
   const [isVip, setIsVip] = useState<boolean>(() => {
-    return Boolean(localStorage.getItem(`serene_vip_${user.id}`) || user.isVip);
+    const vipVal = localStorage.getItem(`serene_vip_${user.id}`);
+    return vipVal !== null ? vipVal === 'true' : Boolean(user.isVip);
   });
 
   useEffect(() => {
-    setIsVip(Boolean(localStorage.getItem(`serene_vip_${user.id}`) || user.isVip));
+    const vipVal = localStorage.getItem(`serene_vip_${user.id}`);
+    setIsVip(vipVal !== null ? vipVal === 'true' : Boolean(user.isVip));
     
     const handleVipUpdate = (e: any) => {
       const targetUserId = e.detail?.userId;
       if (!targetUserId || targetUserId === user.id) {
-        setIsVip(true);
+        setIsVip(e.detail?.isVip !== undefined ? Boolean(e.detail.isVip) : true);
       }
     };
     window.addEventListener('serene_vip_updated', handleVipUpdate);

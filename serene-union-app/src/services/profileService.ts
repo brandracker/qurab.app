@@ -39,8 +39,11 @@ export const profileService = {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (localStorage.getItem(`serene_vip_${parsed.id}`) === 'true') {
+        const vipVal = localStorage.getItem(`serene_vip_${parsed.id}`);
+        if (vipVal === 'true') {
           parsed.isVip = true;
+        } else if (vipVal === 'false') {
+          parsed.isVip = false;
         }
         localStorage.setItem(USER_KEY, JSON.stringify(parsed));
         return parsed;

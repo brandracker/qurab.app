@@ -118,6 +118,43 @@ chatRouter.get('/', async (c) => {
       } catch {}
     }
 
+    // Fetch recent messages for all conversations in bulk to pre-warm client cache
+    const convIds: string[] = (results || []).map((row: any) => row.id).filter(Boolean);
+    const messagesMap: Record<string, any[]> = {};
+
+    if (convIds.length > 0) {
+      try {
+        const placeholders = convIds.map(() => '?').join(',');
+        const { results: recentMsgs } = await c.env.DB.prepare(`
+          SELECT id, conversation_id, sender_id as senderId, sender_name as senderName, text,
+                 media_url as mediaUrl, media_type as mediaType, media_duration as mediaDuration,
+                 file_name as fileName, file_size as fileSize,
+                 is_view_once as isViewOnce, is_opened as isOpened, opened_at as openedAt,
+                 created_at as timestamp
+          FROM chat_messages
+          WHERE conversation_id IN (${placeholders})
+          ORDER BY created_at ASC
+        `).bind(...convIds).all();
+
+        (recentMsgs || []).forEach((m: any) => {
+          const isVO = Boolean(m.isViewOnce);
+          const isOp = Boolean(m.isOpened);
+          const sanitized = {
+            ...m,
+            isViewOnce: isVO,
+            isOpened: isOp,
+            mediaUrl: (isVO && isOp && userId && userId !== m.senderId) ? null : m.mediaUrl
+          };
+          if (!messagesMap[m.conversation_id]) {
+            messagesMap[m.conversation_id] = [];
+          }
+          messagesMap[m.conversation_id].push(sanitized);
+        });
+      } catch (err) {
+        console.warn('[Prewarm Messages] bulk message fetch error:', err);
+      }
+    }
+
     // Map to rich user-friendly payload
     const formatted = (results || []).map((row: any) => {
       const isUserP1 = row.participant_one === userId;
@@ -190,7 +227,7 @@ chatRouter.get('/', async (c) => {
           } : undefined
         },
         waliName: otherWaliName ? `${otherWaliName} (${otherWaliRel || 'Guardian'})` : undefined,
-        messages: []
+        messages: messagesMap[row.id] || []
       };
     });
 
@@ -505,11 +542,43 @@ chatRouter.post('/:id/messages', async (c) => {
       }
     }
 
-    // 2. Insert into chat_messages
+    // 1b. Idempotency Check: Gracefully return existing message without re-triggering unread counters or push notifications
+    const existingMsg: any = await c.env.DB.prepare(`
+      SELECT id, conversation_id, sender_id, sender_name, text, media_url, media_type, media_duration, file_name, file_size, is_view_once, is_opened, created_at
+      FROM chat_messages
+      WHERE id = ?
+    `).bind(msgId).first();
+
+    if (existingMsg) {
+      return c.json({
+        success: true,
+        messageId: existingMsg.id,
+        message: {
+          id: existingMsg.id,
+          senderId: existingMsg.sender_id || senderId,
+          senderName: existingMsg.sender_name || senderName || 'Member',
+          text: existingMsg.text || messageText,
+          mediaUrl: existingMsg.media_url || null,
+          mediaType: existingMsg.media_type || null,
+          mediaDuration: existingMsg.media_duration || null,
+          fileName: existingMsg.file_name || null,
+          fileSize: existingMsg.file_size || null,
+          isViewOnce: Boolean(existingMsg.is_view_once),
+          isOpened: Boolean(existingMsg.is_opened),
+          timestamp: new Date(existingMsg.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          isRead: true,
+          waliNotified: true
+        },
+        isDuplicate: true
+      });
+    }
+
+    // 2. Insert into chat_messages with Idempotency Protection
     try {
       await c.env.DB.prepare(`
         INSERT INTO chat_messages (id, conversation_id, sender_id, sender_name, text, media_url, media_type, media_duration, file_name, file_size, is_view_once, is_opened)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+        ON CONFLICT(id) DO NOTHING
       `).bind(
         msgId, 
         targetConvId, 
@@ -524,11 +593,13 @@ chatRouter.post('/:id/messages', async (c) => {
         isViewOnce ? 1 : 0
       ).run();
     } catch (insertErr) {
-      // Fallback if media columns missing in some environment
-      await c.env.DB.prepare(`
-        INSERT INTO chat_messages (id, conversation_id, sender_id, sender_name, text)
-        VALUES (?, ?, ?, ?, ?)
-      `).bind(msgId, targetConvId, senderId, senderName || 'Member', messageText).run();
+      // Fallback if media columns missing in some environment or older SQLite schema
+      try {
+        await c.env.DB.prepare(`
+          INSERT OR IGNORE INTO chat_messages (id, conversation_id, sender_id, sender_name, text)
+          VALUES (?, ?, ?, ?, ?)
+        `).bind(msgId, targetConvId, senderId, senderName || 'Member', messageText).run();
+      } catch {}
     }
 
     // 3. Update conversation last message & increment recipient unread count

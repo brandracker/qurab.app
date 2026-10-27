@@ -16,9 +16,7 @@ import {
   formatSeconds,
   getThumbnailUrl
 } from '../utils/mediaCompressor';
-import { webRtcService, type CallState, type CallType, type CallerInfo } from '../services/webRtcService';
-import { IncomingCallModal } from './calling/IncomingCallModal';
-import { ActiveCallModal } from './calling/ActiveCallModal';
+import { webRtcService, type CallType, type CallerInfo } from '../services/webRtcService';
 import { MembershipUpgradeModal } from './MembershipUpgradeModal';
 
 interface ChatVideoPlayerProps {
@@ -239,34 +237,8 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
   const isTypingSentRef = useRef<boolean>(false);
   const typingTimeoutRef = useRef<any>(null);
 
-  // WebRTC Audio & Video Calling State
-  const [callState, setCallState] = useState<CallState>('idle');
-  const [incomingCaller, setIncomingCaller] = useState<CallerInfo | null>(null);
-  const [activeCallType, setActiveCallType] = useState<CallType>('audio');
-  const [activeCallPartner, setActiveCallPartner] = useState<CallerInfo | null>(null);
+  // WebRTC VIP Gating State
   const [showVipModalForCalling, setShowVipModalForCalling] = useState<boolean>(false);
-
-  // Subscribe to WebRTC Calling Engine
-  useEffect(() => {
-    const unsub = webRtcService.subscribe((state, data) => {
-      setCallState(state);
-      if (state === 'incoming_ringing' && data?.caller) {
-        setIncomingCaller(data.caller);
-        setActiveCallType(data.callType || 'audio');
-      } else if (state === 'outgoing_calling' && data?.partner) {
-        setActiveCallPartner(data.partner);
-        setActiveCallType(data.callType || 'audio');
-      } else if (state === 'connected' && data?.partner) {
-        setActiveCallPartner(data.partner);
-        setActiveCallType(data.callType || 'audio');
-      } else if (state === 'ended' || state === 'idle') {
-        setIncomingCaller(null);
-        if (state === 'idle') setActiveCallPartner(null);
-      }
-    });
-
-    return () => { unsub(); };
-  }, []);
 
 
 
@@ -671,8 +643,6 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
       isVip: Boolean(currentUser.isVip)
     };
 
-    setActiveCallPartner(partnerInfo);
-    setActiveCallType(type);
     webRtcService.startCall(activeConv.otherUser.id, partnerInfo, type, currentUserInfo);
   };
 
@@ -2475,26 +2445,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
         </div>
       )}
 
-      {/* WebRTC Audio & Video Calling Modals */}
-      <IncomingCallModal
-        isOpen={callState === 'incoming_ringing'}
-        caller={incomingCaller}
-        callType={activeCallType}
-      />
 
-      <ActiveCallModal
-        isOpen={callState === 'outgoing_calling' || callState === 'connected'}
-        callState={callState}
-        callType={activeCallType}
-        partner={activeCallPartner || (activeConv?.otherUser ? {
-          id: activeConv.otherUser.id,
-          fullName: activeConv.otherUser.fullName,
-          gender: activeConv.otherUser.gender,
-          city: activeConv.otherUser.city || activeConv.otherUser.location || 'Pakistan',
-          photoUrl: activeConv.otherUser.photos?.[0],
-          isVip: Boolean(activeConv.otherUser.isVip)
-        } : null)}
-      />
 
       {showVipModalForCalling && (
         <MembershipUpgradeModal

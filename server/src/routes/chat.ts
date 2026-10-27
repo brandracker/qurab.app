@@ -895,3 +895,31 @@ chatRouter.post('/call/initiate', async (c) => {
     return c.json({ success: false, error: err.message }, 500);
   }
 });
+
+// 5.1 Relay WebRTC Calling Signals via Durable Objects
+chatRouter.post('/call/signal', async (c) => {
+  try {
+    const { conversationId, payload } = await c.req.json();
+    if (!conversationId || !payload) {
+      return c.json({ success: false, error: 'conversationId and payload required' }, 400);
+    }
+
+    if (c.env.CHAT_ROOM) {
+      const id = c.env.CHAT_ROOM.idFromName(conversationId);
+      const room = c.env.CHAT_ROOM.get(id);
+      await room.fetch('https://dummy-url/broadcast', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'call_signal',
+          ...payload
+        })
+      });
+    }
+
+    return c.json({ success: true });
+  } catch (err: any) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+

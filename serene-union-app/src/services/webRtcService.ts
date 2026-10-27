@@ -94,9 +94,11 @@ export class WebRtcService {
     // Lazy AudioContext initialization on first user interaction
   }
 
-  public init(currentUserId: string, sendSignalFn: (payload: CallSignalPayload) => void) {
+  public init(currentUserId: string, sendSignalFn?: (payload: CallSignalPayload) => void) {
     this.currentUserId = currentUserId;
-    this.signalSender = sendSignalFn;
+    if (sendSignalFn) {
+      this.signalSender = sendSignalFn;
+    }
   }
 
   public subscribe(cb: (state: CallState, data?: any) => void) {
@@ -321,6 +323,9 @@ export class WebRtcService {
 
   // --- Step 2: Handle Incoming Signals from Partner ---
   public async handleIncomingSignal(payload: CallSignalPayload) {
+    if (!this.currentUserId && payload.targetUserId) {
+      this.currentUserId = payload.targetUserId;
+    }
     if (!this.currentUserId) return;
     if (payload.senderId === this.currentUserId) return;
 
@@ -724,8 +729,22 @@ export class WebRtcService {
       try {
         this.signalSender(payload);
       } catch (err) {
-        console.error('Failed to send call signal:', err);
+        console.error('Failed to send call signal via socket:', err);
       }
+    }
+
+    // Secondary HTTP relay through Cloudflare Durable Object broadcast
+    const partnerId = payload.targetUserId || this.currentPartnerId;
+    const currentId = payload.senderId || this.currentUserId;
+    if (currentId && partnerId) {
+      const convId = `conv_${[currentId, partnerId].sort().join('_')}`;
+      try {
+        fetch(`${API_BASE}/conversations/call/signal`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ conversationId: convId, payload })
+        }).catch(() => {});
+      } catch {}
     }
   }
 

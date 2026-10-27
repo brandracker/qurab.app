@@ -31,7 +31,9 @@ import { pushNotificationService } from './services/pushNotificationService';
 import { AnnouncementModal } from './components/AnnouncementModal';
 import { TrialPromoModal } from './components/TrialPromoModal';
 import { MembershipUpgradeModal } from './components/MembershipUpgradeModal';
-import { webRtcService, type CallerInfo, type CallType } from './services/webRtcService';
+import { webRtcService, type CallState, type CallerInfo, type CallType } from './services/webRtcService';
+import { IncomingCallModal } from './components/calling/IncomingCallModal';
+import { ActiveCallModal } from './components/calling/ActiveCallModal';
 
 type OnboardingStep = 
   | 'welcome' 
@@ -187,6 +189,38 @@ export const App: React.FC = () => {
   const [activeAnnouncement, setActiveAnnouncement] = useState<{ id: string; title: string; message: string } | null>(null);
   const [showTrialPromo, setShowTrialPromo] = useState<boolean>(false);
   const [showVipUpgradeModal, setShowVipUpgradeModal] = useState<boolean>(false);
+
+  // Global WebRTC Calling State (Lifted to App Root for Discover, Matches, Profile, Chat & Settings)
+  const [callState, setCallState] = useState<CallState>('idle');
+  const [incomingCaller, setIncomingCaller] = useState<CallerInfo | null>(null);
+  const [activeCallType, setActiveCallType] = useState<CallType>('audio');
+  const [activeCallPartner, setActiveCallPartner] = useState<CallerInfo | null>(null);
+
+  // Global WebRTC Calling Engine Initialization & Subscription
+  useEffect(() => {
+    if (currentUser?.id && currentUser.id !== 'usr_guest') {
+      webRtcService.init(currentUser.id);
+    }
+
+    const unsub = webRtcService.subscribe((state, data) => {
+      setCallState(state);
+      if (state === 'incoming_ringing' && data?.caller) {
+        setIncomingCaller(data.caller);
+        setActiveCallType(data.callType || 'audio');
+      } else if (state === 'outgoing_calling' && data?.partner) {
+        setActiveCallPartner(data.partner);
+        setActiveCallType(data.callType || 'audio');
+      } else if (state === 'connected' && data?.partner) {
+        setActiveCallPartner(data.partner);
+        setActiveCallType(data.callType || 'audio');
+      } else if (state === 'ended' || state === 'idle') {
+        setIncomingCaller(null);
+        if (state === 'idle') setActiveCallPartner(null);
+      }
+    });
+
+    return () => { unsub(); };
+  }, [currentUser?.id]);
 
   // 7-Day Free Trial Promo Placeholder (Start of App / Post-Login)
   useEffect(() => {
@@ -1158,7 +1192,7 @@ export const App: React.FC = () => {
             userId={currentUser.id}
             isOpen={showVipUpgradeModal}
             onClose={() => setShowVipUpgradeModal(false)}
-            onPurchaseSuccess={(productId) => {
+            onPurchaseSuccess={(productId: string) => {
               if (productId === 'serene_barakah_monthly' || productId === 'qurb_barakah_monthly') {
                 setCurrentUser(prev => ({ ...prev, isVip: true }));
                 try {
@@ -1168,6 +1202,20 @@ export const App: React.FC = () => {
             }}
           />
         )}
+
+        {/* Global WebRTC Audio & Video Calling Modals (Active across Discover, Matches, Profile, Chat & Settings) */}
+        <IncomingCallModal
+          isOpen={callState === 'incoming_ringing'}
+          caller={incomingCaller}
+          callType={activeCallType}
+        />
+
+        <ActiveCallModal
+          isOpen={callState === 'outgoing_calling' || callState === 'connected'}
+          callState={callState}
+          callType={activeCallType}
+          partner={activeCallPartner}
+        />
       </div>
     </div>
   );

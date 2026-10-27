@@ -113,26 +113,36 @@ export async function sendFcmNotification(env: any, payload: FcmPayload): Promis
 
     const targetChannel = payload.channelId || (payload.isCall ? 'qurb_calls' : 'qurb_messages');
 
-    const fcmMessage = {
+    const isCall = Boolean(payload.isCall);
+    const fcmMessage: any = {
       message: {
         token: payload.token,
-        notification: {
+        android: {
+          priority: 'high'
+        },
+        data: {
+          ...(payload.data || {}),
           title: payload.title,
           body: payload.body
-        },
-        android: {
-          priority: 'high',
-          notification: {
-            channel_id: targetChannel,
-            sound: 'default',
-            click_action: 'FCM_PLUGIN_ACTIVITY',
-            default_vibrate_timings: true,
-            notification_priority: payload.isCall ? 'PRIORITY_MAX' : 'PRIORITY_HIGH'
-          }
-        },
-        data: payload.data || {}
+        }
       }
     };
+
+    // For standard chat messages/notifications, include system notification object
+    // For incoming VoIP calls, omit notification object to prevent Android OS system tray suppression
+    if (!isCall) {
+      fcmMessage.message.notification = {
+        title: payload.title,
+        body: payload.body
+      };
+      fcmMessage.message.android.notification = {
+        channel_id: targetChannel,
+        sound: 'default',
+        click_action: 'FCM_PLUGIN_ACTIVITY',
+        default_vibrate_timings: true,
+        notification_priority: 'PRIORITY_HIGH'
+      };
+    }
 
     const res = await fetch(`https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`, {
       method: 'POST',

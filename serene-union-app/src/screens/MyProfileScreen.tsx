@@ -529,7 +529,7 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
                 <p className="text-[10px] text-secondary mt-0.5">
                   {isVip 
                     ? 'All Premium Privileges Active · Unlimited Likes & Direct Salam' 
-                    : `${likesRemaining} / 50 Daily Likes Left Today · Free Halal Chat`}
+                    : `${likesRemaining} / ${Math.max(50, likesRemaining)} Daily Likes Left Today · Free Halal Chat`}
                 </p>
               </div>
             </div>

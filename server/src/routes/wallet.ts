@@ -18,7 +18,7 @@ walletRouter.get('/unity-s2s-callback', async (c) => {
       await c.env.DB.prepare(`
         INSERT INTO user_wallets (user_id, daily_messages_quota, daily_likes_quota, likes_used_today)
         VALUES (?, 40, 60, 0)
-        ON CONFLICT(user_id) DO UPDATE SET daily_messages_quota = daily_messages_quota + 10, daily_likes_quota = daily_likes_quota + 10, likes_used_today = MAX(0, likes_used_today - 10)
+        ON CONFLICT(user_id) DO UPDATE SET daily_messages_quota = daily_messages_quota + 10, daily_likes_quota = daily_likes_quota + 10
       `).bind(userId).run();
     } else if (rewardType === 'salam') {
       const wallet: any = await c.env.DB.prepare(`
@@ -176,18 +176,23 @@ walletRouter.post('/use-like', async (c) => {
       }, 403);
     }
 
-    const used = currentUsed + 1;
     await c.env.DB.prepare(`
-      UPDATE user_wallets SET likes_used_today = ? WHERE user_id = ?
-    `).bind(used, userId).run();
+      UPDATE user_wallets SET likes_used_today = likes_used_today + 1 WHERE user_id = ?
+    `).bind(userId).run();
 
-    const likesRemaining = isVip ? 9999 : Math.max(0, quota - used);
+    const updatedWallet: any = await c.env.DB.prepare(`
+      SELECT daily_likes_quota, likes_used_today, subscription_tier FROM user_wallets WHERE user_id = ?
+    `).bind(userId).first();
+
+    const updatedQuota = updatedWallet?.daily_likes_quota ?? quota;
+    const updatedUsed = updatedWallet?.likes_used_today ?? (currentUsed + 1);
+    const likesRemaining = isVip ? 9999 : Math.max(0, updatedQuota - updatedUsed);
 
     return c.json({
       success: true,
       likesRemaining,
-      likesUsedToday: used,
-      dailyLikesQuota: quota
+      likesUsedToday: updatedUsed,
+      dailyLikesQuota: updatedQuota
     });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
@@ -323,8 +328,8 @@ walletRouter.post('/reward-ad', async (c) => {
     if (effectiveReward === 'likes') {
       await c.env.DB.prepare(`
         INSERT INTO user_wallets (user_id, daily_messages_quota, daily_likes_quota, likes_used_today)
-        VALUES (?, 40, 50, 0)
-        ON CONFLICT(user_id) DO UPDATE SET daily_messages_quota = daily_messages_quota + 10, likes_used_today = MAX(0, likes_used_today - 10)
+        VALUES (?, 40, 60, 0)
+        ON CONFLICT(user_id) DO UPDATE SET daily_messages_quota = daily_messages_quota + 10, daily_likes_quota = daily_likes_quota + 10
       `).bind(userId).run();
     } else if (effectiveReward === 'messages') {
       await c.env.DB.prepare(`

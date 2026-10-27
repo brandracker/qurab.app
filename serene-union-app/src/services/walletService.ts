@@ -142,9 +142,12 @@ export const walletService = {
         if (data.success) {
           const liveRemaining = data.likesRemaining ?? nextLocal;
           try {
-            localStorage.setItem(localKey, liveRemaining.toString());
+            const latestLocal = parseInt(localStorage.getItem(localKey) || '50', 10);
+            if (liveRemaining <= latestLocal) {
+              localStorage.setItem(localKey, liveRemaining.toString());
+              window.dispatchEvent(new CustomEvent('serene_likes_updated', { detail: { userId, likesRemaining: liveRemaining } }));
+            }
           } catch {}
-          window.dispatchEvent(new CustomEvent('serene_likes_updated', { detail: { userId, likesRemaining: liveRemaining } }));
           return { success: true, likesRemaining: liveRemaining };
         }
       }

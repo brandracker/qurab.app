@@ -453,6 +453,31 @@ describe('Wallet, In-App Purchases & Rewarded Ads API Integration Tests', () => 
     expect(checkData.wallet.isVip).toBe(false);
     expect(checkData.wallet.subscriptionTier).toBe('free');
   });
+
+  it('20. Rewarded ad adds +10 likes when user has 50 unconsumed likes (expanding quota to 60)', async () => {
+    const userId = 'usr_fresh_likes_test';
+    // Initialize fresh wallet with 50 likes
+    const initRes = await app.request(`/api/wallet/${userId}`, { method: 'GET' }, env);
+    const initData = await initRes.json();
+    expect(initData.wallet.likesRemaining).toBe(50);
+    expect(initData.wallet.dailyLikesQuota).toBe(50);
+
+    // Watch ad for likes
+    const adRes = await app.request('/api/wallet/reward-ad', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, rewardType: 'likes' })
+    }, env);
+    expect(adRes.status).toBe(200);
+    const adData = await adRes.json();
+    expect(adData.likesRemaining).toBe(60);
+
+    // Verify wallet endpoint also returns 60
+    const checkRes = await app.request(`/api/wallet/${userId}`, { method: 'GET' }, env);
+    const checkData = await checkRes.json();
+    expect(checkData.wallet.likesRemaining).toBe(60);
+    expect(checkData.wallet.dailyLikesQuota).toBe(60);
+  });
 });
 
 

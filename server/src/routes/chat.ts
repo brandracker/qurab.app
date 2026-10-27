@@ -16,12 +16,20 @@ export async function getOfficialAnnouncements(db: any): Promise<any[]> {
         title TEXT NOT NULL,
         message TEXT NOT NULL,
         created_at INTEGER NOT NULL,
-        action_url TEXT
+        action_url TEXT,
+        image_url TEXT,
+        action_label TEXT
       )
     `).run();
 
     try {
       await db.prepare('ALTER TABLE official_announcements ADD COLUMN action_url TEXT').run();
+    } catch {}
+    try {
+      await db.prepare('ALTER TABLE official_announcements ADD COLUMN image_url TEXT').run();
+    } catch {}
+    try {
+      await db.prepare('ALTER TABLE official_announcements ADD COLUMN action_label TEXT').run();
     } catch {}
 
     const { results } = await db.prepare(`
@@ -29,7 +37,21 @@ export async function getOfficialAnnouncements(db: any): Promise<any[]> {
     `).all();
 
     if (results && results.length > 0) {
-      return results;
+      // Self-heal default v1.0.37 update with image banner and label if missing
+      try {
+        await db.prepare(`
+          UPDATE official_announcements 
+          SET image_url = 'https://qurb.app/announcement_v1037_banner.jpg',
+              action_label = 'Update on Google Play Store ↗'
+          WHERE id = 'ann_v1037_update' AND (image_url IS NULL OR image_url = '')
+        `).run();
+      } catch {}
+
+      const { results: updatedResults } = await db.prepare(`
+        SELECT * FROM official_announcements ORDER BY created_at ASC
+      `).all();
+
+      return updatedResults || results;
     }
 
     // Auto-seed initial official announcements
@@ -38,7 +60,9 @@ export async function getOfficialAnnouncements(db: any): Promise<any[]> {
       title: 'Welcome to Qurb Official Channel',
       message: 'Assalamu Alaikum! 🌟 Welcome to the official Qurb Channel.\n\nHere you will receive security advice, feature updates, and official announcements directly from the Qurb Team. Your privacy, modesty, and security are our highest priority.\n\nMay Allah guide you to half your deen with Barakah and joy.',
       created_at: 1740600000000,
-      action_url: 'https://qurb.app'
+      action_url: 'https://qurb.app',
+      image_url: null,
+      action_label: 'Visit Qurb Website ↗'
     };
 
     const updateAnnouncement = {
@@ -46,19 +70,21 @@ export async function getOfficialAnnouncements(db: any): Promise<any[]> {
       title: '🚀 Qurb Update v1.0.37 Available',
       message: '🚀 Update Alert: Qurb v1.0.37 is now available on Google Play Store!\n\n✨ New in this version:\n• Crystal-clear HD Voice & Video Calling\n• Zero connection drops with auto-reconnect\n• Enhanced profile security & instant push notifications\n• Smooth chat and media sharing\n\nUpdate now on Google Play Store:\nhttps://play.google.com/store/apps/details?id=app.qurb.serene&pcampaignid=web_share',
       created_at: 1740650000000,
-      action_url: 'https://play.google.com/store/apps/details?id=app.qurb.serene&pcampaignid=web_share'
+      action_url: 'https://play.google.com/store/apps/details?id=app.qurb.serene&pcampaignid=web_share',
+      image_url: 'https://qurb.app/announcement_v1037_banner.jpg',
+      action_label: 'Update on Google Play Store ↗'
     };
 
     try {
       await db.prepare(`
-        INSERT OR IGNORE INTO official_announcements (id, title, message, created_at, action_url)
-        VALUES (?, ?, ?, ?, ?)
-      `).bind(welcomeAnnouncement.id, welcomeAnnouncement.title, welcomeAnnouncement.message, welcomeAnnouncement.created_at, welcomeAnnouncement.action_url).run();
+        INSERT OR IGNORE INTO official_announcements (id, title, message, created_at, action_url, image_url, action_label)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).bind(welcomeAnnouncement.id, welcomeAnnouncement.title, welcomeAnnouncement.message, welcomeAnnouncement.created_at, welcomeAnnouncement.action_url, welcomeAnnouncement.image_url, welcomeAnnouncement.action_label).run();
 
       await db.prepare(`
-        INSERT OR IGNORE INTO official_announcements (id, title, message, created_at, action_url)
-        VALUES (?, ?, ?, ?, ?)
-      `).bind(updateAnnouncement.id, updateAnnouncement.title, updateAnnouncement.message, updateAnnouncement.created_at, updateAnnouncement.action_url).run();
+        INSERT OR IGNORE INTO official_announcements (id, title, message, created_at, action_url, image_url, action_label)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).bind(updateAnnouncement.id, updateAnnouncement.title, updateAnnouncement.message, updateAnnouncement.created_at, updateAnnouncement.action_url, updateAnnouncement.image_url, updateAnnouncement.action_label).run();
     } catch (e) {
       console.warn('[Announcements Seed] Notice:', e);
     }
@@ -364,9 +390,10 @@ chatRouter.get('/', async (c) => {
           senderId: QURB_OFFICIAL_USER_ID,
           senderName: 'Qurb Team ✓',
           text: a.message,
-          mediaUrl: null,
-          mediaType: 'text',
+          mediaUrl: a.image_url || null,
+          mediaType: a.image_url ? 'image' : 'text',
           actionUrl: a.action_url || null,
+          actionLabel: a.action_label || null,
           isViewOnce: false,
           isOpened: false,
           timestamp: a.created_at || Date.now(),
@@ -481,9 +508,10 @@ chatRouter.get('/:id/messages', async (c) => {
         senderId: QURB_OFFICIAL_USER_ID,
         senderName: 'Qurb Team ✓',
         text: a.message,
-        mediaUrl: null,
-        mediaType: 'text',
+        mediaUrl: a.image_url || null,
+        mediaType: a.image_url ? 'image' : 'text',
         actionUrl: a.action_url || null,
+        actionLabel: a.action_label || null,
         isViewOnce: false,
         isOpened: false,
         timestamp: a.created_at || Date.now(),

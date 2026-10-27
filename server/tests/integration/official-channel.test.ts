@@ -108,4 +108,56 @@ describe('Qurb Official Channel (Broadcast & Announcement) Integration', () => {
     const msgData: any = await msgRes.json();
     expect(msgData.messages.some((m: any) => m.text.includes('Ramadan Mubarak'))).toBe(true);
   });
+
+  it('5. Admin announcements CRUD: GET, POST with banner image & actionLabel, and DELETE', async () => {
+    // 1. List announcements
+    const listRes = await app.request('/api/admin/announcements', {
+      headers: { 'x-admin-token': adminToken }
+    }, env);
+    expect(listRes.status).toBe(200);
+    const listData: any = await listRes.json();
+    expect(listData.success).toBe(true);
+    expect(Array.isArray(listData.announcements)).toBe(true);
+
+    // 2. Create rich announcement with banner image
+    const createRes = await app.request('/api/admin/announcements', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-token': adminToken
+      },
+      body: JSON.stringify({
+        title: '🚀 v1.0.37 Calling Feature Release',
+        message: 'Experience crystal-clear HD voice and video calling between mutual matches with complete modesty!',
+        imageUrl: 'https://qurb.app/announcement_v1037_banner.jpg',
+        actionUrl: 'https://play.google.com/store/apps/details?id=app.qurb.serene',
+        actionLabel: 'Update on Google Play Store ↗'
+      })
+    }, env);
+    expect(createRes.status).toBe(200);
+    const createData: any = await createRes.json();
+    expect(createData.success).toBe(true);
+    expect(createData.announcement.imageUrl).toBe('https://qurb.app/announcement_v1037_banner.jpg');
+    expect(createData.announcement.actionLabel).toBe('Update on Google Play Store ↗');
+
+    const createdId = createData.announcement.id;
+
+    // 3. Verify in user conversation
+    const userConvRes = await app.request(`/api/conversations/conv_qurb_official_${testUserId}/messages`, { method: 'GET' }, env);
+    const userConvData: any = await userConvRes.json();
+    const createdMsg = userConvData.messages.find((m: any) => m.id === createdId);
+    expect(createdMsg).toBeDefined();
+    expect(createdMsg.mediaUrl).toBe('https://qurb.app/announcement_v1037_banner.jpg');
+    expect(createdMsg.mediaType).toBe('image');
+    expect(createdMsg.actionLabel).toBe('Update on Google Play Store ↗');
+
+    // 4. Delete announcement
+    const delRes = await app.request(`/api/admin/announcements/${createdId}`, {
+      method: 'DELETE',
+      headers: { 'x-admin-token': adminToken }
+    }, env);
+    expect(delRes.status).toBe(200);
+    const delData: any = await delRes.json();
+    expect(delData.success).toBe(true);
+  });
 });

@@ -119,6 +119,7 @@ export interface ChatMessage {
     durationSeconds: number;
   };
   actionUrl?: string;
+  actionLabel?: string;
   isOfficial?: boolean;
 }
 

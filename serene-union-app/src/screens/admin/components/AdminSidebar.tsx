@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, Radio, Calendar, Users, Image as ImageIcon, Database, Gift } from 'lucide-react';
+import { Activity, Radio, Calendar, Users, Image as ImageIcon, Database, Gift, Megaphone } from 'lucide-react';
 import type { AdminTab } from '../types';
 
 interface AdminSidebarProps {
@@ -59,6 +59,18 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold uppercase tracking-wider">
             Live
           </span>
+        </button>
+
+        <button
+          onClick={() => onSelectTab('announcements')}
+          className={`flex items-center space-x-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all whitespace-nowrap cursor-pointer ${
+            activeTab === 'announcements'
+              ? 'bg-gradient-to-r from-amber-500 via-rose-500 to-pink-600 text-white shadow-lg shadow-amber-500/25'
+              : 'text-slate-400 hover:bg-white/5 hover:text-white'
+          }`}
+        >
+          <Megaphone className="w-4 h-4 text-amber-400" />
+          <span>Broadcast & Banners</span>
         </button>
 
         <button

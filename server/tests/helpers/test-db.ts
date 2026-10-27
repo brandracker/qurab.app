@@ -218,7 +218,9 @@ export class MockD1Database {
         title TEXT NOT NULL,
         message TEXT NOT NULL,
         created_at INTEGER NOT NULL,
-        action_url TEXT
+        action_url TEXT,
+        image_url TEXT,
+        action_label TEXT
       );
 
       CREATE TABLE IF NOT EXISTS in_app_purchases (

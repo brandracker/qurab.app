@@ -1,4 +1,14 @@
-export type AdminTab = 'overview' | 'live' | 'daily' | 'users' | 'photos' | 'seeds' | 'referrals';
+export type AdminTab = 'overview' | 'live' | 'daily' | 'users' | 'photos' | 'seeds' | 'referrals' | 'announcements';
+
+export interface OfficialAnnouncement {
+  id: string;
+  title: string;
+  message: string;
+  imageUrl?: string | null;
+  actionUrl?: string | null;
+  actionLabel?: string | null;
+  createdAt: number;
+}
 
 export interface DailyUserItem {
   id: string;

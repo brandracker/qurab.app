@@ -4,7 +4,7 @@ import {
   MoreVertical, Eye, EyeOff, ShieldCheck, Paperclip, Mic, Play, Pause, 
   Trash2, X, Download, File, Loader2, Volume2, VolumeX, Maximize2,
   Phone, Video, PhoneCall, PhoneOff, Search, CheckSquare, Square,
-  BadgeCheck, ExternalLink, CheckCircle2
+  BadgeCheck, ExternalLink, CheckCircle2, Megaphone
 } from 'lucide-react';
 import type { Conversation, ChatMessage, UserProfile } from '../types';
 
@@ -1864,16 +1864,19 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
           return activeMessages.length > 0 ? (
             activeMessages.map((msg, idx) => {
               const isMe = msg.senderId === currentUser.id;
+              const isOfficialMsg = Boolean(isOfficialChannel || msg.isOfficial);
               return (
                 <div
                   key={msg.id || idx}
-                  className={`flex flex-col gap-0.5 max-w-[82%] ${isMe ? 'items-end ml-auto' : 'items-start mr-auto'}`}
+                  className={`flex flex-col gap-0.5 ${isOfficialMsg ? 'max-w-[94%] sm:max-w-[85%]' : 'max-w-[82%]'} ${isMe ? 'items-end ml-auto' : 'items-start mr-auto'}`}
                 >
                   <div
                     className={`p-3 rounded-2xl text-xs leading-relaxed ${
                       isMe
                         ? 'bg-primary text-white rounded-br-2xs shadow-brand'
-                        : 'bg-white text-on-surface rounded-bl-2xs border border-outline shadow-subtle'
+                        : isOfficialMsg
+                          ? 'bg-white text-on-surface rounded-2xl border border-sky-200/90 shadow-md ring-1 ring-sky-100/50'
+                          : 'bg-white text-on-surface rounded-bl-2xs border border-outline shadow-subtle'
                     }`}
                   >
                     {/* 1. Voice Message Bubble */}
@@ -1992,23 +1995,104 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                         )
                       )
                     ) : msg.mediaType === 'image' && msg.mediaUrl ? (
-                      /* 2. Photo Attachment Bubble */
-                      <div className="space-y-1.5 max-w-[260px]">
-                        <div 
-                          onClick={() => setLightboxMedia({ url: msg.mediaUrl!, type: 'image' })}
-                          className="rounded-xl overflow-hidden cursor-pointer group/img relative shadow-xs"
-                          title="Click to view full image"
-                        >
-                          <img 
-                            src={msg.mediaUrl} 
-                            alt="Photo Attachment" 
-                            className="w-full max-h-60 object-cover group-hover/img:scale-102 transition-transform duration-200" 
-                          />
+                      /* 2. Photo Attachment Bubble / Official Announcement Banner Card */
+                      (isOfficialChannel || msg.isOfficial) ? (
+                        <div className="space-y-2.5 max-w-[340px] sm:max-w-[440px] text-left">
+                          <div 
+                            onClick={() => setLightboxMedia({ url: msg.mediaUrl!, type: 'image', title: 'Official Announcement Banner' })}
+                            className="rounded-2xl overflow-hidden cursor-pointer group/img relative shadow-md border border-slate-200/80 bg-slate-900 aspect-video"
+                            title="Click to view full banner"
+                          >
+                            <img 
+                              src={msg.mediaUrl} 
+                              alt="Official Announcement Banner" 
+                              className="w-full h-full object-cover group-hover/img:scale-102 transition-transform duration-300" 
+                            />
+                            <div className="absolute top-2 left-2 px-2.5 py-0.5 rounded-full bg-black/60 backdrop-blur-xs text-white text-[10px] font-bold flex items-center gap-1.5 border border-white/20">
+                              <Megaphone className="w-3 h-3 text-amber-400" />
+                              <span>Official Broadcast</span>
+                            </div>
+                          </div>
+                          {msg.text && (
+                            <div className="whitespace-pre-line leading-relaxed text-xs">
+                              {(() => {
+                                const text = msg.text || '';
+                                const urlRegex = /(https?:\/\/[^\s]+)/g;
+                                const parts = text.split(urlRegex);
+
+                                return (
+                                  <>
+                                    {parts.map((part, pIdx) => {
+                                      if (part.match(urlRegex)) {
+                                        const isPlayStore = part.includes('play.google.com/store/apps');
+                                        if (isPlayStore) {
+                                          return (
+                                            <div key={pIdx} className="my-2.5">
+                                              <a
+                                                href={part}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 text-white font-bold text-xs shadow-md hover:from-emerald-700 hover:to-teal-800 transition-all active:scale-95 no-underline"
+                                              >
+                                                <Play className="w-3.5 h-3.5 fill-current" />
+                                                <span>{msg.actionLabel || 'Update on Google Play Store'}</span>
+                                                <ExternalLink className="w-3 h-3 opacity-80" />
+                                              </a>
+                                            </div>
+                                          );
+                                        }
+                                        return (
+                                          <a
+                                            key={pIdx}
+                                            href={part}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="underline font-semibold break-all text-primary hover:text-primary-dark"
+                                          >
+                                            {part}
+                                          </a>
+                                        );
+                                      }
+                                      return <span key={pIdx}>{part}</span>;
+                                    })}
+                                    {msg.actionUrl && !text.includes(msg.actionUrl) && (
+                                      <div className="mt-2.5">
+                                        <a
+                                          href={msg.actionUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 text-white font-bold text-xs shadow-md hover:from-emerald-700 hover:to-teal-800 transition-all active:scale-95 no-underline"
+                                        >
+                                          <Play className="w-3.5 h-3.5 fill-current" />
+                                          <span>{msg.actionLabel || 'Open Link ↗'}</span>
+                                          <ExternalLink className="w-3 h-3 opacity-80" />
+                                        </a>
+                                      </div>
+                                    )}
+                                  </>
+                                );
+                              })()}
+                            </div>
+                          )}
                         </div>
-                        {msg.text && msg.text !== '📷 Photo' && (
-                          <p className="mt-1">{msg.text}</p>
-                        )}
-                      </div>
+                      ) : (
+                        <div className="space-y-1.5 max-w-[260px]">
+                          <div 
+                            onClick={() => setLightboxMedia({ url: msg.mediaUrl!, type: 'image' })}
+                            className="rounded-xl overflow-hidden cursor-pointer group/img relative shadow-xs"
+                            title="Click to view full image"
+                          >
+                            <img 
+                              src={msg.mediaUrl} 
+                              alt="Photo Attachment" 
+                              className="w-full max-h-60 object-cover group-hover/img:scale-102 transition-transform duration-200" 
+                            />
+                          </div>
+                          {msg.text && msg.text !== '📷 Photo' && (
+                            <p className="mt-1">{msg.text}</p>
+                          )}
+                        </div>
+                      )
                     ) : msg.mediaType === 'video' && msg.mediaUrl ? (
                       /* 3. Video Attachment Bubble */
                       <div className="space-y-1.5 max-w-[280px]">
@@ -2131,7 +2215,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                                           className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 text-white font-bold text-xs shadow-md hover:from-emerald-700 hover:to-teal-800 transition-all active:scale-95 no-underline"
                                         >
                                           <Play className="w-3.5 h-3.5 fill-current" />
-                                          <span>Update on Google Play Store</span>
+                                          <span>{msg.actionLabel || 'Update on Google Play Store'}</span>
                                           <ExternalLink className="w-3 h-3 opacity-80" />
                                         </a>
                                       </div>
@@ -2157,10 +2241,11 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                                     href={msg.actionUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary text-white text-xs font-bold shadow-xs hover:bg-primary-dark transition-all"
+                                    className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 text-white font-bold text-xs shadow-md hover:from-emerald-700 hover:to-teal-800 transition-all active:scale-95 no-underline"
                                   >
-                                    <span>Open Link</span>
-                                    <ExternalLink className="w-3 h-3" />
+                                    <Play className="w-3.5 h-3.5 fill-current" />
+                                    <span>{msg.actionLabel || 'Open Link ↗'}</span>
+                                    <ExternalLink className="w-3 h-3 opacity-80" />
                                   </a>
                                 </div>
                               )}

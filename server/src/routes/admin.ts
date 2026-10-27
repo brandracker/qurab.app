@@ -1300,7 +1300,7 @@ adminRouter.post('/wali/:id/verify', async (c) => {
 // 12. Global Broadcast Announcement
 adminRouter.post('/broadcast', async (c) => {
   try {
-    const { title, message } = await c.req.json();
+    const { title, message, imageUrl, actionUrl, actionLabel } = await c.req.json();
     if (!title?.trim() || !message?.trim()) {
       return c.json({ success: false, error: 'Title and message are required for broadcast' }, 400);
     }
@@ -1329,20 +1329,22 @@ adminRouter.post('/broadcast', async (c) => {
           title TEXT NOT NULL,
           message TEXT NOT NULL,
           created_at INTEGER NOT NULL,
-          action_url TEXT
+          action_url TEXT,
+          image_url TEXT,
+          action_label TEXT
         )
       `).run();
 
-      try {
-        await c.env.DB.prepare('ALTER TABLE official_announcements ADD COLUMN action_url TEXT').run();
-      } catch {}
+      try { await c.env.DB.prepare('ALTER TABLE official_announcements ADD COLUMN action_url TEXT').run(); } catch {}
+      try { await c.env.DB.prepare('ALTER TABLE official_announcements ADD COLUMN image_url TEXT').run(); } catch {}
+      try { await c.env.DB.prepare('ALTER TABLE official_announcements ADD COLUMN action_label TEXT').run(); } catch {}
 
       const annId = `ann_broadcast_${batchId}`;
       const broadcastText = title ? `📢 ${title.trim()}\n\n${message.trim()}` : message.trim();
       await c.env.DB.prepare(`
-        INSERT INTO official_announcements (id, title, message, created_at, action_url)
-        VALUES (?, ?, ?, ?, ?)
-      `).bind(annId, title.trim(), broadcastText, Date.now(), null).run();
+        INSERT INTO official_announcements (id, title, message, created_at, action_url, image_url, action_label)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).bind(annId, title.trim(), broadcastText, Date.now(), actionUrl?.trim() || null, imageUrl?.trim() || null, actionLabel?.trim() || null).run();
     } catch (annErr) {
       console.warn('[Broadcast Official Announcement] notice:', annErr);
     }
@@ -1354,6 +1356,122 @@ adminRouter.post('/broadcast', async (c) => {
     });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// 12b. Official Announcements Channel Management
+adminRouter.get('/announcements', async (c) => {
+  try {
+    await c.env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS official_announcements (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        action_url TEXT,
+        image_url TEXT,
+        action_label TEXT
+      )
+    `).run();
+    try { await c.env.DB.prepare('ALTER TABLE official_announcements ADD COLUMN action_url TEXT').run(); } catch {}
+    try { await c.env.DB.prepare('ALTER TABLE official_announcements ADD COLUMN image_url TEXT').run(); } catch {}
+    try { await c.env.DB.prepare('ALTER TABLE official_announcements ADD COLUMN action_label TEXT').run(); } catch {}
+
+    const { results } = await c.env.DB.prepare(`
+      SELECT id, title, message, image_url as imageUrl, action_url as actionUrl, action_label as actionLabel, created_at as createdAt
+      FROM official_announcements
+      ORDER BY created_at DESC
+    `).all();
+
+    return c.json({ success: true, announcements: results || [] });
+  } catch (err: any) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+adminRouter.post('/announcements', async (c) => {
+  try {
+    const { title, message, imageUrl, actionUrl, actionLabel } = await c.req.json();
+    if (!title?.trim() || !message?.trim()) {
+      return c.json({ success: false, error: 'Title and message are required' }, 400);
+    }
+
+    const annId = `ann_${Date.now()}`;
+    const now = Date.now();
+
+    await c.env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS official_announcements (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        action_url TEXT,
+        image_url TEXT,
+        action_label TEXT
+      )
+    `).run();
+    try { await c.env.DB.prepare('ALTER TABLE official_announcements ADD COLUMN action_url TEXT').run(); } catch {}
+    try { await c.env.DB.prepare('ALTER TABLE official_announcements ADD COLUMN image_url TEXT').run(); } catch {}
+    try { await c.env.DB.prepare('ALTER TABLE official_announcements ADD COLUMN action_label TEXT').run(); } catch {}
+
+    await c.env.DB.prepare(`
+      INSERT INTO official_announcements (id, title, message, created_at, action_url, image_url, action_label)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      annId,
+      title.trim(),
+      message.trim(),
+      now,
+      actionUrl?.trim() || null,
+      imageUrl?.trim() || null,
+      actionLabel?.trim() || null
+    ).run();
+
+    // Broadcast into notifications table so all users get notification banner
+    let deliveredCount = 0;
+    try {
+      const notifResult: any = await c.env.DB.prepare(`
+        INSERT OR IGNORE INTO notifications (id, user_id, type, title, message, is_read, created_at)
+        SELECT 
+          'notif_ann_' || u.id || '_' || ?,
+          u.id,
+          'system_broadcast',
+          ?,
+          ?,
+          0,
+          CURRENT_TIMESTAMP
+        FROM users u
+      `).bind(annId, title.trim(), message.trim()).run();
+      deliveredCount = notifResult?.meta?.changes ?? 0;
+    } catch (notifErr) {
+      console.warn('[Broadcast Notifications] notice:', notifErr);
+    }
+
+    return c.json({
+      success: true,
+      announcement: {
+        id: annId,
+        title: title.trim(),
+        message: message.trim(),
+        imageUrl: imageUrl?.trim() || null,
+        actionUrl: actionUrl?.trim() || null,
+        actionLabel: actionLabel?.trim() || null,
+        createdAt: now
+      },
+      deliveredCount
+    });
+  } catch (err: any) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+adminRouter.delete('/announcements/:id', async (c) => {
+  try {
+    const id = c.req.param('id');
+    await c.env.DB.prepare('DELETE FROM official_announcements WHERE id = ?').bind(id).run();
+    return c.json({ success: true, message: 'Announcement deleted successfully' });
+  } catch (err: any) {
+    return c.json({ success: false, error: err.message }, 500);
   }
 });
 

@@ -360,4 +360,32 @@ describe('Matches, Chat, Wali & Monetization API Integration Tests', () => {
     expect(conv.otherUser.photos).toHaveLength(1);
     expect(conv.otherUser.photos[0]).toBe('https://example.com/photo1.jpg');
   });
+
+  it('Successfully fetches conversations for users with 100+ conversation partners using chunked queries', async () => {
+    // Generate and insert 110 mock users and conversations for sampleSisterUser
+    for (let i = 1; i <= 110; i++) {
+      const partnerId = `usr_partner_mock_${i}`;
+      await env.DB.prepare(`
+        INSERT INTO users (id, phone, email, full_name, dob, gender, location)
+        VALUES (?, ?, ?, ?, '1995-01-01', 'male', 'Lahore, PK')
+      `).bind(partnerId, `phone_${i}`, `partner_${i}@test.com`, `Partner ${i}`).run();
+
+      await env.DB.prepare(`
+        INSERT INTO conversations (id, participant_one, participant_two, jsonl_log_path, last_message_text, last_message_time)
+        VALUES (?, ?, ?, 'logs/test.jsonl', 'Salam', datetime('now', '-${i} minutes'))
+      `).bind(`conv_${sampleSisterUser.id}_${partnerId}`, sampleSisterUser.id, partnerId).run();
+
+      await env.DB.prepare(`
+        INSERT INTO user_photos (id, user_id, photo_url, is_primary, sort_order)
+        VALUES (?, ?, ?, 1, 1)
+      `).bind(`ph_${partnerId}`, partnerId, `https://example.com/${partnerId}.jpg`).run();
+    }
+
+    const res = await app.request(`/api/conversations?userId=${sampleSisterUser.id}`, { method: 'GET' }, env);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.conversations.length).toBeGreaterThanOrEqual(110);
+  });
 });
+

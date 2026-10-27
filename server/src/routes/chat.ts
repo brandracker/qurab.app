@@ -73,7 +73,7 @@ chatRouter.get('/', async (c) => {
       ORDER BY c.last_message_time DESC
     `).bind(userId, userId).all();
 
-    // Fetch primary photos for all conversation partners in bulk
+    // Fetch primary photos for all conversation partners in bulk (chunked by 25 to respect D1 variable limits)
     const partnerIds: string[] = [];
     (results || []).forEach((row: any) => {
       const isUserP1 = row.participant_one === userId;
@@ -83,75 +83,93 @@ chatRouter.get('/', async (c) => {
 
     const photoMap: Record<string, string[]> = {};
     if (partnerIds.length > 0) {
-      const placeholders = partnerIds.map(() => '?').join(',');
-      const { results: photos } = await c.env.DB.prepare(`
-        SELECT user_id, photo_url FROM user_photos
-        WHERE user_id IN (${placeholders})
-        ORDER BY is_primary DESC, sort_order ASC
-      `).bind(...partnerIds).all();
+      const chunkSize = 25;
+      for (let i = 0; i < partnerIds.length; i += chunkSize) {
+        const chunk = partnerIds.slice(i, i + chunkSize);
+        try {
+          const placeholders = chunk.map(() => '?').join(',');
+          const { results: photos } = await c.env.DB.prepare(`
+            SELECT user_id, photo_url FROM user_photos
+            WHERE user_id IN (${placeholders})
+            ORDER BY is_primary DESC, sort_order ASC
+          `).bind(...chunk).all();
 
-      (photos || []).forEach((p: any) => {
-        if (!photoMap[p.user_id]) photoMap[p.user_id] = [];
-        if (photoMap[p.user_id].length < 1) {
-          photoMap[p.user_id].push(p.photo_url);
+          (photos || []).forEach((p: any) => {
+            if (!photoMap[p.user_id]) photoMap[p.user_id] = [];
+            if (photoMap[p.user_id].length < 1) {
+              photoMap[p.user_id].push(p.photo_url);
+            }
+          });
+        } catch (photoErr) {
+          console.warn('[Chat Photos Batch] chunk fetch notice:', photoErr);
         }
-      });
+      }
     }
 
-    // Fetch 1-to-1 photo reveals between currentUser and conversation partners from Cloudflare D1
+    // Fetch 1-to-1 photo reveals between currentUser and conversation partners from Cloudflare D1 (chunked by 25)
     const partnerRevealedSet = new Set<string>();
     const myRevealedSet = new Set<string>();
 
     if (partnerIds.length > 0) {
-      try {
-        const placeholders = partnerIds.map(() => '?').join(',');
-        const { results: reveals } = await c.env.DB.prepare(`
-          SELECT owner_id, viewer_id FROM photo_reveals
-          WHERE (owner_id IN (${placeholders}) AND viewer_id = ?)
-             OR (owner_id = ? AND viewer_id IN (${placeholders}))
-        `).bind(...partnerIds, userId, userId, ...partnerIds).all();
+      const chunkSize = 25;
+      for (let i = 0; i < partnerIds.length; i += chunkSize) {
+        const chunk = partnerIds.slice(i, i + chunkSize);
+        try {
+          const placeholders = chunk.map(() => '?').join(',');
+          const { results: reveals } = await c.env.DB.prepare(`
+            SELECT owner_id, viewer_id FROM photo_reveals
+            WHERE (owner_id IN (${placeholders}) AND viewer_id = ?)
+               OR (owner_id = ? AND viewer_id IN (${placeholders}))
+          `).bind(...chunk, userId, userId, ...chunk).all();
 
-        (reveals || []).forEach((r: any) => {
-          if (r.viewer_id === userId) partnerRevealedSet.add(r.owner_id);
-          if (r.owner_id === userId) myRevealedSet.add(r.viewer_id);
-        });
-      } catch {}
+          (reveals || []).forEach((r: any) => {
+            if (r.viewer_id === userId) partnerRevealedSet.add(r.owner_id);
+            if (r.owner_id === userId) myRevealedSet.add(r.viewer_id);
+          });
+        } catch (revealErr) {
+          console.warn('[Chat Reveals Batch] chunk fetch notice:', revealErr);
+        }
+      }
     }
 
-    // Fetch recent messages for all conversations in bulk to pre-warm client cache
+    // Fetch recent messages for all conversations in bulk to pre-warm client cache (chunked by 25)
     const convIds: string[] = (results || []).map((row: any) => row.id).filter(Boolean);
     const messagesMap: Record<string, any[]> = {};
 
     if (convIds.length > 0) {
-      try {
-        const placeholders = convIds.map(() => '?').join(',');
-        const { results: recentMsgs } = await c.env.DB.prepare(`
-          SELECT id, conversation_id, sender_id as senderId, sender_name as senderName, text,
-                 media_url as mediaUrl, media_type as mediaType, media_duration as mediaDuration,
-                 file_name as fileName, file_size as fileSize,
-                 is_view_once as isViewOnce, is_opened as isOpened, opened_at as openedAt,
-                 created_at as timestamp
-          FROM chat_messages
-          WHERE conversation_id IN (${placeholders})
-          ORDER BY created_at ASC
-        `).bind(...convIds).all();
+      const chunkSize = 25;
+      for (let i = 0; i < convIds.length; i += chunkSize) {
+        const chunk = convIds.slice(i, i + chunkSize);
+        try {
+          const placeholders = chunk.map(() => '?').join(',');
+          const { results: recentMsgs } = await c.env.DB.prepare(`
+            SELECT id, conversation_id, sender_id as senderId, sender_name as senderName, text,
+                   media_url as mediaUrl, media_type as mediaType, media_duration as mediaDuration,
+                   file_name as fileName, file_size as fileSize,
+                   is_view_once as isViewOnce, is_opened as isOpened, opened_at as openedAt,
+                   created_at as timestamp
+            FROM chat_messages
+            WHERE conversation_id IN (${placeholders})
+            ORDER BY created_at ASC
+          `).bind(...chunk).all();
 
-        (recentMsgs || []).forEach((m: any) => {
-          const isVO = Boolean(m.isViewOnce);
-          const isOp = Boolean(m.isOpened);
-          const sanitized = {
-            ...m,
-            isViewOnce: isVO,
-            isOpened: isOp,
-            mediaUrl: (isVO && isOp && userId && userId !== m.senderId) ? null : m.mediaUrl
-          };
-          if (!messagesMap[m.conversation_id]) {
-            messagesMap[m.conversation_id] = [];
-          }
-          messagesMap[m.conversation_id].push(sanitized);
-        });
-      } catch (err) {
-        console.warn('[Prewarm Messages] bulk message fetch error:', err);
+          (recentMsgs || []).forEach((m: any) => {
+            const isVO = Boolean(m.isViewOnce);
+            const isOp = Boolean(m.isOpened);
+            const sanitized = {
+              ...m,
+              isViewOnce: isVO,
+              isOpened: isOp,
+              mediaUrl: (isVO && isOp && userId && userId !== m.senderId) ? null : m.mediaUrl
+            };
+            if (!messagesMap[m.conversation_id]) {
+              messagesMap[m.conversation_id] = [];
+            }
+            messagesMap[m.conversation_id].push(sanitized);
+          });
+        } catch (err) {
+          console.warn('[Prewarm Messages] bulk message fetch error:', err);
+        }
       }
     }
 

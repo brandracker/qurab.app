@@ -5,6 +5,71 @@ import { processAiSeedResponse } from '../utils/ai-chat-agent';
 
 export const chatRouter = new Hono<AppContext>();
 
+export const QURB_OFFICIAL_USER_ID = 'usr_qurb_official';
+
+// Helper to ensure official announcements table exists and seed welcome announcements if empty
+export async function getOfficialAnnouncements(db: any): Promise<any[]> {
+  try {
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS official_announcements (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        action_url TEXT
+      )
+    `).run();
+
+    try {
+      await db.prepare('ALTER TABLE official_announcements ADD COLUMN action_url TEXT').run();
+    } catch {}
+
+    const { results } = await db.prepare(`
+      SELECT * FROM official_announcements ORDER BY created_at ASC
+    `).all();
+
+    if (results && results.length > 0) {
+      return results;
+    }
+
+    // Auto-seed initial official announcements
+    const welcomeAnnouncement = {
+      id: 'ann_welcome_001',
+      title: 'Welcome to Qurb Official Channel',
+      message: 'Assalamu Alaikum! 🌟 Welcome to the official Qurb Channel.\n\nHere you will receive security advice, feature updates, and official announcements directly from the Qurb Team. Your privacy, modesty, and security are our highest priority.\n\nMay Allah guide you to half your deen with Barakah and joy.',
+      created_at: 1740600000000,
+      action_url: 'https://qurb.app'
+    };
+
+    const updateAnnouncement = {
+      id: 'ann_v1037_update',
+      title: '🚀 Qurb Update v1.0.37 Available',
+      message: '🚀 Update Alert: Qurb v1.0.37 is now available on Google Play Store!\n\n✨ New in this version:\n• Crystal-clear HD Voice & Video Calling\n• Zero connection drops with auto-reconnect\n• Enhanced profile security & instant push notifications\n• Smooth chat and media sharing\n\nUpdate now on Google Play Store:\nhttps://play.google.com/store/apps/details?id=app.qurb.serene&pcampaignid=web_share',
+      created_at: 1740650000000,
+      action_url: 'https://play.google.com/store/apps/details?id=app.qurb.serene&pcampaignid=web_share'
+    };
+
+    try {
+      await db.prepare(`
+        INSERT OR IGNORE INTO official_announcements (id, title, message, created_at, action_url)
+        VALUES (?, ?, ?, ?, ?)
+      `).bind(welcomeAnnouncement.id, welcomeAnnouncement.title, welcomeAnnouncement.message, welcomeAnnouncement.created_at, welcomeAnnouncement.action_url).run();
+
+      await db.prepare(`
+        INSERT OR IGNORE INTO official_announcements (id, title, message, created_at, action_url)
+        VALUES (?, ?, ?, ?, ?)
+      `).bind(updateAnnouncement.id, updateAnnouncement.title, updateAnnouncement.message, updateAnnouncement.created_at, updateAnnouncement.action_url).run();
+    } catch (e) {
+      console.warn('[Announcements Seed] Notice:', e);
+    }
+
+    return [welcomeAnnouncement, updateAnnouncement];
+  } catch (err) {
+    console.warn('[getOfficialAnnouncements] Error:', err);
+    return [];
+  }
+}
+
 // 1. Get Conversations for User (with rich otherUser payload and auto mutual-match sync)
 chatRouter.get('/', async (c) => {
   try {
@@ -249,6 +314,71 @@ chatRouter.get('/', async (c) => {
       };
     });
 
+    // Prepend Qurb Official Channel (zero-build visible to all app versions v1.0.32-v1.0.37+)
+    try {
+      const announcements = await getOfficialAnnouncements(c.env.DB);
+      const latest = announcements[announcements.length - 1];
+      const officialConvId = `conv_qurb_official_${userId}`;
+      const officialConv = {
+        id: officialConvId,
+        participantOne: userId,
+        participantTwo: QURB_OFFICIAL_USER_ID,
+        lastMessageText: latest?.message || 'Welcome to Qurb Official Channel! 🌟',
+        lastMessageSenderId: QURB_OFFICIAL_USER_ID,
+        lastMessageTime: latest?.created_at ? new Date(latest.created_at).toISOString() : new Date().toISOString(),
+        unreadCount: 0,
+        status: 'active',
+        hasRevealedToPartner: true,
+        isOfficial: true,
+        otherUser: {
+          id: QURB_OFFICIAL_USER_ID,
+          fullName: 'Qurb Team ✓',
+          age: 1,
+          gender: 'official',
+          location: 'Pakistan & Global',
+          city: 'Official Channel',
+          country: 'Pakistan',
+          profession: 'Verified Broadcast',
+          education: 'Official Support',
+          university: '',
+          height: '',
+          marriageTimeline: '',
+          bio: 'Official announcements, updates, release notes, and safety tips from Qurb Team.',
+          blurPhotosByDefault: false,
+          isPhotoRevealed: true,
+          hasRevealedToPartner: true,
+          isVerified: true,
+          photos: ['https://qurb.app/icon.svg'],
+          religiousProfile: {
+            sect: 'Sunni',
+            madhhab: 'Hanafi',
+            practiceLevel: 'practicing',
+            prayerFrequency: '5 times daily',
+            halalDiet: 'Strictly Halal'
+          }
+        },
+        messages: announcements.map((a: any) => ({
+          id: a.id,
+          conversation_id: officialConvId,
+          conversationId: officialConvId,
+          senderId: QURB_OFFICIAL_USER_ID,
+          senderName: 'Qurb Team ✓',
+          text: a.message,
+          mediaUrl: null,
+          mediaType: 'text',
+          actionUrl: a.action_url || null,
+          isViewOnce: false,
+          isOpened: false,
+          timestamp: a.created_at || Date.now(),
+          createdAt: a.created_at || Date.now()
+        }))
+      };
+
+      formatted.unshift(officialConv);
+    } catch (officialErr) {
+      console.warn('[Official Chat Channel] Prepend notice:', officialErr);
+    }
+
     return c.json({ success: true, conversations: formatted });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
@@ -340,6 +470,34 @@ chatRouter.post('/upload-media', async (c) => {
 chatRouter.get('/:id/messages', async (c) => {
   try {
     const rawConvId = c.req.param('id');
+
+    // Handle Qurb Official Channel announcements lookup
+    if (rawConvId.includes('qurb_official')) {
+      const announcements = await getOfficialAnnouncements(c.env.DB);
+      const messages = announcements.map((a: any) => ({
+        id: a.id,
+        conversation_id: rawConvId,
+        conversationId: rawConvId,
+        senderId: QURB_OFFICIAL_USER_ID,
+        senderName: 'Qurb Team ✓',
+        text: a.message,
+        mediaUrl: null,
+        mediaType: 'text',
+        actionUrl: a.action_url || null,
+        isViewOnce: false,
+        isOpened: false,
+        timestamp: a.created_at || Date.now(),
+        createdAt: a.created_at || Date.now()
+      }));
+
+      return c.json({
+        success: true,
+        messages,
+        isPhotoRevealed: true,
+        hasRevealedToPartner: true
+      });
+    }
+
     let targetConvId = rawConvId;
 
     const existingConv: any = await c.env.DB.prepare(`
@@ -511,6 +669,23 @@ chatRouter.post('/:id/messages', async (c) => {
 
     if (!messageText && !mediaUrl) {
       return c.json({ success: false, error: 'Message text is required' }, 400);
+    }
+
+    // Handle messages sent to official announcement channel gracefully
+    if (rawConvId.includes('qurb_official') || receiverId === QURB_OFFICIAL_USER_ID) {
+      const autoReplyText = "Thank you for reaching out to Qurb Team! 🌟 This is an automated broadcast channel for announcements and updates. For customer support or account assistance, please visit the Help section in Settings or email support@qurb.app.";
+      return c.json({
+        success: true,
+        message: {
+          id: `msg_auto_${Date.now()}`,
+          conversationId: rawConvId,
+          senderId: QURB_OFFICIAL_USER_ID,
+          senderName: 'Qurb Team ✓',
+          text: autoReplyText,
+          timestamp: Date.now(),
+          createdAt: Date.now()
+        }
+      });
     }
 
     // 1. Resolve conversation and partner

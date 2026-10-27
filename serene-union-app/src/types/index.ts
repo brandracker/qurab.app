@@ -68,6 +68,8 @@ export interface UserProfile {
   revealedToUserIds?: string[];
   isVip?: boolean;
   isSpotlightActive?: boolean;
+  isVerified?: boolean;
+  isOfficial?: boolean;
   isOnline?: boolean;
   lastActive?: string;
   voiceGreetingUrl?: string;
@@ -116,6 +118,8 @@ export interface ChatMessage {
     status: 'completed' | 'missed' | 'declined';
     durationSeconds: number;
   };
+  actionUrl?: string;
+  isOfficial?: boolean;
 }
 
 export interface Conversation {
@@ -135,6 +139,7 @@ export interface Conversation {
   hasRevealedToPartner?: boolean;
   isPhotoRevealed?: boolean;
   lastMessageTimestamp?: number;
+  isOfficial?: boolean;
 }
 
 

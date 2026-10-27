@@ -35,17 +35,20 @@ describe('1-to-1 Modesty Photo Reveal API Integration (Cloudflare D1 Single Sour
     expect(resB.status).toBe(200);
     const dataB = await resB.json();
     expect(dataB.success).toBe(true);
-    expect(dataB.conversations.length).toBe(1);
-    expect(dataB.conversations[0].otherUser.isPhotoRevealed).toBe(false);
-    expect(dataB.conversations[0].hasRevealedToPartner).toBe(false);
+    const convB = dataB.conversations.find((c: any) => !c.isOfficial);
+    expect(convB).toBeDefined();
+    expect(convB.otherUser.isPhotoRevealed).toBe(false);
+    expect(convB.hasRevealedToPartner).toBe(false);
 
     // Sister checks conversation with Brother
     const resS = await app.request('/api/conversations?userId=usr_sister_1', { method: 'GET' }, env);
     expect(resS.status).toBe(200);
     const dataS = await resS.json();
     expect(dataS.success).toBe(true);
-    expect(dataS.conversations[0].otherUser.isPhotoRevealed).toBe(false);
-    expect(dataS.conversations[0].hasRevealedToPartner).toBe(false);
+    const convS = dataS.conversations.find((c: any) => !c.isOfficial);
+    expect(convS).toBeDefined();
+    expect(convS.otherUser.isPhotoRevealed).toBe(false);
+    expect(convS.hasRevealedToPartner).toBe(false);
   });
 
   it('2. POST /api/conversations/:id/photo-reveal records reveal in D1 and dispatches system notification message', async () => {
@@ -100,18 +103,20 @@ describe('1-to-1 Modesty Photo Reveal API Integration (Cloudflare D1 Single Sour
     // 2. Brother fetches conversations
     const resB = await app.request('/api/conversations?userId=usr_brother_1', { method: 'GET' }, env);
     const dataB = await resB.json();
-    expect(dataB.conversations[0].otherUser.id).toBe('usr_sister_1');
-    expect(dataB.conversations[0].otherUser.isPhotoRevealed).toBe(true);
+    const convB = dataB.conversations.find((c: any) => !c.isOfficial);
+    expect(convB.otherUser.id).toBe('usr_sister_1');
+    expect(convB.otherUser.isPhotoRevealed).toBe(true);
     // Brother has NOT revealed his photos to Sister yet
-    expect(dataB.conversations[0].hasRevealedToPartner).toBe(false);
+    expect(convB.hasRevealedToPartner).toBe(false);
 
     // 3. Sister fetches conversations
     const resS = await app.request('/api/conversations?userId=usr_sister_1', { method: 'GET' }, env);
     const dataS = await resS.json();
+    const convS = dataS.conversations.find((c: any) => !c.isOfficial);
     // Sister has revealed to Brother
-    expect(dataS.conversations[0].hasRevealedToPartner).toBe(true);
+    expect(convS.hasRevealedToPartner).toBe(true);
     // Brother has NOT revealed to Sister
-    expect(dataS.conversations[0].otherUser.isPhotoRevealed).toBe(false);
+    expect(convS.otherUser.isPhotoRevealed).toBe(false);
   });
 
   it('4. POST /api/conversations/:id/photo-reveal with isRevealed = false revokes access and restores blur', async () => {
@@ -152,6 +157,7 @@ describe('1-to-1 Modesty Photo Reveal API Integration (Cloudflare D1 Single Sour
     // 4. Verify Brother now sees isPhotoRevealed = false
     const resB = await app.request('/api/conversations?userId=usr_brother_1', { method: 'GET' }, env);
     const dataB = await resB.json();
-    expect(dataB.conversations[0].otherUser.isPhotoRevealed).toBe(false);
+    const convB = dataB.conversations.find((c: any) => !c.isOfficial);
+    expect(convB.otherUser.isPhotoRevealed).toBe(false);
   });
 });

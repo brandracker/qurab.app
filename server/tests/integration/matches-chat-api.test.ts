@@ -231,7 +231,8 @@ describe('Matches, Chat, Wali & Monetization API Integration Tests', () => {
     // Verify conversation exists
     const convsBefore = await app.request(`/api/conversations?userId=${sampleBrotherUser.id}`, { method: 'GET' }, env);
     const convsBeforeData = await convsBefore.json();
-    expect(convsBeforeData.conversations).toHaveLength(1);
+    const candidateConvsBefore = convsBeforeData.conversations.filter((c: any) => !c.isOfficial);
+    expect(candidateConvsBefore).toHaveLength(1);
 
     // Verify mutual match appears
     const mutualBefore = await app.request(`/api/matches/mutual?userId=${sampleBrotherUser.id}`, { method: 'GET' }, env);
@@ -248,10 +249,10 @@ describe('Matches, Chat, Wali & Monetization API Integration Tests', () => {
 
     // 3. Verify neither Brother nor Sister sees the conversation in /api/conversations
     const convsBrother = await (await app.request(`/api/conversations?userId=${sampleBrotherUser.id}`, { method: 'GET' }, env)).json();
-    expect(convsBrother.conversations).toHaveLength(0);
+    expect(convsBrother.conversations.filter((c: any) => !c.isOfficial)).toHaveLength(0);
 
     const convsSister = await (await app.request(`/api/conversations?userId=${sampleSisterUser.id}`, { method: 'GET' }, env)).json();
-    expect(convsSister.conversations).toHaveLength(0);
+    expect(convsSister.conversations.filter((c: any) => !c.isOfficial)).toHaveLength(0);
 
     // 4. Verify neither Brother nor Sister sees the other in /api/matches/mutual
     const mutualBrother = await (await app.request(`/api/matches/mutual?userId=${sampleBrotherUser.id}`, { method: 'GET' }, env)).json();

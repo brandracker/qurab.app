@@ -154,9 +154,10 @@ describe('New Profiles Matches and Real-time Chat Integration Flow', () => {
     expect(convsRes.status).toBe(200);
     const convsData = await convsRes.json();
     expect(convsData.success).toBe(true);
-    expect(convsData.conversations).toHaveLength(1);
+    const candidateConvs = convsData.conversations.filter((c: any) => !c.isOfficial);
+    expect(candidateConvs).toHaveLength(1);
 
-    const conv = convsData.conversations[0];
+    const conv = candidateConvs[0];
     expect(conv.otherUser.id).toBe(newSister.id);
     expect(conv.otherUser.fullName).toBe('Maryam Siddiqui');
     expect(conv.otherUser.profession).toBe('Clinical Pharmacist');

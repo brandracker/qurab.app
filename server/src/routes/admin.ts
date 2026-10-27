@@ -1319,7 +1319,33 @@ adminRouter.post('/broadcast', async (c) => {
       FROM users u
     `).bind(batchId, title.trim(), message.trim()).run();
 
-    const deliveredCount = result?.meta?.changes ?? (usersList.length || 0);
+    const deliveredCount = result?.meta?.changes ?? 0;
+
+    // Also persist broadcast into official_announcements channel table
+    try {
+      await c.env.DB.prepare(`
+        CREATE TABLE IF NOT EXISTS official_announcements (
+          id TEXT PRIMARY KEY,
+          title TEXT NOT NULL,
+          message TEXT NOT NULL,
+          created_at INTEGER NOT NULL,
+          action_url TEXT
+        )
+      `).run();
+
+      try {
+        await c.env.DB.prepare('ALTER TABLE official_announcements ADD COLUMN action_url TEXT').run();
+      } catch {}
+
+      const annId = `ann_broadcast_${batchId}`;
+      const broadcastText = title ? `📢 ${title.trim()}\n\n${message.trim()}` : message.trim();
+      await c.env.DB.prepare(`
+        INSERT INTO official_announcements (id, title, message, created_at, action_url)
+        VALUES (?, ?, ?, ?, ?)
+      `).bind(annId, title.trim(), broadcastText, Date.now(), null).run();
+    } catch (annErr) {
+      console.warn('[Broadcast Official Announcement] notice:', annErr);
+    }
 
     return c.json({
       success: true,

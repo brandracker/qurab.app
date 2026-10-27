@@ -213,6 +213,14 @@ export class MockD1Database {
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
 
+      CREATE TABLE IF NOT EXISTS official_announcements (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        action_url TEXT
+      );
+
       CREATE TABLE IF NOT EXISTS in_app_purchases (
         id TEXT PRIMARY KEY,
         user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
@@ -275,6 +283,8 @@ export class MockD1Database {
         granted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(user_id, invites_milestone)
       );
+
+      CREATE INDEX IF NOT EXISTS idx_official_announcements_created ON official_announcements(created_at ASC);
 
       CREATE INDEX IF NOT EXISTS idx_referrals_referrer_status ON referrals(referrer_id, status);
       CREATE INDEX IF NOT EXISTS idx_referrals_device ON referrals(device_id);

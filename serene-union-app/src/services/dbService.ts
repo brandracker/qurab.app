@@ -2041,7 +2041,8 @@ class DBService {
               status: rc.status || existing?.status || 'active',
               messages: msgsToSet,
               isPhotoRevealed,
-              hasRevealedToPartner
+              hasRevealedToPartner,
+              isOfficial: Boolean(rc.isOfficial || existing?.isOfficial || rc.id.includes('qurb_official') || rc.otherUser?.id === 'usr_qurb_official')
             });
           });
 
@@ -2082,6 +2083,53 @@ class DBService {
             });
           }
         } catch {}
+
+        // Ensure Official Qurb Channel is always present in conversations
+        const officialConvId = `conv_qurb_official_${user.id}`;
+        if (!convMap.has(officialConvId)) {
+          convMap.set(officialConvId, {
+            id: officialConvId,
+            participantOne: user.id,
+            participantTwo: 'usr_qurb_official',
+            lastMessageText: '🚀 Update Alert: Qurb v1.0.37 is now live on Google Play Store! Crystal-clear HD calling & performance upgrades.',
+            lastMessageSenderId: 'usr_qurb_official',
+            lastMessageTime: 'Just now',
+            lastMessageTimestamp: Date.now(),
+            unreadCount: 0,
+            status: 'active',
+            isOfficial: true,
+            hasRevealedToPartner: true,
+            isPhotoRevealed: true,
+            messages: [],
+            otherUser: {
+              id: 'usr_qurb_official',
+              phone: '+923000000000',
+              fullName: 'Qurb Team ✓',
+              age: 1,
+              gender: 'other',
+              location: 'Pakistan & Global',
+              city: 'Official Channel',
+              country: 'Pakistan',
+              profession: 'Verified Broadcast',
+              education: 'Official Support',
+              height: '',
+              ethnicity: 'Pakistani',
+              marriageTimeline: 'within_1_year',
+              bio: 'Official announcements, updates, release notes, and safety tips from Qurb Team.',
+              blurPhotosByDefault: false,
+              profileVisibility: 'approved_only',
+              photos: ['/icon.svg'],
+              isVerified: true,
+              isOfficial: true,
+              religiousProfile: {
+                practiceLevel: 'practicing',
+                sect: 'Sunni',
+                prayerFrequency: '5 times daily',
+                halalDiet: 'Strictly Halal'
+              }
+            } as any
+          });
+        }
 
         const mergedList = Array.from(convMap.values()).filter(c => {
           const partner = c.otherUser?.id || (c.participantOne === user.id ? c.participantTwo : c.participantOne);

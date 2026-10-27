@@ -3,7 +3,8 @@ import {
   ArrowLeft, CheckCheck, Send, Heart, MessageCircle, FileText, Ban, 
   MoreVertical, Eye, EyeOff, ShieldCheck, Paperclip, Mic, Play, Pause, 
   Trash2, X, Download, File, Loader2, Volume2, VolumeX, Maximize2,
-  Phone, Video, PhoneCall, PhoneOff, Search, CheckSquare, Square
+  Phone, Video, PhoneCall, PhoneOff, Search, CheckSquare, Square,
+  BadgeCheck, ExternalLink, CheckCircle2
 } from 'lucide-react';
 import type { Conversation, ChatMessage, UserProfile } from '../types';
 
@@ -432,6 +433,61 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
       }
     }
   }
+
+  // Fallback for Qurb Official Channel if not present in conversations
+  if (!activeConv && activeConvId && (activeConvId.includes('qurb_official') || activePartnerId === 'usr_qurb_official')) {
+    activeConv = {
+      id: activeConvId,
+      participantOne: currentUser.id,
+      participantTwo: 'usr_qurb_official',
+      otherUser: {
+        id: 'usr_qurb_official',
+        phone: '+923000000000',
+        fullName: 'Qurb Team ✓',
+        dob: '2024-01-01',
+        age: 1,
+        gender: 'other',
+        location: 'Pakistan & Global',
+        city: 'Official Channel',
+        country: 'Pakistan',
+        profession: 'Verified Broadcast',
+        education: 'Official Support',
+        university: '',
+        height: '',
+        ethnicity: 'Pakistani',
+        marriageTimeline: 'within_1_year',
+        bio: 'Official announcements, updates, release notes, and safety tips from Qurb Team.',
+        blurPhotosByDefault: false,
+        profileVisibility: 'approved_only',
+        photos: ['/icon.svg'],
+        isVerified: true,
+        isOfficial: true,
+        religiousProfile: {
+          practiceLevel: 'practicing',
+          sect: 'Sunni',
+          madhhab: 'Hanafi',
+          prayerFrequency: '5 times daily',
+          halalDiet: 'Strictly Halal'
+        }
+      } as any,
+      lastMessageText: '🚀 Update Alert: Qurb v1.0.37 is now available on Google Play Store!',
+      lastMessageSenderId: 'usr_qurb_official',
+      lastMessageTime: 'Just now',
+      lastMessageTimestamp: Date.now(),
+      unreadCount: 0,
+      status: 'active',
+      isOfficial: true,
+      hasRevealedToPartner: true,
+      isPhotoRevealed: true,
+      messages: []
+    };
+  }
+
+  const isOfficialChannel = Boolean(
+    activeConv?.isOfficial || 
+    activeConv?.otherUser?.id === 'usr_qurb_official' || 
+    activeConvId?.includes('qurb_official')
+  );
 
   // Live profile hydration if candidate details are minimal
   useEffect(() => {
@@ -1378,6 +1434,10 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
         <div className="flex-1 overflow-y-auto p-3 space-y-2.5 pb-8">
           {(() => {
             const sortedConversations = [...filteredConversations].sort((a, b) => {
+              const aOfficial = a.isOfficial || a.otherUser?.id === 'usr_qurb_official' || a.id.includes('qurb_official');
+              const bOfficial = b.isOfficial || b.otherUser?.id === 'usr_qurb_official' || b.id.includes('qurb_official');
+              if (aOfficial && !bOfficial) return -1;
+              if (!aOfficial && bOfficial) return 1;
               const tA = a.lastMessageTimestamp || (a.lastMessageTime && !isNaN(new Date(a.lastMessageTime).getTime()) ? new Date(a.lastMessageTime).getTime() : 0);
               const tB = b.lastMessageTimestamp || (b.lastMessageTime && !isNaN(new Date(b.lastMessageTime).getTime()) ? new Date(b.lastMessageTime).getTime() : 0);
               return tB - tA;
@@ -1386,6 +1446,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
             return sortedConversations.length > 0 ? (
               sortedConversations.map(conv => {
                 const partner = conv.otherUser || { id: conv.participantTwo, fullName: 'Match Candidate', photos: [] } as any;
+                const isConvOfficial = Boolean(conv.isOfficial || partner.id === 'usr_qurb_official' || conv.id.includes('qurb_official'));
                 const isIncomingUnread = conv.lastMessageSenderId !== currentUser.id && Boolean(conv.unreadCount && conv.unreadCount > 0);
                 const isSelected = selectedConvIds.has(conv.id);
 
@@ -1408,9 +1469,11 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                     className={`p-3.5 bg-white rounded-2xl border transition-all shadow-subtle group flex items-center gap-3 cursor-pointer ${
                       isSelected
                         ? 'border-primary bg-pastel-rose/30 ring-1 ring-primary'
-                        : isIncomingUnread 
-                          ? 'border-primary/60 bg-pastel-rose/25 border-l-4 border-l-primary shadow-brand/10' 
-                          : 'border-outline hover:border-primary'
+                        : isConvOfficial
+                          ? 'border-sky-200/90 bg-gradient-to-r from-sky-50/40 via-white to-white hover:border-sky-400'
+                          : isIncomingUnread 
+                            ? 'border-primary/60 bg-pastel-rose/25 border-l-4 border-l-primary shadow-brand/10' 
+                            : 'border-outline hover:border-primary'
                     }`}
                   >
                     {/* Multi-Select Checkbox */}
@@ -1428,13 +1491,19 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                     <div 
                       onClick={(e) => {
                         e.stopPropagation();
-                        setSelectedProfile(partner);
+                        if (!isConvOfficial) {
+                          setSelectedProfile(partner);
+                        } else {
+                          setActiveConvId(conv.id);
+                        }
                       }}
                       className="relative shrink-0 cursor-pointer group/avatar"
-                      title={`Click to view ${partner.fullName}'s Biodata`}
+                      title={isConvOfficial ? "Qurb Official Channel" : `Click to view ${partner.fullName}'s Biodata`}
                     >
                       <div className={`w-12 h-12 rounded-full overflow-hidden border-2 bg-surface-variant flex items-center justify-center group-hover/avatar:border-primary transition-all shadow-subtle ${
-                        isIncomingUnread ? 'border-primary ring-2 ring-primary/20' : 'border-primary/30'
+                        isConvOfficial
+                          ? 'border-sky-300 ring-2 ring-sky-100 bg-sky-50'
+                          : isIncomingUnread ? 'border-primary ring-2 ring-primary/20' : 'border-primary/30'
                       }`}>
                         {partner.photos && partner.photos.length > 0 && !partner.photos[0].includes('photo-1534528741775-53994a69daeb') ? (
                           <img
@@ -1450,17 +1519,21 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                               }
                             }}
                             className={`w-full h-full object-cover ${
-                              partner.blurPhotosByDefault && !partner.isPhotoRevealed && !conv.isPhotoRevealed ? 'blur-xs' : ''
+                              !isConvOfficial && partner.blurPhotosByDefault && !partner.isPhotoRevealed && !conv.isPhotoRevealed ? 'blur-xs' : ''
                             }`}
                           />
                         ) : null}
                         <div
-                          className={`halal-avatar-fallback w-full h-full bg-gradient-to-br from-emerald-800 via-emerald-700 to-teal-900 items-center justify-center text-amber-200 font-serif font-black select-none ${
+                          className={`halal-avatar-fallback w-full h-full ${
+                            isConvOfficial
+                              ? 'bg-gradient-to-br from-sky-600 to-indigo-700 text-white'
+                              : 'bg-gradient-to-br from-emerald-800 via-emerald-700 to-teal-900 text-amber-200'
+                          } items-center justify-center font-serif font-black select-none ${
                             partner.photos && partner.photos.length > 0 && !partner.photos[0].includes('photo-1534528741775-53994a69daeb') ? 'hidden' : 'flex'
                           }`}
                         >
-                          <span className="text-sm tracking-wider drop-shadow-xs">
-                            {(partner.fullName || 'M').trim().charAt(0).toUpperCase()}
+                          <span className="text-sm tracking-wider drop-shadow-xs font-bold">
+                            {isConvOfficial ? 'Q' : (partner.fullName || 'M').trim().charAt(0).toUpperCase()}
                           </span>
                         </div>
                       </div>
@@ -1475,14 +1548,21 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                         <h3 
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedProfile(partner);
+                            if (!isConvOfficial) {
+                              setSelectedProfile(partner);
+                            } else {
+                              setActiveConvId(conv.id);
+                            }
                           }}
-                          className={`font-serif text-xs truncate group-hover:text-primary transition-colors cursor-pointer hover:underline ${
+                          className={`font-serif text-xs truncate group-hover:text-primary transition-colors cursor-pointer hover:underline flex items-center gap-1 ${
                             isIncomingUnread ? 'font-black text-primary' : 'font-bold text-on-surface'
                           }`}
-                          title="Click to view full biodata"
+                          title={isConvOfficial ? "Qurb Official Channel" : "Click to view full biodata"}
                         >
-                          {partner.fullName}
+                          <span>{partner.fullName}</span>
+                          {isConvOfficial && (
+                            <BadgeCheck className="w-3.5 h-3.5 text-sky-500 fill-sky-500 text-white shrink-0" />
+                          )}
                         </h3>
                         <div className="flex items-center gap-1.5 shrink-0">
                           <span className={`text-[11px] font-medium ${isIncomingUnread ? 'text-primary font-bold' : 'text-secondary'}`}>
@@ -1551,11 +1631,15 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
 
           {/* Clickable Avatar to View Full Biodata */}
           <div 
-            onClick={() => setSelectedProfile(activeConv.otherUser)}
-            className="relative shrink-0 cursor-pointer group/avatar"
-            title="Click to view full biodata"
+            onClick={() => {
+              if (!isOfficialChannel) setSelectedProfile(activeConv.otherUser);
+            }}
+            className={`relative shrink-0 ${!isOfficialChannel ? 'cursor-pointer group/avatar' : ''}`}
+            title={isOfficialChannel ? "Qurb Official Channel" : "Click to view full biodata"}
           >
-            <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-primary/40 bg-surface-variant flex items-center justify-center group-hover/avatar:border-primary transition-all shadow-subtle">
+            <div className={`w-10 h-10 rounded-full overflow-hidden border-2 bg-surface-variant flex items-center justify-center transition-all shadow-subtle ${
+              isOfficialChannel ? 'border-sky-300 ring-2 ring-sky-100 bg-sky-50' : 'border-primary/40 group-hover/avatar:border-primary'
+            }`}>
               {activeConv.otherUser.photos && activeConv.otherUser.photos.length > 0 && !activeConv.otherUser.photos[0].includes('photo-1534528741775-53994a69daeb') ? (
                 <img
                   src={activeConv.otherUser.photos[0]}
@@ -1570,6 +1654,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                     }
                   }}
                   className={`w-full h-full object-cover transition-all ${
+                    !isOfficialChannel &&
                     activeConv.otherUser.blurPhotosByDefault && 
                     !activeConv.otherUser.isPhotoRevealed &&
                     !activeConv.isPhotoRevealed &&
@@ -1581,12 +1666,16 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                 />
               ) : null}
               <div
-                className={`halal-header-avatar-fallback w-full h-full bg-gradient-to-br from-emerald-800 via-emerald-700 to-teal-900 items-center justify-center text-amber-200 font-serif font-black select-none ${
+                className={`halal-header-avatar-fallback w-full h-full ${
+                  isOfficialChannel
+                    ? 'bg-gradient-to-br from-sky-600 to-indigo-700 text-white'
+                    : 'bg-gradient-to-br from-emerald-800 via-emerald-700 to-teal-900 text-amber-200'
+                } items-center justify-center font-serif font-black select-none ${
                   activeConv.otherUser.photos && activeConv.otherUser.photos.length > 0 && !activeConv.otherUser.photos[0].includes('photo-1534528741775-53994a69daeb') ? 'hidden' : 'flex'
                 }`}
               >
-                <span className="text-xs tracking-wider drop-shadow-xs">
-                  {(activeConv.otherUser.fullName || 'M').trim().charAt(0).toUpperCase()}
+                <span className="text-xs tracking-wider drop-shadow-xs font-bold">
+                  {isOfficialChannel ? 'Q' : (activeConv.otherUser.fullName || 'M').trim().charAt(0).toUpperCase()}
                 </span>
               </div>
             </div>
@@ -1594,66 +1683,82 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
 
           {/* Clickable Name & Biodata Summary */}
           <div 
-            onClick={() => setSelectedProfile(activeConv.otherUser)}
-            className="cursor-pointer group flex flex-col min-w-0"
-            title="Click to view full biodata"
+            onClick={() => {
+              if (!isOfficialChannel) setSelectedProfile(activeConv.otherUser);
+            }}
+            className={`flex flex-col min-w-0 ${!isOfficialChannel ? 'cursor-pointer group' : ''}`}
+            title={isOfficialChannel ? "Qurb Official Channel" : "Click to view full biodata"}
           >
-            <h2 className="font-serif font-bold text-xs text-on-surface group-hover:text-primary transition-colors truncate">
-              {activeConv.otherUser.fullName}
+            <h2 className="font-serif font-bold text-xs text-on-surface group-hover:text-primary transition-colors truncate flex items-center gap-1">
+              <span>{activeConv.otherUser.fullName}</span>
+              {isOfficialChannel && (
+                <BadgeCheck className="w-3.5 h-3.5 text-sky-500 fill-sky-500 text-white shrink-0" />
+              )}
             </h2>
             <div className="text-[10px] text-secondary truncate">
-              {activeConv.otherUser.profession || 'Member'} · {activeConv.otherUser.city || activeConv.otherUser.location || 'Global'}
+              {isOfficialChannel
+                ? 'Official Announcements & Updates'
+                : `${activeConv.otherUser.profession || 'Member'} · ${activeConv.otherUser.city || activeConv.otherUser.location || 'Global'}`}
             </div>
           </div>
         </div>
 
         {/* Action Controls: Call Buttons, Biodata Button & 3-Dots Kebab Menu */}
         <div className="flex items-center gap-1.5 shrink-0 relative">
-          {/* Audio Call Button */}
-          <button
-            type="button"
-            onClick={() => handleStartCall('audio')}
-            className={`w-8.5 h-8.5 rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-xs ${
-              currentUser.isVip 
-                ? 'bg-gradient-to-tr from-emerald-50 to-teal-50 hover:from-emerald-100 hover:to-teal-100 text-emerald-700 border border-emerald-300/80 shadow-emerald-500/10' 
-                : 'bg-surface-variant hover:bg-outline text-secondary border border-outline'
-            }`}
-            title={currentUser.isVip ? "Audio Call (VIP)" : "Audio Call (Requires Barakah VIP)"}
-          >
-            <Phone className={`w-3.5 h-3.5 ${currentUser.isVip ? 'text-emerald-700' : 'text-secondary'}`} />
-          </button>
+          {isOfficialChannel ? (
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-sky-50 to-blue-50 border border-sky-200 text-sky-800 rounded-full text-[11px] font-bold shadow-2xs">
+              <CheckCircle2 className="w-3.5 h-3.5 text-sky-600 fill-sky-100" />
+              <span>Verified Channel</span>
+            </div>
+          ) : (
+            <>
+              {/* Audio Call Button */}
+              <button
+                type="button"
+                onClick={() => handleStartCall('audio')}
+                className={`w-8.5 h-8.5 rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-xs ${
+                  currentUser.isVip 
+                    ? 'bg-gradient-to-tr from-emerald-50 to-teal-50 hover:from-emerald-100 hover:to-teal-100 text-emerald-700 border border-emerald-300/80 shadow-emerald-500/10' 
+                    : 'bg-surface-variant hover:bg-outline text-secondary border border-outline'
+                }`}
+                title={currentUser.isVip ? "Audio Call (VIP)" : "Audio Call (Requires Barakah VIP)"}
+              >
+                <Phone className={`w-3.5 h-3.5 ${currentUser.isVip ? 'text-emerald-700' : 'text-secondary'}`} />
+              </button>
 
-          {/* Video Call Button */}
-          <button
-            type="button"
-            onClick={() => handleStartCall('video')}
-            className={`w-8.5 h-8.5 rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-xs ${
-              currentUser.isVip 
-                ? 'bg-gradient-to-tr from-sky-50 to-indigo-50 hover:from-sky-100 hover:to-indigo-100 text-sky-700 border border-sky-300/80 shadow-sky-500/10' 
-                : 'bg-surface-variant hover:bg-outline text-secondary border border-outline'
-            }`}
-            title={currentUser.isVip ? "Video Call (VIP)" : "Video Call (Requires Barakah VIP)"}
-          >
-            <Video className={`w-3.5 h-3.5 ${currentUser.isVip ? 'text-sky-700' : 'text-secondary'}`} />
-          </button>
+              {/* Video Call Button */}
+              <button
+                type="button"
+                onClick={() => handleStartCall('video')}
+                className={`w-8.5 h-8.5 rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-xs ${
+                  currentUser.isVip 
+                    ? 'bg-gradient-to-tr from-sky-50 to-indigo-50 hover:from-sky-100 hover:to-indigo-100 text-sky-700 border border-sky-300/80 shadow-sky-500/10' 
+                    : 'bg-surface-variant hover:bg-outline text-secondary border border-outline'
+                }`}
+                title={currentUser.isVip ? "Video Call (VIP)" : "Video Call (Requires Barakah VIP)"}
+              >
+                <Video className={`w-3.5 h-3.5 ${currentUser.isVip ? 'text-sky-700' : 'text-secondary'}`} />
+              </button>
 
-          <button
-            onClick={() => setSelectedProfile(activeConv.otherUser)}
-            className="text-xs text-primary font-bold bg-pastel-rose hover:bg-pastel-rose/80 px-3 py-1.5 rounded-full border border-pastel-rose-border transition-all flex items-center gap-1.5 shadow-2xs active:scale-95"
-            title="View Full Biodata"
-          >
-            <FileText className="w-3.5 h-3.5" />
-            <span>Biodata</span>
-          </button>
+              <button
+                onClick={() => setSelectedProfile(activeConv.otherUser)}
+                className="text-xs text-primary font-bold bg-pastel-rose hover:bg-pastel-rose/80 px-3 py-1.5 rounded-full border border-pastel-rose-border transition-all flex items-center gap-1.5 shadow-2xs active:scale-95"
+                title="View Full Biodata"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>Biodata</span>
+              </button>
 
-          {/* 3-Dots Menu Button */}
-          <button
-            onClick={() => setShowMoreMenu(prev => !prev)}
-            className="w-8 h-8 rounded-full bg-surface-variant hover:bg-outline border border-outline flex items-center justify-center text-secondary hover:text-on-surface transition-all active:scale-95"
-            title="More options"
-          >
-            <MoreVertical className="w-4 h-4" />
-          </button>
+              {/* 3-Dots Menu Button */}
+              <button
+                onClick={() => setShowMoreMenu(prev => !prev)}
+                className="w-8 h-8 rounded-full bg-surface-variant hover:bg-outline border border-outline flex items-center justify-center text-secondary hover:text-on-surface transition-all active:scale-95"
+                title="More options"
+              >
+                <MoreVertical className="w-4 h-4" />
+              </button>
+            </>
+          )}
 
           {/* 3-Dots Dropdown Menu */}
           {showMoreMenu && (
@@ -2004,8 +2109,65 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                         )}
                       </div>
                     ) : (
-                      /* Standard Text Message */
-                      <p>{msg.text}</p>
+                      /* Standard Text Message with URL Parsing & Play Store CTA */
+                      <div className="whitespace-pre-line leading-relaxed text-xs">
+                        {(() => {
+                          const text = msg.text || '';
+                          const urlRegex = /(https?:\/\/[^\s]+)/g;
+                          const parts = text.split(urlRegex);
+
+                          return (
+                            <>
+                              {parts.map((part, pIdx) => {
+                                if (part.match(urlRegex)) {
+                                  const isPlayStore = part.includes('play.google.com/store/apps');
+                                  if (isPlayStore) {
+                                    return (
+                                      <div key={pIdx} className="my-2.5">
+                                        <a
+                                          href={part}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 text-white font-bold text-xs shadow-md hover:from-emerald-700 hover:to-teal-800 transition-all active:scale-95 no-underline"
+                                        >
+                                          <Play className="w-3.5 h-3.5 fill-current" />
+                                          <span>Update on Google Play Store</span>
+                                          <ExternalLink className="w-3 h-3 opacity-80" />
+                                        </a>
+                                      </div>
+                                    );
+                                  }
+                                  return (
+                                    <a
+                                      key={pIdx}
+                                      href={part}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className={`underline font-semibold break-all ${isMe ? 'text-white hover:text-white/80' : 'text-primary hover:text-primary-dark'}`}
+                                    >
+                                      {part}
+                                    </a>
+                                  );
+                                }
+                                return <span key={pIdx}>{part}</span>;
+                              })}
+                              {msg.actionUrl && !text.includes(msg.actionUrl) && (
+                                <div className="mt-2.5">
+                                  <a
+                                    href={msg.actionUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary text-white text-xs font-bold shadow-xs hover:bg-primary-dark transition-all"
+                                  >
+                                    <span>Open Link</span>
+                                    <ExternalLink className="w-3 h-3" />
+                                  </a>
+                                </div>
+                              )}
+                            </>
+                          );
+                        })()}
+                      </div>
                     )}
                   </div>
                   <div className="flex items-center gap-1 text-[9px] text-secondary px-1 font-medium">
@@ -2049,104 +2211,111 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
       )}
 
       {/* Message Input Footer with Voice Record & Auto-Compressed Attachment */}
-      <footer className="p-2.5 bg-white border-t border-outline flex items-center gap-2 z-20">
-        {/* Hidden File Attachment Input */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          onChange={handleFileChange}
-          accept="image/*,video/*,application/pdf"
-          className="hidden"
-        />
+      {isOfficialChannel ? (
+        <footer className="p-3.5 bg-surface-variant/90 border-t border-outline flex items-center justify-center gap-2 text-xs text-secondary text-center z-20">
+          <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span>This is an official announcement channel. Only Qurb Admins can broadcast messages.</span>
+        </footer>
+      ) : (
+        <footer className="p-2.5 bg-white border-t border-outline flex items-center gap-2 z-20">
+          {/* Hidden File Attachment Input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            onChange={handleFileChange}
+            accept="image/*,video/*,application/pdf"
+            className="hidden"
+          />
 
-        {isRecording ? (
-          /* Live Recording Bar */
-          <div className="flex-1 flex items-center justify-between bg-rose-50 border border-rose-200 rounded-full px-4 py-1.5 animate-fade-in">
-            <div className="flex items-center gap-2.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-ping" />
-              <span className="text-xs font-mono font-bold text-rose-700">
-                {formatSeconds(recordingSeconds)}
-              </span>
-              <span className="text-xs text-rose-600/80 italic font-medium hidden sm:inline">
-                Recording voice note...
-              </span>
+          {isRecording ? (
+            /* Live Recording Bar */
+            <div className="flex-1 flex items-center justify-between bg-rose-50 border border-rose-200 rounded-full px-4 py-1.5 animate-fade-in">
+              <div className="flex items-center gap-2.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-ping" />
+                <span className="text-xs font-mono font-bold text-rose-700">
+                  {formatSeconds(recordingSeconds)}
+                </span>
+                <span className="text-xs text-rose-600/80 italic font-medium hidden sm:inline">
+                  Recording voice note...
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                {/* Cancel Button */}
+                <button
+                  type="button"
+                  onClick={handleCancelRecording}
+                  className="w-8 h-8 rounded-full bg-white hover:bg-rose-100 text-rose-600 flex items-center justify-center transition-all shadow-2xs cursor-pointer"
+                  title="Cancel recording"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+
+                {/* Stop & Send Button */}
+                <button
+                  type="button"
+                  onClick={handleStopAndSendVoice}
+                  className="px-3 py-1.5 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-brand flex items-center gap-1.5 transition-all cursor-pointer"
+                  title="Send voice note"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Send</span>
+                </button>
+              </div>
             </div>
-
-            <div className="flex items-center gap-1.5">
-              {/* Cancel Button */}
+          ) : (
+            /* Normal Message Input Bar */
+            <>
+              {/* Attachment Button */}
               <button
                 type="button"
-                onClick={handleCancelRecording}
-                className="w-8 h-8 rounded-full bg-white hover:bg-rose-100 text-rose-600 flex items-center justify-center transition-all shadow-2xs cursor-pointer"
-                title="Cancel recording"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-
-              {/* Stop & Send Button */}
-              <button
-                type="button"
-                onClick={handleStopAndSendVoice}
-                className="px-3 py-1.5 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-brand flex items-center gap-1.5 transition-all cursor-pointer"
-                title="Send voice note"
-              >
-                <Send className="w-3.5 h-3.5" />
-                <span>Send</span>
-              </button>
-            </div>
-          </div>
-        ) : (
-          /* Normal Message Input Bar */
-          <>
-            {/* Attachment Button */}
-            <button
-              type="button"
-              onClick={handleAttachmentClick}
-              disabled={isUploadingMedia}
-              className="w-9 h-9 rounded-full bg-surface-variant hover:bg-outline border border-outline flex items-center justify-center text-secondary hover:text-primary transition-all active:scale-95 disabled:opacity-40 shrink-0 cursor-pointer"
-              title="Attach photo, video, or document (auto-compressed)"
-            >
-              <Paperclip className="w-4 h-4" />
-            </button>
-
-            {/* Text Input */}
-            <input
-              type="text"
-              value={inputText}
-              onChange={(e) => handleTextInputChange(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleSendMessage();
-              }}
-              placeholder="Write a respectful message..."
-              disabled={isUploadingMedia}
-              className="flex-1 bg-surface-variant border border-outline rounded-full px-3.5 py-2 text-xs text-on-surface outline-none focus:bg-white focus:border-primary placeholder:text-secondary/70 transition-all"
-            />
-
-            {/* Conditional Send vs Mic Button */}
-            {inputText.trim() ? (
-              <button
-                type="button"
-                onClick={handleSendMessage}
+                onClick={handleAttachmentClick}
                 disabled={isUploadingMedia}
-                className="w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center shadow-brand hover:bg-primary-dark active:scale-95 disabled:opacity-40 transition-all shrink-0 cursor-pointer"
-                title="Send message"
+                className="w-9 h-9 rounded-full bg-surface-variant hover:bg-outline border border-outline flex items-center justify-center text-secondary hover:text-primary transition-all active:scale-95 disabled:opacity-40 shrink-0 cursor-pointer"
+                title="Attach photo, video, or document (auto-compressed)"
               >
-                <Send className="w-4 h-4" />
+                <Paperclip className="w-4 h-4" />
               </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleStartRecording}
+
+              {/* Text Input */}
+              <input
+                type="text"
+                value={inputText}
+                onChange={(e) => handleTextInputChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSendMessage();
+                }}
+                placeholder="Write a respectful message..."
                 disabled={isUploadingMedia}
-                className="w-9 h-9 rounded-full bg-primary/10 hover:bg-primary text-primary hover:text-white border border-primary/20 flex items-center justify-center shadow-brand active:scale-95 disabled:opacity-40 transition-all shrink-0 cursor-pointer"
-                title="Record voice note"
-              >
-                <Mic className="w-4 h-4" />
-              </button>
-            )}
-          </>
-        )}
-      </footer>
+                className="flex-1 bg-surface-variant border border-outline rounded-full px-3.5 py-2 text-xs text-on-surface outline-none focus:bg-white focus:border-primary placeholder:text-secondary/70 transition-all"
+              />
+
+              {/* Conditional Send vs Mic Button */}
+              {inputText.trim() ? (
+                <button
+                  type="button"
+                  onClick={handleSendMessage}
+                  disabled={isUploadingMedia}
+                  className="w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center shadow-brand hover:bg-primary-dark active:scale-95 disabled:opacity-40 transition-all shrink-0 cursor-pointer"
+                  title="Send message"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleStartRecording}
+                  disabled={isUploadingMedia}
+                  className="w-9 h-9 rounded-full bg-primary/10 hover:bg-primary text-primary hover:text-white border border-primary/20 flex items-center justify-center shadow-brand active:scale-95 disabled:opacity-40 transition-all shrink-0 cursor-pointer"
+                  title="Record voice note"
+                >
+                  <Mic className="w-4 h-4" />
+                </button>
+              )}
+            </>
+          )}
+        </footer>
+      )}
 
       {/* Respectful Close Modal with Real Du'a */}
       {showRespectfulCloseModal && activeConv && (

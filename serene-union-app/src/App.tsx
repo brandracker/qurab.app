@@ -1115,6 +1115,12 @@ export const App: React.FC = () => {
             isOpen={Boolean(activeAnnouncement)}
             title={activeAnnouncement.title}
             message={activeAnnouncement.message}
+            actionUrl="https://play.google.com/store/apps/details?id=app.qurb.serene&pcampaignid=web_share"
+            onAction={() => {
+              try {
+                window.open('https://play.google.com/store/apps/details?id=app.qurb.serene&pcampaignid=web_share', '_blank', 'noopener,noreferrer');
+              } catch {}
+            }}
             onClose={() => {
               if (activeAnnouncement) {
                 try {

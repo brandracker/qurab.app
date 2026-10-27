@@ -1,5 +1,5 @@
 export const PLAY_STORE_PACKAGE = 'app.qurb.serene';
-export const PLAY_STORE_URL = `https://play.google.com/store/apps/details?id=${PLAY_STORE_PACKAGE}`;
+export const PLAY_STORE_URL = `https://play.google.com/store/apps/details?id=${PLAY_STORE_PACKAGE}&pcampaignid=web_share`;
 export const PLAY_STORE_MARKET_URI = `market://details?id=${PLAY_STORE_PACKAGE}`;
 
 class RatingService {

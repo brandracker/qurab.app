@@ -1643,28 +1643,28 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
           <button
             type="button"
             onClick={() => handleStartCall('audio')}
-            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-95 cursor-pointer ${
+            className={`w-8.5 h-8.5 rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-xs ${
               currentUser.isVip 
-                ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 border border-emerald-500/20' 
+                ? 'bg-gradient-to-tr from-emerald-50 to-teal-50 hover:from-emerald-100 hover:to-teal-100 text-emerald-700 border border-emerald-300/80 shadow-emerald-500/10' 
                 : 'bg-surface-variant hover:bg-outline text-secondary border border-outline'
             }`}
             title={currentUser.isVip ? "Audio Call (VIP)" : "Audio Call (Requires Barakah VIP)"}
           >
-            <Phone className="w-3.5 h-3.5" />
+            <Phone className={`w-3.5 h-3.5 ${currentUser.isVip ? 'text-emerald-700' : 'text-secondary'}`} />
           </button>
 
           {/* Video Call Button */}
           <button
             type="button"
             onClick={() => handleStartCall('video')}
-            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-95 cursor-pointer ${
+            className={`w-8.5 h-8.5 rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-xs ${
               currentUser.isVip 
-                ? 'bg-sky-500/10 hover:bg-sky-500/20 text-sky-600 border border-sky-500/20' 
+                ? 'bg-gradient-to-tr from-sky-50 to-indigo-50 hover:from-sky-100 hover:to-indigo-100 text-sky-700 border border-sky-300/80 shadow-sky-500/10' 
                 : 'bg-surface-variant hover:bg-outline text-secondary border border-outline'
             }`}
             title={currentUser.isVip ? "Video Call (VIP)" : "Video Call (Requires Barakah VIP)"}
           >
-            <Video className="w-3.5 h-3.5" />
+            <Video className={`w-3.5 h-3.5 ${currentUser.isVip ? 'text-sky-700' : 'text-secondary'}`} />
           </button>
 
           <button

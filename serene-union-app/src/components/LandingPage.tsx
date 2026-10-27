@@ -32,7 +32,7 @@ import { isLocalEnvironment } from '../services/apiConfig';
 
 
 // Official Google Play Store listing URL
-export const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=app.qurb.serene';
+export const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=app.qurb.serene&pcampaignid=web_share';
 
 // Official Store Icons from D:\Marriage App\logos\icons
 const GooglePlayIcon: React.FC<{ className?: string }> = ({ className = "w-5 h-5" }) => (

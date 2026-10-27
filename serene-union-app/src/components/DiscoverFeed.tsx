@@ -29,8 +29,7 @@ import {
   Plane, 
   Star,
   Lock,
-  MapPin,
-  Sparkles
+  MapPin
 } from 'lucide-react';
 import type { UserProfile } from '../types';
 import { FilterModal } from './FilterModal';
@@ -1489,7 +1488,7 @@ export const DiscoverFeed: React.FC<Props> = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className="bg-white rounded-3xl p-5 max-w-sm w-full text-center shadow-2xl border border-outline animate-scale-in">
             <div className="w-14 h-14 rounded-full bg-pastel-rose text-primary flex items-center justify-center mx-auto mb-3 shadow-subtle">
-              <Sparkles className="w-7 h-7" />
+              <ShieldCheck className="w-7 h-7" />
             </div>
             <h3 className="font-serif text-lg font-bold text-on-surface">
               Complete Your Biodata First

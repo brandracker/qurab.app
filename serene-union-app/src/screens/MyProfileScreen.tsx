@@ -39,8 +39,7 @@ import {
   TrendingUp,
   Sliders,
   Gift,
-  ChevronRight,
-  Sparkles
+  ChevronRight
 } from 'lucide-react';
 import type { UserProfile } from '../types';
 import { dbService } from '../services/dbService';
@@ -458,14 +457,14 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                     isHigh ? 'bg-emerald-100 text-emerald-700' : (isMid ? 'bg-pastel-amber text-amber-700' : 'bg-rose-100 text-rose-700')
                   }`}>
-                    <Sparkles className="w-4 h-4" />
+                    <ShieldCheck className="w-4 h-4" />
                   </div>
                   <div>
                     <h3 className="font-serif text-sm font-bold text-on-surface">
                       Biodata Completeness
                     </h3>
                     <p className="text-[10px] text-secondary">
-                      {isHigh ? '✨ Strong Profile (High Visibility)' : (isMid ? '👍 Good Profile (Meets Feed Gate)' : '⚠️ Incomplete (Hidden from Discover Feed)')}
+                      {isHigh ? 'Complete Profile (High Visibility)' : (isMid ? 'Good Profile (Meets Feed Gate)' : '⚠️ Incomplete (Hidden from Discover Feed)')}
                     </p>
                   </div>
                 </div>

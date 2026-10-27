@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { X, Crown, Sparkles, CheckCircle2, RotateCcw, Mail, Eye, ShieldCheck, ArrowRight } from 'lucide-react';
+import { X, Crown, CheckCircle2, RotateCcw, Mail, Eye, ShieldCheck, ArrowRight } from 'lucide-react';
 import { backNavigationService } from '../services/backNavigationService';
 
 interface TrialPromoModalProps {
@@ -68,7 +68,7 @@ export const TrialPromoModal: React.FC<TrialPromoModalProps> = ({
         <div className="p-5 flex flex-col gap-3.5">
           <div>
             <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/40 text-[10px] font-bold text-amber-300 font-mono uppercase tracking-wider mb-1.5">
-              <Sparkles className="w-3 h-3 text-amber-300" />
+              <Crown className="w-3 h-3 text-amber-300" />
               <span>Special Matrimony Gift</span>
             </div>
             <h3 id="trial-promo-title" className="font-serif text-xl font-bold text-white tracking-tight leading-tight">

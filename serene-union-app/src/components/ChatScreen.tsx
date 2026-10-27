@@ -191,8 +191,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
   const [selectedProfile, setSelectedProfile] = useState<UserProfile | null>(null);
   const [roomMessages, setRoomMessages] = useState<ChatMessage[]>(() => {
     if (!initialConvId) return [];
-    const existing = dbService.getConversations().find(c => c.id === initialConvId);
-    return existing?.messages || [];
+    return dbService.getCachedRoomMessages(initialConvId);
   });
   const [chatSearchQuery, setChatSearchQuery] = useState<string>('');
   const [isSelectMode, setIsSelectMode] = useState<boolean>(false);
@@ -362,6 +361,23 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
       ? activeConvId.replace('conv_', '').split('_').find(id => id !== currentUser.id && id.length > 0)
       : null;
 
+    // 1. Check granular room cache first (Fastest, 0ms paint)
+    const cached = dbService.getCachedRoomMessages(activeConvId);
+    if (cached.length > 0) {
+      setRoomMessages(cached);
+      return;
+    }
+
+    if (partnerId) {
+      const partnerKey = `conv_${[currentUser.id, partnerId].sort().join('_')}`;
+      const partnerCached = dbService.getCachedRoomMessages(partnerKey);
+      if (partnerCached.length > 0) {
+        setRoomMessages(partnerCached);
+        return;
+      }
+    }
+
+    // 2. Fallback to conversation list cache
     const existing = dbService.getConversations().find(c => 
       c.id === activeConvId || 
       (partnerId && c.otherUser?.id === partnerId)
@@ -571,7 +587,9 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
               const incoming = data.message;
               setRoomMessages(prev => {
                 if (prev.some(m => m.id === incoming.id)) return prev;
-                return [...prev, incoming];
+                const next = [...prev, incoming];
+                dbService.setCachedRoomMessages(targetRoomId, next);
+                return next;
               });
               // Sync local conversations cache
               const convs = dbService.getConversations();

@@ -298,6 +298,7 @@ chatRouter.get('/:id/messages', async (c) => {
       const anyConv: any = await c.env.DB.prepare(`
         SELECT id FROM conversations 
         WHERE ? LIKE '%' || participant_one || '%' AND ? LIKE '%' || participant_two || '%'
+        LIMIT 1
       `).bind(trimmed, trimmed).first();
 
       if (anyConv) {

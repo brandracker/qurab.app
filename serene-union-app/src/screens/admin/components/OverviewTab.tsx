@@ -10,7 +10,6 @@ import {
   ArrowRight,
   Calendar,
   ChevronRight,
-  Sparkles,
   ExternalLink,
   ChevronDown,
   ChevronUp,
@@ -314,7 +313,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ stats, onRefresh, onSe
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <div className="p-1.5 rounded-lg bg-sky-500/20 text-sky-400">
-                    <Sparkles className="w-3.5 h-3.5" />
+                    <TrendingUp className="w-3.5 h-3.5" />
                   </div>
                   <div>
                     <h4 className="text-xs font-bold text-white tracking-wide">
@@ -476,7 +475,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ stats, onRefresh, onSe
             {selectedDateRow ? (
               <div className="flex items-center justify-between p-3 rounded-xl bg-sky-500/10 border border-sky-500/20 text-xs">
                 <div className="flex items-center space-x-2.5">
-                  <Sparkles className="w-4 h-4 text-sky-400" />
+                  <Calendar className="w-4 h-4 text-sky-400" />
                   <div>
                     <span className="font-bold text-white">
                       {formatDisplayDate(selectedFilterDate)}

@@ -6,7 +6,6 @@ import {
   Check, 
   Users, 
   Crown, 
-  Sparkles, 
   ShieldCheck, 
   Clock, 
   CheckCircle2, 
@@ -238,7 +237,7 @@ export const ReferralHubModal: React.FC<Props> = ({
               {/* REWARD HIGHLIGHTS */}
               <div className="bg-white rounded-3xl p-4 border border-outline/60 shadow-xs space-y-3">
                 <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-amber-500" />
+                  <Gift className="w-4 h-4 text-amber-500" />
                   <span>What You Unlock Free For 1 Month:</span>
                 </h4>
 

@@ -1027,6 +1027,29 @@ class DBService {
     return [];
   }
 
+  getCachedRoomMessages(conversationId: string): ChatMessage[] {
+    if (!conversationId) return [];
+    try {
+      const data = localStorage.getItem(`serene_msgs_${conversationId}`);
+      if (data) {
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    // Fallback to nested messages inside conversation list
+    const conv = this.getConversations().find(c => c.id === conversationId || (c.otherUser && conversationId.includes(c.otherUser.id)));
+    return conv?.messages || [];
+  }
+
+  setCachedRoomMessages(conversationId: string, messages: ChatMessage[]): void {
+    if (!conversationId || !Array.isArray(messages)) return;
+    try {
+      localStorage.setItem(`serene_msgs_${conversationId}`, JSON.stringify(messages));
+    } catch (e) {
+      console.warn('Storage quota limit reached for message cache:', e);
+    }
+  }
+
   async sendLiveMessage(conversationId: string, text: string): Promise<ChatMessage> {
     const user = this.getCurrentUser();
     const msg: ChatMessage = {
@@ -1038,6 +1061,9 @@ class DBService {
       isRead: true,
       waliNotified: true
     };
+
+    const currentCached = this.getCachedRoomMessages(conversationId);
+    this.setCachedRoomMessages(conversationId, [...currentCached, msg]);
 
     const conversations = this.getConversations();
     const conv = conversations.find(c => c.id === conversationId);
@@ -1880,8 +1906,11 @@ class DBService {
       if (!user?.id || user.id === 'usr_guest') return [];
       const blockedIds = new Set(this.getUserBlocked(user.id).map((b: any) => b.id));
 
-      const res = await fetch(`${API_BASE}/conversations?userId=${user.id}`);
-      const data = await res.json();
+      const [data, mutualList] = await Promise.all([
+        fetch(`${API_BASE}/conversations?userId=${user.id}`).then(r => r.json()).catch(() => ({ success: false, conversations: [] })),
+        this.fetchMutualMatches().catch(() => [])
+      ]);
+
       if (data.success && Array.isArray(data.conversations)) {
         const localConvs = this.getConversations();
         const convMap = new Map<string, Conversation>();
@@ -1947,7 +1976,6 @@ class DBService {
 
         // Auto-seed confirmed mutual matches so they ALWAYS show in Chat screen immediately
         try {
-          const mutualList = await this.fetchMutualMatches();
           if (Array.isArray(mutualList)) {
             mutualList.forEach(m => {
               if (!m || !m.id || blockedIds.has(m.id)) return;
@@ -2105,6 +2133,11 @@ class DBService {
           openedAt: m.openedAt || m.opened_at
         }));
 
+        this.setCachedRoomMessages(conversationId, mappedMessages);
+        if (conv?.id && conv.id !== conversationId) {
+          this.setCachedRoomMessages(conv.id, mappedMessages);
+        }
+
         if (conv) {
           conv.messages = mappedMessages;
           let revealChanged = false;
@@ -2141,8 +2174,7 @@ class DBService {
     } catch (err) {
       console.warn('Fetch messages notice:', err);
     }
-    const localConv = this.getConversations().find(c => c.id === conversationId || (c.otherUser && conversationId.includes(c.otherUser.id)));
-    return localConv?.messages || [];
+    return this.getCachedRoomMessages(conversationId);
   }
 
   async sendHeartbeat(userId?: string): Promise<boolean> {

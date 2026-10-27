@@ -20,7 +20,7 @@ import {
   AlertCircle,
   Heart,
   MessageSquare,
-  Flame,
+  HeartHandshake,
   X,
   Maximize2,
   Bot,
@@ -575,7 +575,7 @@ export const SeedProfilesTab: React.FC<SeedProfilesTabProps> = ({ adminToken }) 
           <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/5">
             <div className="text-xs text-slate-400 font-medium">Active Mutual Matches</div>
             <div className="flex items-center space-x-1.5 text-base font-bold text-rose-400 mt-1">
-              <Flame className="w-4 h-4 text-rose-500" />
+              <HeartHandshake className="w-4 h-4 text-rose-500" />
               <span>{totalMutualMatches} Matches</span>
             </div>
           </div>
@@ -731,7 +731,7 @@ export const SeedProfilesTab: React.FC<SeedProfilesTabProps> = ({ adminToken }) 
                     <div className="h-3.5 w-px bg-white/10" />
 
                     <div className="flex items-center space-x-1.5 text-amber-400" title="Mutual matches created">
-                      <Flame className="w-4 h-4 text-amber-500" />
+                      <HeartHandshake className="w-4 h-4 text-amber-500" />
                       <span className="font-bold">{matchesCount}</span>
                       <span className="text-[10px] text-slate-400">Matches</span>
                     </div>

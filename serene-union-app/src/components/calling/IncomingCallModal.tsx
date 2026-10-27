@@ -1,5 +1,5 @@
 import React from 'react';
-import { Phone, PhoneOff, Video, Crown, MapPin, Sparkles, ShieldCheck } from 'lucide-react';
+import { Phone, PhoneOff, Video, Crown, MapPin, ShieldCheck } from 'lucide-react';
 import { webRtcService, type CallerInfo, type CallType } from '../../services/webRtcService';
 
 interface IncomingCallModalProps {
@@ -86,7 +86,7 @@ export const IncomingCallModal: React.FC<IncomingCallModalProps> = ({
               <span>{caller.city || 'Pakistan'}</span>
             </span>
             <span className="text-emerald-400 font-semibold flex items-center space-x-1 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
-              <Sparkles className="w-3.5 h-3.5" />
+              <ShieldCheck className="w-3.5 h-3.5" />
               <span>Verified Rishta</span>
             </span>
           </div>

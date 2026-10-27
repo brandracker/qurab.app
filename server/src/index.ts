@@ -12,6 +12,7 @@ import { walletRouter } from './routes/wallet';
 import { notificationsRouter } from './routes/notifications';
 import { adminRouter } from './routes/admin';
 import { referralsRouter } from './routes/referrals';
+import { versionRouter } from './routes/version';
 
 const app = new Hono<AppContext>();
 
@@ -72,6 +73,8 @@ app.route('/api/wallet', walletRouter);
 app.route('/api/notifications', notificationsRouter);
 app.route('/api/admin', adminRouter);
 app.route('/api/referrals', referralsRouter);
+app.route('/api/version', versionRouter);
+app.route('/api/app-version', versionRouter);
 
 // Global 404 & Error Handler
 app.notFound((c) => {

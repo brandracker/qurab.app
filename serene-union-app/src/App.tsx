@@ -34,6 +34,8 @@ import { MembershipUpgradeModal } from './components/MembershipUpgradeModal';
 import { webRtcService, type CallState, type CallerInfo, type CallType } from './services/webRtcService';
 import { IncomingCallModal } from './components/calling/IncomingCallModal';
 import { ActiveCallModal } from './components/calling/ActiveCallModal';
+import { versionCheckService, type VersionPolicy } from './services/versionCheckService';
+import { HardUpdateModal } from './components/HardUpdateModal';
 
 type OnboardingStep = 
   | 'welcome' 
@@ -189,6 +191,22 @@ export const App: React.FC = () => {
   const [activeAnnouncement, setActiveAnnouncement] = useState<{ id: string; title: string; message: string } | null>(null);
   const [showTrialPromo, setShowTrialPromo] = useState<boolean>(false);
   const [showVipUpgradeModal, setShowVipUpgradeModal] = useState<boolean>(false);
+  const [hardUpdateData, setHardUpdateData] = useState<VersionPolicy | null>(null);
+
+  // Remote Version Check & Hard Force-Update Gate
+  useEffect(() => {
+    const checkAppVersion = async () => {
+      try {
+        const policy = await versionCheckService.checkVersion();
+        if (policy?.forceUpdateRequired) {
+          setHardUpdateData(policy);
+        }
+      } catch (err) {
+        console.warn('Version check notice:', err);
+      }
+    };
+    checkAppVersion();
+  }, []);
 
   // Global WebRTC Calling State (Lifted to App Root for Discover, Matches, Profile, Chat & Settings)
   const [callState, setCallState] = useState<CallState>('idle');
@@ -1216,6 +1234,23 @@ export const App: React.FC = () => {
           callType={activeCallType}
           partner={activeCallPartner}
         />
+
+        {/* Remote Force-Update Hard Lock Modal */}
+        {hardUpdateData && (
+          <HardUpdateModal
+            isOpen={Boolean(hardUpdateData)}
+            title={hardUpdateData.title}
+            message={hardUpdateData.message}
+            latestVersionName={hardUpdateData.latestVersionName}
+            playStoreUrl={hardUpdateData.playStoreUrl}
+            onCheckAgain={async () => {
+              const policy = await versionCheckService.checkVersion(true);
+              if (!policy?.forceUpdateRequired) {
+                setHardUpdateData(null);
+              }
+            }}
+          />
+        )}
       </div>
     </div>
   );

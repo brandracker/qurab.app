@@ -14,6 +14,7 @@ import { ReferralsTab } from './components/ReferralsTab';
 import { UserInspectModal } from './components/UserInspectModal';
 import { BroadcastModal } from './components/BroadcastModal';
 import { SubscriptionModal } from './components/SubscriptionModal';
+import { AppVersionModal } from './components/AppVersionModal';
 import type { 
   AdminTab, 
   DashboardStats, 
@@ -86,8 +87,9 @@ export const AdminPortal: React.FC = () => {
   const [photos, setPhotos] = useState<CandidatePhoto[]>([]);
   const [photoGenderFilter, setPhotoGenderFilter] = useState('');
 
-  // Global Broadcast Modal State
+  // Global Broadcast & Version Policy Modal State
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
+  const [showVersionModal, setShowVersionModal] = useState(false);
   const [isBroadcasting, setIsBroadcasting] = useState(false);
 
   const showToast = (msg: string) => {
@@ -512,6 +514,7 @@ export const AdminPortal: React.FC = () => {
       <AdminHeader
         adminProfile={adminProfile}
         onOpenBroadcast={() => setShowBroadcastModal(true)}
+        onOpenVersionPolicy={() => setShowVersionModal(true)}
         onLogout={handleLogout}
       />
 
@@ -657,6 +660,16 @@ export const AdminPortal: React.FC = () => {
         onSendBroadcast={handleSendBroadcast}
         isBroadcasting={isBroadcasting}
       />
+
+      {/* App Version & Force Update Policy Modal */}
+      {showVersionModal && adminToken && (
+        <AppVersionModal
+          isOpen={showVersionModal}
+          onClose={() => setShowVersionModal(false)}
+          adminToken={adminToken}
+          onSuccessToast={showToast}
+        />
+      )}
     </div>
   );
 };

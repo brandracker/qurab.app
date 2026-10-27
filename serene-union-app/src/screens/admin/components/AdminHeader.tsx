@@ -1,17 +1,19 @@
 import React from 'react';
-import { Megaphone, LogOut } from 'lucide-react';
+import { Megaphone, LogOut, ArrowUpCircle } from 'lucide-react';
 import type { AdminProfile } from '../types';
 
 interface AdminHeaderProps {
   adminProfile: AdminProfile | null;
   onOpenBroadcast: () => void;
   onLogout: () => void;
+  onOpenVersionPolicy?: () => void;
 }
 
 export const AdminHeader: React.FC<AdminHeaderProps> = ({
   adminProfile,
   onOpenBroadcast,
-  onLogout
+  onLogout,
+  onOpenVersionPolicy
 }) => {
   return (
     <header className="h-16 border-b border-white/10 bg-[#0F172A]/90 backdrop-blur-xl px-6 flex items-center justify-between sticky top-0 z-40">
@@ -31,6 +33,17 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
       </div>
 
       <div className="flex items-center space-x-3">
+        {onOpenVersionPolicy && (
+          <button
+            onClick={onOpenVersionPolicy}
+            className="px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 border border-amber-500/30 text-xs font-semibold transition-all flex items-center space-x-1.5 cursor-pointer"
+            title="Manage App Versions & Force Update Lock"
+          >
+            <ArrowUpCircle className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden sm:inline">Force Update</span>
+          </button>
+        )}
+
         <button
           onClick={onOpenBroadcast}
           className="px-3 py-1.5 rounded-xl bg-[#FF2560]/20 hover:bg-[#FF2560]/30 text-rose-200 border border-[#FF2560]/40 text-xs font-semibold transition-all flex items-center space-x-1.5 cursor-pointer"

@@ -2155,3 +2155,88 @@ adminRouter.post('/ai-agent/catchup', async (c) => {
     return c.json({ success: false, error: error.message }, 500);
   }
 });
+
+// 25. App Version Policy: Get Current Configuration
+adminRouter.get('/app-version', async (c) => {
+  try {
+    const rows = await c.env.DB.prepare(`
+      SELECT key, value FROM system_settings 
+      WHERE key IN (
+        'min_supported_version_code',
+        'latest_version_code',
+        'latest_version_name',
+        'force_update_enabled',
+        'update_title',
+        'update_message',
+        'play_store_url'
+      )
+    `).all();
+
+    const configMap: Record<string, string> = {};
+    if (rows && rows.results) {
+      for (const row of rows.results as any[]) {
+        configMap[row.key] = row.value;
+      }
+    }
+
+    return c.json({
+      success: true,
+      minSupportedVersionCode: parseInt(configMap['min_supported_version_code'] || '37', 10),
+      latestVersionCode: parseInt(configMap['latest_version_code'] || '38', 10),
+      latestVersionName: configMap['latest_version_name'] || '1.0.37',
+      forceUpdateEnabled: configMap['force_update_enabled'] === '1',
+      updateTitle: configMap['update_title'] || 'Critical Update Required',
+      updateMessage: configMap['update_message'] || 
+        'A new version of Qurb is required to continue. Please update now from the Google Play Store for critical features and fixes.',
+      playStoreUrl: configMap['play_store_url'] || 
+        'https://play.google.com/store/apps/details?id=app.qurb.serene&pcampaignid=web_share'
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// 26. App Version Policy: Update Configuration
+adminRouter.post('/app-version', async (c) => {
+  try {
+    const body = await c.req.json();
+    const {
+      minSupportedVersionCode,
+      latestVersionCode,
+      latestVersionName,
+      forceUpdateEnabled,
+      updateTitle,
+      updateMessage,
+      playStoreUrl
+    } = body;
+
+    const upserts = [
+      { key: 'min_supported_version_code', val: String(minSupportedVersionCode ?? 37) },
+      { key: 'latest_version_code', val: String(latestVersionCode ?? 38) },
+      { key: 'latest_version_name', val: String(latestVersionName ?? '1.0.37') },
+      { key: 'force_update_enabled', val: forceUpdateEnabled ? '1' : '0' },
+      { key: 'update_title', val: String(updateTitle || 'Critical Update Required') },
+      { key: 'update_message', val: String(updateMessage || 'A new version of Qurb is required to continue. Please update now from the Google Play Store for critical features and fixes.') },
+      { key: 'play_store_url', val: String(playStoreUrl || 'https://play.google.com/store/apps/details?id=app.qurb.serene&pcampaignid=web_share') }
+    ];
+
+    for (const item of upserts) {
+      await c.env.DB.prepare(`
+        INSERT INTO system_settings (key, value, updated_at)
+        VALUES (?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP
+      `).bind(item.key, item.val).run();
+    }
+
+    return c.json({
+      success: true,
+      message: `App Version policy updated. Force update is now ${forceUpdateEnabled ? 'ACTIVATED (HARD LOCK)' : 'INACTIVE'}.`,
+      minSupportedVersionCode: Number(minSupportedVersionCode ?? 37),
+      latestVersionCode: Number(latestVersionCode ?? 38),
+      latestVersionName: String(latestVersionName ?? '1.0.37'),
+      forceUpdateEnabled: Boolean(forceUpdateEnabled)
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});

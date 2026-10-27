@@ -38,7 +38,7 @@ jobs:
         working-directory: serene-union-app
         run: npm install
 
-      - name: Verify Frontend Test Suite (201 Tests)
+      - name: Verify Frontend Test Suite (212 Tests)
         working-directory: serene-union-app
         run: npm test
 

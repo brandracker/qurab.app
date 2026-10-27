@@ -365,13 +365,27 @@ matchesRouter.get('/hub', async (c) => {
       }
     }
 
+    const resolveSeedPhoto = (id: string, existingPhotos: string[]) => {
+      if (existingPhotos && existingPhotos.length > 0) return existingPhotos;
+      if (!id) return [];
+      if (id.startsWith('seed_female_') || id.startsWith('seed_male_')) {
+        return [`/seeds/${id}.jpg`];
+      }
+      if (id.startsWith('usr_seed_pk_')) {
+        const num = parseInt(id.replace('usr_seed_pk_', ''), 10);
+        return [`/seeds/seed_female_${num}.jpg`];
+      }
+      return [];
+    };
+
     const mapCandidate = (row: any) => {
       const birthYear = new Date(row.dob || '1998-01-01').getFullYear();
       const age = new Date().getFullYear() - (birthYear || 1998);
+      const photos = resolveSeedPhoto(row.id, photoMap[row.id] || []);
       return {
         ...row,
         age: age || 26,
-        photos: photoMap[row.id] || []
+        photos
       };
     };
 
@@ -381,11 +395,11 @@ matchesRouter.get('/hub', async (c) => {
       mutual: (mutualRes.results || []).map(mapCandidate),
       sentLikes: (sentLikesRes.results || []).map((row: any) => ({
         ...row,
-        photos: photoMap[row.id] || []
+        photos: resolveSeedPhoto(row.id, photoMap[row.id] || [])
       })),
       passed: (passedRes.results || []).map((row: any) => ({
         ...row,
-        photos: photoMap[row.id] || []
+        photos: resolveSeedPhoto(row.id, photoMap[row.id] || [])
       })),
       blocked: blockedRes.results || []
     });
@@ -700,6 +714,19 @@ matchesRouter.get('/activity', async (c) => {
       ORDER BY m.created_at DESC
     `).bind(userId, userId, userId).all();
 
+    const resolveActivityPhoto = (id: string, photoUrl: string | null) => {
+      if (photoUrl) return [photoUrl];
+      if (!id) return [];
+      if (id.startsWith('seed_female_') || id.startsWith('seed_male_')) {
+        return [`/seeds/${id}.jpg`];
+      }
+      if (id.startsWith('usr_seed_pk_')) {
+        const num = parseInt(id.replace('usr_seed_pk_', ''), 10);
+        return [`/seeds/seed_female_${num}.jpg`];
+      }
+      return [];
+    };
+
     const sentLikes = (sentLikesRows || []).map((row: any) => ({
       id: row.id,
       fullName: row.fullName,
@@ -708,7 +735,7 @@ matchesRouter.get('/activity', async (c) => {
       marriageTimeline: row.marriageTimeline,
       action: row.action,
       actionTime: row.actionTime,
-      photos: row.photoUrl ? [row.photoUrl] : []
+      photos: resolveActivityPhoto(row.id, row.photoUrl)
     }));
 
     // B. Passed Profiles
@@ -734,7 +761,7 @@ matchesRouter.get('/activity', async (c) => {
       location: row.location,
       profession: row.profession,
       actionTime: row.actionTime,
-      photos: row.photoUrl ? [row.photoUrl] : []
+      photos: resolveActivityPhoto(row.id, row.photoUrl)
     }));
 
     // C. Blocked Users

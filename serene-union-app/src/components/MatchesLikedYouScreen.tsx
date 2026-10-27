@@ -21,6 +21,7 @@ import type { UserProfile } from '../types';
 import { dbService } from '../services/dbService';
 import { notificationService } from '../services/notificationService';
 import { MembershipUpgradeModal } from './MembershipUpgradeModal';
+import { getThumbnailUrl } from '../utils/mediaCompressor';
 
 
 import { ProfileDetailModal } from './ProfileDetailModal';
@@ -60,18 +61,24 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
       setIsLoading(true);
     }
     Promise.allSettled([
+      dbService.fetchMatchesHub(currentUser.id),
       dbService.fetchLikedYouCandidates(),
       dbService.fetchMutualMatches(),
       dbService.fetchActivityHub()
-    ]).then(([receivedRes, mutualRes, activityRes]) => {
-      const received = receivedRes.status === 'fulfilled' ? receivedRes.value : [];
-      let mutual = mutualRes.status === 'fulfilled' ? mutualRes.value : [];
-      const activity = activityRes.status === 'fulfilled' && activityRes.value
+    ]).then(([hubRes, receivedRes, mutualRes, activityRes]) => {
+      const hub = hubRes.status === 'fulfilled' && hubRes.value ? hubRes.value : null;
+      const remoteReceived = receivedRes.status === 'fulfilled' ? receivedRes.value : [];
+      let remoteMutual = mutualRes.status === 'fulfilled' ? mutualRes.value : [];
+      const remoteActivity = activityRes.status === 'fulfilled' && activityRes.value
         ? activityRes.value 
         : { sentLikes: [], passed: [], blocked: [] };
 
-      const likes = activity.sentLikes || [];
-      const passedList = activity.passed || [];
+      // Prefer hub if populated, fallback to individual fetchers (e.g. from unit/pipeline test mocks)
+      const received = (hub?.received && hub.received.length > 0) ? hub.received : remoteReceived;
+      let mutual = (hub?.mutual && hub.mutual.length > 0) ? hub.mutual : remoteMutual;
+      const likes = (hub?.sentLikes && hub.sentLikes.length > 0) ? hub.sentLikes : (remoteActivity.sentLikes || []);
+      const passedList = (hub?.passed && hub.passed.length > 0) ? hub.passed : (remoteActivity.passed || []);
+      const blockedList = (hub?.blocked && hub.blocked.length > 0) ? hub.blocked : (remoteActivity.blocked || []);
 
       // Auto-heal mutual matches from confirmed mutual likes if API response was lagged
       if ((!mutual || mutual.length === 0) && likes.some((l: any) => l.action === 'mutual_match')) {
@@ -106,18 +113,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
       setMutualMatches(prev => JSON.stringify(prev) === JSON.stringify(cleanMutual) ? prev : cleanMutual);
       setSentLikes(prev => JSON.stringify(prev) === JSON.stringify(likes) ? prev : likes);
       setPassedProfiles(prev => JSON.stringify(prev) === JSON.stringify(passedList) ? prev : passedList);
-      setBlockedProfiles(prev => JSON.stringify(prev) === JSON.stringify(activity.blocked || []) ? prev : (activity.blocked || []));
-
-      // Sync unified matches hub cache for instant future loads
-      try {
-        localStorage.setItem(`serene_matches_hub_${currentUser.id}`, JSON.stringify({
-          received: cleanReceived,
-          mutual: cleanMutual,
-          sentLikes: likes,
-          passed: passedList,
-          blocked: activity.blocked || []
-        }));
-      } catch {}
+      setBlockedProfiles(prev => JSON.stringify(prev) === JSON.stringify(blockedList) ? prev : blockedList);
     }).catch(err => {
       console.warn('Notice: Background sync for matches completed with fallback:', err);
     }).finally(() => {
@@ -462,7 +458,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
                   candidate.photos[0] && 
                   !candidate.photos[0].includes('photo-1534528741775-53994a69daeb')
                 );
-                const photo = hasPhoto ? candidate.photos![0] : null;
+                const photo = hasPhoto ? getThumbnailUrl(candidate.photos![0]) : null;
                 const initial = (candidate.fullName || 'M').charAt(0).toUpperCase();
 
                 return (
@@ -573,75 +569,94 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
         <div className="space-y-2.5">
           {sentLikes.length > 0 ? (
             <div className="space-y-2">
-              {sentLikes.map(item => (
-                <div
-                  key={item.id}
-                  onClick={() => {
-                    const prof = dbService.getAllProfiles().find(p => p.id === item.id) || {
-                      ...item,
-                      email: item.email || '',
-                      education: item.education || '',
-                      practiceLevel: item.practiceLevel || 'practicing',
-                      hobbies: item.hobbies || []
-                    };
-                    if (prof) setSelectedProfile(prof as UserProfile);
-                  }}
-                  className="bg-white p-3 rounded-2xl border border-outline shadow-subtle flex items-center justify-between gap-3 cursor-pointer hover:border-primary transition-all"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-10 h-10 rounded-full overflow-hidden border border-pastel-rose-border bg-surface-variant flex items-center justify-center shrink-0">
-                      {item.photos && item.photos.length > 0 && !item.photos[0].includes('photo-1534528741775-53994a69daeb') ? (
-                        <img
-                          src={item.photos[0]}
-                          alt={item.fullName}
-                          onError={(e) => {
-                            const target = e.currentTarget;
-                            target.style.display = 'none';
-                            const parent = target.parentElement;
-                            if (parent) {
-                              const fallback = parent.querySelector('.halal-sent-avatar-fallback');
-                              if (fallback) (fallback as HTMLElement).style.display = 'flex';
-                            }
-                          }}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : null}
-                      <div
-                        className={`halal-sent-avatar-fallback w-full h-full bg-pastel-rose text-primary items-center justify-center font-serif font-bold text-xs ${
-                          item.photos && item.photos.length > 0 && !item.photos[0].includes('photo-1534528741775-53994a69daeb') ? 'hidden' : 'flex'
-                        }`}
-                      >
-                        {item.fullName ? item.fullName[0].toUpperCase() : 'C'}
+              {sentLikes.map(item => {
+                const matchedProf = dbService.getAllProfiles().find(p => p.id === item.id);
+                const displayName = (item.fullName && item.fullName !== 'Candidate' && item.fullName !== 'Member')
+                  ? item.fullName
+                  : (matchedProf?.fullName || item.fullName || 'Candidate');
+                const rawPhotos = (item.photos && item.photos.length > 0)
+                  ? item.photos
+                  : (matchedProf?.photos && matchedProf.photos.length > 0 ? matchedProf.photos : (item.id && item.id.startsWith('seed_') ? [`/seeds/${item.id}.jpg`] : []));
+                const firstPhoto = rawPhotos.find((p: string) => typeof p === 'string' && !p.includes('photo-1534528741775-53994a69daeb'));
+                const thumbUrl = firstPhoto ? getThumbnailUrl(firstPhoto) : null;
+                const initial = (displayName || 'C').charAt(0).toUpperCase();
+
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => {
+                      const prof = matchedProf || {
+                        ...item,
+                        fullName: displayName,
+                        photos: rawPhotos,
+                        email: item.email || '',
+                        education: item.education || '',
+                        practiceLevel: item.practiceLevel || 'practicing',
+                        hobbies: item.hobbies || []
+                      };
+                      setSelectedProfile(prof as UserProfile);
+                    }}
+                    className="bg-white p-3 rounded-2xl border border-outline shadow-subtle flex items-center justify-between gap-3 cursor-pointer hover:border-primary transition-all"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-10 h-10 rounded-full overflow-hidden border border-pastel-rose-border bg-surface-variant flex items-center justify-center shrink-0">
+                        {thumbUrl ? (
+                          <img
+                            src={thumbUrl}
+                            alt={displayName}
+                            onError={(e) => {
+                              const target = e.currentTarget;
+                              target.style.display = 'none';
+                              const parent = target.parentElement;
+                              if (parent) {
+                                const fallback = parent.querySelector('.halal-sent-avatar-fallback');
+                                if (fallback) (fallback as HTMLElement).style.display = 'flex';
+                              }
+                            }}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : null}
+                        <div
+                          className={`halal-sent-avatar-fallback w-full h-full bg-pastel-rose text-primary items-center justify-center font-serif font-bold text-xs ${
+                            thumbUrl ? 'hidden' : 'flex'
+                          }`}
+                        >
+                          {initial}
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="font-serif font-bold text-xs text-on-surface">{displayName}</h4>
+                        <p className="text-[10px] text-secondary">
+                          {(matchedProf?.profession || item.profession || 'Professional')} · {(matchedProf?.location || item.location || 'Global')}
+                        </p>
+                        {(item.marriageTimeline || matchedProf?.marriageTimeline) && (
+                          <p className="text-[9px] text-primary/80 font-medium">
+                            Timeline: {(item.marriageTimeline || matchedProf?.marriageTimeline || '').replace(/_/g, ' ')}
+                          </p>
+                        )}
                       </div>
                     </div>
-                    <div>
-                      <h4 className="font-serif font-bold text-xs text-on-surface">{item.fullName}</h4>
-                      <p className="text-[10px] text-secondary">{item.profession || 'Professional'} · {item.location || 'Global'}</p>
-                      {item.marriageTimeline && (
-                        <p className="text-[9px] text-primary/80 font-medium">Timeline: {item.marriageTimeline.replace(/_/g, ' ')}</p>
-                      )}
-                    </div>
-                  </div>
 
-                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 ${
-                    item.action === 'mutual_match'
-                      ? 'bg-pastel-mint text-pastel-mint-text border border-pastel-mint-border'
-                      : 'bg-surface-variant text-secondary border border-outline'
-                  }`}>
-                    {item.action === 'mutual_match' ? (
-                      <>
-                        <Heart className="w-3 h-3 text-pastel-mint-text fill-current" />
-                        <span>Matched</span>
-                      </>
-                    ) : (
-                      <>
-                        <Clock className="w-3 h-3 text-secondary" />
-                        <span>Pending</span>
-                      </>
-                    )}
-                  </span>
-                </div>
-              ))}
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 ${
+                      item.action === 'mutual_match'
+                        ? 'bg-pastel-mint text-pastel-mint-text border border-pastel-mint-border'
+                        : 'bg-surface-variant text-secondary border border-outline'
+                    }`}>
+                      {item.action === 'mutual_match' ? (
+                        <>
+                          <Heart className="w-3 h-3 text-pastel-mint-text fill-current" />
+                          <span>Matched</span>
+                        </>
+                      ) : (
+                        <>
+                          <Clock className="w-3 h-3 text-secondary" />
+                          <span>Pending</span>
+                        </>
+                      )}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
 
           ) : (
@@ -670,7 +685,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
                   match.photos[0] && 
                   !match.photos[0].includes('photo-1534528741775-53994a69daeb')
                 );
-                const photo = hasPhoto ? match.photos![0] : null;
+                const photo = hasPhoto ? getThumbnailUrl(match.photos![0]) : null;
                 const initial = (match.fullName || 'M').charAt(0).toUpperCase();
 
                 return (
@@ -778,34 +793,47 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
               <p className="text-[11px] text-secondary">
                 You passed on these profiles. You can reconsider or undo any pass below to return them to Discover:
               </p>
-              {passedProfiles.map(item => (
-                <div
-                  key={item.id}
-                  className="bg-white p-3 rounded-2xl border border-outline shadow-subtle flex items-center justify-between gap-3"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-10 h-10 rounded-full overflow-hidden border border-outline bg-surface-variant flex items-center justify-center shrink-0">
-                      {item.photos && item.photos.length > 0 && !item.photos[0].includes('photo-1534528741775-53994a69daeb') ? (
-                        <img src={item.photos[0]} alt={item.fullName} className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="font-serif font-bold text-xs text-secondary">{item.fullName ? item.fullName[0] : 'C'}</span>
-                      )}
-                    </div>
-                    <div>
-                      <h4 className="font-serif font-bold text-xs text-on-surface">{item.fullName}</h4>
-                      <p className="text-[10px] text-secondary">{item.profession || 'Professional'} · {item.location || 'Global'}</p>
-                    </div>
-                  </div>
+              {passedProfiles.map(item => {
+                const matchedProf = dbService.getAllProfiles().find(p => p.id === item.id);
+                const displayName = (item.fullName && item.fullName !== 'Candidate' && item.fullName !== 'Member')
+                  ? item.fullName
+                  : (matchedProf?.fullName || item.fullName || 'Candidate');
+                const rawPhotos = (item.photos && item.photos.length > 0)
+                  ? item.photos
+                  : (matchedProf?.photos && matchedProf.photos.length > 0 ? matchedProf.photos : (item.id && item.id.startsWith('seed_') ? [`/seeds/${item.id}.jpg`] : []));
+                const firstPhoto = rawPhotos.find((p: string) => typeof p === 'string' && !p.includes('photo-1534528741775-53994a69daeb'));
+                const thumbUrl = firstPhoto ? getThumbnailUrl(firstPhoto) : null;
+                const initial = (displayName || 'C').charAt(0).toUpperCase();
 
-                  <button
-                    onClick={() => handleUndoPass(item.id, item.fullName)}
-                    className="px-3 py-1.5 rounded-xl bg-white border border-primary text-primary hover:bg-pastel-rose text-xs font-bold flex items-center gap-1 transition-all active:scale-95 shadow-subtle"
+                return (
+                  <div
+                    key={item.id}
+                    className="bg-white p-3 rounded-2xl border border-outline shadow-subtle flex items-center justify-between gap-3"
                   >
-                    <Undo2 className="w-3.5 h-3.5" />
-                    <span>Undo Pass</span>
-                  </button>
-                </div>
-              ))}
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-10 h-10 rounded-full overflow-hidden border border-outline bg-surface-variant flex items-center justify-center shrink-0">
+                        {thumbUrl ? (
+                          <img src={thumbUrl} alt={displayName} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="font-serif font-bold text-xs text-secondary">{initial}</span>
+                        )}
+                      </div>
+                      <div>
+                        <h4 className="font-serif font-bold text-xs text-on-surface">{displayName}</h4>
+                        <p className="text-[10px] text-secondary">{(matchedProf?.profession || item.profession || 'Professional')} · {(matchedProf?.location || item.location || 'Global')}</p>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => handleUndoPass(item.id, displayName)}
+                      className="px-3 py-1.5 rounded-xl bg-white border border-primary text-primary hover:bg-pastel-rose text-xs font-bold flex items-center gap-1 transition-all active:scale-95 shadow-subtle"
+                    >
+                      <Undo2 className="w-3.5 h-3.5" />
+                      <span>Undo Pass</span>
+                    </button>
+                  </div>
+                );
+              })}
             </div>
 
           ) : (

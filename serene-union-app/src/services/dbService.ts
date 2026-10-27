@@ -1529,14 +1529,25 @@ class DBService {
       if (res.ok) {
         const data = await res.json();
         if (data && data.success) {
+          const allProfiles = this.getAllProfiles();
           const sanitizePhotos = (list: any[]) => {
             if (!Array.isArray(list)) return [];
-            return list.map(item => ({
-              ...item,
-              photos: Array.isArray(item.photos)
-                ? item.photos.filter((p: string) => typeof p === 'string' && (!p.startsWith('data:') || p.length < 50000) && !p.includes('photo-1534528741775-53994a69daeb'))
-                : []
-            }));
+            return list.map(item => {
+              const matchedProf = allProfiles.find(p => p.id === item.id);
+              let rawPhotos = Array.isArray(item.photos) && item.photos.length > 0 ? item.photos : (matchedProf?.photos || []);
+              if (rawPhotos.length === 0 && item.id && item.id.startsWith('seed_')) {
+                rawPhotos = [`/seeds/${item.id}.jpg`];
+              }
+              const cleanPhotos = rawPhotos.filter((p: string) => typeof p === 'string' && (!p.startsWith('data:') || p.length < 50000) && !p.includes('photo-1534528741775-53994a69daeb'));
+              const resolvedName = (item.fullName && item.fullName !== 'Candidate' && item.fullName !== 'Member')
+                ? item.fullName
+                : (matchedProf?.fullName || item.fullName || 'Candidate');
+              return {
+                ...item,
+                fullName: resolvedName,
+                photos: cleanPhotos
+              };
+            });
           };
 
           const hubData = {
@@ -1695,6 +1706,7 @@ class DBService {
       const res = await fetch(`${API_BASE}/matches/activity?userId=${user.id}`);
       const data = await res.json();
       if (data.success) {
+        const allProfiles = this.getAllProfiles();
         const mergeMap = (localList: any[], remoteList: any[]) => {
           const map = new Map();
           localList.forEach(item => {
@@ -1703,17 +1715,42 @@ class DBService {
           remoteList.forEach(item => {
             if (item && item.id) {
               const existing = map.get(item.id);
-              const safePhotos = (item.photos || existing?.photos || []).map((p: any) => {
+              const matchedProf = allProfiles.find(p => p.id === item.id);
+
+              const remotePhotos = Array.isArray(item.photos) && item.photos.length > 0 ? item.photos : [];
+              const existingPhotos = Array.isArray(existing?.photos) && existing.photos.length > 0 ? existing.photos : [];
+              const profPhotos = Array.isArray(matchedProf?.photos) && matchedProf.photos.length > 0 ? matchedProf.photos : [];
+              const seedFallbackPhotos = item.id.startsWith('seed_') ? [`/seeds/${item.id}.jpg`] : [];
+
+              const candidatePhotos = remotePhotos.length > 0
+                ? remotePhotos
+                : (existingPhotos.length > 0 ? existingPhotos : (profPhotos.length > 0 ? profPhotos : seedFallbackPhotos));
+
+              const safePhotos = candidatePhotos.map((p: any) => {
                 if (typeof p === 'string' && p.startsWith('data:') && p.length > 50000) return '';
                 return p;
               }).filter(Boolean);
 
+              const resolvedName = (item.fullName && item.fullName !== 'Candidate' && item.fullName !== 'Member')
+                ? item.fullName
+                : (existing?.fullName && existing.fullName !== 'Candidate' && existing.fullName !== 'Member'
+                  ? existing.fullName
+                  : (matchedProf?.fullName || item.fullName || 'Candidate'));
+
+              const resolvedProfession = (item.profession && item.profession !== 'Professional')
+                ? item.profession
+                : (existing?.profession || matchedProf?.profession || item.profession || 'Professional');
+
+              const resolvedLocation = (item.location && item.location !== 'Global')
+                ? item.location
+                : (existing?.location || matchedProf?.location || item.location || 'Global');
+
               map.set(item.id, {
                 ...existing,
                 ...item,
-                fullName: (item.fullName && item.fullName !== 'Candidate') ? item.fullName : (existing?.fullName || item.fullName || 'Candidate'),
-                profession: (item.profession && item.profession !== 'Professional') ? item.profession : (existing?.profession || item.profession || 'Professional'),
-                location: (item.location && item.location !== 'Global') ? item.location : (existing?.location || item.location || 'Global'),
+                fullName: resolvedName,
+                profession: resolvedProfession,
+                location: resolvedLocation,
                 photos: safePhotos
               });
             }

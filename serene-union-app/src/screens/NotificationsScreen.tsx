@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 
 import { notificationService, type LiveNotification } from '../services/notificationService';
+import { getThumbnailUrl } from '../utils/mediaCompressor';
 
 interface Props {
   isOpen: boolean;
@@ -211,18 +212,36 @@ export const NotificationsScreen: React.FC<Props> = ({
               }`}
             >
               {/* Avatar or Icon Badge */}
-              {item.avatarUrl ? (
-                <div className="relative w-11 h-11 rounded-2xl overflow-hidden shrink-0 border border-outline shadow-subtle">
-                  <img src={item.avatarUrl} alt={item.title} className="w-full h-full object-cover" />
+              <div className="relative w-11 h-11 rounded-2xl overflow-hidden shrink-0 border border-outline shadow-subtle">
+                {item.avatarUrl ? (
+                  <img
+                    src={getThumbnailUrl(item.avatarUrl)}
+                    alt={item.title}
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      target.style.display = 'none';
+                      const parent = target.parentElement;
+                      if (parent) {
+                        const fallback = parent.querySelector('.halal-notif-avatar-fallback');
+                        if (fallback) (fallback as HTMLElement).style.display = 'flex';
+                      }
+                    }}
+                    className="w-full h-full object-cover"
+                  />
+                ) : null}
+                <div
+                  className={`halal-notif-avatar-fallback w-full h-full items-center justify-center ${getBadgeBg(item.type)} ${
+                    item.avatarUrl ? 'hidden' : 'flex'
+                  }`}
+                >
+                  {getIcon(item.type)}
+                </div>
+                {item.avatarUrl && (
                   <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center border border-white ${getBadgeBg(item.type)}`}>
                     {getIcon(item.type)}
                   </div>
-                </div>
-              ) : (
-                <div className={`w-11 h-11 rounded-2xl border flex items-center justify-center shrink-0 shadow-subtle ${getBadgeBg(item.type)}`}>
-                  {getIcon(item.type)}
-                </div>
-              )}
+                )}
+              </div>
 
               {/* Text & Quick Actions */}
               <div className="flex-1 min-w-0">

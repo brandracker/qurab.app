@@ -29,7 +29,8 @@ import {
   Plane, 
   Star,
   Lock,
-  MapPin
+  MapPin,
+  Sparkles
 } from 'lucide-react';
 import type { UserProfile } from '../types';
 import { FilterModal } from './FilterModal';
@@ -62,6 +63,7 @@ type CardTab = 'deen' | 'career' | 'family' | 'bio' | 'requirements';
 export const DiscoverFeed: React.FC<Props> = ({ 
   onOpenChat, 
   onOpenMatches, 
+  onOpenProfile,
   onOpenNotifications,
   onSelectProfile,
   onLikeProfile,
@@ -69,6 +71,7 @@ export const DiscoverFeed: React.FC<Props> = ({
 }) => {
   const {
     currentUser,
+    userCompleteness,
     isVip,
     setIsVip,
     likesRemaining,
@@ -80,6 +83,11 @@ export const DiscoverFeed: React.FC<Props> = ({
     currentProfile,
     toastMessage,
     setToastMessage,
+    travelAlert,
+    setTravelAlert,
+    handleUpdateTravelCity,
+    showIncompleteProfileModal,
+    setShowIncompleteProfileModal,
     matchedProfile,
     setMatchedProfile,
     showFilterModal,
@@ -325,6 +333,51 @@ export const DiscoverFeed: React.FC<Props> = ({
         </button>
         </div>
       </header>
+
+      {/* 1-Tap Travel Confirmation Banner (Zero Disruption UX) */}
+      {travelAlert && (
+        <div className="mx-4 mt-2 mb-1 p-3 rounded-2xl bg-gradient-to-r from-emerald-950/95 to-teal-900/95 text-white border border-emerald-500/40 shadow-elevated animate-fade-in z-30">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-start gap-2.5">
+              <span className="text-xl">📍</span>
+              <div>
+                <p className="text-xs font-bold text-emerald-300">
+                  Visiting {travelAlert.detectedCity}?
+                </p>
+                <p className="text-[11px] text-white/85 leading-tight mt-0.5">
+                  We noticed you are currently in {travelAlert.detectedCity}. Would you like to view rishta proposals near {travelAlert.detectedCity} during your visit?
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setTravelAlert(null)}
+              className="text-white/60 hover:text-white p-1"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <div className="flex items-center gap-2 mt-2.5 pt-2 border-t border-white/10">
+            <button
+              type="button"
+              onClick={() => {
+                handleUpdateTravelCity(travelAlert.detectedCity);
+                setTravelAlert(null);
+              }}
+              className="px-3.5 py-1.5 rounded-full bg-emerald-500 text-white text-[11px] font-bold shadow-subtle hover:bg-emerald-600 active:scale-98 transition-all"
+            >
+              ✨ Switch to {travelAlert.detectedCity}
+            </button>
+            <button
+              type="button"
+              onClick={() => setTravelAlert(null)}
+              className="px-3 py-1.5 rounded-full bg-white/10 text-white/80 text-[11px] hover:bg-white/20 transition-all"
+            >
+              Keep {travelAlert.previousCity}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Action Toast Feedback */}
       {toastMessage && (
@@ -1429,6 +1482,61 @@ export const DiscoverFeed: React.FC<Props> = ({
           onNavigateToMatches={onOpenMatches}
           onNavigateToChat={(convId) => onOpenChat(convId || '')}
         />
+      )}
+
+      {/* Action Gating Modal for Incomplete Profile */}
+      {showIncompleteProfileModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-3xl p-5 max-w-sm w-full text-center shadow-2xl border border-outline animate-scale-in">
+            <div className="w-14 h-14 rounded-full bg-pastel-rose text-primary flex items-center justify-center mx-auto mb-3 shadow-subtle">
+              <Sparkles className="w-7 h-7" />
+            </div>
+            <h3 className="font-serif text-lg font-bold text-on-surface">
+              Complete Your Biodata First
+            </h3>
+            <p className="text-xs text-secondary mt-1.5 leading-relaxed">
+              Serious matrimonial connections require mutual trust. Please complete at least 60% of your biodata and add a photo so candidates can evaluate your proposal.
+            </p>
+
+            <div className="my-3.5 p-3 rounded-2xl bg-surface-variant text-left">
+              <div className="flex items-center justify-between text-xs font-bold mb-1">
+                <span>Profile Strength</span>
+                <span className="text-primary">{userCompleteness.score}%</span>
+              </div>
+              <div className="w-full bg-outline rounded-full h-2 overflow-hidden">
+                <div 
+                  className="bg-primary h-full rounded-full transition-all duration-500"
+                  style={{ width: `${userCompleteness.score}%` }}
+                />
+              </div>
+              {userCompleteness.missingFields.length > 0 && (
+                <p className="text-[10px] text-secondary mt-2">
+                  Missing: {userCompleteness.missingFields.slice(0, 2).map(m => m.label).join(', ')}
+                </p>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-2 mt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowIncompleteProfileModal(false);
+                  if (onOpenProfile) onOpenProfile();
+                }}
+                className="w-full py-2.5 rounded-full bg-primary text-white text-xs font-bold shadow-brand hover:bg-primary-dark transition-all"
+              >
+                Complete Biodata (2 mins)
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowIncompleteProfileModal(false)}
+                className="w-full py-2 text-xs text-secondary hover:text-on-surface"
+              >
+                Maybe Later
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

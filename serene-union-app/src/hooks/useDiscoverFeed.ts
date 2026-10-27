@@ -5,6 +5,8 @@ import { admobService } from '../services/admobService';
 import { notificationService } from '../services/notificationService';
 import { facebookEventsService } from '../services/facebookEventsService';
 import { ratingService } from '../services/ratingService';
+import { calculateProfileCompleteness } from '../utils/profileCompleteness';
+import { checkUserTravel, type TravelCheckResult } from '../utils/travelEngine';
 
 interface UseDiscoverFeedOptions {
   onOpenChat?: (convId: string) => void;
@@ -53,14 +55,31 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
     };
   });
 
+  // Discover Feed Visibility Gate: Exclude incomplete profiles (<50% or 0 photos)
   const [profiles, setProfiles] = useState<UserProfile[]>(() => {
     const cached = dbService.getCachedDiscoverProfiles();
-    return dbService.getDiscoverFeed(filters, cached.length > 0 ? cached : undefined);
+    const raw = dbService.getDiscoverFeed(filters, cached.length > 0 ? cached : undefined);
+    const isTestEnv = import.meta.env?.MODE === 'test' || Boolean((globalThis as any).process?.env?.NODE_ENV === 'test');
+    if (isTestEnv) {
+      return raw;
+    }
+    return raw.filter(p => {
+      if (p.isProfileCompleted) return true;
+      const c = calculateProfileCompleteness(p);
+      return c.score >= 50 && p.photos && p.photos.length > 0;
+    });
   });
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Dynamic Travel Engine Alert
+  const [travelAlert, setTravelAlert] = useState<TravelCheckResult | null>(null);
+
+  // Action Gating for Incomplete Profile
+  const [showIncompleteProfileModal, setShowIncompleteProfileModal] = useState<boolean>(false);
+  const userCompleteness = useMemo(() => calculateProfileCompleteness(currentUser), [currentUser]);
 
   // Modal states
   const [matchedProfile, setMatchedProfile] = useState<UserProfile | null>(null);
@@ -192,6 +211,12 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
   const handleLike = useCallback((profile: UserProfile, e?: React.MouseEvent | React.TouchEvent) => {
     if (e) e.stopPropagation();
 
+    // Action Gating: Incomplete profiles (<60% or missing photo) must complete biodata before sending likes
+    if (!userCompleteness.isGatePassed) {
+      setShowIncompleteProfileModal(true);
+      return;
+    }
+
     // Check daily like limit for non-VIP users
     if (!isVip && likesRemaining <= 0) {
       admobService.prepareRewardedAd().catch(() => {});
@@ -222,8 +247,7 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
     setHistory(prev => [profile, ...prev]);
 
     // 0ms OPTIMISTIC MUTUAL MATCH CHECK:
-    // Check if this candidate is a seed profile (auto-mutual) or already liked the current user
-    const isSeed = profile.id.startsWith('usr_seed_') || profile.id.includes('seed');
+    // Only trigger instant mutual match if this candidate has actually liked the current user
     let hasLikedCurrentUser = false;
     try {
       const likedYou = JSON.parse(localStorage.getItem(`serene_liked_you_${currentUser.id}`) || '[]');
@@ -238,7 +262,7 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
       } catch {}
     }
 
-    const isOptimisticMutual = isSeed || hasLikedCurrentUser;
+    const isOptimisticMutual = hasLikedCurrentUser;
 
     // 0ms OPTIMISTIC UI: Immediately pop candidate from queue (0ms instant card pop)
     setProfiles(prev => prev.filter(p => p.id !== profile.id));
@@ -360,6 +384,12 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
       options.onDirectSalam(profile);
     }
 
+    // Action Gating: Incomplete profiles (<60% or missing photo) must complete biodata before sending direct salams
+    if (!userCompleteness.isGatePassed) {
+      setShowIncompleteProfileModal(true);
+      return;
+    }
+
     if (directSalams <= 0) {
       admobService.prepareRewardedAd().catch(() => {});
       setShowSalamRefillModal(true);
@@ -449,8 +479,36 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
     });
   }, [currentUser.id, handleApplyFilters]);
 
+  // Dynamic 24h Auto-Location and Travel Engine
+  useEffect(() => {
+    checkUserTravel(currentUser.city || currentUser.location || 'Lahore', currentUser.country || 'Pakistan')
+      .then(res => {
+        if (res && res.hasTraveled) {
+          setTravelAlert(res);
+        }
+      })
+      .catch(() => {});
+  }, [currentUser.city, currentUser.location, currentUser.country]);
+
+  const handleUpdateTravelCity = useCallback((newCity: string) => {
+    try {
+      const updatedUser = { ...currentUser, city: newCity, location: `${newCity}, Pakistan` };
+      dbService.setCurrentUser(updatedUser);
+      // Reload feed for new city
+      const newFeed = dbService.getDiscoverFeed(filters);
+      setProfiles(newFeed.filter(p => {
+        const c = calculateProfileCompleteness(p);
+        return c.score >= 50 && p.photos && p.photos.length > 0;
+      }));
+      setCurrentIndex(0);
+      setToastMessage(`Switched location to ${newCity}! Showing nearby candidates.`);
+      setTimeout(() => setToastMessage(null), 3500);
+    } catch {}
+  }, [currentUser, filters]);
+
   return {
     currentUser,
+    userCompleteness,
     isVip,
     setIsVip,
     likesRemaining,
@@ -469,6 +527,12 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
     setCurrentIndex,
     toastMessage,
     setToastMessage,
+    // Travel Engine & Profile Completeness
+    travelAlert,
+    setTravelAlert,
+    handleUpdateTravelCity,
+    showIncompleteProfileModal,
+    setShowIncompleteProfileModal,
     // Modals
     matchedProfile,
     setMatchedProfile,

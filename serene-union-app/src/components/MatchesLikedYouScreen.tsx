@@ -478,18 +478,26 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
                         <img
                           src={photo}
                           alt={candidate.fullName}
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            target.style.display = 'none';
+                            const parent = target.parentElement;
+                            if (parent) {
+                              const fallback = parent.querySelector('.halal-grid-avatar-fallback');
+                              if (fallback) (fallback as HTMLElement).style.display = 'flex';
+                            }
+                          }}
                           className={`w-full h-full object-cover transition-all ${
                             !isVip ? 'filter blur-md scale-110 opacity-70' : 'scale-100'
                           }`}
                         />
-                      ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-pastel-rose/30 via-surface-variant to-pastel-lavender/30 text-primary">
-                          <div className="w-14 h-14 rounded-full bg-white shadow-subtle flex items-center justify-center text-xl font-serif font-bold text-primary border border-outline">
-                            {initial}
-                          </div>
-                          <span className="text-[10px] font-medium text-secondary mt-2">Verified Profile</span>
+                      ) : null}
+                      <div className={`halal-grid-avatar-fallback w-full h-full items-center justify-center bg-gradient-to-br from-pastel-rose/30 via-surface-variant to-pastel-lavender/30 text-primary ${photo ? 'hidden' : 'flex'} flex-col`}>
+                        <div className="w-14 h-14 rounded-full bg-white shadow-subtle flex items-center justify-center text-xl font-serif font-bold text-primary border border-outline">
+                          {initial}
                         </div>
-                      )}
+                        <span className="text-[10px] font-medium text-secondary mt-2">Verified Profile</span>
+                      </div>
                       {!isVip && (
                         <div 
                           onClick={(e) => {
@@ -583,10 +591,28 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
                   <div className="flex items-center gap-2.5">
                     <div className="w-10 h-10 rounded-full overflow-hidden border border-pastel-rose-border bg-surface-variant flex items-center justify-center shrink-0">
                       {item.photos && item.photos.length > 0 && !item.photos[0].includes('photo-1534528741775-53994a69daeb') ? (
-                        <img src={item.photos[0]} alt={item.fullName} className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="font-serif font-bold text-xs text-primary">{item.fullName ? item.fullName[0] : 'C'}</span>
-                      )}
+                        <img
+                          src={item.photos[0]}
+                          alt={item.fullName}
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            target.style.display = 'none';
+                            const parent = target.parentElement;
+                            if (parent) {
+                              const fallback = parent.querySelector('.halal-sent-avatar-fallback');
+                              if (fallback) (fallback as HTMLElement).style.display = 'flex';
+                            }
+                          }}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : null}
+                      <div
+                        className={`halal-sent-avatar-fallback w-full h-full bg-pastel-rose text-primary items-center justify-center font-serif font-bold text-xs ${
+                          item.photos && item.photos.length > 0 && !item.photos[0].includes('photo-1534528741775-53994a69daeb') ? 'hidden' : 'flex'
+                        }`}
+                      >
+                        {item.fullName ? item.fullName[0].toUpperCase() : 'C'}
+                      </div>
                     </div>
                     <div>
                       <h4 className="font-serif font-bold text-xs text-on-surface">{item.fullName}</h4>
@@ -662,15 +688,27 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
                           <img
                             src={photo}
                             alt={match.fullName}
+                            onError={(e) => {
+                              const target = e.currentTarget;
+                              target.style.display = 'none';
+                              const parent = target.parentElement;
+                              if (parent) {
+                                const fallback = parent.querySelector('.halal-mutual-avatar-fallback');
+                                if (fallback) (fallback as HTMLElement).style.display = 'flex';
+                              }
+                            }}
                             className={`w-full h-full object-cover ${
                               match.blurPhotosByDefault && !match.photoRevealApproved ? 'blur-xs' : ''
                             }`}
                           />
-                        ) : (
-                          <div className="w-full h-full bg-pastel-rose text-primary flex items-center justify-center font-serif font-bold text-sm">
-                            {initial}
-                          </div>
-                        )}
+                        ) : null}
+                        <div
+                          className={`halal-mutual-avatar-fallback w-full h-full bg-pastel-rose text-primary items-center justify-center font-serif font-bold text-sm ${
+                            photo ? 'hidden' : 'flex'
+                          }`}
+                        >
+                          {initial}
+                        </div>
                       </div>
                       <div>
                         <div className="flex items-center gap-1">

@@ -39,7 +39,8 @@ import {
   TrendingUp,
   Sliders,
   Gift,
-  ChevronRight
+  ChevronRight,
+  Sparkles
 } from 'lucide-react';
 import type { UserProfile } from '../types';
 import { dbService } from '../services/dbService';
@@ -49,6 +50,7 @@ import { MembershipUpgradeModal } from '../components/MembershipUpgradeModal';
 import { RewardedAdModal } from '../components/RewardedAdModal';
 import { EditProfileModal } from '../components/EditProfileModal';
 import { ReferralHubModal } from '../components/ReferralHubModal';
+import { calculateProfileCompleteness } from '../utils/profileCompleteness';
 
 interface Props {
   user: UserProfile;
@@ -444,6 +446,66 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
 
       {/* Main Profile Body */}
       <main className="p-4 space-y-4">
+        {/* Biodata Completeness & Visibility Card */}
+        {(() => {
+          const comp = calculateProfileCompleteness(user);
+          const isHigh = comp.score >= 80;
+          const isMid = comp.score >= 60;
+          return (
+            <div className="bg-white rounded-3xl p-4 border border-outline shadow-card">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                    isHigh ? 'bg-emerald-100 text-emerald-700' : (isMid ? 'bg-pastel-amber text-amber-700' : 'bg-rose-100 text-rose-700')
+                  }`}>
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-serif text-sm font-bold text-on-surface">
+                      Biodata Completeness
+                    </h3>
+                    <p className="text-[10px] text-secondary">
+                      {isHigh ? '✨ Strong Profile (High Visibility)' : (isMid ? '👍 Good Profile (Meets Feed Gate)' : '⚠️ Incomplete (Hidden from Discover Feed)')}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <span className={`text-base font-black font-mono ${
+                    isHigh ? 'text-emerald-600' : (isMid ? 'text-amber-600' : 'text-rose-600')
+                  }`}>
+                    {comp.score}%
+                  </span>
+                </div>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="w-full bg-surface-variant rounded-full h-2.5 overflow-hidden border border-outline/50 mb-2.5">
+                <div 
+                  className={`h-full rounded-full transition-all duration-700 ${
+                    isHigh ? 'bg-emerald-500' : (isMid ? 'bg-amber-500' : 'bg-rose-500')
+                  }`}
+                  style={{ width: `${comp.score}%` }}
+                />
+              </div>
+
+              {comp.missingFields.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {comp.missingFields.slice(0, 3).map((f) => (
+                    <button
+                      key={f.key}
+                      onClick={handleOpenEditProfile}
+                      className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-surface-variant hover:bg-pastel-rose text-primary border border-outline transition-all"
+                    >
+                      +{f.boost}% {f.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         {/* MEMBERSHIP PASS CARD (Pastel Amber or Rose) */}
         <div className={`rounded-3xl p-4 border transition-all ${
           isVip 

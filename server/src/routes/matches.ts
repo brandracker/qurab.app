@@ -99,14 +99,13 @@ matchesRouter.post('/action', async (c) => {
     }
 
     if (action === 'liked') {
-      const isSeedRecipient = receiverId.startsWith('usr_seed_') || receiverId.includes('seed');
-      // Check if receiver has already liked the sender for a true mutual match or if client specified isMutualMatch or seed profile auto-matches
+      // Check if receiver has already liked the sender for a true mutual match or if client specified isMutualMatch
       const reverseLike: any = await c.env.DB.prepare(`
         SELECT id, action FROM matches_and_likes 
         WHERE sender_id = ? AND receiver_id = ? AND (action = 'liked' OR action = 'mutual_match' OR action = 'direct_salam')
       `).bind(receiverId, senderId).first();
 
-      if (reverseLike || isMutualMatch || isSeedRecipient) {
+      if (reverseLike || isMutualMatch) {
         // True Mutual Match!
         const convId = `conv_${[senderId, receiverId].sort().join('_')}`;
 

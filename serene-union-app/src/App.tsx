@@ -991,6 +991,7 @@ export const App: React.FC = () => {
                 <DiscoverFeed 
                   onOpenChat={handleOpenChat} 
                   onOpenMatches={() => setActiveTab('matches')}
+                  onOpenProfile={() => setActiveTab('my_profile')}
                   onOpenNotifications={() => setShowNotifications(true)}
                 />
               )}
@@ -1005,6 +1006,7 @@ export const App: React.FC = () => {
 
               {activeTab === 'chat' && (
                 <ChatScreen
+                  key={activeConvId || 'conversations_list'}
                   initialConvId={activeConvId || undefined}
                   onBackToDiscover={() => setActiveTab('discover')}
                 />

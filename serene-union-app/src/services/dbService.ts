@@ -1078,6 +1078,28 @@ class DBService {
     }
   }
 
+  markAllConversationsRead(): void {
+    const conversations = this.getConversations();
+    let hasChanges = false;
+    for (const conv of conversations) {
+      if (conv.unreadCount && conv.unreadCount > 0) {
+        conv.unreadCount = 0;
+        hasChanges = true;
+      }
+    }
+    if (hasChanges) {
+      localStorage.setItem(this.conversationsKey, JSON.stringify(conversations));
+      window.dispatchEvent(new CustomEvent('serene_conversations_updated'));
+    }
+  }
+
+  deleteConversations(conversationIds: string[]): void {
+    const toDelete = new Set(conversationIds);
+    const conversations = this.getConversations().filter(c => !toDelete.has(c.id));
+    localStorage.setItem(this.conversationsKey, JSON.stringify(conversations));
+    window.dispatchEvent(new CustomEvent('serene_conversations_updated'));
+  }
+
   sendMessage(conversationId: string, text: string): ChatMessage {
     this.sendLiveMessage(conversationId, text);
     const conversations = this.getConversations();

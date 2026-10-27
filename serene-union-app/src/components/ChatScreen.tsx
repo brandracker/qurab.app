@@ -3,7 +3,7 @@ import {
   ArrowLeft, CheckCheck, Send, Heart, MessageCircle, FileText, Ban, 
   MoreVertical, Eye, EyeOff, ShieldCheck, Paperclip, Mic, Play, Pause, 
   Trash2, X, Download, File, Loader2, Volume2, VolumeX, Maximize2,
-  Phone, Video, PhoneCall, PhoneOff
+  Phone, Video, PhoneCall, PhoneOff, Search, CheckSquare, Square
 } from 'lucide-react';
 import type { Conversation, ChatMessage, UserProfile } from '../types';
 
@@ -13,7 +13,8 @@ import {
   VoiceRecorder, 
   processAttachedFile, 
   formatBytes, 
-  formatSeconds 
+  formatSeconds,
+  getThumbnailUrl
 } from '../utils/mediaCompressor';
 import { webRtcService, type CallState, type CallType, type CallerInfo } from '../services/webRtcService';
 import { IncomingCallModal } from './calling/IncomingCallModal';
@@ -188,7 +189,15 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
   const [isBlocking, setIsBlocking] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [selectedProfile, setSelectedProfile] = useState<UserProfile | null>(null);
-  const [roomMessages, setRoomMessages] = useState<ChatMessage[]>([]);
+  const [roomMessages, setRoomMessages] = useState<ChatMessage[]>(() => {
+    if (!initialConvId) return [];
+    const existing = dbService.getConversations().find(c => c.id === initialConvId);
+    return existing?.messages || [];
+  });
+  const [chatSearchQuery, setChatSearchQuery] = useState<string>('');
+  const [isSelectMode, setIsSelectMode] = useState<boolean>(false);
+  const [selectedConvIds, setSelectedConvIds] = useState<Set<string>>(new Set());
+  const [showListMenuDropdown, setShowListMenuDropdown] = useState<boolean>(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const currentUser = dbService.getCurrentUser();
 
@@ -299,7 +308,10 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
       const convs = dbService.getConversations();
       setConversations([...convs]);
       if (activeConvId) {
-        const cur = convs.find(c => c.id === activeConvId || (c.otherUser && activeConvId.includes(c.otherUser.id)));
+        const pId = activeConvId.startsWith('conv_')
+          ? activeConvId.replace('conv_', '').split('_').find(id => id !== currentUser.id && id.length > 0)
+          : null;
+        const cur = convs.find(c => c.id === activeConvId || (pId && c.otherUser?.id === pId));
         if (cur?.messages) {
           setRoomMessages([...cur.messages]);
         }
@@ -335,9 +347,36 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
     };
   }, [activeConvId]);
 
+  const activePartnerId = activeConvId?.startsWith('conv_')
+    ? activeConvId.replace('conv_', '').split('_').find(id => id !== currentUser.id && id.length > 0)
+    : null;
+
+  // 0ms Local-First Cache Hydration for Instant Room Switching (Zero delay & zero bleed-through)
+  useEffect(() => {
+    if (!activeConvId) {
+      setRoomMessages([]);
+      return;
+    }
+
+    const partnerId = activeConvId.startsWith('conv_')
+      ? activeConvId.replace('conv_', '').split('_').find(id => id !== currentUser.id && id.length > 0)
+      : null;
+
+    const existing = dbService.getConversations().find(c => 
+      c.id === activeConvId || 
+      (partnerId && c.otherUser?.id === partnerId)
+    );
+
+    if (existing?.messages && existing.messages.length > 0) {
+      setRoomMessages([...existing.messages]);
+    } else {
+      setRoomMessages([]);
+    }
+  }, [activeConvId]);
+
   let activeConv = conversations.find(c => 
     c.id === activeConvId || 
-    (activeConvId && c.otherUser?.id && activeConvId.includes(c.otherUser.id))
+    (activePartnerId && c.otherUser?.id === activePartnerId)
   );
 
   // Dynamic fallback: If opening a match with a new profile not yet in local conversations list
@@ -454,11 +493,16 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
     syncD1MessagesRef.current = syncD1Messages;
     syncD1Messages();
 
-    // Adaptive polling: 1200ms burst interval for 15s after sending, 3200ms when idle
+    // WebSocket-first Zero Polling: When WebSocket is OPEN, pause background HTTP polling completely
     let timerId: any = null;
     const scheduleNextPoll = () => {
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        // WebSocket is actively streaming messages, check back in 12s only for heartbeat
+        timerId = setTimeout(scheduleNextPoll, 12000);
+        return;
+      }
       const isBurst = Date.now() < burstPollingUntilRef.current;
-      const delay = isBurst ? 1200 : 3200;
+      const delay = isBurst ? 1500 : 4000;
       timerId = setTimeout(async () => {
         if (!isMounted) return;
         await syncD1Messages();
@@ -1168,21 +1212,177 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
 
   // If no active conversation, show conversation list
   if (!activeConv) {
+    const filteredConversations = conversations.filter(conv => {
+      if (!chatSearchQuery.trim()) return true;
+      const q = chatSearchQuery.toLowerCase().trim();
+      const partner = conv.otherUser || {} as any;
+      return (
+        (partner.fullName || '').toLowerCase().includes(q) ||
+        (partner.city || '').toLowerCase().includes(q) ||
+        (partner.location || '').toLowerCase().includes(q) ||
+        (conv.lastMessageText || '').toLowerCase().includes(q)
+      );
+    });
+
+    const handleDeleteSelected = () => {
+      if (selectedConvIds.size === 0) return;
+      if (window.confirm(`Delete ${selectedConvIds.size} selected conversation${selectedConvIds.size > 1 ? 's' : ''}?`)) {
+        dbService.deleteConversations(Array.from(selectedConvIds));
+        setConversations(prev => prev.filter(c => !selectedConvIds.has(c.id)));
+        setSelectedConvIds(new Set());
+        setIsSelectMode(false);
+        setToastMessage('Selected conversations removed.');
+        setTimeout(() => setToastMessage(null), 3000);
+      }
+    };
+
     return (
       <div className="flex-1 flex flex-col h-full bg-background font-sans select-none text-on-surface">
-        <header className="sticky top-0 bg-white px-4 py-3.5 border-b border-outline flex items-center justify-between z-20 shadow-subtle shrink-0">
-          <div>
-            <h1 className="font-serif text-xl font-bold text-on-surface">
-              Messages
-            </h1>
-            <p className="text-[11px] text-secondary mt-0.5">Respectful & Intentional Matrimonial Discussions</p>
-          </div>
-        </header>
+        {/* Luxury Qurb Brand Header */}
+        <header className="sticky top-0 bg-white px-4 py-3.5 border-b border-outline z-20 shadow-subtle shrink-0">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-serif text-2xl font-black text-primary tracking-tight">Qurb</span>
+                <span className="text-[10px] font-semibold text-primary uppercase tracking-widest bg-pastel-rose px-2.5 py-0.5 rounded-full border border-pastel-rose-border shadow-2xs">
+                  Conversations
+                </span>
+              </div>
+              <p className="text-[11px] text-secondary mt-0.5">Respectful & Intentional Matrimonial Discussions</p>
+            </div>
 
+            {/* 3-Dots Management Menu */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowListMenuDropdown(prev => !prev)}
+                className="w-9 h-9 rounded-full bg-surface-variant hover:bg-outline flex items-center justify-center text-secondary hover:text-on-surface transition-all shadow-subtle"
+                title="Conversation Options"
+              >
+                <MoreVertical className="w-4 h-4" />
+              </button>
+
+              {showListMenuDropdown && (
+                <div className="absolute right-0 top-11 w-52 bg-white rounded-2xl shadow-elevated border border-outline py-1.5 z-30 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSelectMode(prev => !prev);
+                      setSelectedConvIds(new Set());
+                      setShowListMenuDropdown(false);
+                    }}
+                    className="w-full px-3.5 py-2.5 text-left hover:bg-surface-variant flex items-center gap-2.5 text-on-surface"
+                  >
+                    <CheckSquare className="w-4 h-4 text-primary" />
+                    <span className="font-medium">{isSelectMode ? 'Cancel Selection' : 'Select Chats to Delete'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      dbService.markAllConversationsRead();
+                      setConversations([...dbService.getConversations()]);
+                      setShowListMenuDropdown(false);
+                      setToastMessage('All conversations marked as read.');
+                      setTimeout(() => setToastMessage(null), 3000);
+                    }}
+                    className="w-full px-3.5 py-2.5 text-left hover:bg-surface-variant flex items-center gap-2.5 text-on-surface"
+                  >
+                    <CheckCheck className="w-4 h-4 text-emerald-600" />
+                    <span className="font-medium">Mark All as Read</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm('Clear all closed conversations from your history?')) {
+                        const activeOnly = conversations.filter(c => c.status !== 'respectfully_closed');
+                        localStorage.setItem('serene_real_conversations_v3', JSON.stringify(activeOnly));
+                        setConversations(activeOnly);
+                        setToastMessage('Closed conversations cleared.');
+                        setTimeout(() => setToastMessage(null), 3000);
+                      }
+                      setShowListMenuDropdown(false);
+                    }}
+                    className="w-full px-3.5 py-2.5 text-left hover:bg-pastel-rose text-error flex items-center gap-2.5"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span className="font-medium">Clear Inactive Chats</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Real-Time Candidate Search Bar */}
+          <div className="relative mt-2.5">
+            <Search className="w-4 h-4 text-secondary absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search candidate name, city, or message..."
+              value={chatSearchQuery}
+              onChange={(e) => setChatSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-8 py-2 text-xs bg-surface-variant border border-outline rounded-xl focus:outline-none focus:border-primary focus:bg-white shadow-subtle transition-all"
+            />
+            {chatSearchQuery && (
+              <button
+                type="button"
+                onClick={() => setChatSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-secondary hover:text-on-surface"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Multi-Select Action Banner */}
+          {isSelectMode && (
+            <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-outline text-xs">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-primary">{selectedConvIds.size} selected</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selectedConvIds.size === filteredConversations.length) {
+                      setSelectedConvIds(new Set());
+                    } else {
+                      setSelectedConvIds(new Set(filteredConversations.map(c => c.id)));
+                    }
+                  }}
+                  className="text-[11px] text-secondary hover:text-primary underline ml-1"
+                >
+                  {selectedConvIds.size === filteredConversations.length ? 'Deselect All' : 'Select All'}
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSelectMode(false);
+                    setSelectedConvIds(new Set());
+                  }}
+                  className="px-2.5 py-1 text-[11px] rounded-lg border border-outline hover:bg-surface-variant"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={selectedConvIds.size === 0}
+                  onClick={handleDeleteSelected}
+                  className="px-3 py-1 text-[11px] font-bold rounded-lg bg-error text-white disabled:opacity-40 flex items-center gap-1 shadow-subtle"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  <span>Delete ({selectedConvIds.size})</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </header>
 
         <div className="flex-1 overflow-y-auto p-3 space-y-2.5 pb-8">
           {(() => {
-            const sortedConversations = [...conversations].sort((a, b) => {
+            const sortedConversations = [...filteredConversations].sort((a, b) => {
               const tA = a.lastMessageTimestamp || (a.lastMessageTime && !isNaN(new Date(a.lastMessageTime).getTime()) ? new Date(a.lastMessageTime).getTime() : 0);
               const tB = b.lastMessageTimestamp || (b.lastMessageTime && !isNaN(new Date(b.lastMessageTime).getTime()) ? new Date(b.lastMessageTime).getTime() : 0);
               return tB - tA;
@@ -1192,20 +1392,44 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
               sortedConversations.map(conv => {
                 const partner = conv.otherUser || { id: conv.participantTwo, fullName: 'Match Candidate', photos: [] } as any;
                 const isIncomingUnread = conv.lastMessageSenderId !== currentUser.id && Boolean(conv.unreadCount && conv.unreadCount > 0);
+                const isSelected = selectedConvIds.has(conv.id);
+
                 return (
                   <div
                     key={conv.id}
                     onClick={() => {
-                      dbService.markConversationAsRead(conv.id);
-                      setActiveConvId(conv.id);
+                      if (isSelectMode) {
+                        setSelectedConvIds(prev => {
+                          const next = new Set(prev);
+                          if (next.has(conv.id)) next.delete(conv.id);
+                          else next.add(conv.id);
+                          return next;
+                        });
+                      } else {
+                        dbService.markConversationAsRead(conv.id);
+                        setActiveConvId(conv.id);
+                      }
                     }}
                     className={`p-3.5 bg-white rounded-2xl border transition-all shadow-subtle group flex items-center gap-3 cursor-pointer ${
-                      isIncomingUnread 
-                        ? 'border-primary/60 bg-pastel-rose/25 border-l-4 border-l-primary shadow-brand/10' 
-                        : 'border-outline hover:border-primary'
+                      isSelected
+                        ? 'border-primary bg-pastel-rose/30 ring-1 ring-primary'
+                        : isIncomingUnread 
+                          ? 'border-primary/60 bg-pastel-rose/25 border-l-4 border-l-primary shadow-brand/10' 
+                          : 'border-outline hover:border-primary'
                     }`}
                   >
-                    {/* Clickable Profile Avatar */}
+                    {/* Multi-Select Checkbox */}
+                    {isSelectMode && (
+                      <div className="shrink-0 text-primary">
+                        {isSelected ? (
+                          <CheckSquare className="w-5 h-5 fill-primary text-white" />
+                        ) : (
+                          <Square className="w-5 h-5 text-secondary" />
+                        )}
+                      </div>
+                    )}
+
+                    {/* Clickable Profile Avatar (Fast 140x140 WebP Thumbnail) */}
                     <div 
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1219,24 +1443,38 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                       }`}>
                         {partner.photos && partner.photos.length > 0 && !partner.photos[0].includes('photo-1534528741775-53994a69daeb') ? (
                           <img
-                            src={partner.photos[0]}
+                            src={getThumbnailUrl(partner.photos[0])}
                             alt={partner.fullName}
+                            onError={(e) => {
+                              const target = e.currentTarget;
+                              target.style.display = 'none';
+                              const parent = target.parentElement;
+                              if (parent) {
+                                const fallback = parent.querySelector('.halal-avatar-fallback');
+                                if (fallback) (fallback as HTMLElement).style.display = 'flex';
+                              }
+                            }}
                             className={`w-full h-full object-cover ${
                               partner.blurPhotosByDefault && !partner.isPhotoRevealed && !conv.isPhotoRevealed ? 'blur-xs' : ''
                             }`}
                           />
-                        ) : (
-                          <span className="font-serif text-sm font-bold text-primary">
-                            {(partner.fullName || 'M').charAt(0)}
+                        ) : null}
+                        <div
+                          className={`halal-avatar-fallback w-full h-full bg-gradient-to-br from-emerald-800 via-emerald-700 to-teal-900 items-center justify-center text-amber-200 font-serif font-black select-none ${
+                            partner.photos && partner.photos.length > 0 && !partner.photos[0].includes('photo-1534528741775-53994a69daeb') ? 'hidden' : 'flex'
+                          }`}
+                        >
+                          <span className="text-sm tracking-wider drop-shadow-xs">
+                            {(partner.fullName || 'M').trim().charAt(0).toUpperCase()}
                           </span>
-                        )}
+                        </div>
                       </div>
                       {isIncomingUnread && (
                         <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-primary border-2 border-white rounded-full animate-pulse" />
                       )}
                     </div>
 
-                    {/* Conversation Info */}
+                    {/* Conversation Info (Clean WhatsApp-Style Row) */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-0.5">
                         <h3 
@@ -1269,24 +1507,13 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                         {conv.lastMessageText || 'Tap to start conversation...'}
                       </p>
 
-                      <div className="flex items-center gap-2 mt-1.5">
-                        {isIncomingUnread && (
+                      {isIncomingUnread && (
+                        <div className="flex items-center gap-2 mt-1">
                           <span className="text-[10px] font-semibold text-primary bg-pastel-rose px-2 py-0.5 rounded-full border border-pastel-rose-border">
                             New Reply
                           </span>
-                        )}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedProfile(partner);
-                          }}
-                          className="text-[10px] text-primary hover:underline font-semibold flex items-center gap-0.5 ml-auto"
-                        >
-                          <FileText className="w-3 h-3" />
-                          <span>View Biodata</span>
-                        </button>
-                      </div>
+                        </div>
+                      )}
                     </div>
 
                   </div>
@@ -1338,6 +1565,15 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                 <img
                   src={activeConv.otherUser.photos[0]}
                   alt={activeConv.otherUser.fullName}
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    target.style.display = 'none';
+                    const parent = target.parentElement;
+                    if (parent) {
+                      const fallback = parent.querySelector('.halal-header-avatar-fallback');
+                      if (fallback) (fallback as HTMLElement).style.display = 'flex';
+                    }
+                  }}
                   className={`w-full h-full object-cover transition-all ${
                     activeConv.otherUser.blurPhotosByDefault && 
                     !activeConv.otherUser.isPhotoRevealed &&
@@ -1348,11 +1584,16 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                       : 'scale-100'
                   }`}
                 />
-              ) : (
-                <span className="font-serif text-xs font-bold text-primary">
-                  {activeConv.otherUser.fullName.charAt(0)}
+              ) : null}
+              <div
+                className={`halal-header-avatar-fallback w-full h-full bg-gradient-to-br from-emerald-800 via-emerald-700 to-teal-900 items-center justify-center text-amber-200 font-serif font-black select-none ${
+                  activeConv.otherUser.photos && activeConv.otherUser.photos.length > 0 && !activeConv.otherUser.photos[0].includes('photo-1534528741775-53994a69daeb') ? 'hidden' : 'flex'
+                }`}
+              >
+                <span className="text-xs tracking-wider drop-shadow-xs">
+                  {(activeConv.otherUser.fullName || 'M').trim().charAt(0).toUpperCase()}
                 </span>
-              )}
+              </div>
             </div>
           </div>
 

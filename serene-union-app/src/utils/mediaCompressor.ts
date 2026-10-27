@@ -93,6 +93,114 @@ export async function compressImage(
 }
 
 /**
+ * Generates an ultra-lightweight square thumbnail (140x140 WebP/JPEG, <15KB)
+ */
+export async function generateSquareThumbnail(
+  fileOrBase64: File | string,
+  targetSize = 140,
+  quality = 0.8
+): Promise<CompressedImageResult> {
+  return new Promise((resolve, reject) => {
+    const handleImage = (img: HTMLImageElement) => {
+      const minDim = Math.min(img.width, img.height);
+      const sx = Math.round((img.width - minDim) / 2);
+      const sy = Math.round((img.height - minDim) / 2);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = targetSize;
+      canvas.height = targetSize;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('Canvas context not available'));
+        return;
+      }
+
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, targetSize, targetSize);
+
+      let mimeType = 'image/webp';
+      let base64 = '';
+      try {
+        base64 = canvas.toDataURL(mimeType, quality);
+        if (!base64.startsWith('data:image/webp')) {
+          mimeType = 'image/jpeg';
+          base64 = canvas.toDataURL(mimeType, quality);
+        }
+      } catch {
+        mimeType = 'image/jpeg';
+        base64 = canvas.toDataURL(mimeType, quality);
+      }
+
+      const base64Clean = base64.split(',')[1] || base64;
+      const size = Math.round((base64Clean.length * 3) / 4);
+
+      resolve({
+        base64,
+        size,
+        width: targetSize,
+        height: targetSize,
+        mimeType
+      });
+    };
+
+    if (typeof fileOrBase64 === 'string') {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onerror = () => reject(new Error('Failed to load image for thumbnail'));
+      img.onload = () => handleImage(img);
+      img.src = fileOrBase64;
+    } else {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('Failed to read image file'));
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onerror = () => reject(new Error('Failed to load image file'));
+        img.onload = () => handleImage(img);
+        img.src = e.target?.result as string;
+      };
+      reader.readAsDataURL(fileOrBase64);
+    }
+  });
+}
+
+/**
+ * Compresses an image into both full resolution (max 1080px) and a square thumbnail (140x140)
+ */
+export async function compressImageWithThumbnail(file: File): Promise<{
+  full: CompressedImageResult;
+  thumb: CompressedImageResult;
+}> {
+  const [full, thumb] = await Promise.all([
+    compressImage(file, 1080, 0.75),
+    generateSquareThumbnail(file, 140, 0.8)
+  ]);
+  return { full, thumb };
+}
+
+/**
+ * Universal helper to resolve low-latency 140x140 WebP thumbnails
+ */
+export function getThumbnailUrl(originalUrl?: string, thumbnailUrl?: string): string {
+  if (thumbnailUrl && thumbnailUrl.trim().length > 0) return thumbnailUrl;
+  if (!originalUrl || typeof originalUrl !== 'string' || originalUrl.trim().length === 0) return '';
+
+  const clean = originalUrl.trim();
+
+  // 1. Seed photos resolution: map /seeds/seed_female_1.jpg -> /seeds/thumbs/seed_female_1.webp
+  if (clean.includes('/seeds/') && !clean.includes('/seeds/thumbs/')) {
+    return clean.replace('/seeds/', '/seeds/thumbs/').replace(/\.(jpe?g|png)$/i, '.webp');
+  }
+
+  // 2. Cloudflare R2 user photos resolution
+  if (clean.includes('/api/photos/media/') && !clean.includes('/thumb_')) {
+    return clean.replace('/api/photos/media/', '/api/photos/media/thumb_');
+  }
+
+  return clean;
+}
+
+/**
  * Handles any user-attached file with automatic compression and media classification
  */
 export async function processAttachedFile(file: File): Promise<CompressedFileResult> {

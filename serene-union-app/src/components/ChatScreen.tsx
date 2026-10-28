@@ -322,9 +322,16 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
     };
   }, [activeConvId]);
 
-  const activePartnerId = activeConvId?.startsWith('conv_')
-    ? activeConvId.replace('conv_', '').split('_').find(id => id !== currentUser.id && id.length > 0)
-    : null;
+  const isTargetingOfficialChannel = Boolean(
+    activeConvId?.includes('qurb') || 
+    activeConvId?.includes('official')
+  );
+
+  const activePartnerId = isTargetingOfficialChannel
+    ? 'usr_qurb_official'
+    : (activeConvId?.startsWith('conv_')
+        ? activeConvId.replace('conv_', '').split('_').find(id => id !== currentUser.id && id.length > 0)
+        : null);
 
   // 0ms Local-First Cache Hydration for Instant Room Switching (Zero delay & zero bleed-through)
   useEffect(() => {
@@ -333,9 +340,11 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
       return;
     }
 
-    const partnerId = activeConvId.startsWith('conv_')
-      ? activeConvId.replace('conv_', '').split('_').find(id => id !== currentUser.id && id.length > 0)
-      : null;
+    const partnerId = isTargetingOfficialChannel 
+      ? 'usr_qurb_official' 
+      : (activeConvId.startsWith('conv_')
+          ? activeConvId.replace('conv_', '').split('_').find(id => id !== currentUser.id && id.length > 0)
+          : null);
 
     // 1. Check granular room cache first (Fastest, 0ms paint)
     const cached = dbService.getCachedRoomMessages(activeConvId);
@@ -345,7 +354,9 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
     }
 
     if (partnerId) {
-      const partnerKey = `conv_${[currentUser.id, partnerId].sort().join('_')}`;
+      const partnerKey = isTargetingOfficialChannel 
+        ? `conv_qurb_official_${currentUser.id}`
+        : `conv_${[currentUser.id, partnerId].sort().join('_')}`;
       const partnerCached = dbService.getCachedRoomMessages(partnerKey);
       if (partnerCached.length > 0) {
         setRoomMessages(partnerCached);
@@ -356,7 +367,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
     // 2. Fallback to conversation list cache
     const existing = dbService.getConversations().find(c => 
       c.id === activeConvId || 
-      (partnerId && c.otherUser?.id === partnerId)
+      (partnerId && (c.otherUser?.id === partnerId || (isTargetingOfficialChannel && (c.isOfficial || c.otherUser?.fullName?.includes('Qurb')))))
     );
 
     if (existing?.messages && existing.messages.length > 0) {
@@ -364,15 +375,96 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
     } else {
       setRoomMessages([]);
     }
-  }, [activeConvId]);
+  }, [activeConvId, isTargetingOfficialChannel, currentUser.id]);
 
   let activeConv = conversations.find(c => 
     c.id === activeConvId || 
-    (activePartnerId && c.otherUser?.id === activePartnerId)
+    (activePartnerId && c.otherUser?.id === activePartnerId) ||
+    (isTargetingOfficialChannel && (c.isOfficial || c.id.includes('qurb') || c.otherUser?.id === 'usr_qurb_official' || c.otherUser?.fullName?.includes('Qurb')))
   );
 
-  // Dynamic fallback: If opening a match with a new profile not yet in local conversations list
-  if (!activeConv && activeConvId) {
+  // Fallback for Qurb Official Channel if targeting official channel
+  if (isTargetingOfficialChannel || activePartnerId === 'usr_qurb_official' || activeConv?.otherUser?.id === 'usr_qurb_official' || activeConv?.otherUser?.fullName?.includes('Qurb')) {
+    const fallbackAnnouncements: ChatMessage[] = [
+      {
+        id: 'ann_welcome_001',
+        senderId: 'usr_qurb_official',
+        senderName: 'Qurb Team',
+        text: 'Assalamu Alaikum! 🌟 Welcome to the official Qurb Channel.\n\nHere you will receive security advice, feature updates, and official announcements directly from the Qurb Team. Your privacy, modesty, and security are our highest priority.\n\nMay Allah guide you to half your deen with Barakah and joy.',
+        timestamp: 'Just now',
+        isRead: true,
+        waliNotified: true,
+        mediaUrl: undefined,
+        mediaType: undefined,
+        actionUrl: 'https://qurb.app',
+        actionLabel: 'Visit Official Website ↗',
+        isOfficial: true
+      },
+      {
+        id: 'ann_v1037_update',
+        senderId: 'usr_qurb_official',
+        senderName: 'Qurb Team',
+        text: '🚀 Update Alert: Qurb v1.0.37 is now available on Google Play Store!\n\n✨ New in this version:\n• Crystal-clear HD Voice & Video Calling\n• Zero connection drops with auto-reconnect\n• Enhanced profile security & instant push notifications\n• Smooth chat and media sharing\n\nUpdate now on Google Play Store for the best halal matchmaking experience!',
+        timestamp: 'Just now',
+        isRead: true,
+        waliNotified: true,
+        mediaUrl: 'https://qurb.app/announcement_v1037_banner.jpg',
+        mediaType: 'image',
+        actionUrl: 'https://play.google.com/store/apps/details?id=app.qurb.serene&pcampaignid=web_share',
+        actionLabel: 'Update on Google Play Store ↗',
+        isOfficial: true
+      }
+    ];
+
+    if (!activeConv || activeConv.otherUser?.fullName === 'Match Candidate' || !activeConv.isOfficial) {
+      activeConv = {
+        id: activeConvId || `conv_qurb_official_${currentUser.id}`,
+        participantOne: currentUser.id,
+        participantTwo: 'usr_qurb_official',
+        otherUser: {
+          id: 'usr_qurb_official',
+          phone: '+923000000000',
+          fullName: 'Qurb Team',
+          dob: '2024-01-01',
+          age: 1,
+          gender: 'other',
+          location: 'Pakistan & Global',
+          city: 'Official Channel',
+          country: 'Pakistan',
+          profession: 'Verified Broadcast',
+          education: 'Official Support',
+          university: '',
+          height: '',
+          ethnicity: 'Pakistani',
+          marriageTimeline: 'within_1_year',
+          bio: 'Official announcements, updates, release notes, and safety tips from Qurb Team.',
+          blurPhotosByDefault: false,
+          profileVisibility: 'approved_only',
+          photos: ['/icon.svg'],
+          isVerified: true,
+          isOfficial: true,
+          religiousProfile: {
+            practiceLevel: 'practicing',
+            sect: 'Sunni',
+            madhhab: 'Hanafi',
+            prayerFrequency: '5 times daily',
+            halalDiet: 'Strictly Halal'
+          }
+        } as any,
+        lastMessageText: '🚀 Update Alert: Qurb v1.0.37 is now available on Google Play Store! Crystal-clear HD Voice & Video Calling.',
+        lastMessageSenderId: 'usr_qurb_official',
+        lastMessageTime: 'Just now',
+        lastMessageTimestamp: Date.now(),
+        unreadCount: 0,
+        status: 'active',
+        isOfficial: true,
+        hasRevealedToPartner: true,
+        isPhotoRevealed: true,
+        messages: (activeConv?.messages && activeConv.messages.length > 0) ? activeConv.messages : fallbackAnnouncements
+      };
+    }
+  } else if (!activeConv && activeConvId) {
+    // Dynamic fallback ONLY for real candidates:
     const rawParts = activeConvId.replace('conv_', '').split('_');
     const partnerId = rawParts.find(id => id !== currentUser.id && id.length > 0);
     if (partnerId) {
@@ -435,64 +527,18 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
     }
   }
 
-  // Fallback for Qurb Official Channel if not present in conversations
-  if (!activeConv && activeConvId && (activeConvId.includes('qurb_official') || activePartnerId === 'usr_qurb_official')) {
-    activeConv = {
-      id: activeConvId,
-      participantOne: currentUser.id,
-      participantTwo: 'usr_qurb_official',
-      otherUser: {
-        id: 'usr_qurb_official',
-        phone: '+923000000000',
-        fullName: 'Qurb Team ✓',
-        dob: '2024-01-01',
-        age: 1,
-        gender: 'other',
-        location: 'Pakistan & Global',
-        city: 'Official Channel',
-        country: 'Pakistan',
-        profession: 'Verified Broadcast',
-        education: 'Official Support',
-        university: '',
-        height: '',
-        ethnicity: 'Pakistani',
-        marriageTimeline: 'within_1_year',
-        bio: 'Official announcements, updates, release notes, and safety tips from Qurb Team.',
-        blurPhotosByDefault: false,
-        profileVisibility: 'approved_only',
-        photos: ['/icon.svg'],
-        isVerified: true,
-        isOfficial: true,
-        religiousProfile: {
-          practiceLevel: 'practicing',
-          sect: 'Sunni',
-          madhhab: 'Hanafi',
-          prayerFrequency: '5 times daily',
-          halalDiet: 'Strictly Halal'
-        }
-      } as any,
-      lastMessageText: '🚀 Update Alert: Qurb v1.0.37 is now available on Google Play Store!',
-      lastMessageSenderId: 'usr_qurb_official',
-      lastMessageTime: 'Just now',
-      lastMessageTimestamp: Date.now(),
-      unreadCount: 0,
-      status: 'active',
-      isOfficial: true,
-      hasRevealedToPartner: true,
-      isPhotoRevealed: true,
-      messages: []
-    };
-  }
-
   const isOfficialChannel = Boolean(
+    isTargetingOfficialChannel ||
     activeConv?.isOfficial || 
     activeConv?.otherUser?.id === 'usr_qurb_official' || 
-    activeConvId?.includes('qurb_official')
+    activeConv?.otherUser?.fullName?.includes('Qurb') ||
+    activeConv?.participantOne === 'usr_qurb_official' ||
+    activeConv?.participantTwo === 'usr_qurb_official'
   );
 
   // Live profile hydration if candidate details are minimal
   useEffect(() => {
-    if (!activeConvId) return;
+    if (!activeConvId || isOfficialChannel) return;
     const rawParts = activeConvId.replace('conv_', '').split('_');
     const partnerId = rawParts.find(id => id !== currentUser.id && id.length > 0);
     if (!partnerId) return;
@@ -890,6 +936,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
 
   // 1. Voice Recording Handlers
   const handleStartRecording = async () => {
+    if (isOfficialChannel) return;
     try {
       const recorder = new VoiceRecorder();
       await recorder.start();
@@ -978,7 +1025,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (isOfficialChannel || !file) return;
     e.target.value = ''; // Reset input for re-selecting same file if needed
 
     const isImg = file.type.toLowerCase().startsWith('image/');
@@ -1147,7 +1194,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
 
   // Real User-to-User Send Message
   const handleSendMessage = async () => {
-    if (!inputText.trim() || !activeConvId || !activeConv) return;
+    if (isOfficialChannel || !inputText.trim() || !activeConvId || !activeConv) return;
 
     const text = inputText.trim();
     const user = dbService.getCurrentUser();
@@ -1918,15 +1965,29 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                     ? 'https://qurb.app/announcement_v1037_banner.jpg' 
                     : undefined);
 
-                const hasPlayStoreLink = Boolean(
+                const rawText = msg.text || '';
+                const urlMatch = rawText.match(/https?:\/\/[^\s]+/);
+                const extractedUrl = urlMatch ? urlMatch[0] : null;
+
+                const isPlayStoreIntent = Boolean(
                   (msg.actionUrl && msg.actionUrl.includes('play.google.com')) ||
-                  (msg.text && msg.text.includes('play.google.com'))
+                  (extractedUrl && extractedUrl.includes('play.google.com')) ||
+                  rawText.toLowerCase().includes('google play') ||
+                  rawText.toLowerCase().includes('play store') ||
+                  rawText.toLowerCase().includes('v1.0.37') ||
+                  rawText.toLowerCase().includes('update alert') ||
+                  (isOfficialChannel && rawText.toLowerCase().includes('update'))
                 );
 
                 const destinationUrl = msg.actionUrl || 
-                  (hasPlayStoreLink ? 'https://play.google.com/store/apps/details?id=app.qurb.serene&pcampaignid=web_share' : undefined);
+                  (isPlayStoreIntent 
+                    ? 'https://play.google.com/store/apps/details?id=app.qurb.serene&pcampaignid=web_share' 
+                    : extractedUrl || (isOfficialChannel ? 'https://play.google.com/store/apps/details?id=app.qurb.serene&pcampaignid=web_share' : undefined));
 
-                const ctaText = msg.actionLabel || (hasPlayStoreLink ? '⚡ Update on Google Play Store ↗' : 'View Update Details ↗');
+                const ctaText = msg.actionLabel || 
+                  (isPlayStoreIntent || destinationUrl?.includes('play.google.com')
+                    ? '⚡ Update on Google Play Store ↗' 
+                    : (destinationUrl?.includes('qurb.app') ? 'Visit Official Website ↗' : 'View Update Details ↗'));
 
                 return (
                   <div key={msg.id || idx} className="w-full flex justify-center py-2.5 px-1 animate-fade-in">
@@ -1997,16 +2058,16 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
 
                         {/* 3. Action CTA Button */}
                         {destinationUrl && (
-                          <div className="pt-1">
+                          <div className="pt-1.5">
                             <a
                               href={destinationUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-800 text-white font-extrabold text-xs shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer no-underline group"
+                              className="w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-800 text-white font-extrabold text-xs shadow-lg shadow-emerald-600/35 flex items-center justify-center gap-2.5 transition-all active:scale-98 cursor-pointer no-underline group ring-1 ring-white/20"
                             >
-                              <Play className="w-4 h-4 fill-white group-hover:scale-110 transition-transform" />
-                              <span>{ctaText}</span>
-                              <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+                              <Play className="w-4 h-4 fill-white group-hover:scale-110 transition-transform shrink-0" />
+                              <span className="tracking-wide text-xs">{ctaText}</span>
+                              <ExternalLink className="w-3.5 h-3.5 opacity-80 shrink-0" />
                             </a>
                           </div>
                         )}

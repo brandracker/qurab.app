@@ -177,23 +177,32 @@ export const chatService = {
       if (data.success && Array.isArray(data.messages)) {
         const conversations = this.getConversations();
         const conv = conversations.find(c => c.id === conversationId || (c.otherUser && conversationId.includes(c.otherUser.id)));
-        const mappedMessages: ChatMessage[] = data.messages.map((m: any) => ({
-          id: m.id || 'msg_' + Math.random().toString(36).substring(2, 7),
-          senderId: m.senderId || m.sender_id,
-          senderName: m.senderName || m.sender_name || 'Member',
-          text: m.text || m.content || '',
-          timestamp: m.timestamp || (m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'),
-          isRead: Boolean(m.isRead ?? m.is_read),
-          waliNotified: Boolean(m.waliNotified ?? m.wali_notified ?? true),
-          mediaUrl: m.mediaUrl || m.media_url,
-          mediaType: m.mediaType || m.media_type,
-          mediaDuration: m.mediaDuration || m.media_duration,
-          fileName: m.fileName || m.file_name,
-          fileSize: m.fileSize || m.file_size,
-          isViewOnce: Boolean(m.isViewOnce ?? m.is_view_once),
-          isOpened: Boolean(m.isOpened ?? m.is_opened),
-          openedAt: m.openedAt || m.opened_at
-        }));
+        const isOfficialConv = conversationId.includes('qurb_official');
+        const mappedMessages: ChatMessage[] = data.messages.map((m: any) => {
+          const bannerUrl = m.mediaUrl || m.media_url || m.imageUrl || m.image_url || 
+            (isOfficialConv && m.text?.includes('v1.0.37') ? 'https://qurb.app/announcement_v1037_banner.jpg' : null);
+
+          return {
+            id: m.id || 'msg_' + Math.random().toString(36).substring(2, 7),
+            senderId: m.senderId || m.sender_id,
+            senderName: isOfficialConv ? 'Qurb Team' : (m.senderName || m.sender_name || 'Member'),
+            text: m.text || m.content || '',
+            timestamp: m.timestamp || (m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'),
+            isRead: Boolean(m.isRead ?? m.is_read),
+            waliNotified: Boolean(m.waliNotified ?? m.wali_notified ?? true),
+            mediaUrl: bannerUrl || undefined,
+            mediaType: bannerUrl ? 'image' : (m.mediaType || m.media_type || 'text'),
+            mediaDuration: m.mediaDuration || m.media_duration,
+            fileName: m.fileName || m.file_name,
+            fileSize: m.fileSize || m.file_size,
+            isViewOnce: Boolean(m.isViewOnce ?? m.is_view_once),
+            isOpened: Boolean(m.isOpened ?? m.is_opened),
+            openedAt: m.openedAt || m.opened_at,
+            actionUrl: m.actionUrl || m.action_url || undefined,
+            actionLabel: m.actionLabel || m.action_label || undefined,
+            isOfficial: Boolean(isOfficialConv || m.isOfficial || m.is_official)
+          };
+        });
 
         if (conv) {
           conv.messages = mappedMessages;

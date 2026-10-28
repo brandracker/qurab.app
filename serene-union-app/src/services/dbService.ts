@@ -2022,7 +2022,11 @@ class DBService {
               ? new Date(rc.lastMessageTime).getTime() 
               : (existing?.lastMessageTimestamp || Date.now());
 
-            const msgsToSet = existing?.messages && existing.messages.length > 0 ? existing.messages : (rc.messages || []);
+            const isOfficial = Boolean(rc.isOfficial || existing?.isOfficial || rc.id.includes('qurb_official') || rc.otherUser?.id === 'usr_qurb_official');
+            const msgsToSet = (isOfficial && Array.isArray(rc.messages) && rc.messages.length > 0)
+              ? rc.messages
+              : (existing?.messages && existing.messages.length > 0 ? existing.messages : (rc.messages || []));
+
             if (Array.isArray(rc.messages) && rc.messages.length > 0) {
               this.setCachedRoomMessages(rc.id, rc.messages);
             }
@@ -2042,7 +2046,7 @@ class DBService {
               messages: msgsToSet,
               isPhotoRevealed,
               hasRevealedToPartner,
-              isOfficial: Boolean(rc.isOfficial || existing?.isOfficial || rc.id.includes('qurb_official') || rc.otherUser?.id === 'usr_qurb_official')
+              isOfficial
             });
           });
 
@@ -2087,11 +2091,42 @@ class DBService {
         // Ensure Official Qurb Channel is always present in conversations
         const officialConvId = `conv_qurb_official_${user.id}`;
         if (!convMap.has(officialConvId)) {
+          const fallbackAnnouncements: ChatMessage[] = [
+            {
+              id: 'ann_welcome_001',
+              senderId: 'usr_qurb_official',
+              senderName: 'Qurb Team',
+              text: 'Assalamu Alaikum! 🌟 Welcome to the official Qurb Channel.\n\nHere you will receive security advice, feature updates, and official announcements directly from the Qurb Team. Your privacy, modesty, and security are our highest priority.\n\nMay Allah guide you to half your deen with Barakah and joy.',
+              timestamp: 'Just now',
+              isRead: true,
+              waliNotified: true,
+              mediaUrl: undefined,
+              mediaType: undefined,
+              actionUrl: 'https://qurb.app',
+              actionLabel: 'Visit Website ↗',
+              isOfficial: true
+            },
+            {
+              id: 'ann_v1037_update',
+              senderId: 'usr_qurb_official',
+              senderName: 'Qurb Team',
+              text: '🚀 Update Alert: Qurb v1.0.37 is now available on Google Play Store!\n\n✨ New in this version:\n• Crystal-clear HD Voice & Video Calling\n• Zero connection drops with auto-reconnect\n• Enhanced profile security & instant push notifications\n• Smooth chat and media sharing\n\nUpdate now on Google Play Store for the best halal matchmaking experience!',
+              timestamp: 'Just now',
+              isRead: true,
+              waliNotified: true,
+              mediaUrl: 'https://qurb.app/announcement_v1037_banner.jpg',
+              mediaType: 'image',
+              actionUrl: 'https://play.google.com/store/apps/details?id=app.qurb.serene&pcampaignid=web_share',
+              actionLabel: 'Update on Google Play Store ↗',
+              isOfficial: true
+            }
+          ];
+
           convMap.set(officialConvId, {
             id: officialConvId,
             participantOne: user.id,
             participantTwo: 'usr_qurb_official',
-            lastMessageText: '🚀 Update Alert: Qurb v1.0.37 is now live on Google Play Store! Crystal-clear HD calling & performance upgrades.',
+            lastMessageText: '🚀 Update Alert: Qurb v1.0.37 is now available on Google Play Store! Crystal-clear HD Voice & Video Calling.',
             lastMessageSenderId: 'usr_qurb_official',
             lastMessageTime: 'Just now',
             lastMessageTimestamp: Date.now(),
@@ -2100,11 +2135,11 @@ class DBService {
             isOfficial: true,
             hasRevealedToPartner: true,
             isPhotoRevealed: true,
-            messages: [],
+            messages: fallbackAnnouncements,
             otherUser: {
               id: 'usr_qurb_official',
               phone: '+923000000000',
-              fullName: 'Qurb Team ✓',
+              fullName: 'Qurb Team',
               age: 1,
               gender: 'other',
               location: 'Pakistan & Global',
@@ -2238,25 +2273,34 @@ class DBService {
       if (data.success && Array.isArray(data.messages)) {
         const conversations = this.getConversations();
         const conv = conversations.find(c => c.id === conversationId || (c.otherUser && conversationId.includes(c.otherUser.id)));
-        const mappedMessages: ChatMessage[] = data.messages.map((m: any) => ({
-          id: m.id || 'msg_' + Math.random().toString(36).substring(2, 7),
-          senderId: m.senderId || m.sender_id,
-          senderName: m.senderName || m.sender_name || 'Member',
-          text: m.text || m.message_text || m.content || '',
-          timestamp: m.timestamp && (m.timestamp.includes('T') || m.timestamp.includes('-') || m.timestamp.includes(':'))
-            ? (isNaN(new Date(m.timestamp).getTime()) ? m.timestamp : new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
-            : (m.timestamp || 'Just now'),
-          isRead: true,
-          waliNotified: true,
-          mediaUrl: m.mediaUrl || m.media_url,
-          mediaType: m.mediaType || m.media_type,
-          mediaDuration: m.mediaDuration || m.media_duration,
-          fileName: m.fileName || m.file_name,
-          fileSize: m.fileSize || m.file_size,
-          isViewOnce: Boolean(m.isViewOnce ?? m.is_view_once),
-          isOpened: Boolean(m.isOpened ?? m.is_opened),
-          openedAt: m.openedAt || m.opened_at
-        }));
+        const isOfficialConv = conversationId.includes('qurb_official');
+        const mappedMessages: ChatMessage[] = data.messages.map((m: any) => {
+          const bannerUrl = m.mediaUrl || m.media_url || m.imageUrl || m.image_url || 
+            (isOfficialConv && m.text?.includes('v1.0.37') ? 'https://qurb.app/announcement_v1037_banner.jpg' : null);
+
+          return {
+            id: m.id || 'msg_' + Math.random().toString(36).substring(2, 7),
+            senderId: m.senderId || m.sender_id,
+            senderName: isOfficialConv ? 'Qurb Team' : (m.senderName || m.sender_name || 'Member'),
+            text: m.text || m.message_text || m.content || '',
+            timestamp: m.timestamp && (m.timestamp.includes('T') || m.timestamp.includes('-') || m.timestamp.includes(':'))
+              ? (isNaN(new Date(m.timestamp).getTime()) ? m.timestamp : new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
+              : (m.timestamp || 'Just now'),
+            isRead: true,
+            waliNotified: true,
+            mediaUrl: bannerUrl || undefined,
+            mediaType: bannerUrl ? 'image' : (m.mediaType || m.media_type || undefined),
+            mediaDuration: m.mediaDuration || m.media_duration,
+            fileName: m.fileName || m.file_name,
+            fileSize: m.fileSize || m.file_size,
+            isViewOnce: Boolean(m.isViewOnce ?? m.is_view_once),
+            isOpened: Boolean(m.isOpened ?? m.is_opened),
+            openedAt: m.openedAt || m.opened_at,
+            actionUrl: m.actionUrl || m.action_url || undefined,
+            actionLabel: m.actionLabel || m.action_label || undefined,
+            isOfficial: Boolean(isOfficialConv || m.isOfficial || m.is_official)
+          };
+        });
 
         this.setCachedRoomMessages(conversationId, mappedMessages);
         if (conv?.id && conv.id !== conversationId) {

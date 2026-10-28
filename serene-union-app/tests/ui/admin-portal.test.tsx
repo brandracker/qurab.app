@@ -461,7 +461,7 @@ describe('Admin Portal UI & Isolation Tests', () => {
     render(<AdminPortal />);
 
     // Click Broadcast button in header
-    const broadcastHeaderBtn = screen.getByRole('button', { name: /Broadcast/i });
+    const broadcastHeaderBtn = screen.getByRole('button', { name: /^Broadcast$/i });
     fireEvent.click(broadcastHeaderBtn);
 
     // Modal renders

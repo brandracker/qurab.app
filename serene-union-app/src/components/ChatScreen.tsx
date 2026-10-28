@@ -4,8 +4,9 @@ import {
   MoreVertical, Eye, EyeOff, ShieldCheck, Paperclip, Mic, Play, Pause, 
   Trash2, X, Download, File, Loader2, Volume2, VolumeX, Maximize2,
   Phone, Video, PhoneCall, PhoneOff, Search, CheckSquare, Square,
-  BadgeCheck, ExternalLink, CheckCircle2, Megaphone
+  ExternalLink, Megaphone
 } from 'lucide-react';
+import { VerifiedBlueTick } from './VerifiedBlueTick';
 import type { Conversation, ChatMessage, UserProfile } from '../types';
 
 import { dbService, API_BASE } from '../services/dbService';
@@ -519,9 +520,17 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
 
   // Live adaptive polling for messages & real-time photo reveal status from Cloudflare D1
   useEffect(() => {
-    const targetRoomId = activeConv?.otherUser?.id 
-      ? (`conv_${[currentUser.id, activeConv.otherUser.id].sort().join('_')}`)
-      : (activeConv?.id || activeConvId);
+    const isTargetOfficial = Boolean(
+      activeConv?.isOfficial || 
+      activeConv?.otherUser?.id === 'usr_qurb_official' || 
+      activeConvId?.includes('qurb_official')
+    );
+
+    const targetRoomId = isTargetOfficial
+      ? (activeConv?.id || activeConvId)
+      : (activeConv?.otherUser?.id 
+          ? (`conv_${[currentUser.id, activeConv.otherUser.id].sort().join('_')}`)
+          : (activeConv?.id || activeConvId));
 
     if (!targetRoomId) return;
 
@@ -571,9 +580,17 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
 
   // Real-Time Cloudflare Durable Object WebSocket (Ultra-fast Turbo Layer)
   useEffect(() => {
-    const targetRoomId = activeConv?.otherUser?.id 
-      ? (`conv_${[currentUser.id, activeConv.otherUser.id].sort().join('_')}`)
-      : (activeConv?.id || activeConvId);
+    const isTargetOfficial = Boolean(
+      activeConv?.isOfficial || 
+      activeConv?.otherUser?.id === 'usr_qurb_official' || 
+      activeConvId?.includes('qurb_official')
+    );
+
+    const targetRoomId = isTargetOfficial
+      ? (activeConv?.id || activeConvId)
+      : (activeConv?.otherUser?.id 
+          ? (`conv_${[currentUser.id, activeConv.otherUser.id].sort().join('_')}`)
+          : (activeConv?.id || activeConvId));
 
     if (!targetRoomId) return;
 
@@ -1500,12 +1517,16 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                       className="relative shrink-0 cursor-pointer group/avatar"
                       title={isConvOfficial ? "Qurb Official Channel" : `Click to view ${partner.fullName}'s Biodata`}
                     >
-                      <div className={`w-12 h-12 rounded-full overflow-hidden border-2 bg-surface-variant flex items-center justify-center group-hover/avatar:border-primary transition-all shadow-subtle ${
+                      <div className={`w-12 h-12 rounded-full overflow-hidden border-2 flex items-center justify-center transition-all shadow-subtle ${
                         isConvOfficial
-                          ? 'border-sky-300 ring-2 ring-sky-100 bg-sky-50'
-                          : isIncomingUnread ? 'border-primary ring-2 ring-primary/20' : 'border-primary/30'
+                          ? 'border-sky-400 ring-2 ring-sky-200/80 bg-gradient-to-br from-[#0B101E] to-[#162038]'
+                          : isIncomingUnread ? 'border-primary ring-2 ring-primary/20 bg-surface-variant' : 'border-primary/30 bg-surface-variant'
                       }`}>
-                        {partner.photos && partner.photos.length > 0 && !partner.photos[0].includes('photo-1534528741775-53994a69daeb') ? (
+                        {isConvOfficial ? (
+                          <div className="w-full h-full p-2 flex items-center justify-center bg-gradient-to-br from-[#0B101E] to-[#162038]">
+                            <img src="/icon.svg" alt="Qurb" className="w-full h-full object-contain" />
+                          </div>
+                        ) : partner.photos && partner.photos.length > 0 && !partner.photos[0].includes('photo-1534528741775-53994a69daeb') ? (
                           <img
                             src={getThumbnailUrl(partner.photos[0])}
                             alt={partner.fullName}
@@ -1519,27 +1540,29 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                               }
                             }}
                             className={`w-full h-full object-cover ${
-                              !isConvOfficial && partner.blurPhotosByDefault && !partner.isPhotoRevealed && !conv.isPhotoRevealed ? 'blur-xs' : ''
+                              partner.blurPhotosByDefault && !partner.isPhotoRevealed && !conv.isPhotoRevealed ? 'blur-xs' : ''
                             }`}
                           />
                         ) : null}
-                        <div
-                          className={`halal-avatar-fallback w-full h-full ${
-                            isConvOfficial
-                              ? 'bg-gradient-to-br from-sky-600 to-indigo-700 text-white'
-                              : 'bg-gradient-to-br from-emerald-800 via-emerald-700 to-teal-900 text-amber-200'
-                          } items-center justify-center font-serif font-black select-none ${
-                            partner.photos && partner.photos.length > 0 && !partner.photos[0].includes('photo-1534528741775-53994a69daeb') ? 'hidden' : 'flex'
-                          }`}
-                        >
-                          <span className="text-sm tracking-wider drop-shadow-xs font-bold">
-                            {isConvOfficial ? 'Q' : (partner.fullName || 'M').trim().charAt(0).toUpperCase()}
-                          </span>
-                        </div>
+                        {!isConvOfficial && (
+                          <div
+                            className={`halal-avatar-fallback w-full h-full bg-gradient-to-br from-emerald-800 via-emerald-700 to-teal-900 text-amber-200 items-center justify-center font-serif font-black select-none ${
+                              partner.photos && partner.photos.length > 0 && !partner.photos[0].includes('photo-1534528741775-53994a69daeb') ? 'hidden' : 'flex'
+                            }`}
+                          >
+                            <span className="text-sm tracking-wider drop-shadow-xs font-bold">
+                              {(partner.fullName || 'M').trim().charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                        )}
                       </div>
-                      {isIncomingUnread && (
+                      {isConvOfficial ? (
+                        <span className="absolute -bottom-0.5 -right-0.5">
+                          <VerifiedBlueTick size={15} />
+                        </span>
+                      ) : isIncomingUnread ? (
                         <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-primary border-2 border-white rounded-full animate-pulse" />
-                      )}
+                      ) : null}
                     </div>
 
                     {/* Conversation Info (Clean WhatsApp-Style Row) */}
@@ -1559,9 +1582,14 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                           }`}
                           title={isConvOfficial ? "Qurb Official Channel" : "Click to view full biodata"}
                         >
-                          <span>{partner.fullName}</span>
+                          <span>{isConvOfficial ? 'Qurb Team' : (partner.fullName || 'Member').replace(/✓/g, '').trim()}</span>
                           {isConvOfficial && (
-                            <BadgeCheck className="w-3.5 h-3.5 text-sky-500 fill-sky-500 text-white shrink-0" />
+                            <>
+                              <VerifiedBlueTick size={15} className="ml-0.5" />
+                              <span className="ml-1 text-[9px] px-1.5 py-0.2 rounded-full bg-sky-50 text-sky-700 font-bold uppercase tracking-wider border border-sky-200/80">
+                                Official
+                              </span>
+                            </>
                           )}
                         </h3>
                         <div className="flex items-center gap-1.5 shrink-0">
@@ -1637,48 +1665,59 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
             className={`relative shrink-0 ${!isOfficialChannel ? 'cursor-pointer group/avatar' : ''}`}
             title={isOfficialChannel ? "Qurb Official Channel" : "Click to view full biodata"}
           >
-            <div className={`w-10 h-10 rounded-full overflow-hidden border-2 bg-surface-variant flex items-center justify-center transition-all shadow-subtle ${
-              isOfficialChannel ? 'border-sky-300 ring-2 ring-sky-100 bg-sky-50' : 'border-primary/40 group-hover/avatar:border-primary'
+            <div className={`w-10 h-10 rounded-full overflow-hidden border-2 flex items-center justify-center transition-all shadow-subtle ${
+              isOfficialChannel ? 'border-sky-300 ring-2 ring-sky-100 bg-sky-50' : 'border-primary/40 group-hover/avatar:border-primary bg-surface-variant'
             }`}>
-              {activeConv.otherUser.photos && activeConv.otherUser.photos.length > 0 && !activeConv.otherUser.photos[0].includes('photo-1534528741775-53994a69daeb') ? (
-                <img
-                  src={activeConv.otherUser.photos[0]}
-                  alt={activeConv.otherUser.fullName}
-                  onError={(e) => {
-                    const target = e.currentTarget;
-                    target.style.display = 'none';
-                    const parent = target.parentElement;
-                    if (parent) {
-                      const fallback = parent.querySelector('.halal-header-avatar-fallback');
-                      if (fallback) (fallback as HTMLElement).style.display = 'flex';
-                    }
-                  }}
-                  className={`w-full h-full object-cover transition-all ${
-                    !isOfficialChannel &&
-                    activeConv.otherUser.blurPhotosByDefault && 
-                    !activeConv.otherUser.isPhotoRevealed &&
-                    !activeConv.isPhotoRevealed &&
-                    !dbService.isPhotoRevealedTo(activeConv.otherUser.id, currentUser.id) && 
-                    !activeConv.otherUser.photoRevealApproved
-                      ? 'filter blur-xs opacity-75 scale-105'
-                      : 'scale-100'
-                  }`}
-                />
-              ) : null}
-              <div
-                className={`halal-header-avatar-fallback w-full h-full ${
-                  isOfficialChannel
-                    ? 'bg-gradient-to-br from-sky-600 to-indigo-700 text-white'
-                    : 'bg-gradient-to-br from-emerald-800 via-emerald-700 to-teal-900 text-amber-200'
-                } items-center justify-center font-serif font-black select-none ${
-                  activeConv.otherUser.photos && activeConv.otherUser.photos.length > 0 && !activeConv.otherUser.photos[0].includes('photo-1534528741775-53994a69daeb') ? 'hidden' : 'flex'
-                }`}
-              >
-                <span className="text-xs tracking-wider drop-shadow-xs font-bold">
-                  {isOfficialChannel ? 'Q' : (activeConv.otherUser.fullName || 'M').trim().charAt(0).toUpperCase()}
-                </span>
-              </div>
+              {isOfficialChannel ? (
+                <div className="w-full h-full bg-gradient-to-br from-sky-600 to-indigo-700 flex items-center justify-center p-1.5">
+                  <img src="/icon.svg" alt="Qurb" className="w-full h-full object-contain filter drop-shadow-sm" onError={(e) => {
+                    (e.currentTarget as HTMLElement).style.display = 'none';
+                  }} />
+                  <span className="text-white font-black text-sm select-none font-serif">Q</span>
+                </div>
+              ) : (
+                <>
+                  {activeConv.otherUser.photos && activeConv.otherUser.photos.length > 0 && !activeConv.otherUser.photos[0].includes('photo-1534528741775-53994a69daeb') ? (
+                    <img
+                      src={activeConv.otherUser.photos[0]}
+                      alt={activeConv.otherUser.fullName}
+                      onError={(e) => {
+                        const target = e.currentTarget;
+                        target.style.display = 'none';
+                        const parent = target.parentElement;
+                        if (parent) {
+                          const fallback = parent.querySelector('.halal-header-avatar-fallback');
+                          if (fallback) (fallback as HTMLElement).style.display = 'flex';
+                        }
+                      }}
+                      className={`w-full h-full object-cover transition-all ${
+                        activeConv.otherUser.blurPhotosByDefault && 
+                        !activeConv.otherUser.isPhotoRevealed &&
+                        !activeConv.isPhotoRevealed &&
+                        !dbService.isPhotoRevealedTo(activeConv.otherUser.id, currentUser.id) && 
+                        !activeConv.otherUser.photoRevealApproved
+                          ? 'filter blur-xs opacity-75 scale-105'
+                          : 'scale-100'
+                      }`}
+                    />
+                  ) : null}
+                  <div
+                    className={`halal-header-avatar-fallback w-full h-full bg-gradient-to-br from-emerald-800 via-emerald-700 to-teal-900 text-amber-200 items-center justify-center font-serif font-black select-none ${
+                      activeConv.otherUser.photos && activeConv.otherUser.photos.length > 0 && !activeConv.otherUser.photos[0].includes('photo-1534528741775-53994a69daeb') ? 'hidden' : 'flex'
+                    }`}
+                  >
+                    <span className="text-xs tracking-wider drop-shadow-xs font-bold">
+                      {(activeConv.otherUser.fullName || 'M').trim().charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
+            {isOfficialChannel && (
+              <div className="absolute -bottom-1 -right-1 filter drop-shadow-sm">
+                <VerifiedBlueTick size={15} />
+              </div>
+            )}
           </div>
 
           {/* Clickable Name & Biodata Summary */}
@@ -1689,15 +1728,20 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
             className={`flex flex-col min-w-0 ${!isOfficialChannel ? 'cursor-pointer group' : ''}`}
             title={isOfficialChannel ? "Qurb Official Channel" : "Click to view full biodata"}
           >
-            <h2 className="font-serif font-bold text-xs text-on-surface group-hover:text-primary transition-colors truncate flex items-center gap-1">
-              <span>{activeConv.otherUser.fullName}</span>
+            <h2 className="font-serif font-bold text-xs text-on-surface group-hover:text-primary transition-colors truncate flex items-center gap-1.5">
+              <span>{isOfficialChannel ? 'Qurb Team' : (activeConv.otherUser.fullName || '').replace(/✓/g, '').trim()}</span>
               {isOfficialChannel && (
-                <BadgeCheck className="w-3.5 h-3.5 text-sky-500 fill-sky-500 text-white shrink-0" />
+                <>
+                  <VerifiedBlueTick size={15} />
+                  <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-sky-50 text-sky-700 font-bold uppercase tracking-wider border border-sky-200">
+                    Official
+                  </span>
+                </>
               )}
             </h2>
             <div className="text-[10px] text-secondary truncate">
               {isOfficialChannel
-                ? 'Official Announcements & Updates'
+                ? 'Official Broadcasts & Verified Updates'
                 : `${activeConv.otherUser.profession || 'Member'} · ${activeConv.otherUser.city || activeConv.otherUser.location || 'Global'}`}
             </div>
           </div>
@@ -1706,8 +1750,8 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
         {/* Action Controls: Call Buttons, Biodata Button & 3-Dots Kebab Menu */}
         <div className="flex items-center gap-1.5 shrink-0 relative">
           {isOfficialChannel ? (
-            <div className="flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-sky-50 to-blue-50 border border-sky-200 text-sky-800 rounded-full text-[11px] font-bold shadow-2xs">
-              <CheckCircle2 className="w-3.5 h-3.5 text-sky-600 fill-sky-100" />
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-sky-50 via-white to-blue-50 border border-sky-300/80 text-sky-800 rounded-full text-[11px] font-bold shadow-xs">
+              <VerifiedBlueTick size={14} />
               <span>Verified Channel</span>
             </div>
           ) : (
@@ -1864,19 +1908,136 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
           return activeMessages.length > 0 ? (
             activeMessages.map((msg, idx) => {
               const isMe = msg.senderId === currentUser.id;
-              const isOfficialMsg = Boolean(isOfficialChannel || msg.isOfficial);
+              const isOfficialMsg = Boolean(isOfficialChannel || msg.isOfficial || msg.senderId === 'usr_qurb_official');
+
+              if (isOfficialMsg) {
+                // High-End Official Announcement Showcase Card
+                const rawMedia = (msg.mediaUrl && typeof msg.mediaUrl === 'string' && msg.mediaUrl.trim() !== '' && msg.mediaUrl !== 'null') ? msg.mediaUrl.trim() : null;
+                const bannerUrl = rawMedia || 
+                  (msg.text?.includes('v1.0.37') || msg.text?.includes('Update') || msg.text?.includes('Calling') || (isOfficialMsg && msg.text?.includes('Play Store'))
+                    ? 'https://qurb.app/announcement_v1037_banner.jpg' 
+                    : undefined);
+
+                const hasPlayStoreLink = Boolean(
+                  (msg.actionUrl && msg.actionUrl.includes('play.google.com')) ||
+                  (msg.text && msg.text.includes('play.google.com'))
+                );
+
+                const destinationUrl = msg.actionUrl || 
+                  (hasPlayStoreLink ? 'https://play.google.com/store/apps/details?id=app.qurb.serene&pcampaignid=web_share' : undefined);
+
+                const ctaText = msg.actionLabel || (hasPlayStoreLink ? '⚡ Update on Google Play Store ↗' : 'View Update Details ↗');
+
+                return (
+                  <div key={msg.id || idx} className="w-full flex justify-center py-2.5 px-1 animate-fade-in">
+                    <div className="w-full max-w-[360px] sm:max-w-[460px] bg-white rounded-3xl border border-sky-200 shadow-xl overflow-hidden ring-1 ring-sky-100/80 text-left transition-all hover:shadow-2xl">
+                      {/* 1. Full-Bleed 16:9 Banner Image */}
+                      {bannerUrl && (
+                        <div 
+                          onClick={() => setLightboxMedia({ url: bannerUrl, type: 'image', title: 'Qurb Official Announcement' })}
+                          className="relative w-full aspect-video bg-slate-950 overflow-hidden cursor-pointer group/banner"
+                          title="Click to view full banner"
+                        >
+                          <img
+                            src={bannerUrl}
+                            alt="Announcement Banner"
+                            className="w-full h-full object-cover group-hover/banner:scale-102 transition-transform duration-300"
+                            onError={(e) => {
+                              const img = e.currentTarget as HTMLImageElement;
+                              if (!img.dataset.triedFallback) {
+                                img.dataset.triedFallback = 'true';
+                                img.src = '/announcement_v1037_banner.jpg';
+                              }
+                            }}
+                          />
+                          {/* Ambient Glass Badges Overlay */}
+                          <div className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-full bg-slate-950/80 backdrop-blur-md text-white text-[10px] font-bold flex items-center gap-1.5 border border-white/20 shadow-md">
+                            <Megaphone className="w-3 h-3 text-amber-400" />
+                            <span>Official Broadcast</span>
+                            <VerifiedBlueTick size={12} />
+                          </div>
+                          <div className="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-full bg-emerald-950/80 backdrop-blur-md text-emerald-300 text-[10px] font-bold flex items-center gap-1 border border-emerald-500/30 shadow-md">
+                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse mr-0.5" />
+                            <span>v1.0.37 Live</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 2. Content Body */}
+                      <div className="p-4 sm:p-5 space-y-3.5">
+                        {/* Channel Header Meta */}
+                        <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 p-0.5 flex items-center justify-center shadow-2xs">
+                              <img src="/icon.svg" alt="Qurb" className="w-full h-full object-contain" />
+                            </div>
+                            <span className="font-bold text-xs text-slate-900 font-serif">Qurb Team</span>
+                            <VerifiedBlueTick size={14} />
+                            <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-sky-50 text-sky-700 font-bold uppercase tracking-wider border border-sky-200">
+                              Official
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-slate-400 font-medium">
+                            {formatChatTime(msg.timestamp)}
+                          </span>
+                        </div>
+
+                        {/* Formatted Text Content */}
+                        <div className="text-xs text-slate-800 leading-relaxed whitespace-pre-line">
+                          {(() => {
+                            const raw = msg.text || '';
+                            const cleanText = raw.replace(/https?:\/\/[^\s]+/g, '').trim();
+                            return (
+                              <p className="leading-relaxed">
+                                {cleanText}
+                              </p>
+                            );
+                          })()}
+                        </div>
+
+                        {/* 3. Action CTA Button */}
+                        {destinationUrl && (
+                          <div className="pt-1">
+                            <a
+                              href={destinationUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-800 text-white font-extrabold text-xs shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer no-underline group"
+                            >
+                              <Play className="w-4 h-4 fill-white group-hover:scale-110 transition-transform" />
+                              <span>{ctaText}</span>
+                              <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+                            </a>
+                          </div>
+                        )}
+
+                        {/* 4. Verified Watermark Footer */}
+                        <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[10px] text-slate-400">
+                          <div className="flex items-center gap-1 text-slate-500">
+                            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>100% Verified Halal Channel</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-sky-600 font-semibold">
+                            <CheckCheck className="w-3.5 h-3.5 text-sky-500" />
+                            <span>Broadcasted</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
               return (
                 <div
                   key={msg.id || idx}
-                  className={`flex flex-col gap-0.5 ${isOfficialMsg ? 'max-w-[94%] sm:max-w-[85%]' : 'max-w-[82%]'} ${isMe ? 'items-end ml-auto' : 'items-start mr-auto'}`}
+                  className={`flex flex-col gap-0.5 max-w-[82%] ${isMe ? 'items-end ml-auto' : 'items-start mr-auto'}`}
                 >
                   <div
                     className={`p-3 rounded-2xl text-xs leading-relaxed ${
                       isMe
                         ? 'bg-primary text-white rounded-br-2xs shadow-brand'
-                        : isOfficialMsg
-                          ? 'bg-white text-on-surface rounded-2xl border border-sky-200/90 shadow-md ring-1 ring-sky-100/50'
-                          : 'bg-white text-on-surface rounded-bl-2xs border border-outline shadow-subtle'
+                        : 'bg-white text-on-surface rounded-bl-2xs border border-outline shadow-subtle'
                     }`}
                   >
                     {/* 1. Voice Message Bubble */}
@@ -2297,9 +2458,9 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
 
       {/* Message Input Footer with Voice Record & Auto-Compressed Attachment */}
       {isOfficialChannel ? (
-        <footer className="p-3.5 bg-surface-variant/90 border-t border-outline flex items-center justify-center gap-2 text-xs text-secondary text-center z-20">
-          <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-          <span>This is an official announcement channel. Only Qurb Admins can broadcast messages.</span>
+        <footer className="p-3.5 bg-gradient-to-r from-slate-50 via-sky-50/50 to-slate-50 border-t border-sky-200/90 flex items-center justify-center gap-2 text-xs text-slate-700 text-center z-20 shadow-xs">
+          <VerifiedBlueTick size={15} />
+          <span className="font-semibold text-slate-800">This is an official announcement channel. Only Qurb Admins can broadcast messages.</span>
         </footer>
       ) : (
         <footer className="p-2.5 bg-white border-t border-outline flex items-center gap-2 z-20">

@@ -9,13 +9,13 @@ import {
   Trash2, 
   Copy, 
   CheckCircle2, 
-  BadgeCheck, 
   Play, 
   Smartphone,
   ShieldCheck,
   X
 } from 'lucide-react';
 import { API_BASE } from '../../../services/dbService';
+import { VerifiedBlueTick } from '../../../components/VerifiedBlueTick';
 import type { OfficialAnnouncement } from '../types';
 
 interface AnnouncementsTabProps {
@@ -395,9 +395,9 @@ export const AnnouncementsTab: React.FC<AnnouncementsTabProps> = ({
                   <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1 font-bold text-xs text-slate-900 truncate">
+                  <div className="flex items-center gap-1.5 font-bold text-xs text-slate-900 truncate">
                     <span>Qurb Team</span>
-                    <BadgeCheck className="w-3.5 h-3.5 text-sky-500 fill-sky-500 text-white shrink-0" />
+                    <VerifiedBlueTick size={14} />
                   </div>
                   <div className="text-[10px] text-slate-500 flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />

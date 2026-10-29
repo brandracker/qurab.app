@@ -253,10 +253,18 @@ referralsRouter.post('/claim', async (c) => {
       return c.json({ success: false, error: 'Apne aap ko refer nahi kiya ja sakta' }, 400);
     }
 
-    // 3. Check referee profile
-    const referee: any = await c.env.DB.prepare(`
+    // 3. Check referee profile with resilience for in-flight async profile saves
+    let referee: any = await c.env.DB.prepare(`
       SELECT id, full_name, email, is_profile_completed FROM users WHERE id = ?
     `).bind(refereeId).first();
+
+    if (!referee) {
+      // In case user profile is still being asynchronously saved to D1, wait briefly and retry
+      await new Promise(r => setTimeout(r, 400));
+      referee = await c.env.DB.prepare(`
+        SELECT id, full_name, email, is_profile_completed FROM users WHERE id = ?
+      `).bind(refereeId).first();
+    }
 
     if (!referee) {
       return c.json({ success: false, error: 'Referee user not found' }, 404);
@@ -428,6 +436,12 @@ referralsRouter.get('/admin/overview', async (c) => {
     const disqualifiedRes: any = await c.env.DB.prepare("SELECT COUNT(*) as c FROM referrals WHERE status = 'disqualified'").first();
     const rewardsRes: any = await c.env.DB.prepare('SELECT COUNT(*) as c FROM referral_rewards').first();
 
+    // Target setting from app_settings
+    const targetRow: any = await c.env.DB.prepare(`
+      SELECT value FROM app_settings WHERE key = 'referral_target_invites'
+    `).first();
+    const targetInvites = targetRow?.value ? parseInt(targetRow.value, 10) : 30;
+
     // Top referrers leaderboard
     const topReferrers: any = await c.env.DB.prepare(`
       SELECT 
@@ -455,8 +469,31 @@ referralsRouter.get('/admin/overview', async (c) => {
       LIMIT 10
     `).all();
 
+    // Recent individual invites log (last 50)
+    const recentInvites: any = await c.env.DB.prepare(`
+      SELECT 
+        r.id,
+        r.referrer_id,
+        r.referee_id,
+        r.device_id,
+        r.status,
+        r.disqualified_reason,
+        r.created_at,
+        r.completed_at,
+        u_ref.full_name as referrer_name,
+        u_ref.email as referrer_email,
+        u_referee.full_name as referee_name,
+        u_referee.email as referee_email
+      FROM referrals r
+      LEFT JOIN users u_ref ON r.referrer_id = u_ref.id
+      LEFT JOIN users u_referee ON r.referee_id = u_referee.id
+      ORDER BY r.created_at DESC
+      LIMIT 50
+    `).all();
+
     return c.json({
       success: true,
+      targetInvites,
       metrics: {
         totalInvites: Number(totalRes?.c || 0),
         completedSignups: Number(completedRes?.c || 0),
@@ -465,7 +502,8 @@ referralsRouter.get('/admin/overview', async (c) => {
         freeVipRewardsGiven: Number(rewardsRes?.c || 0)
       },
       topReferrers: topReferrers?.results || [],
-      suspiciousDevices: suspiciousDevices?.results || []
+      suspiciousDevices: suspiciousDevices?.results || [],
+      recentInvites: recentInvites?.results || []
     });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
@@ -509,6 +547,79 @@ referralsRouter.post('/admin/settings', async (c) => {
       success: true, 
       targetInvites: Number(targetInvites), 
       message: `Referral target successfully updated to ${targetInvites} invites!` 
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// 7. Admin: Simulate / Generate Test Referral (to verify loop & milestones)
+referralsRouter.post('/admin/simulate-invite', async (c) => {
+  try {
+    await ensureReferralTables(c.env.DB);
+    const { referrerId, refereeName, isCompleted = true } = await c.req.json();
+
+    if (!referrerId) {
+      return c.json({ success: false, error: 'referrerId is required' }, 400);
+    }
+
+    // Verify referrer exists
+    const referrer: any = await c.env.DB.prepare(`
+      SELECT id, full_name, email, is_vip FROM users WHERE id = ?
+    `).bind(referrerId).first();
+
+    if (!referrer) {
+      return c.json({ success: false, error: 'Referrer user not found' }, 404);
+    }
+
+    // Create a mock referee user
+    const mockRefereeId = `usr_test_referee_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    const mockEmail = `referee_${Date.now()}@example.com`;
+    const mockName = refereeName || `Friend ${Math.floor(Math.random() * 900 + 100)}`;
+
+    await c.env.DB.prepare(`
+      INSERT INTO users (id, phone, full_name, email, dob, gender, location, is_profile_completed)
+      VALUES (?, ?, ?, ?, '1998-05-15', 'female', 'Lahore', ?)
+    `).bind(mockRefereeId, `+92300${Math.floor(Math.random() * 8999999 + 1000000)}`, mockName, mockEmail, isCompleted ? 1 : 0).run();
+
+    if (isCompleted) {
+      await c.env.DB.prepare(`
+        INSERT INTO user_photos (id, user_id, photo_url, is_primary)
+        VALUES (?, ?, 'https://images.unsplash.com/photo-1544005313-94ddf0286df2', 1)
+      `).bind(`ph_${mockRefereeId}`, mockRefereeId).run();
+    }
+
+    const refId = `ref_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    const status = isCompleted ? 'completed' : 'pending';
+
+    await c.env.DB.prepare(`
+      INSERT INTO referrals (id, referrer_id, referee_id, device_id, status, created_at, completed_at)
+      VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
+    `).bind(
+      refId,
+      referrer.id,
+      mockRefereeId,
+      `dev_sim_${Math.random().toString(36).substring(2, 8)}`,
+      status,
+      isCompleted ? new Date().toISOString() : null
+    ).run();
+
+    // Check reward milestone
+    let milestoneResult = { rewarded: false, milestoneTarget: 30 };
+    if (isCompleted) {
+      const targetRow: any = await c.env.DB.prepare(`
+        SELECT value FROM app_settings WHERE key = 'referral_target_invites'
+      `).first();
+      const target = targetRow?.value ? parseInt(targetRow.value, 10) : 30;
+      milestoneResult = await checkAndFulfillReferralReward(c.env.DB, referrer.id, target);
+    }
+
+    return c.json({
+      success: true,
+      message: `Simulated referral added for ${referrer.full_name}! (Status: ${status})`,
+      referralId: refId,
+      status,
+      rewarded: milestoneResult.rewarded
     });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);

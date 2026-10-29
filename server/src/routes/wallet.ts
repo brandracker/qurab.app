@@ -15,11 +15,18 @@ walletRouter.get('/unity-s2s-callback', async (c) => {
     }
 
     if (rewardType === 'likes') {
+      const wallet: any = await c.env.DB.prepare(`
+        SELECT daily_likes_quota, likes_used_today, subscription_tier FROM user_wallets WHERE user_id = ?
+      `).bind(userId).first();
+      const isVip = wallet?.subscription_tier === 'barakah_vip' || wallet?.subscription_tier === 'vip';
+      const currentRemaining = isVip ? 9999 : Math.max(0, (wallet?.daily_likes_quota ?? 50) - (wallet?.likes_used_today ?? 0));
+      const nextRemaining = isVip ? 9999 : (currentRemaining + 10);
+
       await c.env.DB.prepare(`
         INSERT INTO user_wallets (user_id, daily_messages_quota, daily_likes_quota, likes_used_today)
-        VALUES (?, 40, 60, 0)
-        ON CONFLICT(user_id) DO UPDATE SET daily_messages_quota = daily_messages_quota + 10, daily_likes_quota = daily_likes_quota + 10
-      `).bind(userId).run();
+        VALUES (?, 15, ?, 0)
+        ON CONFLICT(user_id) DO UPDATE SET daily_likes_quota = ?, likes_used_today = 0
+      `).bind(userId, nextRemaining, nextRemaining).run();
     } else if (rewardType === 'salam') {
       const wallet: any = await c.env.DB.prepare(`
         SELECT ads_watched_for_salam, direct_salams_balance FROM user_wallets WHERE user_id = ?
@@ -108,6 +115,19 @@ walletRouter.get('/:userId', async (c) => {
       wallet.daily_messages_quota = 15;
       wallet.subscription_tier = 'free';
     }
+
+    // Reset daily messages quota if date transitioned (likes do not reset daily; 50 is one-time signup bonus)
+    if (wallet.last_likes_reset_date !== todayDate) {
+      await c.env.DB.prepare(`
+        UPDATE user_wallets 
+        SET messages_sent_today = 0,
+            last_likes_reset_date = ? 
+        WHERE user_id = ?
+      `).bind(todayDate, userId).run();
+      wallet.messages_sent_today = 0;
+      wallet.last_likes_reset_date = todayDate;
+    }
+
     const quota = wallet.daily_likes_quota ?? 50;
     const used = wallet.likes_used_today ?? 0;
     const likesRemaining = isVip ? 9999 : Math.max(0, quota - used);
@@ -161,6 +181,8 @@ walletRouter.post('/use-like', async (c) => {
       `).bind(userId, todayDate).run();
       wallet = { daily_likes_quota: 50, likes_used_today: 0, last_likes_reset_date: todayDate, subscription_tier: 'free' };
     }
+
+
 
     const quota = wallet.daily_likes_quota ?? 50;
     const currentUsed = wallet.likes_used_today ?? 0;
@@ -251,20 +273,76 @@ walletRouter.post('/use-direct-salam', async (c) => {
   }
 });
 
+// Helper to ensure in_app_purchases table exists in D1
+async function ensureInAppPurchasesTable(db: any) {
+  try {
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS in_app_purchases (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        platform TEXT NOT NULL,
+        product_id TEXT NOT NULL,
+        purchase_token TEXT,
+        amount_cents INTEGER DEFAULT 0,
+        currency TEXT DEFAULT 'USD',
+        status TEXT DEFAULT 'completed',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+    await db.prepare(`
+      CREATE INDEX IF NOT EXISTS idx_iap_purchase_token ON in_app_purchases(purchase_token)
+    `).run();
+    await db.prepare(`
+      CREATE INDEX IF NOT EXISTS idx_iap_user_id ON in_app_purchases(user_id)
+    `).run();
+  } catch {}
+}
+
 // 2. Process Google Play In-App Purchase
 walletRouter.post('/purchase-google-play', async (c) => {
   try {
-    const { userId, productId, purchaseToken, amountCents, currency, durationDays, isTrial } = await c.req.json();
+    await ensureInAppPurchasesTable(c.env.DB);
+    const { userId, productId, purchaseToken, orderId, amountCents, currency, durationDays, isTrial } = await c.req.json();
     if (!userId || !productId) {
       return c.json({ success: false, error: 'userId and productId are required' }, 400);
     }
 
-    const purchaseId = `gp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    // Ensure user exists in users table to satisfy foreign key constraint
+    const stubPhone = `ph_${userId}`;
+    await c.env.DB.prepare(`
+      INSERT OR IGNORE INTO users (id, phone, full_name, email, dob, gender, location, is_profile_completed)
+      VALUES (?, ?, 'Member', ?, '1998-01-01', 'male', 'Global', 0)
+    `).bind(userId, stubPhone, `${userId}@serene-union.internal`).run();
+
+    const effectiveToken = purchaseToken || `sim_token_${Date.now()}`;
+    const purchaseId = (orderId && typeof orderId === 'string' && orderId.trim().length > 0)
+      ? orderId.trim()
+      : `gp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
+    // Re-bind token to the active user to smoothly handle testing and account switching on device
+    if (purchaseToken && !purchaseToken.startsWith('sim_token_')) {
+      try {
+        await c.env.DB.prepare(
+          'UPDATE in_app_purchases SET user_id = ? WHERE purchase_token = ?'
+        ).bind(userId, purchaseToken).run();
+      } catch {}
+    }
+
+    const isSubscription = (productId === 'qurb_barakah_monthly' || productId === 'serene_barakah_monthly');
+    // If not explicitly set as paid 30 days, any initial monthly subscription purchase is the active 7-Day Free Trial
+    const isFreeTrial = isSubscription && (isTrial === true || durationDays === 7 || durationDays === '7' || !durationDays);
+    const resolvedDays = isFreeTrial ? 7 : (durationDays ? Number(durationDays) : 30);
+    const resolvedAmountCents = isFreeTrial ? 0 : (amountCents !== undefined ? Number(amountCents) : (isSubscription ? 299 : 99));
 
     await c.env.DB.prepare(`
       INSERT INTO in_app_purchases (id, user_id, platform, product_id, purchase_token, amount_cents, currency, status)
       VALUES (?, ?, 'google_play', ?, ?, ?, ?, 'completed')
-    `).bind(purchaseId, userId, productId, purchaseToken || `sim_token_${Date.now()}`, amountCents || 199, currency || 'USD').run();
+      ON CONFLICT(id) DO UPDATE SET 
+        user_id = excluded.user_id,
+        purchase_token = excluded.purchase_token,
+        amount_cents = excluded.amount_cents,
+        status = 'completed'
+    `).bind(purchaseId, userId, productId, effectiveToken, resolvedAmountCents, currency || 'USD').run();
 
     let expiryIso: string | null = null;
 
@@ -281,9 +359,8 @@ walletRouter.post('/purchase-google-play', async (c) => {
         VALUES (?, 1, ?)
         ON CONFLICT(user_id) DO UPDATE SET is_spotlight_active = 1, spotlight_expires_at = ?
       `).bind(userId, expiresAt, expiresAt).run();
-    } else if (productId === 'qurb_barakah_monthly' || productId === 'serene_barakah_monthly') {
-      const trialDays = (isTrial || durationDays === 7 || durationDays === '7') ? 7 : (durationDays || 30);
-      expiryIso = calculateSubscriptionExpiry(trialDays);
+    } else if (isSubscription) {
+      expiryIso = calculateSubscriptionExpiry(resolvedDays);
 
       await c.env.DB.prepare(`
         UPDATE users SET is_vip = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?
@@ -305,6 +382,8 @@ walletRouter.post('/purchase-google-play', async (c) => {
       message: 'Google Play purchase verified & credited successfully!',
       purchaseId,
       productId,
+      isTrial: isFreeTrial,
+      daysGranted: resolvedDays,
       subscriptionExpiry: expiryIso
     });
   } catch (error: any) {
@@ -321,22 +400,33 @@ walletRouter.post('/reward-ad', async (c) => {
     }
 
     const effectiveReward = rewardType || 'likes';
+    const todayDate = new Date().toISOString().slice(0, 10);
     let passEarned = false;
     let currentAdsWatched = 0;
     let directSalams = 0;
 
+    let preWallet: any = await c.env.DB.prepare(`
+      SELECT * FROM user_wallets WHERE user_id = ?
+    `).bind(userId).first();
+
     if (effectiveReward === 'likes') {
+      const isVip = preWallet?.subscription_tier === 'barakah_vip' || preWallet?.subscription_tier === 'vip';
+      const currentRemaining = isVip
+        ? 9999
+        : Math.max(0, (preWallet?.daily_likes_quota ?? 50) - (preWallet?.likes_used_today ?? 0));
+      const nextRemaining = isVip ? 9999 : (currentRemaining + 10);
+
       await c.env.DB.prepare(`
-        INSERT INTO user_wallets (user_id, daily_messages_quota, daily_likes_quota, likes_used_today)
-        VALUES (?, 40, 60, 0)
-        ON CONFLICT(user_id) DO UPDATE SET daily_messages_quota = daily_messages_quota + 10, daily_likes_quota = daily_likes_quota + 10
-      `).bind(userId).run();
+        INSERT INTO user_wallets (user_id, daily_messages_quota, daily_likes_quota, likes_used_today, last_likes_reset_date)
+        VALUES (?, 15, ?, 0, ?)
+        ON CONFLICT(user_id) DO UPDATE SET daily_likes_quota = ?, likes_used_today = 0, last_likes_reset_date = ?
+      `).bind(userId, nextRemaining, todayDate, nextRemaining, todayDate).run();
     } else if (effectiveReward === 'messages') {
       await c.env.DB.prepare(`
-        INSERT INTO user_wallets (user_id, daily_messages_quota)
-        VALUES (?, 40)
+        INSERT INTO user_wallets (user_id, daily_messages_quota, daily_likes_quota, likes_used_today, last_likes_reset_date)
+        VALUES (?, 25, 50, 0, ?)
         ON CONFLICT(user_id) DO UPDATE SET daily_messages_quota = daily_messages_quota + 10
-      `).bind(userId).run();
+      `).bind(userId, todayDate).run();
     } else if (effectiveReward === 'salam') {
       const wallet: any = await c.env.DB.prepare(`
         SELECT ads_watched_for_salam, direct_salams_balance FROM user_wallets WHERE user_id = ?
@@ -378,6 +468,8 @@ walletRouter.post('/reward-ad', async (c) => {
       directSalams: walletRow?.direct_salams_balance ?? directSalams,
       likesAdded: effectiveReward === 'likes' ? 10 : 0,
       likesRemaining,
+      dailyLikesQuota: walletRow?.daily_likes_quota ?? likesRemaining,
+      likesUsedToday: walletRow?.likes_used_today ?? 0,
       newDailyQuota: walletRow ? walletRow.daily_messages_quota : 40,
       message: effectiveReward === 'salam'
         ? (passEarned ? 'Alhamdulillah! 3 ads completed: +1 Direct Salam pass added!' : `Ad watched! (${walletRow?.ads_watched_for_salam ?? currentAdsWatched}/3 completed towards 1 Direct Salam pass)`)
@@ -552,6 +644,7 @@ walletRouter.post('/stripe/verify-session', async (c) => {
 // 6. Google Play Real-Time Developer Notifications (RTDN Webhook via Cloud Pub/Sub)
 walletRouter.post('/google-play/webhook', async (c) => {
   try {
+    await ensureInAppPurchasesTable(c.env.DB);
     const body: any = await c.req.json();
     let notificationData: any = null;
 
@@ -564,31 +657,64 @@ walletRouter.post('/google-play/webhook', async (c) => {
       notificationData = body;
     }
 
+    // Google Play Test Notification from Console
+    if (notificationData?.testNotification) {
+      return c.json({ success: true, test: true, message: 'Google Play RTDN test notification verified' });
+    }
+
     const subNotification = notificationData?.subscriptionNotification;
     if (subNotification) {
       const { notificationType, purchaseToken } = subNotification;
+      if (!purchaseToken) {
+        return c.json({ success: true, ignored: true, message: 'Missing purchaseToken' });
+      }
+
       const purchase: any = await c.env.DB.prepare(
-        'SELECT user_id FROM in_app_purchases WHERE purchase_token = ? OR id LIKE ? ORDER BY created_at DESC LIMIT 1'
-      ).bind(purchaseToken, `%${purchaseToken}%`).first();
+        'SELECT user_id, product_id FROM in_app_purchases WHERE purchase_token = ? ORDER BY created_at DESC LIMIT 1'
+      ).bind(purchaseToken).first();
 
       const userId = purchase?.user_id;
       if (userId) {
-        // Types: 1: RECOVERED, 2: RENEWED, 3: CANCELED (active till expiry), 5: ON_HOLD, 12: REVOKED, 13: EXPIRED
+        // Google Play Subscription Notification Types:
+        // 1: RECOVERED
+        // 2: RENEWED
+        // 3: CANCELED (Auto-renew turned off; access remains active until expiry!)
+        // 4: PURCHASED (Initial trial or subscription activation)
+        // 5: ON_HOLD
+        // 7: RESTARTED
+        // 12: REVOKED (Chargeback or refund)
+        // 13: EXPIRED (Subscription ended)
         if (notificationType === 13 || notificationType === 12 || notificationType === 5) {
-          await c.env.DB.prepare("UPDATE users SET is_vip = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(userId).run();
-          await c.env.DB.prepare(`
-            UPDATE user_wallets 
-            SET subscription_tier = 'free', daily_messages_quota = 15 
-            WHERE user_id = ?
-          `).bind(userId).run();
-        } else if (notificationType === 2 || notificationType === 1) {
-          const newExpiry = calculateSubscriptionExpiry(30);
+          const wallet: any = await c.env.DB.prepare(
+            'SELECT subscription_tier, subscription_expiry FROM user_wallets WHERE user_id = ?'
+          ).bind(userId).first();
+
+          // Don't downgrade lifetime VIP grants (null expiry)
+          if (wallet?.subscription_tier === 'barakah_vip' && wallet?.subscription_expiry === null) {
+            console.log(`[GooglePlay Webhook] User ${userId} has permanent/lifetime VIP. Expiry webhook skipped.`);
+          } else {
+            await c.env.DB.prepare("UPDATE users SET is_vip = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(userId).run();
+            await c.env.DB.prepare(`
+              UPDATE user_wallets 
+              SET subscription_tier = 'free', daily_messages_quota = 15 
+              WHERE user_id = ?
+            `).bind(userId).run();
+          }
+        } else if (notificationType === 2 || notificationType === 1 || notificationType === 4 || notificationType === 7) {
+          // Google Play RTDN event handling:
+          // 4 = SUBSCRIPTION_PURCHASED -> Initial 7-Day Free Trial
+          // 2 = SUBSCRIPTION_RENEWED -> 30-Day Monthly renewal after trial ends
+          // 1 = RECOVERED, 7 = RESTARTED -> 30-Day Paid access
+          const daysGranted = (notificationType === 4) ? 7 : 30;
+          const newExpiry = calculateSubscriptionExpiry(daysGranted);
           await c.env.DB.prepare("UPDATE users SET is_vip = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(userId).run();
           await c.env.DB.prepare(`
             UPDATE user_wallets 
             SET subscription_tier = 'barakah_vip', daily_messages_quota = 9999, subscription_expiry = ? 
             WHERE user_id = ?
           `).bind(newExpiry, userId).run();
+        } else if (notificationType === 3) {
+          console.log(`[GooglePlay Webhook] Auto-renew canceled for user ${userId}. Membership remains active until period end.`);
         }
       }
     }

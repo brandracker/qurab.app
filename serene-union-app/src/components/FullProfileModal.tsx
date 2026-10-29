@@ -1,5 +1,5 @@
 import React from 'react';
-import { Lock, Eye, X, MapPin, Heart } from 'lucide-react';
+import { Lock, Eye, EyeOff, X, MapPin, Heart } from 'lucide-react';
 import type { UserProfile } from '../types';
 
 
@@ -31,12 +31,17 @@ export const FullProfileModal: React.FC<Props> = ({
             className={`w-full h-full object-cover transition-all ${isBlurred ? 'blur-2xl scale-110' : ''}`}
           />
           {isBlurred && (
-            <div className="absolute inset-0 bg-black/35 flex flex-col items-center justify-center p-4 text-center">
-              <Lock className="w-8 h-8 text-white mb-2" />
-              <p className="text-white text-sm font-medium">Photos Protected by Modesty Mode</p>
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-xs flex flex-col items-center justify-center p-4 text-center">
+              <div className="w-16 h-16 rounded-full bg-black/45 backdrop-blur-md border border-white/25 flex items-center justify-center text-white/85 shadow-2xl mb-3">
+                <EyeOff className="w-8 h-8" />
+              </div>
+              <div className="bg-black/60 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/20 flex items-center gap-2 text-white text-xs font-semibold shadow-lg mb-3">
+                <Lock className="w-3.5 h-3.5 text-amber-400" />
+                <span>Photos Protected by Modesty Mode</span>
+              </div>
               <button
                 onClick={onRequestPhoto}
-                className="mt-3 px-4 py-2 bg-white text-primary font-bold text-xs rounded-full shadow-brand hover:bg-pastel-rose transition-all flex items-center gap-1.5"
+                className="px-4 py-2 bg-white text-primary font-bold text-xs rounded-full shadow-brand hover:bg-rose-50 transition-all flex items-center gap-1.5"
               >
                 <Eye className="w-3.5 h-3.5" />
                 <span>{profile.photoRevealRequested ? 'Photo Access Requested' : 'Request to View Photos'}</span>

@@ -762,6 +762,121 @@ adminRouter.get('/messages/recent', async (c) => {
   }
 });
 
+// Helper to ensure in_app_purchases table exists in D1
+async function ensureInAppPurchasesTable(db: any) {
+  try {
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS in_app_purchases (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        platform TEXT NOT NULL,
+        product_id TEXT NOT NULL,
+        purchase_token TEXT,
+        amount_cents INTEGER DEFAULT 0,
+        currency TEXT DEFAULT 'USD',
+        status TEXT DEFAULT 'completed',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+    await db.prepare(`
+      CREATE INDEX IF NOT EXISTS idx_iap_user_id ON in_app_purchases(user_id)
+    `).run();
+    await db.prepare(`
+      CREATE INDEX IF NOT EXISTS idx_iap_purchase_token ON in_app_purchases(purchase_token)
+    `).run();
+  } catch (e) {
+    // Non-blocking schema guard
+  }
+}
+
+// 4.0 Subscriptions Hub: Get All Active VIPs, Trials, and Google Play Purchases
+adminRouter.get('/subscriptions', async (c) => {
+  try {
+    await ensureInAppPurchasesTable(c.env.DB);
+
+    // 1. All VIP users and users with purchase history
+    let vipUsersRes: any = { results: [] };
+    try {
+      vipUsersRes = await c.env.DB.prepare(`
+        SELECT u.id, u.full_name, u.email, u.phone, u.gender, u.city, u.is_vip, u.created_at as account_created_at,
+               w.subscription_tier, w.subscription_expiry, w.direct_salams_balance,
+               (SELECT created_at FROM in_app_purchases WHERE user_id = u.id ORDER BY created_at ASC LIMIT 1) as first_purchased_at,
+               (SELECT created_at FROM in_app_purchases WHERE user_id = u.id ORDER BY created_at DESC LIMIT 1) as last_purchased_at,
+               (SELECT product_id FROM in_app_purchases WHERE user_id = u.id ORDER BY created_at DESC LIMIT 1) as last_product_id,
+               (SELECT id FROM in_app_purchases WHERE user_id = u.id ORDER BY created_at DESC LIMIT 1) as last_order_id,
+               (SELECT amount_cents FROM in_app_purchases WHERE user_id = u.id ORDER BY created_at DESC LIMIT 1) as last_amount_cents
+        FROM users u
+        LEFT JOIN user_wallets w ON u.id = w.user_id
+        WHERE u.is_vip = 1 OR w.subscription_tier = 'barakah_vip' OR EXISTS (SELECT 1 FROM in_app_purchases WHERE user_id = u.id)
+        ORDER BY u.created_at DESC
+        LIMIT 100
+      `).all();
+    } catch (dbErr: any) {
+      // Fallback if joined subquery fails
+      vipUsersRes = await c.env.DB.prepare(`
+        SELECT u.id, u.full_name, u.email, u.phone, u.gender, u.city, u.is_vip, u.created_at as account_created_at,
+               w.subscription_tier, w.subscription_expiry, w.direct_salams_balance
+        FROM users u
+        LEFT JOIN user_wallets w ON u.id = w.user_id
+        WHERE u.is_vip = 1 OR w.subscription_tier = 'barakah_vip'
+        ORDER BY u.created_at DESC
+        LIMIT 100
+      `).all();
+    }
+
+    // 2. Recent Google Play In-App Purchases
+    let recentPurchasesRes: any = { results: [] };
+    try {
+      recentPurchasesRes = await c.env.DB.prepare(`
+        SELECT p.id, p.user_id, p.product_id, p.platform, p.purchase_token, p.amount_cents, p.currency, p.status, p.created_at,
+               u.full_name as user_name, u.email as user_email, u.phone as user_phone
+        FROM in_app_purchases p
+        LEFT JOIN users u ON p.user_id = u.id
+        ORDER BY p.created_at DESC
+        LIMIT 50
+      `).all();
+    } catch {}
+
+    // 3. Stats Summary
+    const totalVipCount = (await c.env.DB.prepare("SELECT COUNT(*) as c FROM users WHERE is_vip = 1").first())?.c || 0;
+    let totalOrders = 0;
+    let totalRevenueCents = 0;
+    try {
+      const statsRes: any = await c.env.DB.prepare("SELECT COUNT(*) as c, SUM(amount_cents) as total_cents FROM in_app_purchases").first();
+      totalOrders = Number(statsRes?.c || 0);
+      totalRevenueCents = Number(statsRes?.total_cents || 0);
+    } catch {}
+
+    const sanitizedSubscribers = (vipUsersRes?.results || []).map((sub: any) => {
+      let isVip = Boolean(sub.is_vip);
+      const expiry = sub.subscription_expiry;
+      if (expiry) {
+        const expiryTime = new Date(expiry).getTime();
+        if (expiryTime <= Date.now()) {
+          isVip = false;
+        }
+      }
+      return {
+        ...sub,
+        is_vip: isVip ? 1 : 0
+      };
+    });
+
+    return c.json({
+      success: true,
+      subscribers: sanitizedSubscribers,
+      purchases: recentPurchasesRes?.results || [],
+      stats: {
+        totalVip: Number(totalVipCount),
+        totalOrders,
+        totalRevenueCents
+      }
+    });
+  } catch (err: any) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
 // 4. High-Scale User Directory (Server-Side Pagination, Sorting & Multi-Filters)
 adminRouter.get('/users', async (c) => {
   try {
@@ -877,6 +992,25 @@ adminRouter.get('/users/:id', async (c) => {
       } catch {}
     }
 
+    let purchases: any[] = [];
+    let subscriptionStartedAt: string | null = null;
+    try {
+      const purchasesRes = await c.env.DB.prepare(`
+        SELECT id, product_id, platform, purchase_token, amount_cents, currency, status, created_at
+        FROM in_app_purchases
+        WHERE user_id = ?
+        ORDER BY created_at DESC
+        LIMIT 25
+      `).bind(id).all();
+      purchases = purchasesRes?.results || [];
+
+      // Find the first or latest purchase granting VIP
+      const vipSub = purchases.find((p: any) => p.product_id?.includes('monthly') || p.product_id?.includes('vip'));
+      if (vipSub) {
+        subscriptionStartedAt = vipSub.created_at;
+      }
+    } catch {}
+
     return c.json({
       success: true,
       user: {
@@ -884,8 +1018,38 @@ adminRouter.get('/users/:id', async (c) => {
         religious_profile: religious || null,
         wali_details: wali || null,
         photos: photos?.results || [],
-        wallet: wallet || null
+        wallet: wallet ? {
+          ...wallet,
+          subscriptionStartedAt
+        } : null,
+        purchases
       }
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// 5.1 Get User In-App Purchase History (Google Play / Store)
+adminRouter.get('/users/:id/purchases', async (c) => {
+  try {
+    const id = c.req.param('id');
+    await ensureInAppPurchasesTable(c.env.DB);
+    let purchases: any[] = [];
+    try {
+      const purchasesRes = await c.env.DB.prepare(`
+        SELECT id, product_id, platform, purchase_token, amount_cents, currency, status, created_at
+        FROM in_app_purchases
+        WHERE user_id = ?
+        ORDER BY created_at DESC
+        LIMIT 50
+      `).bind(id).all();
+      purchases = purchasesRes?.results || [];
+    } catch {}
+
+    return c.json({
+      success: true,
+      purchases
     });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
@@ -980,9 +1144,16 @@ adminRouter.post('/users/:id/subscription', async (c) => {
     const msgQuota = isVipActive ? 9999 : 15;
     const bonusSalams = Number(directSalams) || 0;
 
-    const expiryDateIso = isVipActive 
-      ? calculateSubscriptionExpiry(durationDays !== undefined ? durationDays : (expiryDate ?? 30))
-      : null;
+    let expiryDateIso: string | null = null;
+    if (isVipActive) {
+      if (durationDays === 'lifetime') {
+        expiryDateIso = null;
+      } else if (expiryDate) {
+        expiryDateIso = calculateSubscriptionExpiry(expiryDate);
+      } else {
+        expiryDateIso = calculateSubscriptionExpiry(durationDays ?? 7);
+      }
+    }
 
     // 1. Update users table
     await c.env.DB.prepare(`
@@ -2292,6 +2463,7 @@ adminRouter.post('/ai-agent/catchup', async (c) => {
       success: true,
       repliedCount: result.repliedCount,
       processedConvs: result.processedConvs,
+      postponedCount: result.postponedCount || 0,
       remainingCount,
       message: `Successfully replied to ${result.repliedCount} pending chat${result.repliedCount === 1 ? '' : 's'}.`
     });

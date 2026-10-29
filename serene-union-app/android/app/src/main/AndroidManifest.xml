@@ -24,6 +24,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Backward-compatibility intent filter for FCM notifications with click_action -->
+            <intent-filter>
+                <action android:name="FCM_PLUGIN_ACTIVITY" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+
             <!-- Stripe Payment Return Deep Links -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

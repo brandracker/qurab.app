@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { UserProfile, FilterState } from '../types';
-import { dbService, API_BASE } from '../services/dbService';
+import { dbService } from '../services/dbService';
 import { notificationService } from '../services/notificationService';
 import { facebookEventsService } from '../services/facebookEventsService';
 import { ratingService } from '../services/ratingService';
@@ -26,8 +26,19 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
   }, [currentUser.id]);
 
   const [likesRemaining, setLikesRemaining] = useState<number>(() => {
-    const saved = localStorage.getItem(getLikeKey());
-    return saved !== null ? parseInt(saved, 10) : 50;
+    const key = `serene_likes_left_${currentUser.id}`;
+    const saved = localStorage.getItem(key);
+    if (saved !== null) {
+      const parsed = parseInt(saved, 10);
+      if (!isNaN(parsed)) return parsed;
+    }
+    const today = new Date().toISOString().slice(0, 10);
+    const dateSaved = localStorage.getItem(`serene_likes_left_${currentUser.id}_${today}`);
+    if (dateSaved !== null) {
+      const parsed = parseInt(dateSaved, 10);
+      if (!isNaN(parsed)) return parsed;
+    }
+    return 50;
   });
 
   const [directSalams, setDirectSalams] = useState<number>(() => {
@@ -66,7 +77,7 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
     return raw.filter(p => {
       if (p.isProfileCompleted) return true;
       const c = calculateProfileCompleteness(p);
-      return c.score >= 50 && p.photos && p.photos.length > 0;
+      return c.score >= 40;
     });
   });
   const [currentIndex, setCurrentIndex] = useState<number>(0);
@@ -434,28 +445,10 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
     setSalamModalProfile(null);
   }, []);
 
-  const handleClaimAdLikes = useCallback(async () => {
-    const nextLikes = likesRemaining + 10;
-    setLikesRemaining(nextLikes);
-    localStorage.setItem(getLikeKey(), nextLikes.toString());
+  const handleClaimAdLikes = useCallback(() => {
     setToastMessage('+10 Extra Discover Likes added! 🎉');
     setTimeout(() => setToastMessage(null), 3500);
-
-    try {
-      const res = await fetch(`${API_BASE}/wallet/reward-ad`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: currentUser.id, rewardType: 'likes' })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && typeof data.likesRemaining === 'number') {
-          setLikesRemaining(data.likesRemaining);
-          localStorage.setItem(getLikeKey(), data.likesRemaining.toString());
-        }
-      }
-    } catch {}
-  }, [likesRemaining, getLikeKey, currentUser.id]);
+  }, []);
 
   const handleResetFilters = useCallback(async () => {
     setSearchQuery('');
@@ -493,8 +486,9 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
       // Reload feed for new city
       const newFeed = dbService.getDiscoverFeed(filters);
       setProfiles(newFeed.filter(p => {
+        if (p.isProfileCompleted) return true;
         const c = calculateProfileCompleteness(p);
-        return c.score >= 50 && p.photos && p.photos.length > 0;
+        return c.score >= 40;
       }));
       setCurrentIndex(0);
       setToastMessage(`Switched location to ${newCity}! Showing nearby candidates.`);

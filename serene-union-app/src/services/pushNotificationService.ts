@@ -123,7 +123,7 @@ class PushNotificationService {
           this.showLocalNotification(
             notification.title || 'New Matrimonial Update 💖',
             notification.body || 'You have a new update in Qurb.',
-            data.conversationId
+            data
           );
         }
       });
@@ -140,6 +140,14 @@ class PushNotificationService {
           window.dispatchEvent(
             new CustomEvent('qurb_open_chat', { detail: { conversationId: data.conversationId } })
           );
+        } else if (data.type === 'like' || data.type === 'match' || data.targetTab === 'matches') {
+          window.dispatchEvent(
+            new CustomEvent('qurb_navigate_tab', { detail: { tab: 'matches' } })
+          );
+        } else if (data.targetTab) {
+          window.dispatchEvent(
+            new CustomEvent('qurb_navigate_tab', { detail: { tab: data.targetTab } })
+          );
         }
       });
 
@@ -153,6 +161,14 @@ class PushNotificationService {
         } else if (extra.conversationId) {
           window.dispatchEvent(
             new CustomEvent('qurb_open_chat', { detail: { conversationId: extra.conversationId } })
+          );
+        } else if (extra.type === 'like' || extra.type === 'match' || extra.targetTab === 'matches') {
+          window.dispatchEvent(
+            new CustomEvent('qurb_navigate_tab', { detail: { tab: 'matches' } })
+          );
+        } else if (extra.targetTab) {
+          window.dispatchEvent(
+            new CustomEvent('qurb_navigate_tab', { detail: { tab: extra.targetTab } })
           );
         }
       });
@@ -181,9 +197,11 @@ class PushNotificationService {
   /**
    * Displays an immediate native Android banner notification with sound
    */
-  async showLocalNotification(title: string, body: string, conversationId?: string, force: boolean = false): Promise<void> {
+  async showLocalNotification(title: string, body: string, extraData?: Record<string, any> | string, force: boolean = false): Promise<void> {
     if (!Capacitor.isNativePlatform()) return;
     if (this.isForeground && !force) return;
+
+    const extra = typeof extraData === 'string' ? { conversationId: extraData } : (extraData || {});
 
     try {
       await LocalNotifications.schedule({
@@ -193,7 +211,7 @@ class PushNotificationService {
             title,
             body,
             channelId: 'qurb_messages',
-            extra: { conversationId },
+            extra,
             sound: 'default'
           }
         ]

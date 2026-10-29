@@ -4,7 +4,7 @@ import {
   MoreVertical, Eye, EyeOff, ShieldCheck, Paperclip, Mic, Play, Pause, 
   Trash2, X, Download, File, Loader2, Volume2, VolumeX, Maximize2,
   Phone, Video, PhoneCall, PhoneOff, Search, CheckSquare, Square,
-  ExternalLink, Megaphone
+  ExternalLink, Megaphone, Pin, Lock
 } from 'lucide-react';
 import { VerifiedBlueTick } from './VerifiedBlueTick';
 import type { Conversation, ChatMessage, UserProfile } from '../types';
@@ -20,6 +20,7 @@ import {
 } from '../utils/mediaCompressor';
 import { webRtcService, type CallType, type CallerInfo } from '../services/webRtcService';
 import { MembershipUpgradeModal } from './MembershipUpgradeModal';
+import { isUserOnline } from '../utils/onlineStatus';
 
 interface ChatVideoPlayerProps {
   src: string;
@@ -200,6 +201,36 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const currentUser = dbService.getCurrentUser();
 
+  // Modern Horizontal Match Stories Strip
+  const [mutualMatches, setMutualMatches] = useState<UserProfile[]>(() => {
+    try {
+      const stored = localStorage.getItem(`serene_mutual_matches_${currentUser.id}`);
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      dbService.fetchMutualMatches().then(list => {
+        if (Array.isArray(list) && list.length > 0) {
+          setMutualMatches(list);
+        }
+      });
+    } catch {}
+  }, [currentUser.id]);
+
+  const handleOpenMatchChat = (match: UserProfile) => {
+    const convId = `conv_${[currentUser.id, match.id].sort().join('_')}`;
+    let existing = conversations.find(c => c.id === convId || c.otherUser?.id === match.id);
+    if (!existing) {
+      existing = dbService.createMatchConversation(match);
+      setConversations(prev => [existing!, ...prev]);
+    }
+    setActiveConvId(existing.id);
+  };
+
   // Voice Recording & Media Attachment State
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [recordingSeconds, setRecordingSeconds] = useState<number>(0);
@@ -244,22 +275,22 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
 
 
 
-  const formatChatTime = (timeStr?: string): string => {
-    if (!timeStr) return '';
-    if (timeStr.includes('-') || timeStr.includes('T')) {
-      try {
-        const d = new Date(timeStr);
-        if (!isNaN(d.getTime())) {
-          const now = new Date();
-          const isToday = d.toDateString() === now.toDateString();
-          if (isToday) {
-            return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          }
-          return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  const formatChatTime = (timeInput?: string | number): string => {
+    if (!timeInput) return '';
+    try {
+      const timeStr = String(timeInput).trim();
+      const num = Number(timeStr);
+      const d = !isNaN(num) && num > 1000000000 ? new Date(num) : new Date(timeStr);
+      if (!isNaN(d.getTime())) {
+        const now = new Date();
+        const isToday = d.toDateString() === now.toDateString();
+        if (isToday) {
+          return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         }
-      } catch {}
-    }
-    return timeStr;
+        return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+      }
+    } catch {}
+    return String(timeInput);
   };
 
 
@@ -462,6 +493,48 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
         isPhotoRevealed: true,
         messages: (activeConv?.messages && activeConv.messages.length > 0) ? activeConv.messages : fallbackAnnouncements
       };
+    } else {
+      if (!Array.isArray(activeConv.messages) || activeConv.messages.length === 0) {
+        activeConv = {
+          ...activeConv,
+          messages: fallbackAnnouncements
+        };
+      }
+      if (!activeConv.otherUser || !activeConv.otherUser.fullName) {
+        activeConv = {
+          ...activeConv,
+          otherUser: {
+            id: 'usr_qurb_official',
+            phone: '+923000000000',
+            fullName: 'Qurb Team',
+            dob: '2024-01-01',
+            age: 1,
+            gender: 'other',
+            location: 'Pakistan & Global',
+            city: 'Official Channel',
+            country: 'Pakistan',
+            profession: 'Verified Broadcast',
+            education: 'Official Support',
+            university: '',
+            height: '',
+            ethnicity: 'Pakistani',
+            marriageTimeline: 'within_1_year',
+            bio: 'Official announcements, updates, release notes, and safety tips from Qurb Team.',
+            blurPhotosByDefault: false,
+            profileVisibility: 'approved_only',
+            photos: ['/icon.svg'],
+            isVerified: true,
+            isOfficial: true,
+            religiousProfile: {
+              practiceLevel: 'practicing',
+              sect: 'Sunni',
+              madhhab: 'Hanafi',
+              prayerFrequency: '5 times daily',
+              halalDiet: 'Strictly Halal'
+            }
+          } as any
+        };
+      }
     }
   } else if (!activeConv && activeConvId) {
     // Dynamic fallback ONLY for real candidates:
@@ -1496,6 +1569,65 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
         </header>
 
         <div className="flex-1 overflow-y-auto p-3 space-y-2.5 pb-8">
+          {/* Modern New Matches Horizontal Stories Strip */}
+          {mutualMatches.length > 0 && !chatSearchQuery && (
+            <div className="mb-3 px-1 pt-0.5">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-secondary flex items-center gap-1.5">
+                  <Heart className="w-3.5 h-3.5 text-primary fill-primary" />
+                  <span>New Matches</span>
+                </span>
+                <span className="text-[10px] text-primary font-semibold">One-Tap Halal Chat</span>
+              </div>
+              <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-1.5 pt-0.5">
+                {mutualMatches.map(match => (
+                  <button
+                    key={match.id}
+                    type="button"
+                    onClick={() => handleOpenMatchChat(match)}
+                    className="flex flex-col items-center shrink-0 group focus:outline-none cursor-pointer"
+                    title={`Start chatting with ${match.fullName}`}
+                  >
+                    <div className="relative p-0.5 rounded-full bg-gradient-to-tr from-rose-500 via-primary to-amber-400 group-hover:scale-105 group-active:scale-95 transition-transform shadow-xs">
+                      <div className="w-13 h-13 rounded-full p-0.5 bg-white overflow-hidden flex items-center justify-center">
+                        {match.photos && match.photos.length > 0 && !match.photos[0].includes('photo-1534528741775-53994a69daeb') ? (
+                          <img
+                            src={getThumbnailUrl(match.photos[0])}
+                            alt={match.fullName}
+                            onError={(e) => {
+                              const target = e.currentTarget;
+                              target.style.display = 'none';
+                              const fallback = target.parentElement?.querySelector('.match-avatar-fallback');
+                              if (fallback) (fallback as HTMLElement).style.display = 'flex';
+                            }}
+                            className={`w-full h-full object-cover rounded-full ${
+                              match.blurPhotosByDefault && !match.isPhotoRevealed ? 'blur-xs' : ''
+                            }`}
+                          />
+                        ) : null}
+                        <div
+                          className={`match-avatar-fallback w-full h-full bg-gradient-to-br from-emerald-800 to-teal-900 text-amber-200 items-center justify-center font-serif font-bold text-sm rounded-full ${
+                            match.photos && match.photos.length > 0 && !match.photos[0].includes('photo-1534528741775-53994a69daeb') ? 'hidden' : 'flex'
+                          }`}
+                        >
+                          {(match.fullName || 'M').charAt(0).toUpperCase()}
+                        </div>
+                      </div>
+                      {isUserOnline(match) ? (
+                        <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full shadow-2xs" title="Online" />
+                      ) : (
+                        <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-amber-400 border-2 border-white rounded-full shadow-2xs" title="Offline / Away" />
+                      )}
+                    </div>
+                    <span className="text-[11px] font-semibold text-slate-800 mt-1.5 max-w-[62px] truncate group-hover:text-primary transition-colors">
+                      {match.fullName?.split(' ')[0] || 'Match'}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {(() => {
             const sortedConversations = [...filteredConversations].sort((a, b) => {
               const aOfficial = a.isOfficial || a.otherUser?.id === 'usr_qurb_official' || a.id.includes('qurb_official');
@@ -1510,8 +1642,14 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
             return sortedConversations.length > 0 ? (
               sortedConversations.map(conv => {
                 const partner = conv.otherUser || { id: conv.participantTwo, fullName: 'Match Candidate', photos: [] } as any;
-                const isConvOfficial = Boolean(conv.isOfficial || partner.id === 'usr_qurb_official' || conv.id.includes('qurb_official'));
-                const isIncomingUnread = conv.lastMessageSenderId !== currentUser.id && Boolean(conv.unreadCount && conv.unreadCount > 0);
+                const isConvOfficial = Boolean(
+                  conv.isOfficial || 
+                  partner.id === 'usr_qurb_official' || 
+                  conv.id.includes('qurb') || 
+                  conv.id.includes('official') || 
+                  (partner.fullName && partner.fullName.includes('Qurb'))
+                );
+                const isIncomingUnread = !isConvOfficial && conv.lastMessageSenderId !== currentUser.id && Boolean(conv.unreadCount && conv.unreadCount > 0);
                 const isSelected = selectedConvIds.has(conv.id);
 
                 return (
@@ -1526,7 +1664,9 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                           return next;
                         });
                       } else {
-                        dbService.markConversationAsRead(conv.id);
+                        try {
+                          dbService.markConversationAsRead(conv.id);
+                        } catch {}
                         setActiveConvId(conv.id);
                       }
                     }}
@@ -1534,10 +1674,10 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                       isSelected
                         ? 'border-primary bg-pastel-rose/30 ring-1 ring-primary'
                         : isConvOfficial
-                          ? 'border-sky-200/90 bg-gradient-to-r from-sky-50/40 via-white to-white hover:border-sky-400'
+                          ? 'border-primary/25 bg-gradient-to-r from-rose-50/50 via-white to-white hover:border-primary/50 hover:shadow-brand/5'
                           : isIncomingUnread 
                             ? 'border-primary/60 bg-pastel-rose/25 border-l-4 border-l-primary shadow-brand/10' 
-                            : 'border-outline hover:border-primary'
+                            : 'border-slate-100 hover:border-primary/40 hover:shadow-subtle'
                     }`}
                   >
                     {/* Multi-Select Checkbox */}
@@ -1555,7 +1695,9 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                     <div 
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (!isConvOfficial) {
+                        if (isConvOfficial) {
+                          setActiveConvId(conv.id);
+                        } else if (partner && partner.id !== 'usr_qurb_official') {
                           setSelectedProfile(partner);
                         } else {
                           setActiveConvId(conv.id);
@@ -1564,13 +1706,13 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                       className="relative shrink-0 cursor-pointer group/avatar"
                       title={isConvOfficial ? "Qurb Official Channel" : `Click to view ${partner.fullName}'s Biodata`}
                     >
-                      <div className={`w-12 h-12 rounded-full overflow-hidden border-2 flex items-center justify-center transition-all shadow-subtle ${
+                      <div className={`w-12 h-12 rounded-full overflow-hidden border flex items-center justify-center transition-all shadow-subtle ${
                         isConvOfficial
-                          ? 'border-sky-400 ring-2 ring-sky-200/80 bg-gradient-to-br from-[#0B101E] to-[#162038]'
-                          : isIncomingUnread ? 'border-primary ring-2 ring-primary/20 bg-surface-variant' : 'border-primary/30 bg-surface-variant'
+                          ? 'border-primary/20 bg-pastel-rose/40'
+                          : isIncomingUnread ? 'border-primary ring-2 ring-primary/20 bg-surface-variant' : 'border-outline bg-surface-variant'
                       }`}>
                         {isConvOfficial ? (
-                          <div className="w-full h-full p-2 flex items-center justify-center bg-gradient-to-br from-[#0B101E] to-[#162038]">
+                          <div className="w-full h-full p-2.5 flex items-center justify-center">
                             <img src="/icon.svg" alt="Qurb" className="w-full h-full object-contain" />
                           </div>
                         ) : partner.photos && partner.photos.length > 0 && !partner.photos[0].includes('photo-1534528741775-53994a69daeb') ? (
@@ -1603,22 +1745,17 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                           </div>
                         )}
                       </div>
-                      {isConvOfficial ? (
-                        <span className="absolute -bottom-0.5 -right-0.5">
-                          <VerifiedBlueTick size={15} />
-                        </span>
-                      ) : isIncomingUnread ? (
-                        <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-primary border-2 border-white rounded-full animate-pulse" />
-                      ) : null}
                     </div>
 
-                    {/* Conversation Info (Clean WhatsApp-Style Row) */}
+                    {/* Conversation Info (Clean Modern Row) */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-0.5">
                         <h3 
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (!isConvOfficial) {
+                            if (isConvOfficial) {
+                              setActiveConvId(conv.id);
+                            } else if (partner && partner.id !== 'usr_qurb_official') {
                               setSelectedProfile(partner);
                             } else {
                               setActiveConvId(conv.id);
@@ -1631,15 +1768,16 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                         >
                           <span>{isConvOfficial ? 'Qurb Team' : (partner.fullName || 'Member').replace(/✓/g, '').trim()}</span>
                           {isConvOfficial && (
-                            <>
-                              <VerifiedBlueTick size={15} className="ml-0.5" />
-                              <span className="ml-1 text-[9px] px-1.5 py-0.2 rounded-full bg-sky-50 text-sky-700 font-bold uppercase tracking-wider border border-sky-200/80">
-                                Official
-                              </span>
-                            </>
+                            <VerifiedBlueTick size={15} className="ml-0.5" />
                           )}
                         </h3>
                         <div className="flex items-center gap-1.5 shrink-0">
+                          {isConvOfficial && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-primary bg-rose-50 border border-rose-200/80 px-2 py-0.5 rounded-full shadow-2xs">
+                              <Pin className="w-2.5 h-2.5 rotate-45 text-primary" />
+                              <span>Pinned</span>
+                            </span>
+                          )}
                           <span className={`text-[11px] font-medium ${isIncomingUnread ? 'text-primary font-bold' : 'text-secondary'}`}>
                             {formatChatTime(conv.lastMessageTime)}
                           </span>
@@ -1651,19 +1789,36 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                         </div>
                       </div>
 
-                      <p className={`text-xs truncate ${
+                      <div className={`text-xs truncate ${
                         isIncomingUnread ? 'font-bold text-on-surface' : 'text-secondary'
                       }`}>
-                        {conv.lastMessageText || 'Tap to start conversation...'}
-                      </p>
-
-                      {isIncomingUnread && (
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[10px] font-semibold text-primary bg-pastel-rose px-2 py-0.5 rounded-full border border-pastel-rose-border">
-                            New Reply
-                          </span>
-                        </div>
-                      )}
+                        {(() => {
+                          const text = conv.lastMessageText || (isConvOfficial ? 'Official announcements and verified updates.' : 'Tap to start conversation...');
+                          if (text.includes('restored photo blur') || text.includes('photo blur for modesty') || text.startsWith('🔒')) {
+                            const cleanText = text.replace(/^[🔒\s]+/, '').replace(/^dY"'\s*/, '');
+                            return (
+                              <span className="inline-flex items-center gap-1.5 text-slate-600 font-medium truncate max-w-full">
+                                <span className="w-4 h-4 rounded-full bg-amber-100 border border-amber-300/80 flex items-center justify-center shrink-0 shadow-2xs">
+                                  <Lock className="w-2.5 h-2.5 text-amber-700" />
+                                </span>
+                                <span className="truncate">{cleanText}</span>
+                              </span>
+                            );
+                          }
+                          if (text.includes('revealed their unblurred photos') || text.startsWith('📸')) {
+                            const cleanText = text.replace(/^[📸\s]+/, '').replace(/^dY",\s*/, '');
+                            return (
+                              <span className="inline-flex items-center gap-1.5 text-slate-600 font-medium truncate max-w-full">
+                                <span className="w-4 h-4 rounded-full bg-emerald-100 border border-emerald-300/80 flex items-center justify-center shrink-0 shadow-2xs">
+                                  <Eye className="w-2.5 h-2.5 text-emerald-700" />
+                                </span>
+                                <span className="truncate">{cleanText}</span>
+                              </span>
+                            );
+                          }
+                          return text;
+                        })()}
+                      </div>
                     </div>
 
                   </div>
@@ -1695,11 +1850,11 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
   return (
     <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden font-sans select-none pb-0 text-on-surface">
       {/* Chat Top Header */}
-      <header className="sticky top-0 bg-white px-3.5 py-2.5 border-b border-outline flex items-center justify-between z-20 shadow-subtle">
+      <header className="sticky top-0 bg-white/95 backdrop-blur-md px-3.5 py-2.5 border-b border-slate-100 flex items-center justify-between z-20 shadow-xs">
         <div className="flex items-center gap-2.5 min-w-0">
           <button
             onClick={() => setActiveConvId(null)}
-            className="w-8 h-8 rounded-full bg-surface-variant border border-outline flex items-center justify-center text-on-surface hover:bg-outline transition-colors shrink-0"
+            className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200/80 flex items-center justify-center text-slate-700 hover:bg-slate-200 transition-colors shrink-0 cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
@@ -1707,24 +1862,21 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
           {/* Clickable Avatar to View Full Biodata */}
           <div 
             onClick={() => {
-              if (!isOfficialChannel) setSelectedProfile(activeConv.otherUser);
+              if (!isOfficialChannel && activeConv?.otherUser) setSelectedProfile(activeConv.otherUser);
             }}
             className={`relative shrink-0 ${!isOfficialChannel ? 'cursor-pointer group/avatar' : ''}`}
             title={isOfficialChannel ? "Qurb Official Channel" : "Click to view full biodata"}
           >
-            <div className={`w-10 h-10 rounded-full overflow-hidden border-2 flex items-center justify-center transition-all shadow-subtle ${
-              isOfficialChannel ? 'border-sky-300 ring-2 ring-sky-100 bg-sky-50' : 'border-primary/40 group-hover/avatar:border-primary bg-surface-variant'
+            <div className={`w-10 h-10 rounded-full overflow-hidden border flex items-center justify-center transition-all shadow-subtle ${
+              isOfficialChannel ? 'border-primary/20 bg-pastel-rose/50' : 'border-slate-200 group-hover/avatar:border-primary/60 bg-surface-variant ring-1 ring-primary/20'
             }`}>
               {isOfficialChannel ? (
-                <div className="w-full h-full bg-gradient-to-br from-sky-600 to-indigo-700 flex items-center justify-center p-1.5">
-                  <img src="/icon.svg" alt="Qurb" className="w-full h-full object-contain filter drop-shadow-sm" onError={(e) => {
-                    (e.currentTarget as HTMLElement).style.display = 'none';
-                  }} />
-                  <span className="text-white font-black text-sm select-none font-serif">Q</span>
+                <div className="w-full h-full p-2 flex items-center justify-center">
+                  <img src="/icon.svg" alt="Qurb" className="w-full h-full object-contain" />
                 </div>
               ) : (
                 <>
-                  {activeConv.otherUser.photos && activeConv.otherUser.photos.length > 0 && !activeConv.otherUser.photos[0].includes('photo-1534528741775-53994a69daeb') ? (
+                  {activeConv?.otherUser?.photos && activeConv.otherUser.photos.length > 0 && !activeConv.otherUser.photos[0].includes('photo-1534528741775-53994a69daeb') ? (
                     <img
                       src={activeConv.otherUser.photos[0]}
                       alt={activeConv.otherUser.fullName}
@@ -1750,58 +1902,66 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                   ) : null}
                   <div
                     className={`halal-header-avatar-fallback w-full h-full bg-gradient-to-br from-emerald-800 via-emerald-700 to-teal-900 text-amber-200 items-center justify-center font-serif font-black select-none ${
-                      activeConv.otherUser.photos && activeConv.otherUser.photos.length > 0 && !activeConv.otherUser.photos[0].includes('photo-1534528741775-53994a69daeb') ? 'hidden' : 'flex'
+                      activeConv?.otherUser?.photos && activeConv.otherUser.photos.length > 0 && !activeConv.otherUser.photos[0].includes('photo-1534528741775-53994a69daeb') ? 'hidden' : 'flex'
                     }`}
                   >
                     <span className="text-xs tracking-wider drop-shadow-xs font-bold">
-                      {(activeConv.otherUser.fullName || 'M').trim().charAt(0).toUpperCase()}
+                      {(activeConv?.otherUser?.fullName || 'M').trim().charAt(0).toUpperCase()}
                     </span>
                   </div>
                 </>
               )}
             </div>
-            {isOfficialChannel && (
-              <div className="absolute -bottom-1 -right-1 filter drop-shadow-sm">
-                <VerifiedBlueTick size={15} />
-              </div>
+            {!isOfficialChannel && (
+              isUserOnline(activeConv?.otherUser) ? (
+                <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full shadow-2xs" title="Online" />
+              ) : (
+                <span className="absolute bottom-0 right-0 w-3 h-3 bg-amber-400 border-2 border-white rounded-full shadow-2xs" title="Offline / Away" />
+              )
             )}
           </div>
 
           {/* Clickable Name & Biodata Summary */}
           <div 
             onClick={() => {
-              if (!isOfficialChannel) setSelectedProfile(activeConv.otherUser);
+              if (!isOfficialChannel && activeConv?.otherUser) setSelectedProfile(activeConv.otherUser);
             }}
             className={`flex flex-col min-w-0 ${!isOfficialChannel ? 'cursor-pointer group' : ''}`}
             title={isOfficialChannel ? "Qurb Official Channel" : "Click to view full biodata"}
           >
             <h2 className="font-serif font-bold text-xs text-on-surface group-hover:text-primary transition-colors truncate flex items-center gap-1.5">
-              <span>{isOfficialChannel ? 'Qurb Team' : (activeConv.otherUser.fullName || '').replace(/✓/g, '').trim()}</span>
+              <span>{isOfficialChannel ? 'Qurb Team' : (activeConv?.otherUser?.fullName || '').replace(/✓/g, '').trim()}</span>
               {isOfficialChannel && (
-                <>
-                  <VerifiedBlueTick size={15} />
-                  <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-sky-50 text-sky-700 font-bold uppercase tracking-wider border border-sky-200">
-                    Official
-                  </span>
-                </>
+                <VerifiedBlueTick size={15} />
               )}
             </h2>
-            <div className="text-[10px] text-secondary truncate">
-              {isOfficialChannel
-                ? 'Official Broadcasts & Verified Updates'
-                : `${activeConv.otherUser.profession || 'Member'} · ${activeConv.otherUser.city || activeConv.otherUser.location || 'Global'}`}
+            <div className="text-[10px] text-secondary truncate flex items-center gap-1.5">
+              {isOfficialChannel ? (
+                'Verified Channel · Official Updates'
+              ) : (
+                <>
+                  <span className="truncate">{activeConv?.otherUser?.profession || 'Member'} · {activeConv?.otherUser?.city || activeConv?.otherUser?.location || 'Global'}</span>
+                  <span className="w-1 h-1 rounded-full bg-slate-300 shrink-0" />
+                  {isUserOnline(activeConv?.otherUser) ? (
+                    <span className="flex items-center gap-1 text-emerald-600 font-semibold shrink-0">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      <span>Online</span>
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-amber-600 font-semibold shrink-0">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                      <span>Away</span>
+                    </span>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>
 
         {/* Action Controls: Call Buttons, Biodata Button & 3-Dots Kebab Menu */}
         <div className="flex items-center gap-1.5 shrink-0 relative">
-          {isOfficialChannel ? (
-            <div className="flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-sky-50 via-white to-blue-50 border border-sky-300/80 text-sky-800 rounded-full text-[11px] font-bold shadow-xs">
-              <VerifiedBlueTick size={14} />
-              <span>Verified Channel</span>
-            </div>
-          ) : (
+          {isOfficialChannel ? null : (
             <>
               {/* Audio Call Button */}
               <button
@@ -1832,7 +1992,9 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
               </button>
 
               <button
-                onClick={() => setSelectedProfile(activeConv.otherUser)}
+                onClick={() => {
+                  if (activeConv?.otherUser) setSelectedProfile(activeConv.otherUser);
+                }}
                 className="text-xs text-primary font-bold bg-pastel-rose hover:bg-pastel-rose/80 px-3 py-1.5 rounded-full border border-pastel-rose-border transition-all flex items-center gap-1.5 shadow-2xs active:scale-95"
                 title="View Full Biodata"
               >
@@ -1892,60 +2054,62 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
         </div>
       </header>
 
-      {/* 1-to-1 Modesty Photo Reveal Privacy Quick Bar */}
-      <div className="bg-surface-variant/80 backdrop-blur-xs px-3.5 py-1.5 border-b border-outline flex items-center justify-between z-10 text-xs shadow-2xs">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-          <span className="text-[11px] font-medium text-on-surface truncate">
-            {(() => {
-              const partnerRevealedToMe = Boolean(activeConv.otherUser.isPhotoRevealed || activeConv.isPhotoRevealed);
-              const partnerFirstName = activeConv.otherUser.fullName.split(' ')[0];
-              if (hasRevealedToPartner && partnerRevealedToMe) {
-                return `Mutual reveal active: Photos unblurred for both`;
-              }
-              if (hasRevealedToPartner) {
-                return `Your photos are unblurred for ${partnerFirstName} (Waiting for theirs)`;
-              }
-              if (partnerRevealedToMe) {
-                return `${partnerFirstName} revealed their photos to you!`;
-              }
-              return `Modesty Shield: Your photos are blurred`;
-            })()}
-          </span>
+      {/* 1-to-1 Modesty Photo Reveal Privacy Quick Bar (Only for candidate-to-candidate matches) */}
+      {!isOfficialChannel && (
+        <div className="bg-surface-variant/80 backdrop-blur-xs px-3.5 py-1.5 border-b border-outline flex items-center justify-between z-10 text-xs shadow-2xs">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            <span className="text-[11px] font-medium text-on-surface truncate">
+              {(() => {
+                const partnerRevealedToMe = Boolean(activeConv?.otherUser?.isPhotoRevealed || activeConv?.isPhotoRevealed);
+                const partnerFirstName = activeConv?.otherUser?.fullName ? activeConv.otherUser.fullName.split(' ')[0] : 'Partner';
+                if (hasRevealedToPartner && partnerRevealedToMe) {
+                  return `Mutual reveal active: Photos unblurred for both`;
+                }
+                if (hasRevealedToPartner) {
+                  return `Your photos are unblurred for ${partnerFirstName} (Waiting for theirs)`;
+                }
+                if (partnerRevealedToMe) {
+                  return `${partnerFirstName} revealed their photos to you!`;
+                }
+                return `Modesty Shield: Your photos are blurred`;
+              })()}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={handleToggleRevealPhotos}
+            className={`px-3 py-1 rounded-full text-[10px] font-bold border transition-all flex items-center gap-1 shrink-0 shadow-2xs active:scale-95 ${
+              hasRevealedToPartner
+                ? 'bg-white border-outline text-secondary hover:bg-surface-variant hover:text-on-surface'
+                : 'bg-primary text-white border-primary shadow-brand hover:bg-primary-dark'
+            }`}
+          >
+            {hasRevealedToPartner ? (
+              <>
+                <EyeOff className="w-3 h-3" />
+                <span>Blur Again</span>
+              </>
+            ) : (
+              <>
+                <Eye className="w-3 h-3" />
+                <span>Reveal Photos</span>
+              </>
+            )}
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={handleToggleRevealPhotos}
-          className={`px-3 py-1 rounded-full text-[10px] font-bold border transition-all flex items-center gap-1 shrink-0 shadow-2xs active:scale-95 ${
-            hasRevealedToPartner
-              ? 'bg-white border-outline text-secondary hover:bg-surface-variant hover:text-on-surface'
-              : 'bg-primary text-white border-primary shadow-brand hover:bg-primary-dark'
-          }`}
-        >
-          {hasRevealedToPartner ? (
-            <>
-              <EyeOff className="w-3 h-3" />
-              <span>Blur Again</span>
-            </>
-          ) : (
-            <>
-              <Eye className="w-3 h-3" />
-              <span>Reveal Photos</span>
-            </>
-          )}
-        </button>
-      </div>
+      )}
 
 
       {/* Messages Scroll Area */}
 
 
       {/* Messages Scroll Area */}
-      <main className="flex-1 overflow-y-auto p-3.5 space-y-3">
+      <main className="flex-1 overflow-y-auto p-3.5 space-y-3 bg-[#FAF8F5]/60">
         {/* Date Marker */}
-        <div className="flex justify-center">
-          <span className="text-[10px] text-secondary bg-white px-3 py-0.5 rounded-full border border-outline font-medium shadow-subtle flex items-center gap-1">
-            <ShieldCheck className="w-3 h-3 text-primary" />
+        <div className="flex justify-center my-1">
+          <span className="text-[10px] text-amber-900/90 bg-white/90 backdrop-blur-md px-3.5 py-1 rounded-full border border-amber-200/80 font-medium shadow-2xs flex items-center gap-1.5 font-serif">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
             <span>Conversation Began with Bismillah</span>
           </span>
         </div>
@@ -2013,9 +2177,8 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                           />
                           {/* Ambient Glass Badges Overlay */}
                           <div className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-full bg-slate-950/80 backdrop-blur-md text-white text-[10px] font-bold flex items-center gap-1.5 border border-white/20 shadow-md">
-                            <Megaphone className="w-3 h-3 text-amber-400" />
-                            <span>Official Broadcast</span>
-                            <VerifiedBlueTick size={12} />
+                            <span>Qurb Team</span>
+                            <VerifiedBlueTick size={13} />
                           </div>
                           <div className="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-full bg-emerald-950/80 backdrop-blur-md text-emerald-300 text-[10px] font-bold flex items-center gap-1 border border-emerald-500/30 shadow-md">
                             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse mr-0.5" />
@@ -2029,14 +2192,11 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                         {/* Channel Header Meta */}
                         <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
                           <div className="flex items-center gap-1.5">
-                            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 p-0.5 flex items-center justify-center shadow-2xs">
+                            <div className="w-7 h-7 rounded-full bg-pastel-rose/80 border border-primary/20 p-1 flex items-center justify-center shadow-xs">
                               <img src="/icon.svg" alt="Qurb" className="w-full h-full object-contain" />
                             </div>
                             <span className="font-bold text-xs text-slate-900 font-serif">Qurb Team</span>
-                            <VerifiedBlueTick size={14} />
-                            <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-sky-50 text-sky-700 font-bold uppercase tracking-wider border border-sky-200">
-                              Official
-                            </span>
+                            <VerifiedBlueTick size={15} />
                           </div>
                           <span className="text-[10px] text-slate-400 font-medium">
                             {formatChatTime(msg.timestamp)}
@@ -2089,16 +2249,48 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                 );
               }
 
+              const rawMsgText = msg.text || '';
+              const isModestyLockMsg = rawMsgText.includes('restored photo blur') || rawMsgText.includes('photo blur for modesty') || rawMsgText.startsWith('🔒');
+              const isModestyRevealMsg = rawMsgText.includes('revealed their unblurred photos') || rawMsgText.startsWith('📸');
+
+              if (isModestyLockMsg) {
+                const cleanText = rawMsgText.replace(/^[🔒\s]+/, '').replace(/^dY"'\s*/, '');
+                return (
+                  <div key={msg.id || idx} className="flex justify-center my-2 animate-fade-in w-full">
+                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-50/90 border border-amber-200/90 shadow-2xs text-[11px] font-medium text-amber-900 max-w-[90%] backdrop-blur-xs">
+                      <div className="w-5 h-5 rounded-full bg-amber-100 border border-amber-300 flex items-center justify-center text-amber-700 shrink-0">
+                        <Lock className="w-3 h-3" />
+                      </div>
+                      <span className="truncate">{cleanText}</span>
+                    </div>
+                  </div>
+                );
+              }
+
+              if (isModestyRevealMsg) {
+                const cleanText = rawMsgText.replace(/^[📸\s]+/, '').replace(/^dY",\s*/, '');
+                return (
+                  <div key={msg.id || idx} className="flex justify-center my-2 animate-fade-in w-full">
+                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50/90 border border-emerald-200/90 shadow-2xs text-[11px] font-medium text-emerald-900 max-w-[90%] backdrop-blur-xs">
+                      <div className="w-5 h-5 rounded-full bg-emerald-100 border border-emerald-300 flex items-center justify-center text-emerald-700 shrink-0">
+                        <Eye className="w-3 h-3" />
+                      </div>
+                      <span className="truncate">{cleanText}</span>
+                    </div>
+                  </div>
+                );
+              }
+
               return (
                 <div
                   key={msg.id || idx}
                   className={`flex flex-col gap-0.5 max-w-[82%] ${isMe ? 'items-end ml-auto' : 'items-start mr-auto'}`}
                 >
                   <div
-                    className={`p-3 rounded-2xl text-xs leading-relaxed ${
+                    className={`p-3 rounded-2xl text-xs leading-relaxed transition-all ${
                       isMe
-                        ? 'bg-primary text-white rounded-br-2xs shadow-brand'
-                        : 'bg-white text-on-surface rounded-bl-2xs border border-outline shadow-subtle'
+                        ? 'bg-gradient-to-tr from-primary via-rose-600 to-rose-500 text-white rounded-br-2xs shadow-sm shadow-primary/20'
+                        : 'bg-white text-slate-800 rounded-bl-2xs border border-slate-200/80 shadow-xs'
                     }`}
                   >
                     {/* 1. Voice Message Bubble */}
@@ -2485,9 +2677,28 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
               );
             })
           ) : (
-            <div className="text-center py-10 text-secondary text-xs">
-              <MessageCircle className="w-6 h-6 mx-auto mb-1 text-primary" />
-              <p>No messages yet. Send a respectful salam to begin.</p>
+            <div className="flex flex-col items-center justify-center py-12 px-4 text-center my-auto">
+              <div className="w-12 h-12 rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center mb-2.5 text-primary shadow-xs">
+                <MessageCircle className="w-6 h-6 text-primary" />
+              </div>
+              <p className="font-serif font-bold text-sm text-slate-800">Start a Blessed Conversation</p>
+              <p className="text-xs text-secondary max-w-xs mt-1 leading-relaxed">Send a respectful Islamic Salam to initiate matrimonial discussions.</p>
+              
+              {/* Quick Salam Chips */}
+              <div className="mt-4 flex flex-wrap justify-center gap-2 max-w-xs">
+                {['Assalamu Alaikum wa Rahmatullah 🌟', 'Kese hain aap? ✨', 'JazakAllah Khair for connecting 🤲'].map((salam, sIdx) => (
+                  <button
+                    key={sIdx}
+                    type="button"
+                    onClick={() => {
+                      setInputText(salam);
+                    }}
+                    className="text-[11px] font-medium bg-white hover:bg-rose-50/80 text-slate-700 hover:text-primary px-3 py-1.5 rounded-full border border-slate-200/90 shadow-2xs transition-all active:scale-95 cursor-pointer"
+                  >
+                    {salam}
+                  </button>
+                ))}
+              </div>
             </div>
           );
         })()}
@@ -2519,12 +2730,12 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
 
       {/* Message Input Footer with Voice Record & Auto-Compressed Attachment */}
       {isOfficialChannel ? (
-        <footer className="p-3.5 bg-gradient-to-r from-slate-50 via-sky-50/50 to-slate-50 border-t border-sky-200/90 flex items-center justify-center gap-2 text-xs text-slate-700 text-center z-20 shadow-xs">
+        <footer className="p-3.5 bg-white/95 backdrop-blur-md border-t border-slate-100 flex items-center justify-center gap-2 text-xs text-on-surface text-center z-20 shadow-xs">
           <VerifiedBlueTick size={15} />
-          <span className="font-semibold text-slate-800">This is an official announcement channel. Only Qurb Admins can broadcast messages.</span>
+          <span className="font-medium text-secondary">This is an official announcement channel. Only Qurb Admins can broadcast messages.</span>
         </footer>
       ) : (
-        <footer className="p-2.5 bg-white border-t border-outline flex items-center gap-2 z-20">
+        <footer className="p-2.5 bg-white/95 backdrop-blur-md border-t border-slate-100 flex items-center gap-2 z-20 shadow-xs">
           {/* Hidden File Attachment Input */}
           <input
             ref={fileInputRef}
@@ -2536,7 +2747,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
 
           {isRecording ? (
             /* Live Recording Bar */
-            <div className="flex-1 flex items-center justify-between bg-rose-50 border border-rose-200 rounded-full px-4 py-1.5 animate-fade-in">
+            <div className="flex-1 flex items-center justify-between bg-rose-50 border border-rose-200 rounded-full px-4 py-1.5 animate-fade-in shadow-2xs">
               <div className="flex items-center gap-2.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-ping" />
                 <span className="text-xs font-mono font-bold text-rose-700">
@@ -2552,7 +2763,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                 <button
                   type="button"
                   onClick={handleCancelRecording}
-                  className="w-8 h-8 rounded-full bg-white hover:bg-rose-100 text-rose-600 flex items-center justify-center transition-all shadow-2xs cursor-pointer"
+                  className="w-8 h-8 rounded-full bg-white hover:bg-rose-100 text-rose-600 flex items-center justify-center transition-all shadow-2xs cursor-pointer active:scale-95"
                   title="Cancel recording"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -2562,7 +2773,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                 <button
                   type="button"
                   onClick={handleStopAndSendVoice}
-                  className="px-3 py-1.5 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-brand flex items-center gap-1.5 transition-all cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-full bg-gradient-to-r from-primary to-rose-600 hover:opacity-95 text-white text-xs font-bold shadow-brand flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
                   title="Send voice note"
                 >
                   <Send className="w-3.5 h-3.5" />
@@ -2578,7 +2789,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                 type="button"
                 onClick={handleAttachmentClick}
                 disabled={isUploadingMedia}
-                className="w-9 h-9 rounded-full bg-surface-variant hover:bg-outline border border-outline flex items-center justify-center text-secondary hover:text-primary transition-all active:scale-95 disabled:opacity-40 shrink-0 cursor-pointer"
+                className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200/80 flex items-center justify-center text-slate-500 hover:text-primary transition-all active:scale-95 disabled:opacity-40 shrink-0 cursor-pointer"
                 title="Attach photo, video, or document (auto-compressed)"
               >
                 <Paperclip className="w-4 h-4" />
@@ -2594,7 +2805,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                 }}
                 placeholder="Write a respectful message..."
                 disabled={isUploadingMedia}
-                className="flex-1 bg-surface-variant border border-outline rounded-full px-3.5 py-2 text-xs text-on-surface outline-none focus:bg-white focus:border-primary placeholder:text-secondary/70 transition-all"
+                className="flex-1 bg-slate-100/90 border border-slate-200/80 rounded-full px-4 py-2 text-xs text-slate-800 outline-none focus:bg-white focus:border-primary/50 focus:ring-2 focus:ring-primary/20 placeholder:text-slate-400 transition-all"
               />
 
               {/* Conditional Send vs Mic Button */}
@@ -2603,7 +2814,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                   type="button"
                   onClick={handleSendMessage}
                   disabled={isUploadingMedia}
-                  className="w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center shadow-brand hover:bg-primary-dark active:scale-95 disabled:opacity-40 transition-all shrink-0 cursor-pointer"
+                  className="w-9 h-9 rounded-full bg-gradient-to-r from-primary to-rose-600 text-white flex items-center justify-center shadow-md shadow-primary/25 hover:opacity-95 active:scale-95 disabled:opacity-40 transition-all shrink-0 cursor-pointer"
                   title="Send message"
                 >
                   <Send className="w-4 h-4" />
@@ -2613,7 +2824,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                   type="button"
                   onClick={handleStartRecording}
                   disabled={isUploadingMedia}
-                  className="w-9 h-9 rounded-full bg-primary/10 hover:bg-primary text-primary hover:text-white border border-primary/20 flex items-center justify-center shadow-brand active:scale-95 disabled:opacity-40 transition-all shrink-0 cursor-pointer"
+                  className="w-9 h-9 rounded-full bg-rose-50 hover:bg-primary text-primary hover:text-white border border-rose-200/80 flex items-center justify-center shadow-xs active:scale-95 disabled:opacity-40 transition-all shrink-0 cursor-pointer"
                   title="Record voice note"
                 >
                   <Mic className="w-4 h-4" />
@@ -2633,7 +2844,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
             </div>
             <h3 className="font-serif text-base font-bold text-on-surface">End Conversation with Grace</h3>
             <p className="text-xs text-secondary leading-relaxed">
-              In accordance with Islamic adab, closing this conversation will send this respectful closing du'a to {activeConv.otherUser.fullName.split(' ')[0]}:
+              In accordance with Islamic adab, closing this conversation will send this respectful closing du'a to {activeConv?.otherUser?.fullName?.split(' ')[0] || 'Candidate'}:
             </p>
             <div className="bg-pastel-mint/60 p-3 rounded-2xl border border-pastel-mint-border text-[11px] text-pastel-mint-text italic leading-relaxed text-left">
               "Assalamu Alaikum. JazakAllah Khair for your time and respectful communication. May Allah (SWT) grant you barakah and bless you with a righteous spouse who is the coolness of your eyes. Ameen."
@@ -2668,7 +2879,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
 
             <div className="text-center space-y-1">
               <h3 className="font-serif text-base font-bold text-on-surface">
-                Block {activeConv.otherUser.fullName.split(' ')[0]}?
+                Block {activeConv?.otherUser?.fullName?.split(' ')[0] || 'Candidate'}?
               </h3>
               <p className="text-xs text-secondary leading-relaxed">
                 This will end the chat immediately and add them to your <strong>Blocked Users</strong> list in Matches. You can unblock them anytime from your Matches tab.

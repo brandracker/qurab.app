@@ -12,6 +12,7 @@ import { PhotoModerationTab } from './components/PhotoModerationTab';
 import { SeedProfilesTab } from './components/SeedProfilesTab';
 import { ReferralsTab } from './components/ReferralsTab';
 import { AnnouncementsTab } from './components/AnnouncementsTab';
+import { SubscriptionsTab } from './components/SubscriptionsTab';
 import { UserInspectModal } from './components/UserInspectModal';
 import { BroadcastModal } from './components/BroadcastModal';
 import { SubscriptionModal } from './components/SubscriptionModal';
@@ -313,7 +314,8 @@ export const AdminPortal: React.FC = () => {
     directSalams: number,
     isVip: boolean,
     resetQuotas: boolean,
-    durationDays?: number | 'lifetime'
+    durationDays?: number | 'lifetime' | string,
+    expiryDate?: string
   ) => {
     setIsSubmittingSubscription(true);
     try {
@@ -323,7 +325,7 @@ export const AdminPortal: React.FC = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${adminToken}`
         },
-        body: JSON.stringify({ tier, directSalams, isVip, resetQuotas, durationDays })
+        body: JSON.stringify({ tier, directSalams, isVip, resetQuotas, durationDays, expiryDate })
       });
       const data = await res.json();
       if (data.success) {
@@ -552,6 +554,15 @@ export const AdminPortal: React.FC = () => {
             />
           )}
 
+          {activeTab === 'subscriptions' && adminToken && (
+            <SubscriptionsTab
+              adminToken={adminToken}
+              onManageSubscription={setSelectedSubscriptionUser}
+              onInspectUser={handleInspectUser}
+              onShowToast={showToast}
+            />
+          )}
+
           {activeTab === 'users' && (
             <UserDirectoryTab
               users={users}
@@ -652,6 +663,7 @@ export const AdminPortal: React.FC = () => {
       {selectedSubscriptionUser && (
         <SubscriptionModal
           user={selectedSubscriptionUser}
+          adminToken={adminToken}
           onClose={() => setSelectedSubscriptionUser(null)}
           onUpdateSubscription={handleUpdateSubscription}
           isSubmitting={isSubmittingSubscription}

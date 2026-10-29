@@ -158,12 +158,19 @@ export const SeedProfilesTab: React.FC<SeedProfilesTabProps> = ({ adminToken }) 
       const data = await res.json();
       if (data.success) {
         const replied = data.repliedCount || 0;
+        const postponed = data.postponedCount || 0;
         setPendingChatsCount(data.remainingCount ?? 0);
-        showToast(
-          replied > 0
-            ? `Auto-replied to ${replied} pending chat${replied === 1 ? '' : 's'} with Gemini AI!`
-            : 'All seed chats & matches are already up-to-date!'
-        );
+        if (replied > 0) {
+          showToast(
+            postponed > 0
+              ? `Auto-replied to ${replied} chat${replied === 1 ? '' : 's'} (${postponed} postponed for 4-5 min natural delay)`
+              : `Auto-replied to ${replied} pending chat${replied === 1 ? '' : 's'} with Gemini AI!`
+          );
+        } else if (postponed > 0) {
+          showToast(`⏳ ${postponed} chat${postponed === 1 ? '' : 's'} postponed to maintain 4-5 min natural delay per user.`);
+        } else {
+          showToast('All seed chats & matches are already up-to-date!');
+        }
         fetchSeedProfiles();
       } else {
         showToast(`⚠️ Catchup notice: ${data.error || 'Failed to complete catchup'}`);

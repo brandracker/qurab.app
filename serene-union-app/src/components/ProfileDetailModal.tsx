@@ -28,7 +28,9 @@ import {
   Users,
   Volume2,
   Play,
-  Pause
+  Pause,
+  EyeOff,
+  Lock
 } from 'lucide-react';
 
 
@@ -104,7 +106,7 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
     }
   };
 
-  if (!isOpen || !profile) return null;
+  if (!isOpen || !profile || profile.id === 'usr_qurb_official' || profile.isOfficial) return null;
 
 
   const photos = (profile.photos || []).filter(
@@ -145,6 +147,19 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
                   !isUnblurred ? 'filter blur-xl scale-110 opacity-85' : 'scale-100'
                 }`}
               />
+
+              {/* High-End Modesty Blur Center Overlay */}
+              {!isUnblurred && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-15 p-4 text-center">
+                  <div className="w-18 h-18 rounded-full bg-black/45 backdrop-blur-md border border-white/25 flex items-center justify-center text-white/85 shadow-2xl mb-2.5">
+                    <EyeOff className="w-9 h-9" />
+                  </div>
+                  <div className="bg-black/60 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/20 flex items-center gap-2 text-white text-xs font-semibold shadow-lg">
+                    <Lock className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Photos blurred for modesty · Unlocks on mutual interest</span>
+                  </div>
+                </div>
+              )}
 
               {/* Segmented Story Bars for Multiple Photos */}
               {photos.length > 1 && (

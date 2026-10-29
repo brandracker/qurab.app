@@ -28,7 +28,6 @@ import { isLocalEnvironment } from './services/apiConfig';
 import { AdminPortal } from './screens/admin/AdminPortal';
 import { backNavigationService } from './services/backNavigationService';
 import { pushNotificationService } from './services/pushNotificationService';
-import { AnnouncementModal } from './components/AnnouncementModal';
 import { TrialPromoModal } from './components/TrialPromoModal';
 import { MembershipUpgradeModal } from './components/MembershipUpgradeModal';
 import { webRtcService, type CallState, type CallerInfo, type CallType } from './services/webRtcService';
@@ -189,7 +188,6 @@ export const App: React.FC = () => {
 
   // Active User Profile State
   const [currentUser, setCurrentUser] = useState<UserProfile>(() => dbService.getCurrentUser());
-  const [activeAnnouncement, setActiveAnnouncement] = useState<{ id: string; title: string; message: string } | null>(null);
   const [showTrialPromo, setShowTrialPromo] = useState<boolean>(false);
   const [showVipUpgradeModal, setShowVipUpgradeModal] = useState<boolean>(false);
   const [hardUpdateData, setHardUpdateData] = useState<VersionPolicy | null>(null);
@@ -264,21 +262,6 @@ export const App: React.FC = () => {
     }
   }, [currentStep, currentUser?.id, currentUser?.isVip]);
 
-  // Task 09: Check dynamic in-app announcements
-  useEffect(() => {
-    if (!currentUser.id || currentUser.id === 'usr_guest') return;
-    const checkAnnouncements = async () => {
-      try {
-        const notifs = await notificationService.syncLiveNotifications();
-        const broadcast = notifs.find(n => n.type === 'system_broadcast' && !localStorage.getItem(`qurb_seen_bc_${n.id}`));
-        if (broadcast) {
-          setActiveAnnouncement({ id: broadcast.id, title: broadcast.title, message: broadcast.message });
-        }
-      } catch {}
-    };
-    checkAnnouncements();
-  }, [currentUser.id]);
-
   // Global Real-time Chat Background Sync & Unread Tracking
   useEffect(() => {
     if (!currentUser.id || currentUser.id === 'usr_guest') return;
@@ -348,8 +331,22 @@ export const App: React.FC = () => {
 
     const handleOpenChatEvent = (e: any) => {
       if (e.detail?.conversationId) {
+        if (currentUser?.id && currentUser.id !== 'usr_guest') {
+          setCurrentStep('main_app');
+        }
         setActiveConvId(e.detail.conversationId);
         setActiveTab('chat');
+        setShowNotifications(false);
+      }
+    };
+
+    const handleNavigateTabEvent = (e: any) => {
+      const tab = e.detail?.tab;
+      if (tab && ['discover', 'matches', 'chat', 'profile'].includes(tab)) {
+        if (currentUser?.id && currentUser.id !== 'usr_guest') {
+          setCurrentStep('main_app');
+        }
+        setActiveTab(tab as any);
         setShowNotifications(false);
       }
     };
@@ -384,9 +381,11 @@ export const App: React.FC = () => {
     };
 
     window.addEventListener('qurb_open_chat', handleOpenChatEvent);
+    window.addEventListener('qurb_navigate_tab', handleNavigateTabEvent);
     window.addEventListener('qurb_incoming_call_push', handleIncomingCallPushEvent);
     return () => {
       window.removeEventListener('qurb_open_chat', handleOpenChatEvent);
+      window.removeEventListener('qurb_navigate_tab', handleNavigateTabEvent);
       window.removeEventListener('qurb_incoming_call_push', handleIncomingCallPushEvent);
     };
   }, [currentUser.id]);
@@ -422,6 +421,35 @@ export const App: React.FC = () => {
           setCurrentUser(prev => ({ ...prev, ...liveUser }));
         }
       });
+
+      // Native Android: Auto-sync active Google Play Subscriptions to trigger dates
+      if (Capacitor.isNativePlatform()) {
+        import('@capacitor/core').then(async ({ registerPlugin }) => {
+          try {
+            const GooglePlayBilling = registerPlugin<any>('GooglePlayBillingPlugin');
+            const restored = await GooglePlayBilling.restorePurchases();
+            if (restored?.hasActiveSubscription && restored.purchaseToken) {
+              await fetch(`${API_BASE}/wallet/purchase-google-play`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  userId: currentUser.id,
+                  productId: restored.productId || 'qurb_barakah_monthly',
+                  purchaseToken: restored.purchaseToken,
+                  orderId: restored.orderId,
+                  amountCents: 0,
+                  currency: 'USD',
+                  isTrial: true,
+                  durationDays: 7
+                })
+              });
+              await dbService.fetchLikesRemaining(currentUser.id);
+            }
+          } catch (e) {
+            console.warn('[GooglePlay] Auto-restore sync notice:', e);
+          }
+        });
+      }
     }
 
     const handleVipUpdate = (e: any) => {
@@ -611,11 +639,14 @@ export const App: React.FC = () => {
 
     const pendingRef = localStorage.getItem('qurb_referral_pending_code');
     if (pendingRef && currentUser?.id && currentUser.id !== 'usr_guest' && pendingRef !== currentUser.id) {
-      referralService.claimCode(currentUser.id, pendingRef).then(res => {
-        if (res.success) {
-          localStorage.removeItem('qurb_referral_pending_code');
-        }
-      }).catch(() => {});
+      const timer = setTimeout(() => {
+        referralService.claimCode(currentUser.id, pendingRef).then(res => {
+          if (res.success) {
+            localStorage.removeItem('qurb_referral_pending_code');
+          }
+        }).catch(() => {});
+      }, 500);
+      return () => clearTimeout(timer);
     }
   }, [currentUser?.id]);
 
@@ -804,6 +835,8 @@ export const App: React.FC = () => {
     try {
       await dbService.updateUserProfileLive(merged.id, merged);
       await dbService.fetchLiveProfiles();
+      // Evaluate referral status if user registered via an invitation
+      await referralService.evaluateProfile(merged.id);
     } catch (err) {
       console.warn('Remote profile save notice:', err);
     }
@@ -1172,28 +1205,8 @@ export const App: React.FC = () => {
           </div>
         )}
 
-        {/* Dynamic In-App Announcement Modal (Task 09) */}
-        {activeAnnouncement && (
-          <AnnouncementModal
-            isOpen={Boolean(activeAnnouncement)}
-            title={activeAnnouncement.title}
-            message={activeAnnouncement.message}
-            actionUrl="https://play.google.com/store/apps/details?id=app.qurb.serene&pcampaignid=web_share"
-            onAction={() => {
-              try {
-                window.open('https://play.google.com/store/apps/details?id=app.qurb.serene&pcampaignid=web_share', '_blank', 'noopener,noreferrer');
-              } catch {}
-            }}
-            onClose={() => {
-              if (activeAnnouncement) {
-                try {
-                  localStorage.setItem(`qurb_seen_bc_${activeAnnouncement.id}`, 'true');
-                } catch {}
-                setActiveAnnouncement(null);
-              }
-            }}
-          />
-        )}
+        {/* Dynamic In-App Announcement Modal (Disabled by user request) */}
+        {/* activeAnnouncement popup disabled */}
 
         {/* 7-Day Free Trial Promo Placeholder Modal */}
         {showTrialPromo && (

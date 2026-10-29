@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ShieldAlert, ExternalLink, RefreshCw, Sparkles, CheckCircle2 } from 'lucide-react';
+import { ShieldAlert, ExternalLink, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { backNavigationService } from '../services/backNavigationService';
 import { googlePlayUpdateService } from '../services/googlePlayUpdateService';
 
@@ -78,7 +78,7 @@ export const HardUpdateModal: React.FC<Props> = ({
             </div>
 
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/15 border border-amber-400/30 text-[10px] font-bold uppercase tracking-wider text-amber-300 font-mono mb-2">
-              <Sparkles className="w-3 h-3 text-amber-300" />
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
               <span>Mandatory App Update • v{latestVersionName}</span>
             </div>
 

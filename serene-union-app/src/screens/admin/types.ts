@@ -1,4 +1,4 @@
-export type AdminTab = 'overview' | 'live' | 'daily' | 'users' | 'photos' | 'seeds' | 'referrals' | 'announcements';
+export type AdminTab = 'overview' | 'live' | 'daily' | 'subscriptions' | 'users' | 'photos' | 'seeds' | 'referrals' | 'announcements';
 
 export interface OfficialAnnouncement {
   id: string;
@@ -361,6 +361,19 @@ export interface CandidateUser {
     direct_salams_balance?: number;
     daily_messages_quota?: number;
     is_spotlight_active?: number | boolean;
+    subscriptionStartedAt?: string | null;
   } | null;
+  purchases?: InAppPurchaseRecord[];
   created_at?: string;
+}
+
+export interface InAppPurchaseRecord {
+  id: string;
+  product_id: string;
+  platform: string;
+  purchase_token?: string;
+  amount_cents: number;
+  currency: string;
+  status: string;
+  created_at: string;
 }

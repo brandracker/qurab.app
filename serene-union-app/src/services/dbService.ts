@@ -609,8 +609,19 @@ class DBService {
     isSpotlightActive: boolean;
     spotlightExpiresAt: string | null;
   }> {
-    const localKey = `serene_likes_left_${userId}`;
-    const fallbackCount = parseInt(localStorage.getItem(localKey) || '50', 10);
+    const legacyKey = `serene_likes_left_${userId}`;
+    const today = new Date().toISOString().slice(0, 10);
+    const localKey = `serene_likes_left_${userId}_${today}`;
+    let fallbackCount = 50;
+    const persistentVal = localStorage.getItem(legacyKey);
+    if (persistentVal !== null) {
+      fallbackCount = parseInt(persistentVal, 10);
+    } else {
+      const todayVal = localStorage.getItem(localKey);
+      if (todayVal !== null) {
+        fallbackCount = parseInt(todayVal, 10);
+      }
+    }
     const fallbackVip = Boolean(localStorage.getItem(`serene_vip_${userId}`) === 'true');
     const fallbackSalams = parseInt(localStorage.getItem(`serene_salams_left_${userId}`) || '2', 10);
     const fallbackAdsWatched = parseInt(localStorage.getItem(`serene_salam_ads_${userId}`) || '0', 10);
@@ -642,6 +653,8 @@ class DBService {
           
           try {
             localStorage.setItem(localKey, liveRemaining.toString());
+            localStorage.setItem(legacyKey, liveRemaining.toString());
+            localStorage.setItem(`serene_likes_date_${userId}`, today);
             localStorage.setItem(`serene_vip_${userId}`, liveVip ? 'true' : 'false');
             localStorage.setItem(`serene_salams_left_${userId}`, liveSalams.toString());
             localStorage.setItem(`serene_salam_ads_${userId}`, liveAdsWatched.toString());
@@ -684,16 +697,19 @@ class DBService {
   }
 
   async consumeDailyLike(userId: string): Promise<{ success: boolean; likesRemaining: number }> {
-    const localKey = `serene_likes_left_${userId}`;
-    const currentLocal = parseInt(localStorage.getItem(localKey) || '50', 10);
+    const legacyKey = `serene_likes_left_${userId}`;
+    const today = new Date().toISOString().slice(0, 10);
+    const localKey = `serene_likes_left_${userId}_${today}`;
+    const currentLocal = parseInt(localStorage.getItem(legacyKey) || localStorage.getItem(localKey) || '50', 10);
     const nextLocal = Math.max(0, currentLocal - 1);
     try {
       localStorage.setItem(localKey, nextLocal.toString());
+      localStorage.setItem(legacyKey, nextLocal.toString());
+      localStorage.setItem(`serene_likes_date_${userId}`, today);
     } catch {}
 
-    window.dispatchEvent(new CustomEvent('serene_likes_updated', { detail: { userId, likesRemaining: nextLocal } }));
-
     if (!userId || userId === 'usr_guest') {
+      window.dispatchEvent(new CustomEvent('serene_likes_updated', { detail: { userId, likesRemaining: nextLocal } }));
       return { success: true, likesRemaining: nextLocal };
     }
 
@@ -705,14 +721,12 @@ class DBService {
       });
       if (res.ok) {
         const data = await res.json();
-        if (data.success) {
-          const liveRemaining = data.likesRemaining ?? nextLocal;
+        if (data.success && typeof data.likesRemaining === 'number') {
+          const liveRemaining = data.likesRemaining;
           try {
-            const latestLocal = parseInt(localStorage.getItem(localKey) || '50', 10);
-            if (liveRemaining <= latestLocal) {
-              localStorage.setItem(localKey, liveRemaining.toString());
-              window.dispatchEvent(new CustomEvent('serene_likes_updated', { detail: { userId, likesRemaining: liveRemaining } }));
-            }
+            localStorage.setItem(localKey, liveRemaining.toString());
+            localStorage.setItem(legacyKey, liveRemaining.toString());
+            window.dispatchEvent(new CustomEvent('serene_likes_updated', { detail: { userId, likesRemaining: liveRemaining } }));
           } catch {}
           return { success: true, likesRemaining: liveRemaining };
         }
@@ -778,7 +792,10 @@ class DBService {
             window.dispatchEvent(new CustomEvent('serene_salam_ads_updated', { detail: { userId, adsWatched: data.adsWatchedForSalam } }));
           }
           if (typeof data.likesRemaining === 'number') {
+            const today = new Date().toISOString().slice(0, 10);
+            localStorage.setItem(`serene_likes_left_${userId}_${today}`, data.likesRemaining.toString());
             localStorage.setItem(`serene_likes_left_${userId}`, data.likesRemaining.toString());
+            localStorage.setItem(`serene_likes_date_${userId}`, today);
             window.dispatchEvent(new CustomEvent('serene_likes_updated', { detail: { userId, likesRemaining: data.likesRemaining } }));
           }
           return data;
@@ -960,17 +977,68 @@ class DBService {
       return 0;
     });
 
-    if (!filters) return all;
+    let filtered = all;
+    if (filters) {
+      filtered = all.filter(p => {
+        if (p.age && (p.age < filters.minAge || p.age > filters.maxAge)) return false;
+        // Only filter by maxDistance if explicitly set > 0
+        if (filters.maxDistance && filters.maxDistance > 0 && typeof p.distanceKm === 'number' && p.distanceKm > filters.maxDistance) return false;
+        if (filters.sects && filters.sects.length > 0 && p.religiousProfile?.sect && !filters.sects.includes(p.religiousProfile.sect)) return false;
+        if (filters.practiceLevels && filters.practiceLevels.length > 0 && p.religiousProfile?.practiceLevel && !filters.practiceLevels.includes(p.religiousProfile.practiceLevel)) return false;
+        if (filters.marriageTimelines && filters.marriageTimelines.length > 0 && p.marriageTimeline && !filters.marriageTimelines.includes(p.marriageTimeline)) return false;
+        return true;
+      });
+    }
 
-    return all.filter(p => {
-      if (p.age && (p.age < filters.minAge || p.age > filters.maxAge)) return false;
-      // Only filter by maxDistance if explicitly set > 0
-      if (filters.maxDistance && filters.maxDistance > 0 && typeof p.distanceKm === 'number' && p.distanceKm > filters.maxDistance) return false;
-      if (filters.sects && filters.sects.length > 0 && p.religiousProfile?.sect && !filters.sects.includes(p.religiousProfile.sect)) return false;
-      if (filters.practiceLevels && filters.practiceLevels.length > 0 && p.religiousProfile?.practiceLevel && !filters.practiceLevels.includes(p.religiousProfile.practiceLevel)) return false;
-      if (filters.marriageTimelines && filters.marriageTimelines.length > 0 && p.marriageTimeline && !filters.marriageTimelines.includes(p.marriageTimeline)) return false;
-      return true;
-    });
+    return this.applyPhotoPriorityInterleaving(filtered);
+  }
+
+  /**
+   * Interleave candidate profiles based on photo priority pattern:
+   * 4 Show Image (unblurred) -> 2 Blur (blurred photo) -> 2 No Photo (no photos uploaded)
+   */
+  applyPhotoPriorityInterleaving(profiles: UserProfile[]): UserProfile[] {
+    const unblurred: UserProfile[] = [];
+    const blurred: UserProfile[] = [];
+    const noPhoto: UserProfile[] = [];
+
+    for (const p of profiles) {
+      const hasPhoto = Boolean(
+        p.photos && 
+        p.photos.length > 0 && 
+        p.photos.some((url: string) => url && typeof url === 'string' && url.trim().length > 0)
+      );
+
+      if (!hasPhoto) {
+        noPhoto.push(p);
+      } else if (p.blurPhotosByDefault) {
+        blurred.push(p);
+      } else {
+        unblurred.push(p);
+      }
+    }
+
+    const result: UserProfile[] = [];
+    let uIdx = 0;
+    let bIdx = 0;
+    let nIdx = 0;
+
+    while (uIdx < unblurred.length || bIdx < blurred.length || nIdx < noPhoto.length) {
+      // 1. Up to 4 show image (unblurred)
+      for (let i = 0; i < 4 && uIdx < unblurred.length; i++) {
+        result.push(unblurred[uIdx++]);
+      }
+      // 2. Up to 2 blur
+      for (let i = 0; i < 2 && bIdx < blurred.length; i++) {
+        result.push(blurred[bIdx++]);
+      }
+      // 3. Up to 2 no photo
+      for (let i = 0; i < 2 && nIdx < noPhoto.length; i++) {
+        result.push(noPhoto[nIdx++]);
+      }
+    }
+
+    return result;
   }
 
   async resetPassedProfiles(userId: string): Promise<boolean> {

@@ -1084,7 +1084,46 @@ profilesRouter.get('/discover', async (c) => {
       return 0;
     });
 
-    const finalProfiles = formatted.slice(0, limit);
+    // Interleave candidate profiles based on photo priority pattern:
+    // 4 Show Image (unblurred) -> 2 Blur (blurred photo) -> 2 No Photo (no photos uploaded)
+    const unblurredList: any[] = [];
+    const blurredList: any[] = [];
+    const noPhotoList: any[] = [];
+
+    for (const p of formatted) {
+      const hasPhoto = Boolean(
+        p.photos && 
+        p.photos.length > 0 && 
+        p.photos.some((url: string) => url && typeof url === 'string' && url.trim().length > 0)
+      );
+
+      if (!hasPhoto) {
+        noPhotoList.push(p);
+      } else if (p.blurPhotosByDefault) {
+        blurredList.push(p);
+      } else {
+        unblurredList.push(p);
+      }
+    }
+
+    const interleaved: any[] = [];
+    let uIdx = 0;
+    let bIdx = 0;
+    let nIdx = 0;
+
+    while (uIdx < unblurredList.length || bIdx < blurredList.length || nIdx < noPhotoList.length) {
+      for (let i = 0; i < 4 && uIdx < unblurredList.length; i++) {
+        interleaved.push(unblurredList[uIdx++]);
+      }
+      for (let i = 0; i < 2 && bIdx < blurredList.length; i++) {
+        interleaved.push(blurredList[bIdx++]);
+      }
+      for (let i = 0; i < 2 && nIdx < noPhotoList.length; i++) {
+        interleaved.push(noPhotoList[nIdx++]);
+      }
+    }
+
+    const finalProfiles = interleaved.slice(0, limit);
     return c.json({ success: true, count: finalProfiles.length, profiles: finalProfiles });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);

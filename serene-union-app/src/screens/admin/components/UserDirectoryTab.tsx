@@ -220,7 +220,7 @@ export const UserDirectoryTab: React.FC<UserDirectoryTabProps> = ({
                             </div>
                             <div className="text-xs text-slate-400 font-mono mt-0.5">{u.email || u.phone}</div>
                             <div className="text-[10px] text-slate-500 flex items-center space-x-2 mt-0.5">
-                              <span>ID: {u.id?.slice(0, 10)}...</span>
+                              <span>Joined: {u.created_at ? new Date(u.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</span>
                               <span>•</span>
                               <span className="text-[10px] text-slate-500">{u.photo_count || 0} pics</span>
                             </div>
@@ -252,6 +252,11 @@ export const UserDirectoryTab: React.FC<UserDirectoryTabProps> = ({
                         >
                           {isVip ? 'Barakah VIP' : 'Standard'}
                         </button>
+                        {isVip && u.wallet?.subscription_expiry && (
+                          <div className="text-[10px] text-amber-400/80 font-mono mt-1">
+                            Exp: {new Date(u.wallet.subscription_expiry).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })}
+                          </div>
+                        )}
                       </td>
 
                       <td className="px-6 py-4">

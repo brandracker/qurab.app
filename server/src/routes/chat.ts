@@ -130,6 +130,7 @@ chatRouter.get('/', async (c) => {
     const { results } = await c.env.DB.prepare(`
       SELECT c.*, 
         u1.full_name as p1_name, u2.full_name as p2_name,
+        u1.last_active_at as p1_last_active, u2.last_active_at as p2_last_active,
         u1.gender as p1_gender, u2.gender as p2_gender,
         u1.dob as p1_dob, u2.dob as p2_dob,
         u1.location as p1_location, u2.location as p2_location,
@@ -294,6 +295,12 @@ chatRouter.get('/', async (c) => {
       const isPhotoRevealed = partnerRevealedSet.has(otherId);
       const hasRevealedToPartner = myRevealedSet.has(otherId);
       const unreadCount = isUserP1 ? (row.unread_count_p1 || 0) : (row.unread_count_p2 || 0);
+      const otherLastActive = isUserP1 ? row.p2_last_active : row.p1_last_active;
+      const otherOnline = Boolean(
+        otherLastActive && 
+        !isNaN(new Date(otherLastActive).getTime()) && 
+        (Date.now() - new Date(otherLastActive).getTime()) < 15 * 60 * 1000
+      );
 
       return {
         id: row.id,
@@ -333,7 +340,9 @@ chatRouter.get('/', async (c) => {
           wali: otherWaliName ? {
             name: otherWaliName,
             relationship: otherWaliRel || 'Guardian'
-          } : undefined
+          } : undefined,
+          isOnline: otherOnline,
+          lastActive: otherLastActive || undefined
         },
         waliName: otherWaliName ? `${otherWaliName} (${otherWaliRel || 'Guardian'})` : undefined,
         messages: messagesMap[row.id] || []

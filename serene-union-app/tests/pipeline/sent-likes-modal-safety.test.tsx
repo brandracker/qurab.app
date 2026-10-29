@@ -83,6 +83,7 @@ describe('Sent Likes Modal Safety & Context-Aware Actions', () => {
       <MatchesLikedYouScreen
         onOpenChat={handleOpenChat}
         onOpenDiscover={handleOpenDiscover}
+        initialTab="received"
       />
     );
 
@@ -134,6 +135,7 @@ describe('Sent Likes Modal Safety & Context-Aware Actions', () => {
       <MatchesLikedYouScreen
         onOpenChat={handleOpenChat}
         onOpenDiscover={handleOpenDiscover}
+        initialTab="received"
       />
     );
 
@@ -198,6 +200,7 @@ describe('Sent Likes Modal Safety & Context-Aware Actions', () => {
       <MatchesLikedYouScreen
         onOpenChat={handleOpenChat}
         onOpenDiscover={handleOpenDiscover}
+        initialTab="received"
       />
     );
 

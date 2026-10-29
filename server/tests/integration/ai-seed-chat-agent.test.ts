@@ -355,6 +355,63 @@ describe('AI Seed Profiles Chat Agent Integration', () => {
     expect(reply2.replied).toBe(false);
     expect(reply2.reason).toBe('already_responded_awaiting_user_reply');
   });
+
+  it('13. Multi-seed matches with 1 user: Batch catchup replies to only 1 profile per user and postpones others for natural delay', async () => {
+    await env.DB.prepare("INSERT OR REPLACE INTO system_settings (key, value) VALUES ('ai_agent_enabled', '1')").run();
+
+    // Clean any prior conversations/messages for this test
+    await env.DB.prepare("DELETE FROM conversations WHERE participant_one = 'usr_real_male_1' OR participant_two = 'usr_real_male_1'").run();
+    await env.DB.prepare("DELETE FROM chat_messages WHERE conversation_id LIKE 'conv_%'").run();
+
+    // Add a second seed profile (Zainab)
+    await env.DB.prepare(`
+      INSERT INTO users (
+        id, phone, email, full_name, dob, gender, location, city, profession, education, bio, is_seed, is_profile_completed
+      ) VALUES (
+        'usr_seed_pk_52', '+923001234552', 'zainab@qurb.app', 'Zainab Noor', '2002-05-10', 'female',
+        'Gulberg, Lahore', 'Lahore', 'Software Engineer', 'BS CS', 'Software engineer looking for marriage.', 1, 1
+      )
+    `).run();
+
+    // Create 2 unreplied conversations for the same user (usr_real_male_1)
+    await env.DB.prepare(`
+      INSERT OR REPLACE INTO conversations (
+        id, participant_one, participant_two, jsonl_log_path, last_message_text, last_message_time, last_message_sender_id
+      ) VALUES 
+        ('conv_1', 'usr_real_male_1', 'usr_seed_pk_51', 'logs/c1.jsonl', 'Salam Alaikum!', datetime('now', '-10 minutes'), 'usr_real_male_1'),
+        ('conv_2', 'usr_real_male_1', 'usr_seed_pk_52', 'logs/c2.jsonl', 'Salam Alaikum Zainab!', datetime('now', '-5 minutes'), 'usr_real_male_1')
+    `).run();
+
+    // Trigger batch catchup with 4-minute cooldown
+    const batchResult1 = await app.request('/api/admin/ai-agent/catchup', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer adm_tok_adm_root.mocktoken.12345'
+      },
+      body: JSON.stringify({ limit: 10 })
+    }, env);
+
+    const data1 = await batchResult1.json();
+    expect(data1.success).toBe(true);
+    // Exactly 1 replied, 1 postponed for natural delay
+    expect(data1.repliedCount).toBe(1);
+    expect(data1.postponedCount).toBe(1);
+
+    // If triggered again immediately, the cooldown prevents the second seed profile from replying right away
+    const batchResult2 = await app.request('/api/admin/ai-agent/catchup', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer adm_tok_adm_root.mocktoken.12345'
+      },
+      body: JSON.stringify({ limit: 10 })
+    }, env);
+
+    const data2 = await batchResult2.json();
+    expect(data2.repliedCount).toBe(0);
+    expect(data2.postponedCount).toBe(1);
+  });
 });
 
 

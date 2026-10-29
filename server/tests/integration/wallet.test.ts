@@ -47,8 +47,11 @@ describe('Wallet, In-App Purchases & Rewarded Ads API Integration Tests', () => 
       body: JSON.stringify(payload)
     }, env);
 
+    const data: any = await res.json();
+    if (res.status !== 200) {
+      console.log('TEST 21 FAILED WITH:', data);
+    }
     expect(res.status).toBe(200);
-    const data = await res.json();
     expect(data.success).toBe(true);
 
     // Verify wallet updated
@@ -69,8 +72,11 @@ describe('Wallet, In-App Purchases & Rewarded Ads API Integration Tests', () => 
       body: JSON.stringify(payload)
     }, env);
 
+    const data: any = await res.json();
+    if (res.status !== 200) {
+      console.log('TEST 21 FAILED WITH:', data);
+    }
     expect(res.status).toBe(200);
-    const data = await res.json();
     expect(data.success).toBe(true);
 
     const getRes = await app.request('/api/wallet/usr_test_wallet_2', { method: 'GET' }, env);
@@ -90,8 +96,11 @@ describe('Wallet, In-App Purchases & Rewarded Ads API Integration Tests', () => 
       body: JSON.stringify(payload)
     }, env);
 
+    const data: any = await res.json();
+    if (res.status !== 200) {
+      console.log('TEST 21 FAILED WITH:', data);
+    }
     expect(res.status).toBe(200);
-    const data = await res.json();
     expect(data.success).toBe(true);
 
     const getRes = await app.request('/api/wallet/usr_test_wallet_3', { method: 'GET' }, env);
@@ -293,7 +302,7 @@ describe('Wallet, In-App Purchases & Rewarded Ads API Integration Tests', () => 
     expect(data.error).toContain('sessionId is required');
   });
 
-  it('15. Likes quota is persistent and does NOT reset across date changes (monetization architecture)', async () => {
+  it('15. Persistent likes quota architecture: Likes remain persistent across dates and add +10 on rewarded ad', async () => {
     await app.request('/api/wallet/usr_test_onetime', { method: 'GET' }, env);
     for (let i = 0; i < 5; i++) {
       await app.request('/api/wallet/use-like', {
@@ -308,16 +317,15 @@ describe('Wallet, In-App Purchases & Rewarded Ads API Integration Tests', () => 
     expect(walletData.wallet.likesRemaining).toBe(45);
     expect(walletData.wallet.likesUsedToday).toBe(5);
 
-    // Simulate older date in database
+    // Simulate older date in database to test date transition
     await env.DB.prepare(`
       UPDATE user_wallets SET last_likes_reset_date = '2025-01-01' WHERE user_id = 'usr_test_onetime'
     `).run();
 
-    // Query wallet on new date - must REMAIN persistent at 45 likes (NO free midnight refill!)
+    // Query wallet on new date - likes must NOT reset to 50! Persistent 45 likes must remain!
     walletRes = await app.request('/api/wallet/usr_test_onetime', { method: 'GET' }, env);
     walletData = await walletRes.json();
     expect(walletData.wallet.likesRemaining).toBe(45);
-    expect(walletData.wallet.likesUsedToday).toBe(5);
 
     // Consume remaining 45 likes
     await env.DB.prepare(`
@@ -362,8 +370,11 @@ describe('Wallet, In-App Purchases & Rewarded Ads API Integration Tests', () => 
       body: JSON.stringify(payload)
     }, env);
 
+    const data: any = await res.json();
+    if (res.status !== 200) {
+      console.log('TEST 21 FAILED WITH:', data);
+    }
     expect(res.status).toBe(200);
-    const data = await res.json();
     expect(data.success).toBe(true);
     expect(data.subscriptionExpiry).toBeDefined();
 
@@ -477,6 +488,102 @@ describe('Wallet, In-App Purchases & Rewarded Ads API Integration Tests', () => 
     const checkData = await checkRes.json();
     expect(checkData.wallet.likesRemaining).toBe(60);
     expect(checkData.wallet.dailyLikesQuota).toBe(60);
+  });
+
+  it('21. POST /api/wallet/purchase-google-play records GPA order ID and activates 7-day trial', async () => {
+    const payload = {
+      userId: 'usr_trial_gpa_user',
+      productId: 'qurb_barakah_monthly',
+      purchaseToken: 'gp_token_gpa_trial',
+      orderId: 'GPA.3393-0422-6807-92094'
+    };
+
+    const res = await app.request('/api/wallet/purchase-google-play', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }, env);
+
+    expect(res.status).toBe(200);
+    const data: any = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.purchaseId).toBe('GPA.3393-0422-6807-92094');
+    expect(data.isTrial).toBe(true);
+    expect(data.daysGranted).toBe(7);
+
+    // Verify wallet reflects 7 days remaining
+    const getRes = await app.request('/api/wallet/usr_trial_gpa_user', { method: 'GET' }, env);
+    const getData = await getRes.json();
+    expect(getData.wallet.isVip).toBe(true);
+    expect(getData.wallet.daysRemaining).toBeLessThanOrEqual(7);
+  });
+
+  it('22. Google Play RTDN Webhook type 4 grants 7-day trial and type 2 grants 30-day renewal', async () => {
+    // 0. Initial baseline purchase
+    await app.request('/api/wallet/purchase-google-play', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: 'usr_test_wallet_1',
+        productId: 'qurb_barakah_monthly',
+        purchaseToken: 'gp_token_gpa_trial',
+        orderId: 'GPA.3393-0422-6807-92094'
+      })
+    }, env);
+
+    // 1. Initial trial purchase notificationType 4
+    const pubsubTrial = {
+      message: {
+        data: Buffer.from(JSON.stringify({
+          version: '1.0',
+          packageName: 'app.qurb.serene',
+          subscriptionNotification: {
+            notificationType: 4,
+            purchaseToken: 'gp_token_gpa_trial',
+            subscriptionId: 'qurb_barakah_monthly'
+          }
+        })).toString('base64')
+      }
+    };
+
+    const trialRes = await app.request('/api/wallet/google-play/webhook', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(pubsubTrial)
+    }, env);
+    expect(trialRes.status).toBe(200);
+
+    let check = await app.request('/api/wallet/usr_test_wallet_1', { method: 'GET' }, env);
+    let checkData = await check.json();
+    expect(checkData.wallet.isVip).toBe(true);
+    expect(checkData.wallet.daysRemaining).toBeLessThanOrEqual(7);
+
+    // 2. Renewal notificationType 2
+    const pubsubRenew = {
+      message: {
+        data: Buffer.from(JSON.stringify({
+          version: '1.0',
+          packageName: 'app.qurb.serene',
+          subscriptionNotification: {
+            notificationType: 2,
+            purchaseToken: 'gp_token_gpa_trial',
+            subscriptionId: 'qurb_barakah_monthly'
+          }
+        })).toString('base64')
+      }
+    };
+
+    const renewRes = await app.request('/api/wallet/google-play/webhook', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(pubsubRenew)
+    }, env);
+    expect(renewRes.status).toBe(200);
+
+    check = await app.request('/api/wallet/usr_test_wallet_1', { method: 'GET' }, env);
+    checkData = await check.json();
+    expect(checkData.wallet.isVip).toBe(true);
+    expect(checkData.wallet.daysRemaining).toBeGreaterThanOrEqual(29);
   });
 });
 

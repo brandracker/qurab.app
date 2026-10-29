@@ -101,6 +101,20 @@ public class MainActivity extends BridgeActivity {
     }
 
 
+    private String getExtraStringSafe(Intent intent, String key) {
+        if (intent == null || key == null) return null;
+        try {
+            String val = intent.getStringExtra(key);
+            if (val != null) return val;
+            Bundle extras = intent.getExtras();
+            if (extras != null && extras.containsKey(key)) {
+                Object obj = extras.get(key);
+                return obj != null ? obj.toString() : null;
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
+
     private void handleDeepLink(Intent intent) {
         if (intent == null) return;
 
@@ -113,13 +127,14 @@ public class MainActivity extends BridgeActivity {
         } catch (Exception ignored) {}
 
         // Handle incoming call action or extras
-        if ("incoming_call".equals(intent.getStringExtra("type")) || "app.qurb.serene.ACTION_INCOMING_CALL".equals(intent.getAction())) {
-            String callerId = intent.getStringExtra("callerId");
-            String callerName = intent.getStringExtra("callerName");
-            String callType = intent.getStringExtra("callType");
-            String callerPhoto = intent.getStringExtra("callerPhoto");
-            String conversationId = intent.getStringExtra("conversationId");
-            String callAction = intent.getStringExtra("call_action");
+        String callTypeExtra = getExtraStringSafe(intent, "type");
+        if ("incoming_call".equals(callTypeExtra) || "app.qurb.serene.ACTION_INCOMING_CALL".equals(intent.getAction())) {
+            String callerId = getExtraStringSafe(intent, "callerId");
+            String callerName = getExtraStringSafe(intent, "callerName");
+            String callType = getExtraStringSafe(intent, "callType");
+            String callerPhoto = getExtraStringSafe(intent, "callerPhoto");
+            String conversationId = getExtraStringSafe(intent, "conversationId");
+            String callAction = getExtraStringSafe(intent, "call_action");
 
             String safeName = callerName != null ? callerName.replace("'", "\\'") : "Match Candidate";
             String safeId = callerId != null ? callerId : "";
@@ -141,6 +156,34 @@ public class MainActivity extends BridgeActivity {
                 getBridge().getWebView().postDelayed(() -> {
                     getBridge().getWebView().evaluateJavascript(js, null);
                 }, 800);
+            }
+        } else {
+            // Handle chat notification or general notification redirection (Cold boot and Background resume)
+            String convId = getExtraStringSafe(intent, "conversationId");
+            String notifType = getExtraStringSafe(intent, "type");
+            String targetTab = getExtraStringSafe(intent, "targetTab");
+
+            if (convId != null && !convId.trim().isEmpty()) {
+                String safeConv = convId.replace("'", "\\'");
+                String js = "window.dispatchEvent(new CustomEvent('qurb_open_chat', { detail: { conversationId: '" + safeConv + "' } }));";
+                if (getBridge() != null && getBridge().getWebView() != null) {
+                    getBridge().getWebView().postDelayed(() -> {
+                        getBridge().getWebView().evaluateJavascript(js, null);
+                    }, 500);
+                    getBridge().getWebView().postDelayed(() -> {
+                        getBridge().getWebView().evaluateJavascript(js, null);
+                    }, 1400);
+                }
+            } else if ("like".equals(notifType) || "match".equals(notifType) || "matches".equals(targetTab)) {
+                String js = "window.dispatchEvent(new CustomEvent('qurb_navigate_tab', { detail: { tab: 'matches' } }));";
+                if (getBridge() != null && getBridge().getWebView() != null) {
+                    getBridge().getWebView().postDelayed(() -> {
+                        getBridge().getWebView().evaluateJavascript(js, null);
+                    }, 500);
+                    getBridge().getWebView().postDelayed(() -> {
+                        getBridge().getWebView().evaluateJavascript(js, null);
+                    }, 1400);
+                }
             }
         }
 

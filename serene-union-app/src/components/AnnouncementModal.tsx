@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Megaphone, X, Check, ExternalLink, Sparkles } from 'lucide-react';
+import { Megaphone, X, Check, ExternalLink } from 'lucide-react';
 import { backNavigationService } from '../services/backNavigationService';
 
 export const PLAY_STORE_UPDATE_URL = 'https://play.google.com/store/apps/details?id=app.qurb.serene&pcampaignid=web_share';
@@ -65,7 +65,7 @@ export const AnnouncementModal: React.FC<Props> = ({
               </div>
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-amber-300 font-mono flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-amber-300" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
                   Official Announcement
                 </span>
                 <h3 className="font-serif text-lg font-bold text-white leading-snug">

@@ -194,14 +194,19 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ stats, onRefresh, onSe
           </div>
         </div>
 
-        <div className="bg-[#0F172A] border border-white/10 rounded-3xl p-6 shadow-xl relative overflow-hidden">
+        <div 
+          onClick={() => onSelectTab && onSelectTab('subscriptions')}
+          className="bg-[#0F172A] border border-white/10 rounded-3xl p-6 shadow-xl relative overflow-hidden cursor-pointer hover:border-amber-500/50 transition-all group"
+          title="Click to view Subscriptions & In-App Purchases Hub"
+        >
           <div className="flex items-center justify-between text-slate-400 mb-3">
-            <span className="text-xs font-semibold uppercase tracking-wider">Barakah VIP</span>
-            <Crown className="w-5 h-5 text-amber-400" />
+            <span className="text-xs font-semibold uppercase tracking-wider group-hover:text-amber-300 transition-colors">Barakah VIP</span>
+            <Crown className="w-5 h-5 text-amber-400 group-hover:scale-110 transition-transform" />
           </div>
           <div className="text-4xl font-extrabold text-white font-serif">{stats?.vipSubscribers ?? '—'}</div>
-          <div className="text-xs text-slate-400 mt-3">
-            Active premium subscribers
+          <div className="text-xs text-amber-400/80 mt-3 flex items-center justify-between">
+            <span>Active premium subscribers</span>
+            <span className="text-[11px] font-semibold underline">Manage Hub →</span>
           </div>
         </div>
       </div>

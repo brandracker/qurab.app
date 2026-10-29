@@ -244,8 +244,26 @@ export const UserInspectModal: React.FC<UserInspectModalProps> = ({
                 <span>Tier: {isVip ? 'Barakah VIP Club' : 'Standard Free'}</span>
                 {isVip && <Crown className="w-3.5 h-3.5 text-amber-400" />}
               </div>
-              <div className="text-[11px] text-slate-400">
-                Direct Salams Balance: <span className="text-emerald-400 font-semibold">{salamsBalance}</span>
+              <div className="text-[11px] text-slate-400 flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
+                <span>Direct Salams: <strong className="text-emerald-400 font-semibold">{salamsBalance}</strong></span>
+                {isVip && (
+                  <>
+                    <span>•</span>
+                    <span>
+                      Expires: <strong className="text-amber-300">
+                        {wallet?.subscription_expiry 
+                          ? new Date(wallet.subscription_expiry).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) 
+                          : 'Lifetime'}
+                      </strong>
+                    </span>
+                  </>
+                )}
+                {user.created_at && (
+                  <>
+                    <span>•</span>
+                    <span>Joined: <strong className="text-slate-300">{new Date(user.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</strong></span>
+                  </>
+                )}
               </div>
             </div>
           </div>

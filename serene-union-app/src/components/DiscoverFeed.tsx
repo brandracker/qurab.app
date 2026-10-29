@@ -28,8 +28,8 @@ import {
   FileCheck2, 
   Plane, 
   Star,
-  Lock,
-  MapPin
+  MapPin,
+  EyeOff
 } from 'lucide-react';
 import type { UserProfile } from '../types';
 import { FilterModal } from './FilterModal';
@@ -190,6 +190,16 @@ export const DiscoverFeed: React.FC<Props> = ({
   }, [isDrawerOpen]);
 
   const photos = currentProfile?.photos || [];
+
+  const isPhotoBlurred = Boolean(
+    currentProfile &&
+    !photoError &&
+    photos.length > 0 &&
+    currentProfile.blurPhotosByDefault &&
+    !currentProfile.photoRevealApproved &&
+    !currentProfile.isPhotoRevealed &&
+    !dbService.isPhotoRevealedTo(currentProfile.id, currentUser.id)
+  );
 
   const handleNextPhoto = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -607,7 +617,7 @@ export const DiscoverFeed: React.FC<Props> = ({
                     }
                   }}
                   className={`w-full h-full object-cover transition-all duration-300 select-none pointer-events-none ${
-                    currentProfile.blurPhotosByDefault && !currentProfile.photoRevealApproved
+                    isPhotoBlurred
                       ? 'filter blur-3xl scale-110 opacity-70 brightness-95'
                       : 'scale-100'
                   }`}
@@ -638,12 +648,14 @@ export const DiscoverFeed: React.FC<Props> = ({
                 </div>
               )}
 
-              {/* Clean Minimal Modesty Indicator (No ugly box, no duplicate voice button) */}
-              {currentProfile.blurPhotosByDefault && !currentProfile.photoRevealApproved && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center z-10 pointer-events-none select-none">
-                  <div className="inline-flex items-center gap-2 bg-black/50 backdrop-blur-md px-4 py-2 rounded-full text-white/90 text-xs font-medium border border-white/20 shadow-lg">
-                    <Lock className="w-3.5 h-3.5 text-amber-300" />
-                    <span>Photos blurred for modesty · Unlocks on mutual interest</span>
+              {/* Clean Minimal Modesty Indicator: Large Professional Circle EyeOff Icon Only When Blurred */}
+              {isPhotoBlurred && (
+                <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none select-none">
+                  <div 
+                    className="w-20 h-20 rounded-full bg-black/40 backdrop-blur-md border border-white/25 flex items-center justify-center text-white/75 shadow-xl transition-all"
+                    title="Photos blurred for modesty"
+                  >
+                    <EyeOff className="w-10 h-10 stroke-[2] text-white/75 drop-shadow-sm" />
                   </div>
                 </div>
               )}
@@ -682,9 +694,9 @@ export const DiscoverFeed: React.FC<Props> = ({
                     <HeartHandshake className="w-3 h-3 text-emerald-400" />
                     <span>94% Match</span>
                   </div>
-                  {currentProfile.blurPhotosByDefault && !currentProfile.photoRevealApproved && (
+                  {isPhotoBlurred && (
                     <span className="bg-black/50 text-amber-300 border border-amber-400/30 text-[10px] font-medium px-2 py-0.5 rounded-full backdrop-blur-md flex items-center gap-1">
-                      <Lock className="w-2.5 h-2.5" />
+                      <EyeOff className="w-2.5 h-2.5" />
                       <span>Modest</span>
                     </span>
                   )}
@@ -864,8 +876,30 @@ export const DiscoverFeed: React.FC<Props> = ({
                 </span>
               </button>
 
-              {/* Floating Matrimonial Action Bar (Pass, Direct Salam, Connect) */}
-              <div className="flex items-center justify-between gap-3 pt-1">
+              {/* Floating Matrimonial Action Bar (Direct Salam, Pass, Connect) */}
+              <div className="flex items-center justify-center gap-5 pt-1">
+                {/* Direct Salam Button */}
+                <button
+                  type="button"
+                  onClick={(e) => handleDirectSalam(currentProfile, e)}
+                  onTouchEnd={(e) => {
+                    e.stopPropagation();
+                    handleDirectSalam(currentProfile, e);
+                  }}
+                  aria-label="Direct Salam"
+                  className="relative w-14 h-14 min-w-[56px] min-h-[56px] rounded-full bg-white/20 backdrop-blur-md text-white border border-emerald-400/60 hover:bg-emerald-500/25 active:scale-90 flex flex-col items-center justify-center transition-all shadow-lg cursor-pointer pointer-events-auto group"
+                  title="Send Direct Salam (instant message without waiting for mutual like)"
+                >
+                  <Hand className="w-5 h-5 text-emerald-400 group-hover:scale-110 transition-transform" />
+                  <span className="text-[9px] font-bold text-white/90 leading-tight">Salam</span>
+                  <span className={`absolute -top-1 -right-1 text-[9px] px-1.5 py-0.2 rounded-full font-mono font-bold shadow-md border border-slate-900/60 ${
+                    directSalams > 0 ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white'
+                  }`}>
+                    {directSalams > 0 ? directSalams : `${adsWatchedForSalam % 3}/3`}
+                  </span>
+                  <span className="sr-only">Direct Salam</span>
+                </button>
+
                 {/* Pass Button */}
                 <button
                   type="button"
@@ -875,30 +909,10 @@ export const DiscoverFeed: React.FC<Props> = ({
                     handlePass(currentProfile.id, e);
                   }}
                   aria-label="Pass"
-                  className="w-14 h-14 min-w-[56px] min-h-[56px] rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 text-white hover:bg-rose-500/80 hover:border-rose-400 active:scale-90 flex items-center justify-center transition-all shadow-lg cursor-pointer pointer-events-auto"
+                  className="w-14 h-14 min-w-[56px] min-h-[56px] rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white hover:bg-rose-500/80 hover:border-rose-400 active:scale-90 flex items-center justify-center transition-all shadow-lg cursor-pointer pointer-events-auto"
                   title="Pass"
                 >
                   <X className="w-6 h-6 stroke-[2.5]" />
-                </button>
-
-                {/* Direct Salam Button */}
-                <button
-                  type="button"
-                  onClick={(e) => handleDirectSalam(currentProfile, e)}
-                  onTouchEnd={(e) => {
-                    e.stopPropagation();
-                    handleDirectSalam(currentProfile, e);
-                  }}
-                  className="flex-1 h-14 min-h-[56px] rounded-2xl bg-white/20 backdrop-blur-md text-white border border-white/30 text-xs font-bold flex items-center justify-center gap-2 hover:bg-white/30 active:scale-95 transition-all shadow-lg cursor-pointer pointer-events-auto"
-                  title="Send Direct Salam (instant message without waiting for mutual like)"
-                >
-                  <Hand className="w-4 h-4 text-emerald-300" />
-                  <span>Direct Salam</span>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold ${
-                    directSalams > 0 ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white shadow-xs'
-                  }`}>
-                    {directSalams > 0 ? `${directSalams} Left` : `${adsWatchedForSalam % 3}/3 Ads`}
-                  </span>
                 </button>
 
                 {/* Connect / Like Button */}
@@ -910,7 +924,7 @@ export const DiscoverFeed: React.FC<Props> = ({
                     handleLike(currentProfile, e);
                   }}
                   aria-label="Connect"
-                  className="w-14 h-14 min-w-[56px] min-h-[56px] rounded-2xl bg-primary text-white hover:bg-primary-dark active:scale-90 flex items-center justify-center transition-all shadow-brand border border-primary-light cursor-pointer pointer-events-auto"
+                  className="w-14 h-14 min-w-[56px] min-h-[56px] rounded-full bg-primary text-white hover:bg-primary-dark active:scale-90 flex items-center justify-center transition-all shadow-brand border border-primary-light cursor-pointer pointer-events-auto"
                   title="Express Interest / Like"
                 >
                   <Heart className="w-6 h-6 fill-current" />
@@ -1440,15 +1454,14 @@ export const DiscoverFeed: React.FC<Props> = ({
             } else if (adRewardType === 'undo') {
               handleClaimAdUndo();
             } else {
-              dbService.claimAdReward(currentUser.id, 'salam').then(() => {
-                const nextWatched = (adsWatchedForSalam % 3) + 1;
-                if (nextWatched >= 3) {
-                  setToastMessage("🎉 3 Ads completed! +1 Direct Salam Pass added!");
-                } else {
-                  setToastMessage(`Ad ${nextWatched}/3 completed! Watch ${3 - nextWatched} more for a free pass.`);
-                }
-                setTimeout(() => setToastMessage(null), 4000);
-              });
+              // Note: dbService.claimAdReward is already executed inside RewardedAdModal
+              const nextWatched = (adsWatchedForSalam % 3) + 1;
+              if (nextWatched >= 3) {
+                setToastMessage("🎉 3 Ads completed! +1 Direct Salam Pass added!");
+              } else {
+                setToastMessage(`Ad ${nextWatched}/3 completed! Watch ${3 - nextWatched} more for a free pass.`);
+              }
+              setTimeout(() => setToastMessage(null), 4000);
             }
           }}
         />
@@ -1461,7 +1474,7 @@ export const DiscoverFeed: React.FC<Props> = ({
           isOpen={showVipModal}
           onClose={() => setShowVipModal(false)}
           onPurchaseSuccess={(productId) => {
-            if (productId === 'serene_barakah_monthly') {
+            if (productId === 'serene_barakah_monthly' || productId === 'qurb_barakah_monthly') {
               setIsVip(true);
               localStorage.setItem(`serene_vip_${currentUser.id}`, 'true');
             }

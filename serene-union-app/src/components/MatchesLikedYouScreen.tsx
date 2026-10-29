@@ -14,7 +14,9 @@ import {
   CheckCircle2, 
   X,
   Send,
-  Loader2
+  Loader2,
+  MapPin,
+  ChevronRight
 } from 'lucide-react';
 import type { UserProfile } from '../types';
 
@@ -22,6 +24,7 @@ import { dbService } from '../services/dbService';
 import { notificationService } from '../services/notificationService';
 import { MembershipUpgradeModal } from './MembershipUpgradeModal';
 import { getThumbnailUrl } from '../utils/mediaCompressor';
+import { isUserOnline } from '../utils/onlineStatus';
 
 
 import { ProfileDetailModal } from './ProfileDetailModal';
@@ -29,13 +32,15 @@ import { ProfileDetailModal } from './ProfileDetailModal';
 interface Props {
   onOpenChat: (convId: string) => void;
   onOpenDiscover: () => void;
+  currentUser?: UserProfile;
+  initialTab?: TabType;
 }
 
 type TabType = 'received' | 'sent' | 'mutual' | 'passed' | 'blocked';
 
-export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDiscover }) => {
+export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDiscover, initialTab }) => {
   const currentUser = dbService.getCurrentUser();
-  const [activeTab, setActiveTab] = useState<TabType>('received');
+  const [activeTab, setActiveTab] = useState<TabType>(initialTab || 'sent');
   const [selectedProfile, setSelectedProfile] = useState<UserProfile | null>(null);
   
   // Instant SWR cache initialization: loads immediately from local memory with 0ms delay
@@ -245,46 +250,45 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
   const [mainSection, setMainSection] = useState<'activity' | 'privacy'>('activity');
 
   return (
-    <div className="w-full h-full flex flex-col p-4 overflow-y-auto pb-24 font-sans bg-background select-none text-on-surface">
+    <div className="w-full h-full flex flex-col p-4 overflow-y-auto pb-24 font-sans bg-slate-50/50 select-none text-on-surface relative">
+      {/* Subtle Ambient Decorative Glows */}
+      <div className="absolute top-0 right-0 w-64 h-64 bg-primary/4 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-24 left-0 w-48 h-48 bg-emerald-500/4 rounded-full blur-2xl pointer-events-none" />
+
       {/* Top Header */}
-      <header className="mb-3.5 flex items-center justify-between pt-1">
+      <header className="mb-3.5 flex items-center justify-between pt-1 relative z-10">
         <div>
-          <h1 className="font-serif text-xl font-bold text-on-surface">
-            Matches & Activity
+          <h1 className="font-serif text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <span>Matches & Activity</span>
           </h1>
-          <p className="text-[11px] text-secondary mt-0.5">Manage connections, sent interests & privacy history</p>
+          <p className="text-[11px] text-slate-500 mt-0.5">Manage connections, sent interests & privacy history</p>
         </div>
 
         {isVip && (
-          <span className="bg-pastel-amber text-pastel-amber-text border border-pastel-amber-border text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
-            <Crown className="w-3 h-3 text-pastel-amber-text" />
+          <span className="bg-gradient-to-r from-amber-50 to-amber-100/90 text-amber-700 border border-amber-300/60 text-[10px] font-bold px-3 py-1 rounded-full shadow-2xs flex items-center gap-1.5">
+            <Crown className="w-3.5 h-3.5 text-amber-600" />
             <span>VIP Active</span>
           </span>
         )}
       </header>
 
       {/* Main 2-Section Segmented Control */}
-      <div className="bg-surface-variant p-1 rounded-2xl flex items-center mb-3 border border-outline">
+      <div className="bg-slate-200/60 p-1 rounded-2xl flex items-center mb-3 border border-slate-200/80 shadow-2xs backdrop-blur-xs relative z-10">
         <button
           onClick={() => {
             setMainSection('activity');
             if (activeTab === 'passed' || activeTab === 'blocked') {
-              setActiveTab('received');
+              setActiveTab('sent');
             }
           }}
           className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
             mainSection === 'activity'
-              ? 'bg-white text-primary shadow-subtle'
-              : 'text-secondary hover:text-on-surface'
+              ? 'bg-white text-primary shadow-xs'
+              : 'text-slate-500 hover:text-slate-800'
           }`}
         >
           <Heart className="w-3.5 h-3.5" />
           <span>Match Activity</span>
-          {(interestedProfiles.length + mutualMatches.length + sentLikes.length) > 0 && (
-            <span className="bg-pastel-rose text-primary px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold">
-              {interestedProfiles.length + mutualMatches.length + sentLikes.length}
-            </span>
-          )}
         </button>
 
         <button
@@ -296,116 +300,79 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
           }}
           className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
             mainSection === 'privacy'
-              ? 'bg-white text-primary shadow-subtle'
-              : 'text-secondary hover:text-on-surface'
+              ? 'bg-white text-primary shadow-xs'
+              : 'text-slate-500 hover:text-slate-800'
           }`}
         >
           <Shield className="w-3.5 h-3.5" />
           <span>Privacy & Passes</span>
-          {(passedProfiles.length + blockedProfiles.length) > 0 && (
-            <span className="bg-surface-variant text-secondary px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold">
-              {passedProfiles.length + blockedProfiles.length}
-            </span>
-          )}
         </button>
       </div>
 
       {/* Sub-Tabs Selector based on Main Section */}
-      <div className="flex items-center gap-2 mb-3.5">
+      <div className="flex items-center gap-2 mb-3.5 relative z-10">
         {mainSection === 'activity' ? (
           <>
-            <button
-              onClick={() => setActiveTab('received')}
-              className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-all border ${
-                activeTab === 'received'
-                  ? 'bg-primary text-white border-primary shadow-brand'
-                  : 'bg-white text-secondary border-outline hover:bg-surface-variant'
-              }`}
-            >
-              <span>Liked You</span>
-              {interestedProfiles.length > 0 && (
-                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                  activeTab === 'received' ? 'bg-white/20 text-white' : 'bg-pastel-rose text-primary'
-                }`}>
-                  {interestedProfiles.length}
-                </span>
-              )}
-            </button>
-
+            {/* 1. You Liked */}
             <button
               onClick={() => setActiveTab('sent')}
-              className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-all border ${
+              className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all border ${
                 activeTab === 'sent'
-                  ? 'bg-primary text-white border-primary shadow-brand'
-                  : 'bg-white text-secondary border-outline hover:bg-surface-variant'
+                  ? 'bg-gradient-to-r from-primary to-primary-dark text-white border-transparent shadow-brand'
+                  : 'bg-white text-slate-600 border-slate-200/80 hover:bg-slate-50 hover:border-slate-300 shadow-2xs'
               }`}
             >
               <span>You Liked</span>
-              {sentLikes.length > 0 && (
-                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                  activeTab === 'sent' ? 'bg-white/20 text-white' : 'bg-pastel-rose text-primary'
-                }`}>
-                  {sentLikes.length}
-                </span>
-              )}
             </button>
 
+            {/* 2. Mutual */}
             <button
               onClick={() => setActiveTab('mutual')}
-              className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-all border ${
+              className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all border ${
                 activeTab === 'mutual'
-                  ? 'bg-primary text-white border-primary shadow-brand'
-                  : 'bg-white text-secondary border-outline hover:bg-surface-variant'
+                  ? 'bg-gradient-to-r from-primary to-primary-dark text-white border-transparent shadow-brand'
+                  : 'bg-white text-slate-600 border-slate-200/80 hover:bg-slate-50 hover:border-slate-300 shadow-2xs'
               }`}
             >
               <span>Mutual</span>
-              {mutualMatches.length > 0 && (
-                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                  activeTab === 'mutual' ? 'bg-white/20 text-white' : 'bg-pastel-rose text-primary'
-                }`}>
-                  {mutualMatches.length}
-                </span>
-              )}
+            </button>
+
+            {/* 3. Liked You */}
+            <button
+              onClick={() => setActiveTab('received')}
+              className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all border ${
+                activeTab === 'received'
+                  ? 'bg-gradient-to-r from-primary to-primary-dark text-white border-transparent shadow-brand'
+                  : 'bg-white text-slate-600 border-slate-200/80 hover:bg-slate-50 hover:border-slate-300 shadow-2xs'
+              }`}
+            >
+              <span>Liked You</span>
             </button>
           </>
         ) : (
           <>
             <button
               onClick={() => setActiveTab('passed')}
-              className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-all border ${
+              className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all border ${
                 activeTab === 'passed'
-                  ? 'bg-primary text-white border-primary shadow-brand'
-                  : 'bg-white text-secondary border-outline hover:bg-surface-variant'
+                  ? 'bg-gradient-to-r from-primary to-primary-dark text-white border-transparent shadow-brand'
+                  : 'bg-white text-slate-600 border-slate-200/80 hover:bg-slate-50 hover:border-slate-300 shadow-2xs'
               }`}
             >
               <Undo2 className="w-3.5 h-3.5" />
               <span>Passed History</span>
-              {passedProfiles.length > 0 && (
-                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                  activeTab === 'passed' ? 'bg-white/20 text-white' : 'bg-surface-variant text-secondary'
-                }`}>
-                  {passedProfiles.length}
-                </span>
-              )}
             </button>
 
             <button
               onClick={() => setActiveTab('blocked')}
-              className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-all border ${
+              className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all border ${
                 activeTab === 'blocked'
-                  ? 'bg-primary text-white border-primary shadow-brand'
-                  : 'bg-white text-secondary border-outline hover:bg-surface-variant'
+                  ? 'bg-gradient-to-r from-primary to-primary-dark text-white border-transparent shadow-brand'
+                  : 'bg-white text-slate-600 border-slate-200/80 hover:bg-slate-50 hover:border-slate-300 shadow-2xs'
               }`}
             >
               <Ban className="w-3.5 h-3.5" />
               <span>Blocked</span>
-              {blockedProfiles.length > 0 && (
-                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                  activeTab === 'blocked' ? 'bg-white/20 text-white' : 'bg-pastel-rose text-primary'
-                }`}>
-                  {blockedProfiles.length}
-                </span>
-              )}
             </button>
           </>
         )}
@@ -429,23 +396,23 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
         <div className="space-y-3.5">
           {/* VIP Banner */}
           {!isVip && interestedProfiles.length > 0 && (
-            <div className="bg-pastel-amber rounded-3xl p-3.5 border border-pastel-amber-border flex flex-col gap-2 shadow-subtle">
+            <div className="bg-gradient-to-r from-amber-50 via-orange-50/60 to-amber-50 rounded-2xl p-3.5 border border-amber-200/80 flex flex-col gap-2.5 shadow-2xs">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-white text-pastel-amber-text flex items-center justify-center shadow-subtle shrink-0">
-                  <Crown className="w-4 h-4 text-pastel-amber-text" />
+                <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-700 flex items-center justify-center shrink-0 border border-amber-200/60">
+                  <Crown className="w-4 h-4 text-amber-600" />
                 </div>
                 <div>
-                  <h3 className="font-serif text-xs font-bold text-on-surface">
+                  <h3 className="font-serif text-xs font-bold text-slate-800">
                     {interestedProfiles.length} Candidates Liked You!
                   </h3>
-                  <p className="text-[10px] text-secondary">
+                  <p className="text-[10px] text-slate-500">
                     Upgrade to VIP to unblur photos and connect immediately.
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setShowUpgradeModal(true)}
-                className="w-full py-2.5 rounded-full bg-primary text-white text-[11px] font-bold shadow-brand hover:bg-primary-dark active:scale-98 transition-all flex items-center justify-center gap-1.5"
+                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white text-[11px] font-bold shadow-brand hover:brightness-105 active:scale-98 transition-all flex items-center justify-center gap-1.5"
               >
                 <Unlock className="w-3.5 h-3.5" />
                 <span>Unlock "Who Liked You" with VIP</span>
@@ -456,7 +423,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
           {isLoading && interestedProfiles.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <Loader2 className="w-6 h-6 text-primary animate-spin mb-2" />
-              <p className="text-xs text-secondary">Checking incoming likes...</p>
+              <p className="text-xs text-slate-500">Checking incoming likes...</p>
             </div>
           ) : interestedProfiles.length > 0 ? (
             <div className="grid grid-cols-2 gap-2.5">
@@ -473,11 +440,11 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
                 return (
                   <div
                     key={candidate.id}
-                    className="bg-white rounded-2xl border border-outline overflow-hidden flex flex-col shadow-subtle relative group"
+                    className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden flex flex-col shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] hover:border-primary/40 transition-all duration-200 relative group"
                   >
                     <div 
                       onClick={() => setSelectedProfile(candidate)}
-                      className="relative aspect-[3/4] bg-surface-variant overflow-hidden cursor-pointer flex items-center justify-center"
+                      className="relative aspect-[3/4] bg-slate-100 overflow-hidden cursor-pointer flex items-center justify-center"
                     >
                       {photo ? (
                         <img
@@ -497,11 +464,11 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
                           }`}
                         />
                       ) : null}
-                      <div className={`halal-grid-avatar-fallback w-full h-full items-center justify-center bg-gradient-to-br from-pastel-rose/30 via-surface-variant to-pastel-lavender/30 text-primary ${photo ? 'hidden' : 'flex'} flex-col`}>
-                        <div className="w-14 h-14 rounded-full bg-white shadow-subtle flex items-center justify-center text-xl font-serif font-bold text-primary border border-outline">
+                      <div className={`halal-grid-avatar-fallback w-full h-full items-center justify-center bg-gradient-to-br from-emerald-800 via-teal-700 to-emerald-950 text-amber-200 ${photo ? 'hidden' : 'flex'} flex-col shadow-inner`}>
+                        <div className="w-14 h-14 rounded-full bg-white/10 backdrop-blur-sm border border-amber-200/30 shadow-inner flex items-center justify-center text-xl font-serif font-bold text-amber-200">
                           {initial}
                         </div>
-                        <span className="text-[10px] font-medium text-secondary mt-2">Verified Profile</span>
+                        <span className="text-[10px] font-medium text-amber-100/80 mt-2">Verified Profile</span>
                       </div>
                       {!isVip && (
                         <div 
@@ -509,35 +476,36 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
                             e.stopPropagation();
                             setShowUpgradeModal(true);
                           }}
-                          className="absolute inset-0 flex flex-col items-center justify-center bg-black/35 hover:bg-black/45 text-white p-2 text-center cursor-pointer transition-colors backdrop-blur-[2px]"
+                          className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 hover:bg-black/50 text-white p-2 text-center cursor-pointer transition-colors backdrop-blur-[2px]"
                           title="Click to unlock VIP photo unblur"
                         >
-                          <Lock className="w-4 h-4 mb-1 text-pastel-amber-border" />
+                          <Lock className="w-4 h-4 mb-1 text-amber-300" />
                           <span className="text-[9px] font-bold">VIP Photo</span>
                           <span className="text-[8px] text-white/90 mt-0.5 underline">View Biodata</span>
                         </div>
                       )}
-                      <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded-full text-[9px] font-bold text-white pointer-events-none">
-                        {candidate.location?.split(',')[0]}
+                      <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded-full text-[9px] font-bold text-white pointer-events-none flex items-center gap-1">
+                        <MapPin className="w-2.5 h-2.5 text-white/80" />
+                        <span>{candidate.location?.split(',')[0]}</span>
                         {typeof candidate.distanceKm === 'number' && ` · ${candidate.distanceKm} km`}
                       </div>
                     </div>
 
                     <div className="p-2.5 flex-1 flex flex-col justify-between gap-1.5">
                       <div onClick={() => setSelectedProfile(candidate)} className="cursor-pointer">
-                        <h3 className="font-serif font-bold text-xs text-on-surface truncate hover:text-primary transition-colors">
+                        <h3 className="font-serif font-bold text-xs text-slate-800 truncate hover:text-primary transition-colors">
                           {isVip ? (candidate.fullName || 'Member') : `${(candidate.fullName || 'Member').split(' ')[0]} (Liked You)`}
                         </h3>
-                        <p className="text-[10px] text-secondary truncate">
+                        <p className="text-[10px] text-slate-500 truncate mt-0.5">
                           {candidate.profession || 'Professional'} · {candidate.religiousProfile?.sect || 'Sunni'}
                         </p>
                       </div>
 
-                      <div className="pt-1.5 border-t border-outline">
+                      <div className="pt-1.5 border-t border-slate-100">
                         <div className="flex items-center gap-1.5">
                           <button
                             onClick={() => handleInstantMatch(candidate)}
-                            className="flex-1 py-1.5 rounded-xl bg-primary text-white text-[10px] font-bold shadow-brand hover:bg-primary-dark active:scale-95 transition-all flex items-center justify-center gap-1"
+                            className="flex-1 py-1.5 rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white text-[10px] font-bold shadow-brand hover:brightness-105 active:scale-95 transition-all flex items-center justify-center gap-1"
                           >
                             <Heart className="w-3 h-3 fill-current" />
                             <span>Match & Chat</span>
@@ -545,7 +513,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
 
                           <button
                             onClick={() => handlePassCandidate(candidate)}
-                            className="px-2.5 py-1.5 rounded-xl bg-surface-variant hover:bg-outline text-secondary text-[10px] font-semibold transition-all"
+                            className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-semibold transition-all"
                             title="Pass"
                           >
                             <X className="w-3 h-3" />
@@ -560,12 +528,12 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
             </div>
           ) : (
 
-            <div className="flex flex-col items-center justify-center py-14 text-center px-4 bg-white rounded-3xl border border-outline shadow-card">
-              <div className="w-10 h-10 rounded-full bg-pastel-rose text-primary flex items-center justify-center mb-2">
-                <Heart className="w-5 h-5 text-primary" />
+            <div className="flex flex-col items-center justify-center py-14 text-center px-4 bg-white rounded-3xl border border-slate-200/80 shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
+              <div className="w-12 h-12 rounded-2xl bg-rose-50 text-primary flex items-center justify-center mb-2.5 border border-rose-100">
+                <Heart className="w-6 h-6 text-primary" />
               </div>
-              <h3 className="font-serif font-bold text-sm text-on-surface">No New Likes Yet</h3>
-              <p className="text-xs text-secondary mt-1 max-w-xs leading-relaxed">
+              <h3 className="font-serif font-bold text-sm text-slate-800">No New Likes Yet</h3>
+              <p className="text-xs text-slate-500 mt-1 max-w-xs leading-relaxed">
                 When prospective matches like your profile on Discover, they will appear here!
               </p>
             </div>
@@ -577,7 +545,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
       {activeTab === 'sent' && (
         <div className="space-y-2.5">
           {sentLikes.length > 0 ? (
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               {sentLikes.map(item => {
                 const matchedProf = dbService.getAllProfiles().find(p => p.id === item.id);
                 const displayName = (item.fullName && item.fullName !== 'Candidate' && item.fullName !== 'Member')
@@ -589,6 +557,10 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
                 const firstPhoto = rawPhotos.find((p: string) => typeof p === 'string' && !p.includes('photo-1534528741775-53994a69daeb'));
                 const thumbUrl = firstPhoto ? getThumbnailUrl(firstPhoto) : null;
                 const initial = (displayName || 'C').charAt(0).toUpperCase();
+
+                const profession = matchedProf?.profession || item.profession || 'Member';
+                const location = matchedProf?.location || item.location || 'Global';
+                const timeline = item.marriageTimeline || matchedProf?.marriageTimeline;
 
                 return (
                   <div
@@ -605,10 +577,10 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
                       };
                       setSelectedProfile(prof as UserProfile);
                     }}
-                    className="bg-white p-3 rounded-2xl border border-outline shadow-subtle flex items-center justify-between gap-3 cursor-pointer hover:border-primary transition-all"
+                    className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] hover:border-primary/40 flex items-center justify-between gap-3 cursor-pointer transition-all duration-200 active:scale-[0.99] group"
                   >
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-10 h-10 rounded-full overflow-hidden border border-pastel-rose-border bg-surface-variant flex items-center justify-center shrink-0">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-sm ring-1 ring-slate-100 flex items-center justify-center shrink-0">
                         {thumbUrl ? (
                           <img
                             src={thumbUrl}
@@ -622,59 +594,72 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
                                 if (fallback) (fallback as HTMLElement).style.display = 'flex';
                               }
                             }}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
                         ) : null}
                         <div
-                          className={`halal-sent-avatar-fallback w-full h-full bg-pastel-rose text-primary items-center justify-center font-serif font-bold text-xs ${
+                          className={`halal-sent-avatar-fallback w-full h-full bg-gradient-to-br from-emerald-800 via-teal-700 to-emerald-950 text-amber-200 items-center justify-center font-serif font-bold text-base shadow-inner ${
                             thumbUrl ? 'hidden' : 'flex'
                           }`}
                         >
                           {initial}
                         </div>
                       </div>
-                      <div>
-                        <h4 className="font-serif font-bold text-xs text-on-surface">{displayName}</h4>
-                        <p className="text-[10px] text-secondary">
-                          {(matchedProf?.profession || item.profession || 'Professional')} · {(matchedProf?.location || item.location || 'Global')}
-                        </p>
-                        {(item.marriageTimeline || matchedProf?.marriageTimeline) && (
-                          <p className="text-[9px] text-primary/80 font-medium">
-                            Timeline: {(item.marriageTimeline || matchedProf?.marriageTimeline || '').replace(/_/g, ' ')}
-                          </p>
+                      <div className="min-w-0">
+                        <h4 className="font-serif font-bold text-sm text-slate-800 truncate group-hover:text-primary transition-colors">
+                          {displayName}
+                        </h4>
+                        <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium mt-0.5">
+                          <span className="truncate max-w-[130px]">{profession}</span>
+                          <span className="w-1 h-1 rounded-full bg-slate-300 shrink-0" />
+                          <span className="flex items-center gap-0.5 text-slate-400 shrink-0 truncate max-w-[120px]">
+                            <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                            {location}
+                          </span>
+                        </div>
+                        {timeline && (
+                          <div className="mt-1">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-rose-50 text-rose-600 border border-rose-100">
+                              <Clock className="w-2.5 h-2.5 text-rose-500 shrink-0" />
+                              <span>Timeline: {timeline.replace(/_/g, ' ')}</span>
+                            </span>
+                          </div>
                         )}
                       </div>
                     </div>
 
-                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 ${
-                      item.action === 'mutual_match'
-                        ? 'bg-pastel-mint text-pastel-mint-text border border-pastel-mint-border'
-                        : 'bg-surface-variant text-secondary border border-outline'
-                    }`}>
-                      {item.action === 'mutual_match' ? (
-                        <>
-                          <Heart className="w-3 h-3 text-pastel-mint-text fill-current" />
-                          <span>Matched</span>
-                        </>
-                      ) : (
-                        <>
-                          <Clock className="w-3 h-3 text-secondary" />
-                          <span>Pending</span>
-                        </>
-                      )}
-                    </span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold flex items-center gap-1.5 transition-colors ${
+                        item.action === 'mutual_match'
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs'
+                          : 'bg-slate-50 text-slate-600 border border-slate-200/90 shadow-2xs group-hover:border-primary/40 group-hover:text-primary'
+                      }`}>
+                        {item.action === 'mutual_match' ? (
+                          <>
+                            <Heart className="w-3 h-3 text-emerald-600 fill-current" />
+                            <span>Matched</span>
+                          </>
+                        ) : (
+                          <>
+                            <Clock className="w-3 h-3 text-slate-400 group-hover:text-primary transition-colors" />
+                            <span>Pending</span>
+                          </>
+                        )}
+                      </span>
+                      <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                    </div>
                   </div>
                 );
               })}
             </div>
 
           ) : (
-            <div className="flex flex-col items-center justify-center py-14 text-center px-4 bg-white rounded-3xl border border-outline shadow-card">
-              <div className="w-10 h-10 rounded-full bg-pastel-rose text-primary flex items-center justify-center mb-2">
-                <Send className="w-5 h-5 text-primary" />
+            <div className="flex flex-col items-center justify-center py-14 text-center px-4 bg-white rounded-3xl border border-slate-200/80 shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
+              <div className="w-12 h-12 rounded-2xl bg-rose-50 text-primary flex items-center justify-center mb-2.5 border border-rose-100">
+                <Send className="w-6 h-6 text-primary" />
               </div>
-              <h3 className="font-serif font-bold text-sm text-on-surface">No Sent Likes Yet</h3>
-              <p className="text-xs text-secondary mt-1 max-w-xs leading-relaxed">
+              <h3 className="font-serif font-bold text-sm text-slate-800">No Sent Likes Yet</h3>
+              <p className="text-xs text-slate-500 mt-1 max-w-xs leading-relaxed">
                 Explore Discover and express interest to candidates you feel aligned with.
               </p>
             </div>
@@ -686,7 +671,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
       {activeTab === 'mutual' && (
         <div className="space-y-2.5">
           {mutualMatches.length > 0 ? (
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               {mutualMatches.map(match => {
                 const hasPhoto = Boolean(
                   match.photos && 
@@ -704,10 +689,10 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
                       const newConv = dbService.createMatchConversation(match);
                       onOpenChat(newConv.id);
                     }}
-                    className="bg-white p-3 rounded-2xl border border-outline shadow-subtle flex items-center justify-between gap-3 hover:border-primary transition-all cursor-pointer group"
+                    className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] hover:border-primary/40 flex items-center justify-between gap-3 cursor-pointer group transition-all duration-200 active:scale-[0.99]"
                   >
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-11 h-11 rounded-full bg-surface-variant overflow-hidden border-2 border-primary shrink-0 group-hover:scale-105 transition-transform shadow-2xs flex items-center justify-center">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-sm ring-2 ring-primary/40 shrink-0 group-hover:scale-105 transition-transform flex items-center justify-center">
                         {photo ? (
                           <img
                             src={photo}
@@ -727,30 +712,40 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
                           />
                         ) : null}
                         <div
-                          className={`halal-mutual-avatar-fallback w-full h-full bg-pastel-rose text-primary items-center justify-center font-serif font-bold text-sm ${
+                          className={`halal-mutual-avatar-fallback w-full h-full bg-gradient-to-br from-emerald-800 via-teal-700 to-emerald-950 text-amber-200 items-center justify-center font-serif font-bold text-base shadow-inner ${
                             photo ? 'hidden' : 'flex'
                           }`}
                         >
                           {initial}
                         </div>
                       </div>
-                      <div>
-                        <div className="flex items-center gap-1">
-                          <h4 className="font-serif font-bold text-xs text-on-surface group-hover:text-primary transition-colors">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <h4 className="font-serif font-bold text-sm text-slate-800 group-hover:text-primary transition-colors truncate">
                             {match.fullName}
                           </h4>
+                          {isUserOnline(match) ? (
+                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-100 shrink-0 shadow-2xs" title="Online" />
+                          ) : (
+                            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 ring-2 ring-amber-100 shrink-0 shadow-2xs" title="Offline / Away" />
+                          )}
                         </div>
 
-                        <p className="text-[10px] text-primary font-semibold">
-                          {match.profession || 'Professional'} · {match.location}
-                        </p>
-                        <span className="text-[9px] text-secondary">
+                        <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium mt-0.5">
+                          <span className="text-primary font-semibold truncate max-w-[130px]">{match.profession || 'Professional'}</span>
+                          <span className="w-1 h-1 rounded-full bg-slate-300 shrink-0" />
+                          <span className="flex items-center gap-0.5 text-slate-400 shrink-0 truncate max-w-[120px]">
+                            <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                            {match.location}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-slate-400 mt-0.5 block">
                           Tap to chat · Tap eye for biodata
                         </span>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-2 shrink-0">
                       <button
                         type="button"
                         onClick={(e) => {
@@ -758,9 +753,9 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
                           setSelectedProfile(match);
                         }}
                         title="View Full Profile"
-                        className="w-8 h-8 rounded-xl bg-surface-variant border border-outline text-on-surface hover:bg-outline flex items-center justify-center transition-colors"
+                        className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 hover:text-primary hover:bg-slate-200 flex items-center justify-center transition-colors shadow-2xs active:scale-95"
                       >
-                        <Eye className="w-3.5 h-3.5" />
+                        <Eye className="w-4 h-4" />
                       </button>
 
                       <button
@@ -770,7 +765,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
                           const newConv = dbService.createMatchConversation(match);
                           onOpenChat(newConv.id);
                         }}
-                        className="px-3.5 py-2 rounded-xl bg-primary text-white text-xs font-bold flex items-center gap-1 shadow-brand hover:bg-primary-dark active:scale-95 transition-all"
+                        className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white text-xs font-bold flex items-center gap-1.5 shadow-brand hover:brightness-105 active:scale-95 transition-all"
                       >
                         <MessageCircle className="w-3.5 h-3.5" />
                         <span>Chat</span>
@@ -781,12 +776,12 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
               })}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-14 text-center px-4 bg-white rounded-3xl border border-outline shadow-card">
-              <div className="w-10 h-10 rounded-full bg-pastel-mint text-pastel-mint-text flex items-center justify-center mb-2">
-                <Heart className="w-5 h-5 text-pastel-mint-text fill-current" />
+            <div className="flex flex-col items-center justify-center py-14 text-center px-4 bg-white rounded-3xl border border-slate-200/80 shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-2.5 border border-emerald-100">
+                <Heart className="w-6 h-6 text-emerald-600 fill-current" />
               </div>
-              <h3 className="font-serif font-bold text-sm text-on-surface">No Mutual Matches Yet</h3>
-              <p className="text-xs text-secondary mt-1 max-w-xs leading-relaxed">
+              <h3 className="font-serif font-bold text-sm text-slate-800">No Mutual Matches Yet</h3>
+              <p className="text-xs text-slate-500 mt-1 max-w-xs leading-relaxed">
                 When two profiles mutually like each other, you can immediately start a respectful chat here.
               </p>
             </div>
@@ -798,8 +793,8 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
       {activeTab === 'passed' && (
         <div className="space-y-2.5">
           {passedProfiles.length > 0 ? (
-            <div className="space-y-2">
-              <p className="text-[11px] text-secondary">
+            <div className="space-y-2.5">
+              <p className="text-[11px] text-slate-500 font-medium">
                 You passed on these profiles. You can reconsider or undo any pass below to return them to Discover:
               </p>
               {passedProfiles.map(item => {
@@ -817,25 +812,34 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
                 return (
                   <div
                     key={item.id}
-                    className="bg-white p-3 rounded-2xl border border-outline shadow-subtle flex items-center justify-between gap-3"
+                    className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-[0_2px_8px_rgba(0,0,0,0.03)] flex items-center justify-between gap-3"
                   >
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-10 h-10 rounded-full overflow-hidden border border-outline bg-surface-variant flex items-center justify-center shrink-0">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-white shadow-sm ring-1 ring-slate-100 bg-slate-100 flex items-center justify-center shrink-0">
                         {thumbUrl ? (
                           <img src={thumbUrl} alt={displayName} className="w-full h-full object-cover" />
                         ) : (
-                          <span className="font-serif font-bold text-xs text-secondary">{initial}</span>
+                          <div className="w-full h-full bg-gradient-to-br from-emerald-800 via-teal-700 to-emerald-950 text-amber-200 flex items-center justify-center font-serif font-bold text-sm shadow-inner">
+                            {initial}
+                          </div>
                         )}
                       </div>
-                      <div>
-                        <h4 className="font-serif font-bold text-xs text-on-surface">{displayName}</h4>
-                        <p className="text-[10px] text-secondary">{(matchedProf?.profession || item.profession || 'Professional')} · {(matchedProf?.location || item.location || 'Global')}</p>
+                      <div className="min-w-0">
+                        <h4 className="font-serif font-bold text-xs text-slate-800 truncate">{displayName}</h4>
+                        <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-medium mt-0.5">
+                          <span className="truncate max-w-[120px]">{(matchedProf?.profession || item.profession || 'Professional')}</span>
+                          <span className="w-1 h-1 rounded-full bg-slate-300 shrink-0" />
+                          <span className="flex items-center gap-0.5 text-slate-400 shrink-0 truncate max-w-[110px]">
+                            <MapPin className="w-2.5 h-2.5 text-slate-400 shrink-0" />
+                            {(matchedProf?.location || item.location || 'Global')}
+                          </span>
+                        </div>
                       </div>
                     </div>
 
                     <button
                       onClick={() => handleUndoPass(item.id, displayName)}
-                      className="px-3 py-1.5 rounded-xl bg-white border border-primary text-primary hover:bg-pastel-rose text-xs font-bold flex items-center gap-1 transition-all active:scale-95 shadow-subtle"
+                      className="px-3 py-1.5 rounded-xl bg-white border border-primary/70 text-primary hover:bg-rose-50 text-xs font-bold flex items-center gap-1 transition-all active:scale-95 shadow-2xs shrink-0"
                     >
                       <Undo2 className="w-3.5 h-3.5" />
                       <span>Undo Pass</span>
@@ -846,12 +850,12 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
             </div>
 
           ) : (
-            <div className="flex flex-col items-center justify-center py-14 text-center px-4 bg-white rounded-3xl border border-outline shadow-card">
-              <div className="w-10 h-10 rounded-full bg-surface-variant text-secondary flex items-center justify-center mb-2">
-                <Clock className="w-5 h-5" />
+            <div className="flex flex-col items-center justify-center py-14 text-center px-4 bg-white rounded-3xl border border-slate-200/80 shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
+              <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-600 flex items-center justify-center mb-2.5 border border-slate-200">
+                <Clock className="w-6 h-6" />
               </div>
-              <h3 className="font-serif font-bold text-sm text-on-surface">No Passed Profiles</h3>
-              <p className="text-xs text-secondary mt-1 max-w-xs leading-relaxed">
+              <h3 className="font-serif font-bold text-sm text-slate-800">No Passed Profiles</h3>
+              <p className="text-xs text-slate-500 mt-1 max-w-xs leading-relaxed">
                 Any candidate profiles you pass on will appear here with an option to reconsider.
               </p>
             </div>
@@ -863,23 +867,23 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
       {activeTab === 'blocked' && (
         <div className="space-y-2.5">
           {blockedProfiles.length > 0 ? (
-            <div className="space-y-2">
-              <p className="text-[11px] text-secondary">
+            <div className="space-y-2.5">
+              <p className="text-[11px] text-slate-500 font-medium">
                 Profiles you have shielded or blocked for privacy:
               </p>
               {blockedProfiles.map(item => (
                 <div
                   key={item.id}
-                  className="bg-white p-3 rounded-2xl border border-outline shadow-subtle flex items-center justify-between gap-3"
+                  className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-[0_2px_8px_rgba(0,0,0,0.03)] flex items-center justify-between gap-3"
                 >
-                  <div>
-                    <h4 className="font-serif font-bold text-xs text-on-surface">{item.fullName}</h4>
-                    <p className="text-[10px] text-secondary">{item.reason || 'Blocked'} · {item.location || 'Global'}</p>
+                  <div className="min-w-0">
+                    <h4 className="font-serif font-bold text-xs text-slate-800 truncate">{item.fullName}</h4>
+                    <p className="text-[10px] text-slate-500 mt-0.5">{item.reason || 'Blocked'} · {item.location || 'Global'}</p>
                   </div>
 
                   <button
                     onClick={() => handleUnblock(item.id, item.fullName)}
-                    className="px-3 py-1.5 rounded-xl bg-white border border-error text-error hover:bg-pastel-rose text-xs font-bold flex items-center gap-1 transition-all active:scale-95 shadow-subtle"
+                    className="px-3 py-1.5 rounded-xl bg-white border border-red-200 text-red-600 hover:bg-red-50 text-xs font-bold flex items-center gap-1 transition-all active:scale-95 shadow-2xs shrink-0"
                   >
                     <Unlock className="w-3.5 h-3.5" />
                     <span>Unblock</span>
@@ -888,12 +892,12 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
               ))}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-14 text-center px-4 bg-white rounded-3xl border border-outline shadow-card">
-              <div className="w-10 h-10 rounded-full bg-pastel-rose text-primary flex items-center justify-center mb-2">
-                <Shield className="w-5 h-5 text-primary" />
+            <div className="flex flex-col items-center justify-center py-14 text-center px-4 bg-white rounded-3xl border border-slate-200/80 shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
+              <div className="w-12 h-12 rounded-2xl bg-rose-50 text-primary flex items-center justify-center mb-2.5 border border-rose-100">
+                <Shield className="w-6 h-6 text-primary" />
               </div>
-              <h3 className="font-serif font-bold text-sm text-on-surface">No Blocked Profiles</h3>
-              <p className="text-xs text-secondary mt-1 max-w-xs leading-relaxed">
+              <h3 className="font-serif font-bold text-sm text-slate-800">No Blocked Profiles</h3>
+              <p className="text-xs text-slate-500 mt-1 max-w-xs leading-relaxed">
                 You have not blocked any members. Your account privacy shield is active.
               </p>
             </div>
@@ -905,9 +909,9 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
       <div className="pt-4 text-center">
         <button
           onClick={onOpenDiscover}
-          className="px-5 py-2.5 rounded-full bg-white border border-outline text-primary font-sans text-xs font-bold hover:bg-surface-variant transition-all inline-flex items-center gap-1.5 shadow-subtle"
+          className="px-5 py-2.5 rounded-full bg-white border border-slate-200 text-slate-700 hover:text-primary hover:border-primary font-medium text-xs shadow-2xs hover:shadow-xs transition-all inline-flex items-center gap-1.5 active:scale-95"
         >
-          <Compass className="w-4 h-4" />
+          <Compass className="w-4 h-4 text-primary" />
           <span>Explore More on Discover</span>
         </button>
       </div>
@@ -919,7 +923,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({ onOpenChat, onOpenDisco
           isOpen={showUpgradeModal}
           onClose={() => setShowUpgradeModal(false)}
           onPurchaseSuccess={(productId) => {
-            if (productId === 'serene_barakah_monthly') {
+            if (productId === 'serene_barakah_monthly' || productId === 'qurb_barakah_monthly') {
               setIsVip(true);
               localStorage.setItem(`serene_vip_${currentUser.id}`, 'true');
             }

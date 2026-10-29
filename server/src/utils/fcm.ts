@@ -138,7 +138,6 @@ export async function sendFcmNotification(env: any, payload: FcmPayload): Promis
       fcmMessage.message.android.notification = {
         channel_id: targetChannel,
         sound: 'default',
-        click_action: 'FCM_PLUGIN_ACTIVITY',
         default_vibrate_timings: true,
         notification_priority: 'PRIORITY_HIGH'
       };

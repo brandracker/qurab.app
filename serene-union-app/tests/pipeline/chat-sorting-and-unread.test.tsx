@@ -114,11 +114,10 @@ describe('Real-World Pipeline: Chat Sorting & Unread Highlights', () => {
     expect(conversationTitles[1].textContent).toContain('Aisha Al-Mansoor');
   });
 
-  it('2. Unread incoming messages display the unread badge, "New Reply" pill, and card highlight', () => {
+  it('2. Unread incoming messages display the unread badge and card highlight', () => {
     render(<ChatScreen onBackToDiscover={vi.fn()} />);
 
     // Maryam has unread reply
-    expect(screen.getByText('New Reply')).toBeDefined();
     expect(screen.getByText('1')).toBeDefined();
     expect(screen.getByText('New reply from Maryam')).toBeDefined();
   });

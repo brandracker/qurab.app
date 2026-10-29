@@ -569,6 +569,7 @@ matchesRouter.get('/mutual', async (c) => {
       SELECT DISTINCT
         COALESCE(u.id, CASE WHEN m.sender_id = ? THEN m.receiver_id ELSE m.sender_id END) as id, 
         u.phone, u.email, 
+        u.last_active_at as lastActiveAt, 
         COALESCE(u.full_name, 'Member') as fullName, 
         COALESCE(u.dob, '1998-01-01') as dob, 
         COALESCE(u.gender, 'other') as gender, 
@@ -688,7 +689,9 @@ matchesRouter.get('/mutual', async (c) => {
           relationship: row.waliRelationship,
           phone: row.waliPhone,
           isVerified: Boolean(row.waliVerified)
-        } : null
+        } : null,
+        isOnline: Boolean(row.lastActiveAt && !isNaN(new Date(row.lastActiveAt).getTime()) && (Date.now() - new Date(row.lastActiveAt).getTime()) < 15 * 60 * 1000),
+        lastActive: row.lastActiveAt || undefined
       };
     });
 

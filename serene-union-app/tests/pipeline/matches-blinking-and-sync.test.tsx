@@ -57,6 +57,7 @@ describe('Matches Blinking Elimination, Silent Sync, Auto-Match & Guest Migratio
       <MatchesLikedYouScreen
         currentUser={mockUser}
         onOpenChat={vi.fn()}
+        initialTab="received"
       />
     );
 
@@ -90,6 +91,7 @@ describe('Matches Blinking Elimination, Silent Sync, Auto-Match & Guest Migratio
       <MatchesLikedYouScreen
         currentUser={mockUser}
         onOpenChat={handleOpenChat}
+        initialTab="received"
       />
     );
 

@@ -101,8 +101,8 @@ export const ActiveCallModal: React.FC<ActiveCallModalProps> = ({
     setIsMuted(nextMuted);
   };
 
-  const handleToggleVideo = () => {
-    const nextVideo = webRtcService.toggleVideo();
+  const handleToggleVideo = async () => {
+    const nextVideo = await webRtcService.toggleVideo();
     setIsVideoOn(nextVideo);
   };
 
@@ -385,12 +385,31 @@ export const ActiveCallModal: React.FC<ActiveCallModalProps> = ({
         </div>
       )}
 
+      {/* ----------------- CALL ENDED OVERLAY ----------------- */}
+      {callState === 'ended' && (
+        <div 
+          data-testid="call-ended-overlay"
+          className="absolute inset-0 z-50 bg-[#03060E]/95 backdrop-blur-2xl flex flex-col items-center justify-center p-6 space-y-4 animate-fade-in select-none"
+        >
+          <div className="w-20 h-20 rounded-full bg-rose-500/20 border-2 border-rose-500/50 flex items-center justify-center text-rose-400 shadow-[0_0_50px_rgba(244,63,94,0.35)]">
+            <PhoneOff className="w-9 h-9" />
+          </div>
+          <div className="text-center space-y-1">
+            <h3 className="text-2xl font-extrabold text-white font-serif">Call Ended</h3>
+            <p className="text-xs text-slate-300 font-mono">
+              {durationSecs > 0 ? `Duration: ${formatDuration(durationSecs)}` : 'Call Disconnected'}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* ----------------- BOTTOM FLOATING LUXURY CONTROL DOCK ----------------- */}
       <div className="relative z-30 pb-8 sm:pb-10 px-4 sm:px-6">
         <div className="max-w-xs sm:max-w-sm mx-auto p-3.5 rounded-full bg-[#050914]/85 backdrop-blur-3xl border border-white/20 shadow-[0_20px_60px_rgba(0,0,0,0.8)] flex items-center justify-between px-4 sm:px-5">
           {/* 1. Mic Mute / Unmute */}
           <button
             type="button"
+            data-testid="mute-btn"
             onClick={handleToggleMute}
             className={`w-12 h-12 rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer ${
               isMuted 
@@ -405,6 +424,7 @@ export const ActiveCallModal: React.FC<ActiveCallModalProps> = ({
           {/* 2. Speakerphone Toggle */}
           <button
             type="button"
+            data-testid="speaker-btn"
             onClick={handleToggleSpeaker}
             className={`w-12 h-12 rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer ${
               isSpeakerOn 
@@ -420,6 +440,7 @@ export const ActiveCallModal: React.FC<ActiveCallModalProps> = ({
           {callType === 'video' && (
             <button
               type="button"
+              data-testid="switch-cam-btn"
               onClick={handleSwitchCamera}
               className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 active:scale-90 text-white border border-white/15 flex items-center justify-center transition-all cursor-pointer"
               title={isFrontCam ? 'Switch to Rear Camera' : 'Switch to Front Camera'}
@@ -432,6 +453,7 @@ export const ActiveCallModal: React.FC<ActiveCallModalProps> = ({
           {callType === 'video' && (
             <button
               type="button"
+              data-testid="toggle-video-btn"
               onClick={handleToggleVideo}
               className={`w-12 h-12 rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer ${
                 !isVideoOn 
@@ -447,6 +469,7 @@ export const ActiveCallModal: React.FC<ActiveCallModalProps> = ({
           {/* 5. End Call Button (Big Glowing Ruby Red Circle) */}
           <button
             type="button"
+            data-testid="end-call-btn"
             onClick={() => webRtcService.endCall('user_hung_up')}
             className="w-13 h-13 rounded-full bg-gradient-to-tr from-rose-600 via-rose-500 to-red-600 hover:from-rose-500 hover:to-red-500 active:scale-90 text-white flex items-center justify-center shadow-2xl shadow-rose-600/60 transition-all cursor-pointer border border-rose-300/50"
             title="End Call"

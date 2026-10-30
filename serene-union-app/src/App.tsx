@@ -1261,7 +1261,7 @@ export const App: React.FC = () => {
         />
 
         <ActiveCallModal
-          isOpen={callState === 'outgoing_calling' || callState === 'connected'}
+          isOpen={callState === 'outgoing_calling' || callState === 'connected' || callState === 'ended'}
           callState={callState}
           callType={activeCallType}
           partner={activeCallPartner}

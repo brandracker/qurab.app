@@ -168,16 +168,16 @@ export class ChatRoomDO {
 
   recordCallSignal(sig: any) {
     if (!sig) return;
-    if (sig.signal === 'end' || sig.signal === 'reject') {
-      this.recentCallSignals = [];
-    } else {
-      const now = Date.now();
-      this.recentCallSignals = this.recentCallSignals
-        .filter(s => now - s.timestamp < 35000)
-        .concat({ ...sig, timestamp: sig.timestamp || now });
-      if (this.recentCallSignals.length > 10) {
-        this.recentCallSignals = this.recentCallSignals.slice(-10);
-      }
+    const now = Date.now();
+    if (sig.signal === 'initiate') {
+      this.recentCallSignals = [{ ...sig, timestamp: sig.timestamp || now }];
+      return;
+    }
+    this.recentCallSignals = this.recentCallSignals
+      .filter(s => now - s.timestamp < 35000)
+      .concat({ ...sig, timestamp: sig.timestamp || now });
+    if (this.recentCallSignals.length > 20) {
+      this.recentCallSignals = this.recentCallSignals.slice(-20);
     }
   }
 }

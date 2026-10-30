@@ -130,6 +130,7 @@ export const IncomingCallModal: React.FC<IncomingCallModalProps> = ({
           <div className="flex flex-col items-center space-y-2">
             <button
               type="button"
+              data-testid="decline-call-btn"
               onClick={() => webRtcService.rejectCall('declined')}
               className="w-17 h-17 sm:w-19 sm:h-19 rounded-full bg-gradient-to-tr from-rose-600 via-rose-500 to-red-600 hover:from-rose-500 hover:to-red-500 active:scale-92 text-white flex items-center justify-center shadow-2xl shadow-rose-600/50 border border-rose-300/40 transition-all cursor-pointer"
               title="Decline Call"
@@ -143,6 +144,7 @@ export const IncomingCallModal: React.FC<IncomingCallModalProps> = ({
           <div className="flex flex-col items-center space-y-2">
             <button
               type="button"
+              data-testid="accept-call-btn"
               onClick={() => webRtcService.acceptCall(false)}
               className="w-17 h-17 sm:w-19 sm:h-19 rounded-full bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 active:scale-92 text-white flex items-center justify-center shadow-2xl shadow-emerald-600/50 border border-emerald-300/50 transition-all cursor-pointer relative group"
               title="Accept Audio Call"
@@ -158,6 +160,7 @@ export const IncomingCallModal: React.FC<IncomingCallModalProps> = ({
             <div className="flex flex-col items-center space-y-2">
               <button
                 type="button"
+                data-testid="accept-video-call-btn"
                 onClick={() => webRtcService.acceptCall(true)}
                 className="w-17 h-17 sm:w-19 sm:h-19 rounded-full bg-gradient-to-tr from-sky-600 via-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-400 active:scale-92 text-white flex items-center justify-center shadow-2xl shadow-sky-600/50 border border-sky-300/50 transition-all cursor-pointer relative group"
                 title="Accept Video Call"

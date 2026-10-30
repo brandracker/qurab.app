@@ -2,11 +2,11 @@ import { Hono } from 'hono';
 import type { AppContext } from '../types';
 import { sendFcmNotification } from '../utils/fcm';
 import { processAiSeedResponse } from '../utils/ai-chat-agent';
-import { 
-  getCanonicalConversationId, 
-  extractPartnerIdFromConvId, 
+import {
+  getCanonicalConversationId,
+  extractPartnerIdFromConvId,
   parseConversationParticipants,
-  QURB_OFFICIAL_USER_ID 
+  QURB_OFFICIAL_USER_ID
 } from '../utils/conversation';
 
 export const chatRouter = new Hono<AppContext>();
@@ -20,23 +20,23 @@ export async function ensureChatTableAndCleanGhostUsr(db: any) {
     // 1. Purge ghost 'usr' records from child tables first to respect foreign key constraints
     await db.prepare(`
       DELETE FROM chat_messages WHERE conversation_id LIKE '%conv_usr_usr%' OR sender_id = 'usr';
-    `).run().catch(() => {});
+    `).run().catch(() => { });
 
     await db.prepare(`
       DELETE FROM messages WHERE conversation_id LIKE '%conv_usr_usr%' OR sender_id = 'usr';
-    `).run().catch(() => {});
+    `).run().catch(() => { });
 
     await db.prepare(`
       DELETE FROM conversations WHERE participant_one = 'usr' OR participant_two = 'usr' OR id LIKE '%conv_usr_usr%';
-    `).run().catch(() => {});
+    `).run().catch(() => { });
 
     await db.prepare(`
       DELETE FROM matches_and_likes WHERE sender_id = 'usr' OR receiver_id = 'usr';
-    `).run().catch(() => {});
+    `).run().catch(() => { });
 
     await db.prepare(`
       DELETE FROM users WHERE id = 'usr';
-    `).run().catch(() => {});
+    `).run().catch(() => { });
 
     // 2. Ensure conversations participant_one and participant_two are canonical (p1 < p2)
     await db.prepare(`
@@ -44,7 +44,7 @@ export async function ensureChatTableAndCleanGhostUsr(db: any) {
       SET participant_one = CASE WHEN participant_one < participant_two THEN participant_one ELSE participant_two END,
           participant_two = CASE WHEN participant_one < participant_two THEN participant_two ELSE participant_one END
       WHERE participant_one > participant_two AND participant_one != 'usr' AND participant_two != 'usr';
-    `).run().catch(() => {});
+    `).run().catch(() => { });
 
     hasRunChatSelfHeal = true;
   } catch (e) {
@@ -75,13 +75,13 @@ export async function getOfficialAnnouncements(db: any): Promise<any[]> {
 
     try {
       await db.prepare('ALTER TABLE official_announcements ADD COLUMN action_url TEXT').run();
-    } catch {}
+    } catch { }
     try {
       await db.prepare('ALTER TABLE official_announcements ADD COLUMN image_url TEXT').run();
-    } catch {}
+    } catch { }
     try {
       await db.prepare('ALTER TABLE official_announcements ADD COLUMN action_label TEXT').run();
-    } catch {}
+    } catch { }
 
     const { results } = await db.prepare(`
       SELECT * FROM official_announcements ORDER BY created_at ASC
@@ -96,7 +96,7 @@ export async function getOfficialAnnouncements(db: any): Promise<any[]> {
               action_label = 'Update on Google Play Store ↗'
           WHERE id = 'ann_v1037_update' AND (image_url IS NULL OR image_url = '')
         `).run();
-      } catch {}
+      } catch { }
 
       const { results: updatedResults } = await db.prepare(`
         SELECT * FROM official_announcements ORDER BY created_at ASC
@@ -177,7 +177,7 @@ chatRouter.get('/', async (c) => {
             ))
           )
       `).bind(userId, userId).run();
-    } catch {}
+    } catch { }
 
     const { results } = await c.env.DB.prepare(`
       SELECT c.*, 
@@ -357,8 +357,8 @@ chatRouter.get('/', async (c) => {
       const unreadCount = isUserP1 ? (row.unread_count_p1 || 0) : (row.unread_count_p2 || 0);
       const otherLastActive = isUserP1 ? row.p2_last_active : row.p1_last_active;
       const otherOnline = Boolean(
-        otherLastActive && 
-        !isNaN(new Date(otherLastActive).getTime()) && 
+        otherLastActive &&
+        !isNaN(new Date(otherLastActive).getTime()) &&
         (Date.now() - new Date(otherLastActive).getTime()) < 15 * 60 * 1000
       );
 
@@ -658,7 +658,7 @@ chatRouter.get('/:id/messages', async (c) => {
         if (legacyMsgs && legacyMsgs.length > 0) {
           messageRows = legacyMsgs;
         }
-      } catch {}
+      } catch { }
     }
 
     // Check 1-to-1 photo reveals if userId query param is provided
@@ -709,7 +709,7 @@ chatRouter.get('/:id/messages', async (c) => {
               hasRevealedToPartner = true;
             }
           });
-        } catch {}
+        } catch { }
         try {
           await c.env.DB.prepare(`
             UPDATE conversations 
@@ -717,12 +717,12 @@ chatRouter.get('/:id/messages', async (c) => {
                 unread_count_p2 = CASE WHEN participant_two = ? THEN 0 ELSE unread_count_p2 END
             WHERE id = ? OR id = ?
           `).bind(userId, userId, targetConvId, rawConvId).run();
-        } catch {}
+        } catch { }
       }
     }
 
-    return c.json({ 
-      success: true, 
+    return c.json({
+      success: true,
       messages: sanitizedMessages || [],
       isPhotoRevealed,
       hasRevealedToPartner
@@ -769,16 +769,16 @@ chatRouter.get('/:id/ws', async (c) => {
 chatRouter.post('/:id/messages', async (c) => {
   try {
     const rawConvId = c.req.param('id');
-    const { 
-      senderId, 
-      senderName, 
-      text, 
-      receiverId, 
-      id, 
-      mediaUrl, 
-      mediaType, 
-      mediaDuration, 
-      fileName, 
+    const {
+      senderId,
+      senderName,
+      text,
+      receiverId,
+      id,
+      mediaUrl,
+      mediaType,
+      mediaDuration,
+      fileName,
       fileSize,
       isViewOnce
     } = await c.req.json();
@@ -905,10 +905,10 @@ chatRouter.post('/:id/messages', async (c) => {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
         ON CONFLICT(id) DO NOTHING
       `).bind(
-        msgId, 
-        targetConvId, 
-        senderId, 
-        senderName || 'Member', 
+        msgId,
+        targetConvId,
+        senderId,
+        senderName || 'Member',
         messageText,
         mediaUrl || null,
         mediaType || null,
@@ -924,7 +924,7 @@ chatRouter.post('/:id/messages', async (c) => {
           INSERT OR IGNORE INTO chat_messages (id, conversation_id, sender_id, sender_name, text)
           VALUES (?, ?, ?, ?, ?)
         `).bind(msgId, targetConvId, senderId, senderName || 'Member', messageText).run();
-      } catch {}
+      } catch { }
     }
 
     // 3. Update conversation last message & increment recipient unread count
@@ -945,11 +945,11 @@ chatRouter.post('/:id/messages', async (c) => {
         VALUES (?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
         ON CONFLICT(id) DO NOTHING
       `).bind(msgId, targetConvId, senderId, messageText).run();
-    } catch {}
+    } catch { }
 
     try {
       await c.env.DB.prepare("UPDATE users SET last_active_at = datetime('now') WHERE id = ?").bind(senderId).run();
-    } catch {}
+    } catch { }
 
     // 4. Centralized notification in D1 for recipient
     const recipientId = p1 === senderId ? p2 : p1;
@@ -963,7 +963,7 @@ chatRouter.post('/:id/messages', async (c) => {
           INSERT INTO notifications (id, user_id, type, title, message, target_id, action_label, is_read, created_at)
           VALUES (?, ?, 'message', ?, ?, ?, 'Open Chat', 0, CURRENT_TIMESTAMP)
         `).bind(notifId, recipientId, `New Message from ${senderFirstName}`, preview, targetConvId).run();
-      } catch {}
+      } catch { }
 
       // 5. Remote Android Push Notification via FCM
       try {
@@ -1023,7 +1023,7 @@ chatRouter.post('/:id/messages', async (c) => {
             conversationId: targetConvId,
             message: msgObj
           })
-        }).catch(() => {});
+        }).catch(() => { });
 
         if (c.executionCtx && typeof c.executionCtx.waitUntil === 'function') {
           c.executionCtx.waitUntil(broadcastPromise);
@@ -1100,8 +1100,8 @@ chatRouter.post('/:id/photo-reveal', async (c) => {
     const owner: any = await c.env.DB.prepare(`SELECT full_name FROM users WHERE id = ?`).bind(ownerId).first();
     const ownerFirstName = owner?.full_name ? owner.full_name.split(' ')[0] : 'Member';
 
-    const statusMsg = isRevealed 
-      ? `📸 ${ownerFirstName} revealed their unblurred photos for this conversation.` 
+    const statusMsg = isRevealed
+      ? `📸 ${ownerFirstName} revealed their unblurred photos for this conversation.`
       : `🔒 ${ownerFirstName} restored photo blur for modesty.`;
 
     // 3. Resolve targetConvId
@@ -1125,7 +1125,7 @@ chatRouter.post('/:id/photo-reveal', async (c) => {
         SET last_message_text = ?, last_message_sender_id = 'system', last_message_time = CURRENT_TIMESTAMP
         WHERE id = ? OR id = ?
       `).bind(statusMsg, targetConvId, rawConvId).run();
-    } catch {}
+    } catch { }
 
     // Real-Time Broadcast via Durable Object WebSockets
     if (c.env.CHAT_ROOM) {
@@ -1144,12 +1144,12 @@ chatRouter.post('/:id/photo-reveal', async (c) => {
             statusMsg,
             messageId: msgId
           })
-        }).catch(() => {});
+        }).catch(() => { });
 
         if (c.executionCtx && typeof c.executionCtx.waitUntil === 'function') {
           c.executionCtx.waitUntil(broadcastPromise);
         }
-      } catch {}
+      } catch { }
     }
 
     return c.json({

@@ -43,6 +43,10 @@ const ICE_SERVERS: RTCIceServer[] = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
   { urls: 'stun:stun2.l.google.com:19302' },
+  { urls: 'stun:stun3.l.google.com:19302' },
+  { urls: 'stun:stun4.l.google.com:19302' },
+  // Cloudflare Public STUN
+  { urls: 'stun:stun.cloudflare.com:3478' },
   // OpenRelay Public STUN & TURN (Metered WebRTC Project for Symmetric NAT / 4G Mobile Data)
   { urls: 'stun:stun.relay.metered.ca:80' },
   {
@@ -85,6 +89,9 @@ export class WebRtcService {
   private audioCtx: AudioContext | null = null;
   private ringToneInterval: any = null;
   private callTimeoutTimer: any = null;
+  private signalingPollInterval: any = null;
+  private processedSignals: Set<string> = new Set();
+  private iceDisconnectTimer: any = null;
 
   private isInitiator: boolean = false;
   private activeCallerInfo: CallerInfo | null = null;
@@ -258,6 +265,46 @@ export class WebRtcService {
     } catch {}
   }
 
+  // --- Dedicated HTTP Calling Signal Polling Engine ---
+  private startSignalingPoll(conversationId: string) {
+    this.stopSignalingPoll();
+    if (!conversationId) return;
+
+    const poll = async () => {
+      if (this.currentCallState === 'idle') {
+        this.stopSignalingPoll();
+        return;
+      }
+      try {
+        const res = await fetch(`${API_BASE}/conversations/call/signal?conversationId=${encodeURIComponent(conversationId)}`);
+        const data = await res.json();
+        if (data.success && Array.isArray(data.signals)) {
+          for (const sig of data.signals) {
+            const sigKey = `${sig.signal}_${sig.senderId}_${sig.timestamp || ''}`;
+            if (!this.processedSignals.has(sigKey)) {
+              this.processedSignals.add(sigKey);
+              if (sig.senderId !== this.currentUserId) {
+                console.log('[WebRTC Polling Relay] Received signal:', sig.signal);
+                await this.handleIncomingSignal(sig);
+              }
+            }
+          }
+        }
+      } catch {}
+    };
+
+    poll();
+    this.signalingPollInterval = setInterval(poll, 700);
+  }
+
+  private stopSignalingPoll() {
+    if (this.signalingPollInterval) {
+      clearInterval(this.signalingPollInterval);
+      this.signalingPollInterval = null;
+    }
+    this.processedSignals.clear();
+  }
+
   // --- Step 1: Start an Outgoing Call (Initiator / Caller) ---
   public async startCall(partnerId: string, partnerInfo: CallerInfo, callType: CallType, currentUserInfo: CallerInfo) {
     if (this.currentCallState !== 'idle') {
@@ -285,6 +332,9 @@ export class WebRtcService {
     } else {
       await this.setupLocalMedia(false);
     }
+
+    const conversationId = `conv_${[this.currentUserId || currentUserInfo.id, partnerId].sort().join('_')}`;
+    this.startSignalingPoll(conversationId);
 
     this.notifyState('outgoing_calling', { partner: partnerInfo, callType });
     this.playRingtone();
@@ -359,6 +409,10 @@ export class WebRtcService {
         this.activeCallerInfo = payload.callerInfo || null;
         this.callConnectedTime = null;
         this.hasLoggedCall = false;
+
+        const conversationId = `conv_${[this.currentUserId, payload.senderId].sort().join('_')}`;
+        this.startSignalingPoll(conversationId);
+
         this.notifyState('incoming_ringing', { caller: this.currentPartnerInfo, callType: payload.callType });
         this.playRingtone();
 
@@ -407,9 +461,21 @@ export class WebRtcService {
         if (this.callTimeoutTimer) clearTimeout(this.callTimeoutTimer);
         this.playTone(400, 200, 0.4); // Descending reject tone
         const reason = payload.payload?.reason || 'declined';
-        this.cleanup(reason);
+        this.stopSignalingPoll();
+        this.triggerCallHistoryLog(reason);
+        if (this.localStream) {
+          this.localStream.getTracks().forEach(t => t.stop());
+          this.localStream = null;
+        }
+        if (this.peerConnection) {
+          try { this.peerConnection.close(); } catch {}
+          this.peerConnection = null;
+        }
         this.notifyState('ended', { reason });
-        setTimeout(() => this.notifyState('idle'), 2500);
+        setTimeout(() => {
+          this.cleanup(reason);
+          this.notifyState('idle');
+        }, 1500);
         break;
       }
 
@@ -452,9 +518,22 @@ export class WebRtcService {
         this.stopRingtone();
         if (this.callTimeoutTimer) clearTimeout(this.callTimeoutTimer);
         this.playTone(500, 250, 0.3);
-        this.cleanup('call_ended_by_partner');
-        this.notifyState('ended', { reason: 'call_ended_by_partner' });
-        setTimeout(() => this.notifyState('idle'), 2500);
+        const reason = payload.payload?.reason || 'call_ended_by_partner';
+        this.stopSignalingPoll();
+        this.triggerCallHistoryLog(reason);
+        if (this.localStream) {
+          this.localStream.getTracks().forEach(t => t.stop());
+          this.localStream = null;
+        }
+        if (this.peerConnection) {
+          try { this.peerConnection.close(); } catch {}
+          this.peerConnection = null;
+        }
+        this.notifyState('ended', { reason });
+        setTimeout(() => {
+          this.cleanup(reason);
+          this.notifyState('idle');
+        }, 1500);
         break;
       }
     }
@@ -468,6 +547,11 @@ export class WebRtcService {
     this.currentCallType = withVideo ? 'video' : 'audio';
     this.isVideoEnabled = withVideo;
     this.isMuted = false;
+
+    if (this.currentPartnerId) {
+      const convId = `conv_${[this.currentUserId || '', this.currentPartnerId].sort().join('_')}`;
+      this.startSignalingPoll(convId);
+    }
 
     this.notifyState('connected', { partner: this.currentPartnerInfo, callType: this.currentCallType });
     this.playTone(523, 784, 0.25);
@@ -499,9 +583,21 @@ export class WebRtcService {
         payload: { reason }
       });
     }
-    this.cleanup(reason);
+    this.stopSignalingPoll();
+    this.triggerCallHistoryLog(reason);
+    if (this.localStream) {
+      this.localStream.getTracks().forEach(t => t.stop());
+      this.localStream = null;
+    }
+    if (this.peerConnection) {
+      try { this.peerConnection.close(); } catch {}
+      this.peerConnection = null;
+    }
     this.notifyState('ended', { reason });
-    setTimeout(() => this.notifyState('idle'), 1500);
+    setTimeout(() => {
+      this.cleanup(reason);
+      this.notifyState('idle');
+    }, 1200);
   }
 
   // --- Step 5: End Call ---
@@ -521,9 +617,21 @@ export class WebRtcService {
     }
 
     this.playTone(500, 250, 0.3);
-    this.cleanup(reason);
+    this.stopSignalingPoll();
+    this.triggerCallHistoryLog(reason);
+    if (this.localStream) {
+      this.localStream.getTracks().forEach(t => t.stop());
+      this.localStream = null;
+    }
+    if (this.peerConnection) {
+      try { this.peerConnection.close(); } catch {}
+      this.peerConnection = null;
+    }
     this.notifyState('ended', { reason });
-    setTimeout(() => this.notifyState('idle'), 2000);
+    setTimeout(() => {
+      this.cleanup(reason);
+      this.notifyState('idle');
+    }, 1500);
   }
 
   // --- Media Setup & WebRTC Negotiation ---
@@ -684,9 +792,29 @@ export class WebRtcService {
     };
 
     this.peerConnection.oniceconnectionstatechange = () => {
-      if (this.peerConnection?.iceConnectionState === 'disconnected' || 
-          this.peerConnection?.iceConnectionState === 'failed') {
-        // Graceful handle network drop
+      const state = this.peerConnection?.iceConnectionState;
+      if (state === 'disconnected' || state === 'failed') {
+        if (!this.iceDisconnectTimer) {
+          this.iceDisconnectTimer = setTimeout(() => {
+            const curState = this.peerConnection?.iceConnectionState;
+            if (curState === 'disconnected' || curState === 'failed') {
+              console.warn('[WebRTC] Network connection lost permanently, ending call.');
+              this.endCall('connection_lost');
+            }
+          }, 3500);
+        }
+      } else if (state === 'connected' || state === 'completed') {
+        if (this.iceDisconnectTimer) {
+          clearTimeout(this.iceDisconnectTimer);
+          this.iceDisconnectTimer = null;
+        }
+      }
+    };
+
+    this.peerConnection.onconnectionstatechange = () => {
+      const state = this.peerConnection?.connectionState;
+      if (state === 'failed' || state === 'closed') {
+        this.endCall('connection_lost');
       }
     };
   }
@@ -702,28 +830,81 @@ export class WebRtcService {
     return this.isMuted;
   }
 
-  public toggleVideo(): boolean {
-    if (!this.localStream) return this.isVideoEnabled;
+  public async toggleVideo(): Promise<boolean> {
     this.isVideoEnabled = !this.isVideoEnabled;
-    this.localStream.getVideoTracks().forEach(track => {
-      track.enabled = this.isVideoEnabled;
-    });
+
+    if (this.localStream) {
+      const videoTracks = this.localStream.getVideoTracks();
+      if (videoTracks.length > 0) {
+        videoTracks.forEach(track => {
+          track.enabled = this.isVideoEnabled;
+        });
+      } else if (this.isVideoEnabled && typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
+        // Upgrade from audio to video dynamically
+        try {
+          const videoStream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: this.isFrontCamera ? 'user' : 'environment',
+              width: { ideal: 640 },
+              height: { ideal: 480 }
+            },
+            audio: false
+          });
+          const newTrack = videoStream.getVideoTracks()[0];
+          if (newTrack) {
+            this.localStream.addTrack(newTrack);
+            if (this.peerConnection) {
+              this.peerConnection.addTrack(newTrack, this.localStream);
+            }
+          }
+        } catch (err) {
+          console.warn('Dynamic video track request failed:', err);
+          this.isVideoEnabled = false;
+        }
+      }
+    }
+
     this.notifyStreams();
     return this.isVideoEnabled;
   }
 
   public async switchCamera(): Promise<void> {
-    if (!this.localStream) return;
+    if (!this.peerConnection || !this.isVideoEnabled) return;
     this.isFrontCamera = !this.isFrontCamera;
-    await this.setupLocalMedia(this.isVideoEnabled);
-    if (this.peerConnection && this.localStream) {
-      const videoTrack = this.localStream.getVideoTracks()[0];
-      if (videoTrack) {
-        const sender = this.peerConnection.getSenders().find(s => s.track?.kind === 'video');
-        if (sender) {
-          sender.replaceTrack(videoTrack);
+
+    try {
+      if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
+        const newStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: this.isFrontCamera ? 'user' : 'environment',
+            width: { ideal: 640 },
+            height: { ideal: 480 }
+          },
+          audio: false
+        });
+
+        const newVideoTrack = newStream.getVideoTracks()[0];
+        if (newVideoTrack) {
+          // Replace track in localStream without stopping or touching audio tracks
+          if (this.localStream) {
+            const oldVideo = this.localStream.getVideoTracks()[0];
+            if (oldVideo) {
+              this.localStream.removeTrack(oldVideo);
+              oldVideo.stop();
+            }
+            this.localStream.addTrack(newVideoTrack);
+          }
+
+          // Swap track on WebRTC sender
+          const videoSender = this.peerConnection.getSenders().find(s => s.track?.kind === 'video');
+          if (videoSender) {
+            await videoSender.replaceTrack(newVideoTrack);
+          }
+          this.notifyStreams();
         }
       }
+    } catch (err) {
+      console.warn('Switch camera notice:', err);
     }
   }
 
@@ -790,6 +971,11 @@ export class WebRtcService {
   }
 
   private cleanup(reason: string = 'ended') {
+    this.stopSignalingPoll();
+    if (this.iceDisconnectTimer) {
+      clearTimeout(this.iceDisconnectTimer);
+      this.iceDisconnectTimer = null;
+    }
     this.triggerCallHistoryLog(reason);
     this.stopRingtone();
     if (this.callTimeoutTimer) {

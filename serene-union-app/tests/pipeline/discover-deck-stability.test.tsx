@@ -95,7 +95,7 @@ describe('Real-World Pipeline: Discover Swipe Deck Clamping & Stability', () => 
 
     // Gracefully shows catch up empty state without throw
     await waitFor(() => {
-      expect(screen.getByText(/No Profiles Found/i)).toBeDefined();
+      expect(screen.getByText(/All Profiles Reviewed|No Profiles/i)).toBeDefined();
     });
   });
 

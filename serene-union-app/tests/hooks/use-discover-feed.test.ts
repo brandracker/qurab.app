@@ -123,7 +123,7 @@ describe('useDiscoverFeed Custom Hook Architecture & Wiring', () => {
     });
 
     expect(consumeSalamSpy).toHaveBeenCalledWith('usr_hook_viewer');
-    expect(createConvSpy).toHaveBeenCalledWith(mockCandidateA, 'Assalamu Alaikum!');
+    expect(createConvSpy).toHaveBeenCalledWith(mockCandidateA, 'Assalamu Alaikum!', true, 'usr_hook_viewer');
     expect(sendMatchSpy).toHaveBeenCalledWith(mockCandidateA.id, 'direct_salam', 'Assalamu Alaikum!', mockCandidateA);
     expect(onChatSpy).toHaveBeenCalledWith('conv_direct_test');
     // Candidate A must be removed from Discover queue

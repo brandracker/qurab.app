@@ -1,4 +1,6 @@
 import type { UserProfile, Conversation, ChatMessage, FilterState } from '../types';
+import { getCanonicalConversationId, extractPartnerIdFromConvId } from '../utils/conversation';
+export { getCanonicalConversationId, extractPartnerIdFromConvId };
 
 import { API_BASE, WORKER_API_BASE, LOCAL_API_BASE } from './apiConfig';
 export { API_BASE, WORKER_API_BASE, LOCAL_API_BASE };
@@ -863,7 +865,7 @@ class DBService {
 
     // 2. Persist to Cloudflare D1 backend
     try {
-      const targetId = convId || `conv_${[ownerId, viewerId].sort().join('_')}`;
+      const targetId = convId || getCanonicalConversationId(ownerId, viewerId);
       const endpoints = [
         `${API_BASE}/conversations/${targetId}/photo-reveal`,
         `/api/conversations/${targetId}/photo-reveal`
@@ -2049,11 +2051,11 @@ class DBService {
         const localConvs = this.getConversations();
         const convMap = new Map<string, Conversation>();
 
-        // Preload local conversations so messages and local drafts are preserved, excluding blocked users
+        // Preload local conversations so messages and local drafts are preserved, excluding blocked users and corrupted ghost accounts
         localConvs.forEach(c => {
-          if (c && c.id) {
+          if (c && c.id && !c.id.includes('conv_usr_usr')) {
             const partner = c.otherUser?.id || (c.participantOne === user.id ? c.participantTwo : c.participantOne);
-            if (!blockedIds.has(partner)) {
+            if (partner && partner !== 'usr' && !blockedIds.has(partner)) {
               convMap.set(c.id, c);
             }
           }
@@ -2061,9 +2063,11 @@ class DBService {
 
         data.conversations
           .filter((rc: any) => {
+            if (!rc || !rc.id || rc.id.includes('conv_usr_usr')) return false;
+            if (rc.participantOne === 'usr' || rc.participantTwo === 'usr' || rc.otherUser?.id === 'usr') return false;
             const isParticipant = rc.participantOne === user.id || rc.participantTwo === user.id;
             const otherId = rc.participantOne === user.id ? rc.participantTwo : rc.participantOne;
-            return isParticipant && !blockedIds.has(otherId) && !blockedIds.has(rc.otherUser?.id);
+            return isParticipant && otherId !== 'usr' && !blockedIds.has(otherId) && !blockedIds.has(rc.otherUser?.id);
           })
           .forEach((rc: any) => {
             const existing = convMap.get(rc.id);
@@ -2126,8 +2130,8 @@ class DBService {
         try {
           if (Array.isArray(mutualList)) {
             mutualList.forEach(m => {
-              if (!m || !m.id || blockedIds.has(m.id)) return;
-              const convId = `conv_${[user.id, m.id].sort().join('_')}`;
+              if (!m || !m.id || m.id === 'usr' || blockedIds.has(m.id)) return;
+              const convId = getCanonicalConversationId(user.id, m.id);
               if (!convMap.has(convId)) {
                 const rawPhotos = m.photos || [];
                 const sanitizedPhotos = Array.isArray(rawPhotos)
@@ -2239,8 +2243,9 @@ class DBService {
         }
 
         const mergedList = Array.from(convMap.values()).filter(c => {
+          if (!c || !c.id || c.id.includes('conv_usr_usr') || c.participantOne === 'usr' || c.participantTwo === 'usr') return false;
           const partner = c.otherUser?.id || (c.participantOne === user.id ? c.participantTwo : c.participantOne);
-          return !blockedIds.has(partner);
+          return partner && partner !== 'usr' && !blockedIds.has(partner);
         });
         const prevJson = localStorage.getItem(this.conversationsKey);
         const lightweightConvs = mergedList.map(c => ({
@@ -2270,7 +2275,11 @@ class DBService {
 
   createMatchConversation(profile: UserProfile, openingMessage?: string, isDirectSalam?: boolean, salamSenderId?: string): Conversation {
     const user = this.getCurrentUser();
-    const convId = `conv_${[user.id, profile.id].sort().join('_')}`;
+    if (!profile || !profile.id || profile.id === 'usr' || user.id === 'usr') {
+      return (this.getConversations()[0] || {}) as any;
+    }
+    const convId = getCanonicalConversationId(user.id, profile.id);
+    const [canonP1, canonP2] = [user.id, profile.id].sort();
 
     const conversations = this.getConversations();
     const existing = conversations.find(c => c.id === convId || c.otherUser?.id === profile.id);
@@ -2303,8 +2312,8 @@ class DBService {
 
     const newConv: Conversation = {
       id: convId,
-      participantOne: user.id,
-      participantTwo: profile.id,
+      participantOne: canonP1,
+      participantTwo: canonP2,
       otherUser: profile,
       lastMessageText: initialText,
       lastMessageSenderId: openingMessage ? user.id : 'system',
@@ -2333,8 +2342,8 @@ class DBService {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        participantOne: user.id,
-        participantTwo: profile.id
+        participantOne: canonP1,
+        participantTwo: canonP2
       })
     }).catch(() => {});
 

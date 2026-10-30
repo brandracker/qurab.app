@@ -2,10 +2,61 @@ import { Hono } from 'hono';
 import type { AppContext } from '../types';
 import { sendFcmNotification } from '../utils/fcm';
 import { processAiSeedResponse } from '../utils/ai-chat-agent';
+import { 
+  getCanonicalConversationId, 
+  extractPartnerIdFromConvId, 
+  parseConversationParticipants,
+  QURB_OFFICIAL_USER_ID 
+} from '../utils/conversation';
 
 export const chatRouter = new Hono<AppContext>();
 
-export const QURB_OFFICIAL_USER_ID = 'usr_qurb_official';
+export { QURB_OFFICIAL_USER_ID };
+
+let hasRunChatSelfHeal = false;
+export async function ensureChatTableAndCleanGhostUsr(db: any) {
+  if (hasRunChatSelfHeal) return;
+  try {
+    // 1. Purge ghost 'usr' records from child tables first to respect foreign key constraints
+    await db.prepare(`
+      DELETE FROM chat_messages WHERE conversation_id LIKE '%conv_usr_usr%' OR sender_id = 'usr';
+    `).run().catch(() => {});
+
+    await db.prepare(`
+      DELETE FROM messages WHERE conversation_id LIKE '%conv_usr_usr%' OR sender_id = 'usr';
+    `).run().catch(() => {});
+
+    await db.prepare(`
+      DELETE FROM conversations WHERE participant_one = 'usr' OR participant_two = 'usr' OR id LIKE '%conv_usr_usr%';
+    `).run().catch(() => {});
+
+    await db.prepare(`
+      DELETE FROM matches_and_likes WHERE sender_id = 'usr' OR receiver_id = 'usr';
+    `).run().catch(() => {});
+
+    await db.prepare(`
+      DELETE FROM users WHERE id = 'usr';
+    `).run().catch(() => {});
+
+    // 2. Ensure conversations participant_one and participant_two are canonical (p1 < p2)
+    await db.prepare(`
+      UPDATE conversations
+      SET participant_one = CASE WHEN participant_one < participant_two THEN participant_one ELSE participant_two END,
+          participant_two = CASE WHEN participant_one < participant_two THEN participant_two ELSE participant_one END
+      WHERE participant_one > participant_two AND participant_one != 'usr' AND participant_two != 'usr';
+    `).run().catch(() => {});
+
+    hasRunChatSelfHeal = true;
+  } catch (e) {
+    console.warn('[Chat DB Self-Heal Notice]:', e);
+  }
+}
+
+// Auto-run DB self-heal on chat operations
+chatRouter.use('*', async (c, next) => {
+  await ensureChatTableAndCleanGhostUsr(c.env.DB);
+  await next();
+});
 
 // Helper to ensure official announcements table exists and seed welcome announcements if empty
 export async function getOfficialAnnouncements(db: any): Promise<any[]> {
@@ -110,13 +161,14 @@ chatRouter.get('/', async (c) => {
         INSERT OR IGNORE INTO conversations (id, participant_one, participant_two, jsonl_log_path, last_message_text, last_message_time)
         SELECT 
           'conv_' || CASE WHEN m.sender_id < m.receiver_id THEN m.sender_id || '_' || m.receiver_id ELSE m.receiver_id || '_' || m.sender_id END,
-          m.sender_id,
-          m.receiver_id,
+          CASE WHEN m.sender_id < m.receiver_id THEN m.sender_id ELSE m.receiver_id END,
+          CASE WHEN m.sender_id < m.receiver_id THEN m.receiver_id ELSE m.sender_id END,
           'logs/conv.jsonl',
           'You matched! Start with Bismillah.',
           m.created_at
         FROM matches_and_likes m
         WHERE (m.sender_id = ? OR m.receiver_id = ?) 
+          AND m.sender_id != 'usr' AND m.receiver_id != 'usr'
           AND (
             m.action = 'mutual_match' 
             OR (m.action = 'liked' AND EXISTS (
@@ -164,6 +216,7 @@ chatRouter.get('/', async (c) => {
       LEFT JOIN religious_profiles rp1 ON u1.id = rp1.user_id
       LEFT JOIN religious_profiles rp2 ON u2.id = rp2.user_id
       WHERE (c.participant_one = ? OR c.participant_two = ?)
+        AND c.participant_one != 'usr' AND c.participant_two != 'usr'
         AND NOT EXISTS (
           SELECT 1 FROM blocked_users b
           WHERE (b.blocker_id = c.participant_one AND b.blocked_id = c.participant_two)
@@ -434,18 +487,17 @@ chatRouter.get('/', async (c) => {
 chatRouter.post('/create', async (c) => {
   try {
     const { participantOne, participantTwo } = await c.req.json();
-    if (!participantOne || !participantTwo) {
-      return c.json({ success: false, error: 'participantOne and participantTwo are required' }, 400);
+    if (!participantOne || !participantTwo || participantOne === 'usr' || participantTwo === 'usr' || participantOne === participantTwo) {
+      return c.json({ success: false, error: 'Valid participantOne and participantTwo are required' }, 400);
     }
 
-    const p1 = participantOne;
-    const p2 = participantTwo;
-    const convId = `conv_${[p1, p2].sort().join('_')}`;
+    const [canonP1, canonP2] = [participantOne, participantTwo].sort();
+    const convId = getCanonicalConversationId(canonP1, canonP2);
 
     await c.env.DB.prepare(`
       INSERT OR IGNORE INTO conversations (id, participant_one, participant_two, jsonl_log_path, last_message_text, last_message_time)
       VALUES (?, ?, ?, ?, 'You matched! Start with Bismillah.', CURRENT_TIMESTAMP)
-    `).bind(convId, p1, p2, `logs/${convId}.jsonl`).run();
+    `).bind(convId, canonP1, canonP2, `logs/${convId}.jsonl`).run();
 
     return c.json({ success: true, conversationId: convId });
   } catch (error: any) {
@@ -546,23 +598,25 @@ chatRouter.get('/:id/messages', async (c) => {
 
     let targetConvId = rawConvId;
 
-    const existingConv: any = await c.env.DB.prepare(`
+    let existingConv: any = await c.env.DB.prepare(`
       SELECT id, participant_one, participant_two FROM conversations WHERE id = ?
     `).bind(rawConvId).first();
 
-    if (existingConv) {
-      targetConvId = existingConv.id;
-    } else if (rawConvId.startsWith('conv_')) {
-      const trimmed = rawConvId.replace('conv_', '');
-      const anyConv: any = await c.env.DB.prepare(`
-        SELECT id FROM conversations 
-        WHERE ? LIKE '%' || participant_one || '%' AND ? LIKE '%' || participant_two || '%'
-        LIMIT 1
-      `).bind(trimmed, trimmed).first();
-
-      if (anyConv) {
-        targetConvId = anyConv.id;
+    if (!existingConv && rawConvId.startsWith('conv_')) {
+      const parts = parseConversationParticipants(rawConvId);
+      if (parts) {
+        const canonicalId = `conv_${parts[0]}_${parts[1]}`;
+        existingConv = await c.env.DB.prepare(`
+          SELECT id, participant_one, participant_two FROM conversations WHERE id = ?
+        `).bind(canonicalId).first();
+        if (existingConv) {
+          targetConvId = existingConv.id;
+        } else {
+          targetConvId = canonicalId;
+        }
       }
+    } else if (existingConv) {
+      targetConvId = existingConv.id;
     }
 
     const { results } = await c.env.DB.prepare(`
@@ -576,13 +630,33 @@ chatRouter.get('/:id/messages', async (c) => {
       ORDER BY created_at ASC
     `).bind(rawConvId, targetConvId).all();
 
+    let messageRows = results || [];
+    // Dual-table compatibility: check legacy messages table if empty
+    if (messageRows.length === 0) {
+      try {
+        const { results: legacyMsgs } = await c.env.DB.prepare(`
+          SELECT id, conversation_id, sender_id as senderId, 'Member' as senderName, text,
+                 NULL as mediaUrl, NULL as mediaType, NULL as mediaDuration,
+                 NULL as fileName, NULL as fileSize,
+                 0 as isViewOnce, 0 as isOpened, NULL as openedAt,
+                 created_at as timestamp
+          FROM messages
+          WHERE conversation_id = ? OR conversation_id = ?
+          ORDER BY created_at ASC
+        `).bind(rawConvId, targetConvId).all();
+        if (legacyMsgs && legacyMsgs.length > 0) {
+          messageRows = legacyMsgs;
+        }
+      } catch {}
+    }
+
     // Check 1-to-1 photo reveals if userId query param is provided
     const userId = c.req.query('userId');
     let isPhotoRevealed = false;
     let hasRevealedToPartner = false;
 
     // Secure view-once media: If viewed and receiver queries, redact mediaUrl
-    const sanitizedMessages = (results || []).map((row: any) => {
+    const sanitizedMessages = messageRows.map((row: any) => {
       const isVO = Boolean(row.isViewOnce);
       const isOp = Boolean(row.isOpened);
       if (isVO && isOp && userId && userId !== row.senderId) {
@@ -604,17 +678,11 @@ chatRouter.get('/:id/messages', async (c) => {
       let p1 = existingConv?.participant_one;
       let p2 = existingConv?.participant_two;
 
-      if (!p1 || !p2) {
-        if (rawConvId.startsWith('conv_')) {
-          const parts = rawConvId.replace('conv_', '').split('_');
-          p1 = parts[0];
-          p2 = parts[1];
-        }
-      }
+      const partnerId = (p1 && p2 && p1 !== 'usr' && p2 !== 'usr')
+        ? (p1 === userId ? p2 : p1)
+        : extractPartnerIdFromConvId(rawConvId, userId);
 
-      const partnerId = p1 === userId ? p2 : (p2 === userId ? p1 : (p1 || p2));
-
-      if (partnerId && partnerId !== userId) {
+      if (partnerId && partnerId !== userId && partnerId !== 'usr') {
         try {
           const { results: reveals } = await c.env.DB.prepare(`
             SELECT owner_id, viewer_id FROM photo_reveals
@@ -669,9 +737,9 @@ chatRouter.get('/:id/ws', async (c) => {
 
   // Normalize room ID if participants are present in the ID
   if (rawConvId.startsWith('conv_')) {
-    const parts = rawConvId.replace('conv_', '').split('_');
-    if (parts.length === 2) {
-      targetRoomId = `conv_${parts.sort().join('_')}`;
+    const parts = parseConversationParticipants(rawConvId);
+    if (parts) {
+      targetRoomId = `conv_${parts[0]}_${parts[1]}`;
     }
   }
 
@@ -739,33 +807,40 @@ chatRouter.post('/:id/messages', async (c) => {
     let p1 = senderId;
     let p2 = receiverId;
 
-    // Check if conversation already exists in DB
-    const existingConv: any = await c.env.DB.prepare(`
+    // Check if conversation already exists in DB (by raw or canonical format)
+    let existingConv: any = await c.env.DB.prepare(`
       SELECT id, participant_one, participant_two FROM conversations WHERE id = ?
     `).bind(rawConvId).first();
+
+    if (!existingConv && p1 && p2) {
+      const canonicalId = `conv_${[p1, p2].sort().join('_')}`;
+      existingConv = await c.env.DB.prepare(`
+        SELECT id, participant_one, participant_two FROM conversations WHERE id = ?
+      `).bind(canonicalId).first();
+    }
 
     if (existingConv) {
       targetConvId = existingConv.id;
       p1 = existingConv.participant_one;
       p2 = existingConv.participant_two;
     } else {
-      // Try resolving partner from convId format
-      if (!p2 && rawConvId.startsWith('conv_')) {
-        const trimmed = rawConvId.replace('conv_', '');
-        if (trimmed.startsWith(senderId + '_')) {
-          p2 = trimmed.slice(senderId.length + 1);
-        } else if (trimmed.endsWith('_' + senderId)) {
-          p2 = trimmed.slice(0, trimmed.length - senderId.length - 1);
-        }
+      if (!p2 && rawConvId) {
+        p2 = extractPartnerIdFromConvId(rawConvId, senderId);
       }
-
-      if (p1 && p2) {
-        targetConvId = `conv_${[p1, p2].sort().join('_')}`;
+      if (p1 && p2 && p1 !== 'usr' && p2 !== 'usr' && p1 !== p2) {
+        const [canonP1, canonP2] = [p1, p2].sort();
+        targetConvId = `conv_${canonP1}_${canonP2}`;
         await c.env.DB.prepare(`
           INSERT OR IGNORE INTO conversations (id, participant_one, participant_two, jsonl_log_path, last_message_text, last_message_time)
           VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-        `).bind(targetConvId, p1, p2, `logs/${targetConvId}.jsonl`, messageText).run();
+        `).bind(targetConvId, canonP1, canonP2, `logs/${targetConvId}.jsonl`, messageText).run();
+        p1 = canonP1;
+        p2 = canonP2;
       }
+    }
+
+    if (!p1 || !p2 || p1 === 'usr' || p2 === 'usr' || p1 === p2) {
+      return c.json({ success: false, error: 'Invalid participant' }, 400);
     }
 
     // Check if either participant has blocked the other
@@ -851,6 +926,15 @@ chatRouter.post('/:id/messages', async (c) => {
           unread_count_p2 = CASE WHEN participant_two != ? THEN unread_count_p2 + 1 ELSE unread_count_p2 END
       WHERE id = ? OR id = ?
     `).bind(messageText, senderId, senderId, senderId, targetConvId, rawConvId).run();
+
+    // Dual-table sync: also insert into legacy messages table so older queries stay in sync
+    try {
+      await c.env.DB.prepare(`
+        INSERT INTO messages (id, conversation_id, sender_id, text, wali_notified, created_at)
+        VALUES (?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
+        ON CONFLICT(id) DO NOTHING
+      `).bind(msgId, targetConvId, senderId, messageText).run();
+    } catch {}
 
     try {
       await c.env.DB.prepare("UPDATE users SET last_active_at = datetime('now') WHERE id = ?").bind(senderId).run();
@@ -1013,7 +1097,7 @@ chatRouter.post('/:id/photo-reveal', async (c) => {
     let targetConvId = rawConvId;
     const existingConv: any = await c.env.DB.prepare(`SELECT id FROM conversations WHERE id = ?`).bind(rawConvId).first();
     if (!existingConv && rawConvId.startsWith('conv_')) {
-      targetConvId = `conv_${[ownerId, viewerId].sort().join('_')}`;
+      targetConvId = getCanonicalConversationId(ownerId, viewerId);
     }
 
     const msgId = `sys_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
@@ -1085,7 +1169,7 @@ chatRouter.post('/call/initiate', async (c) => {
     if (recipientUser?.fcm_token) {
       const callerFirstName = callerInfo?.fullName?.split(' ')[0] || 'Match Candidate';
       const callTypeName = callType === 'video' ? 'Video Call 📹' : 'Audio Call 📞';
-      const convId = conversationId || `conv_${[callerId, recipientId].sort().join('_')}`;
+      const convId = conversationId || getCanonicalConversationId(callerId, recipientId);
 
       // High-priority FCM push notification
       c.executionCtx.waitUntil(

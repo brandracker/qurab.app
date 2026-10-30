@@ -153,6 +153,15 @@ export class MockD1Database {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
 
+      CREATE TABLE IF NOT EXISTS messages (
+        id TEXT PRIMARY KEY,
+        conversation_id TEXT,
+        sender_id TEXT,
+        text TEXT NOT NULL,
+        wali_notified BOOLEAN DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
       CREATE TABLE IF NOT EXISTS photo_reveals (
         owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         viewer_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,

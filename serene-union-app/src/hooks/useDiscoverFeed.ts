@@ -6,6 +6,7 @@ import { facebookEventsService } from '../services/facebookEventsService';
 import { ratingService } from '../services/ratingService';
 import { calculateProfileCompleteness } from '../utils/profileCompleteness';
 import { checkUserTravel, type TravelCheckResult } from '../utils/travelEngine';
+import { getCanonicalConversationId } from '../utils/conversation';
 
 interface UseDiscoverFeedOptions {
   onOpenChat?: (convId: string) => void;
@@ -327,7 +328,7 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
       setMatchedProfile(profile);
 
       // Pre-warm local conversation & mutual matches cache at 0ms
-      const convId = `conv_${[currentUser.id, profile.id].sort().join('_')}`;
+      const convId = getCanonicalConversationId(currentUser.id, profile.id);
       try {
         dbService.createMatchConversation(profile);
       } catch {}

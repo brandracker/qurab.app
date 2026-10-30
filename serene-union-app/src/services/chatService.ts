@@ -1,6 +1,7 @@
 import type { Conversation, ChatMessage, UserProfile } from '../types';
 import { API_BASE } from './apiConfig';
 import { profileService } from './profileService';
+import { getCanonicalConversationId } from '../utils/conversation';
 
 export const CONVERSATIONS_KEY = 'serene_real_conversations_v3';
 
@@ -106,7 +107,7 @@ export const chatService = {
 
   createMatchConversation(profile: UserProfile, openingMessage?: string): Conversation {
     const user = profileService.getCurrentUser();
-    const convId = `conv_${[user.id, profile.id].sort().join('_')}`;
+    const convId = getCanonicalConversationId(user.id, profile.id);
 
     const conversations = this.getConversations();
     const existing = conversations.find(c => c.id === convId || c.otherUser?.id === profile.id);
@@ -314,7 +315,7 @@ export const chatService = {
   },
 
   async togglePhotoRevealLive(conversationId: string, myUserId: string, targetUserId: string, isRevealed: boolean): Promise<boolean> {
-    const targetId = conversationId || `conv_${[myUserId, targetUserId].sort().join('_')}`;
+    const targetId = conversationId || getCanonicalConversationId(myUserId, targetUserId);
 
     // 1. Immediately update both local storage representations
     try {

@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { AppContext } from '../types';
 import { processAiSeedResponse } from '../utils/ai-chat-agent';
+import { getCanonicalConversationId } from '../utils/conversation';
 
 export const matchesRouter = new Hono<AppContext>();
 
@@ -31,8 +32,8 @@ export const resolveSeedPhoto = (id: string, existingPhotos: string[] = []): str
 matchesRouter.post('/action', async (c) => {
   try {
     const { senderId, receiverId, action, messageText, isMutualMatch } = await c.req.json();
-    if (!senderId || !receiverId || !action) {
-      return c.json({ success: false, error: 'senderId, receiverId, and action are required' }, 400);
+    if (!senderId || !receiverId || !action || senderId === 'usr' || receiverId === 'usr' || senderId === receiverId) {
+      return c.json({ success: false, error: 'Valid senderId, receiverId, and action are required' }, 400);
     }
 
     // Ensure both sender and receiver exist in users table to prevent SQLITE_CONSTRAINT_FOREIGNKEY errors
@@ -50,7 +51,8 @@ matchesRouter.post('/action', async (c) => {
 
     // Direct Salam handling (Instant conversation with custom Islamic greeting note)
     if (action === 'direct_salam') {
-      const convId = `conv_${[senderId, receiverId].sort().join('_')}`;
+      const [canonP1, canonP2] = [senderId, receiverId].sort();
+      const convId = `conv_${canonP1}_${canonP2}`;
       const introMessage = (messageText && typeof messageText === 'string' && messageText.trim().length > 0)
         ? messageText.trim()
         : 'Assalamu Alaikum! I would be honored to get to know your biodata for marriage.';
@@ -61,11 +63,11 @@ matchesRouter.post('/action', async (c) => {
         VALUES (?, ?, ?, 'direct_salam')
       `).bind(matchId, senderId, receiverId).run();
 
-      // 2. Initialize Conversation in D1
+      // 2. Initialize Conversation in D1 with canonical participant order
       await c.env.DB.prepare(`
         INSERT OR IGNORE INTO conversations (id, participant_one, participant_two, jsonl_log_path, last_message_text, last_message_sender_id, last_message_time)
         VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-      `).bind(convId, senderId, receiverId, `logs/${convId}.jsonl`, introMessage, senderId).run();
+      `).bind(convId, canonP1, canonP2, `logs/${convId}.jsonl`, introMessage, senderId).run();
 
       await c.env.DB.prepare(`
         UPDATE conversations
@@ -130,7 +132,8 @@ matchesRouter.post('/action', async (c) => {
 
       if (reverseLike || isMutualMatch) {
         // True Mutual Match!
-        const convId = `conv_${[senderId, receiverId].sort().join('_')}`;
+        const [canonP1, canonP2] = [senderId, receiverId].sort();
+        const convId = `conv_${canonP1}_${canonP2}`;
 
         // 1. Update both match records to mutual_match bidirectionally
         await c.env.DB.prepare(`
@@ -143,11 +146,11 @@ matchesRouter.post('/action', async (c) => {
           VALUES (?, ?, ?, 'mutual_match')
         `).bind(`mat_${receiverId}_${senderId}`, receiverId, senderId).run();
 
-        // 2. Automatically create conversation in D1
+        // 2. Automatically create conversation in D1 with canonical participant order
         await c.env.DB.prepare(`
           INSERT OR IGNORE INTO conversations (id, participant_one, participant_two, jsonl_log_path, last_message_text, last_message_time)
           VALUES (?, ?, ?, ?, 'You matched! Start with Bismillah.', CURRENT_TIMESTAMP)
-        `).bind(convId, senderId, receiverId, `logs/${convId}.jsonl`).run();
+        `).bind(convId, canonP1, canonP2, `logs/${convId}.jsonl`).run();
 
         // 3. Centralized Notifications in D1 for both users
         try {
@@ -226,7 +229,7 @@ matchesRouter.post('/action', async (c) => {
             VALUES (?, ?, ?, 'passed')
           `).bind(`mat_${receiverId}_${senderId}`, receiverId, senderId).run();
 
-          const convId = `conv_${[senderId, receiverId].sort().join('_')}`;
+          const convId = getCanonicalConversationId(senderId, receiverId);
           await c.env.DB.prepare(`DELETE FROM conversations WHERE id = ?`).bind(convId).run();
         }
       } catch {}
@@ -948,7 +951,7 @@ matchesRouter.post('/block', async (c) => {
     `).bind(`mat_${targetId}_${userId}`, targetId, userId).run();
 
     // Delete active conversation row from D1 so it is immediately removed from live polling
-    const convId = `conv_${[userId, targetId].sort().join('_')}`;
+    const convId = getCanonicalConversationId(userId, targetId);
     await c.env.DB.prepare(`
       DELETE FROM conversations 
       WHERE id = ? 
@@ -984,7 +987,7 @@ matchesRouter.post('/unblock', async (c) => {
     `).bind(userId, targetId, targetId, userId).run();
 
     // C. Clean up any stale conversation row in D1
-    const convId = `conv_${[userId, targetId].sort().join('_')}`;
+    const convId = getCanonicalConversationId(userId, targetId);
     await c.env.DB.prepare(`
       DELETE FROM conversations 
       WHERE id = ? 

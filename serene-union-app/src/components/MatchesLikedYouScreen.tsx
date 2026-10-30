@@ -28,6 +28,7 @@ import { isUserOnline } from '../utils/onlineStatus';
 
 
 import { ProfileDetailModal } from './ProfileDetailModal';
+import { getCanonicalConversationId } from '../utils/conversation';
 
 interface Props {
   onOpenChat: (convId: string) => void;
@@ -215,7 +216,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
     } catch {}
 
     // 0ms INSTANT CONVERSATION & NAVIGATION (Zero blank screen, Zero network freeze)
-    const convId = `conv_${[currentUser.id, candidate.id].sort().join('_')}`;
+    const convId = getCanonicalConversationId(currentUser.id, candidate.id);
     const newConv = dbService.createMatchConversation(candidate);
 
     const candidateName = candidate.fullName || 'Member';

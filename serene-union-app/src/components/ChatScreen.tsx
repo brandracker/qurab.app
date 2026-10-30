@@ -21,6 +21,7 @@ import {
 import { webRtcService, type CallType, type CallerInfo } from '../services/webRtcService';
 import { MembershipUpgradeModal } from './MembershipUpgradeModal';
 import { isUserOnline } from '../utils/onlineStatus';
+import { extractPartnerIdFromConvId, getCanonicalConversationId } from '../utils/conversation';
 
 interface ChatVideoPlayerProps {
   src: string;
@@ -222,7 +223,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
   }, [currentUser.id]);
 
   const handleOpenMatchChat = (match: UserProfile) => {
-    const convId = `conv_${[currentUser.id, match.id].sort().join('_')}`;
+    const convId = getCanonicalConversationId(currentUser.id, match.id);
     let existing = conversations.find(c => c.id === convId || c.otherUser?.id === match.id);
     if (!existing) {
       existing = dbService.createMatchConversation(match);
@@ -312,9 +313,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
       const convs = dbService.getConversations();
       setConversations([...convs]);
       if (activeConvId) {
-        const pId = activeConvId.startsWith('conv_')
-          ? activeConvId.replace('conv_', '').split('_').find(id => id !== currentUser.id && id.length > 0)
-          : null;
+        const pId = extractPartnerIdFromConvId(activeConvId, currentUser.id);
         const cur = convs.find(c => c.id === activeConvId || (pId && c.otherUser?.id === pId));
         if (cur?.messages) {
           setRoomMessages([...cur.messages]);
@@ -360,9 +359,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
 
   const activePartnerId = isTargetingOfficialChannel
     ? 'usr_qurb_official'
-    : (activeConvId?.startsWith('conv_')
-        ? activeConvId.replace('conv_', '').split('_').find(id => id !== currentUser.id && id.length > 0)
-        : null);
+    : extractPartnerIdFromConvId(activeConvId || '', currentUser.id);
 
   // 0ms Local-First Cache Hydration for Instant Room Switching (Zero delay & zero bleed-through)
   useEffect(() => {
@@ -373,9 +370,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
 
     const partnerId = isTargetingOfficialChannel 
       ? 'usr_qurb_official' 
-      : (activeConvId.startsWith('conv_')
-          ? activeConvId.replace('conv_', '').split('_').find(id => id !== currentUser.id && id.length > 0)
-          : null);
+      : extractPartnerIdFromConvId(activeConvId, currentUser.id);
 
     // 1. Check granular room cache first (Fastest, 0ms paint)
     const cached = dbService.getCachedRoomMessages(activeConvId);
@@ -387,7 +382,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
     if (partnerId) {
       const partnerKey = isTargetingOfficialChannel 
         ? `conv_qurb_official_${currentUser.id}`
-        : `conv_${[currentUser.id, partnerId].sort().join('_')}`;
+        : getCanonicalConversationId(currentUser.id, partnerId);
       const partnerCached = dbService.getCachedRoomMessages(partnerKey);
       if (partnerCached.length > 0) {
         setRoomMessages(partnerCached);
@@ -538,8 +533,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
     }
   } else if (!activeConv && activeConvId) {
     // Dynamic fallback ONLY for real candidates:
-    const rawParts = activeConvId.replace('conv_', '').split('_');
-    const partnerId = rawParts.find(id => id !== currentUser.id && id.length > 0);
+    const partnerId = extractPartnerIdFromConvId(activeConvId, currentUser.id);
     if (partnerId) {
       const allProfiles = dbService.getAllProfiles();
       let candidate = allProfiles.find(p => p.id === partnerId);
@@ -612,8 +606,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
   // Live profile hydration if candidate details are minimal
   useEffect(() => {
     if (!activeConvId || isOfficialChannel) return;
-    const rawParts = activeConvId.replace('conv_', '').split('_');
-    const partnerId = rawParts.find(id => id !== currentUser.id && id.length > 0);
+    const partnerId = extractPartnerIdFromConvId(activeConvId, currentUser.id);
     if (!partnerId) return;
 
     if (!activeConv?.otherUser || activeConv.otherUser.fullName === 'Match Candidate') {
@@ -648,7 +641,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
     const targetRoomId = isTargetOfficial
       ? (activeConv?.id || activeConvId)
       : (activeConv?.otherUser?.id 
-          ? (`conv_${[currentUser.id, activeConv.otherUser.id].sort().join('_')}`)
+          ? getCanonicalConversationId(currentUser.id, activeConv.otherUser.id)
           : (activeConv?.id || activeConvId));
 
     if (!targetRoomId) return;
@@ -708,7 +701,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
     const targetRoomId = isTargetOfficial
       ? (activeConv?.id || activeConvId)
       : (activeConv?.otherUser?.id 
-          ? (`conv_${[currentUser.id, activeConv.otherUser.id].sort().join('_')}`)
+          ? getCanonicalConversationId(currentUser.id, activeConv.otherUser.id)
           : (activeConv?.id || activeConvId));
 
     if (!targetRoomId) return;
@@ -885,7 +878,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
     setHasRevealedToPartner(isNowRevealed);
 
     const targetRoomId = activeConv?.otherUser?.id 
-      ? (`conv_${[currentUser.id, activeConv.otherUser.id].sort().join('_')}`)
+      ? getCanonicalConversationId(currentUser.id, activeConv.otherUser.id)
       : (activeConv?.id || activeConvId || '');
 
     // Persist live to Cloudflare D1
@@ -942,7 +935,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
     if (!activeConvId || !activeConv) return;
     const user = dbService.getCurrentUser();
     const targetRoomId = activeConv.otherUser?.id 
-      ? (`conv_${[user.id, activeConv.otherUser.id].sort().join('_')}`)
+      ? getCanonicalConversationId(user.id, activeConv.otherUser.id)
       : activeConvId;
 
     const newMsg: ChatMessage = {
@@ -1049,7 +1042,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
 
       setUploadStatus('Uploading voice note...');
       const targetRoomId = activeConv?.otherUser?.id 
-        ? (`conv_${[currentUser.id, activeConv.otherUser.id].sort().join('_')}`)
+        ? getCanonicalConversationId(currentUser.id, activeConv.otherUser.id)
         : (activeConvId || 'chat');
 
       const res = await fetch(`${API_BASE}/conversations/upload-media`, {
@@ -1131,7 +1124,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
       setUploadStatus('Uploading to secure cloud...');
 
       const targetRoomId = activeConv?.otherUser?.id 
-        ? (`conv_${[currentUser.id, activeConv.otherUser.id].sort().join('_')}`)
+        ? getCanonicalConversationId(currentUser.id, activeConv.otherUser.id)
         : (activeConvId || 'chat');
 
       const res = await fetch(`${API_BASE}/conversations/upload-media`, {
@@ -1283,7 +1276,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
     const text = inputText.trim();
     const user = dbService.getCurrentUser();
     const targetRoomId = activeConv.otherUser?.id 
-      ? (`conv_${[user.id, activeConv.otherUser.id].sort().join('_')}`)
+      ? getCanonicalConversationId(user.id, activeConv.otherUser.id)
       : activeConvId;
 
     const newMsg: ChatMessage = {

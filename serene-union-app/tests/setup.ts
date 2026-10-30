@@ -57,13 +57,29 @@ if (!globalThis.fetch || !(globalThis.fetch as any)._isMock) {
   const mockFetch = vi.fn().mockImplementation(async (url: any) => {
     const urlStr = String(url);
     if (urlStr.includes('/wallet/')) {
+      const parts = urlStr.split('/');
+      const targetUid = parts[parts.length - 1];
+      let isVipStored = false;
+      if (typeof localStorage !== 'undefined') {
+        if (localStorage.getItem(`serene_vip_${targetUid}`) === 'true') {
+          isVipStored = true;
+        } else {
+          try {
+            const rawUser = localStorage.getItem('serene_current_user_v1');
+            if (rawUser) {
+              const u = JSON.parse(rawUser);
+              if (u.id === targetUid && u.isVip === true) isVipStored = true;
+            }
+          } catch {}
+        }
+      }
       return {
         ok: true,
         json: async () => ({
           success: true,
           wallet: {
             likesRemaining: 50,
-            isVip: false,
+            isVip: isVipStored,
             directSalams: 2,
             adsWatchedForSalam: 0,
             dailyMessagesQuota: 15

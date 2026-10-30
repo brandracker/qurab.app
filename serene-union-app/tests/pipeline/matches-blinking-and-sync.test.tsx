@@ -16,7 +16,8 @@ describe('Matches Blinking Elimination, Silent Sync, Auto-Match & Guest Migratio
     education: 'MSc',
     marriageTimeline: 'within_1_year' as const,
     bio: 'Practicing Muslim engineer',
-    photos: []
+    photos: [],
+    isVip: true
   };
 
   const mockCandidate = {

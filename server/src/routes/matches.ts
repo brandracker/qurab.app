@@ -4,6 +4,29 @@ import { processAiSeedResponse } from '../utils/ai-chat-agent';
 
 export const matchesRouter = new Hono<AppContext>();
 
+export const resolveSeedPhoto = (id: string, existingPhotos: string[] = []): string[] => {
+  if (existingPhotos && existingPhotos.length > 0) return existingPhotos;
+  if (!id) return [];
+  if (id.startsWith('seed_female_') || id.startsWith('seed_male_')) {
+    const normalized = id.replace(/_0+(\d+)/, '_$1');
+    return [`/seeds/${normalized}.jpg`];
+  }
+  if (id.startsWith('usr_seed_pk_')) {
+    const rest = id.replace('usr_seed_pk_', '');
+    if (rest.startsWith('male_')) {
+      const num = parseInt(rest.replace('male_', ''), 10);
+      return [`/seeds/seed_male_${isNaN(num) ? 1 : num}.jpg`];
+    }
+    if (rest.startsWith('female_')) {
+      const num = parseInt(rest.replace('female_', ''), 10);
+      return [`/seeds/seed_female_${isNaN(num) ? 1 : num}.jpg`];
+    }
+    const num = parseInt(rest, 10);
+    return [`/seeds/seed_female_${isNaN(num) ? 1 : num}.jpg`];
+  }
+  return [];
+};
+
 // 1. Matches & Likes Action with True Mutual Match Detection & Conversation Creation
 matchesRouter.post('/action', async (c) => {
   try {
@@ -184,13 +207,32 @@ matchesRouter.post('/action', async (c) => {
       });
     }
 
-    // Passed / Dismissed
+    // Passed / Dismissed / Declined Salam
     await c.env.DB.prepare(`
       INSERT OR REPLACE INTO matches_and_likes (id, sender_id, receiver_id, action)
-      VALUES (?, ?, ?, ?)
-    `).bind(matchId, senderId, receiverId, action).run();
+      VALUES (?, ?, ?, 'passed')
+    `).bind(matchId, senderId, receiverId).run();
 
-    return c.json({ success: true, isMutual: false });
+    if (action === 'reject_salam' || action === 'passed') {
+      try {
+        const reverseSalam: any = await c.env.DB.prepare(`
+          SELECT id FROM matches_and_likes 
+          WHERE sender_id = ? AND receiver_id = ? AND action = 'direct_salam'
+        `).bind(receiverId, senderId).first();
+
+        if (reverseSalam || action === 'reject_salam') {
+          await c.env.DB.prepare(`
+            INSERT OR REPLACE INTO matches_and_likes (id, sender_id, receiver_id, action)
+            VALUES (?, ?, ?, 'passed')
+          `).bind(`mat_${receiverId}_${senderId}`, receiverId, senderId).run();
+
+          const convId = `conv_${[senderId, receiverId].sort().join('_')}`;
+          await c.env.DB.prepare(`DELETE FROM conversations WHERE id = ?`).bind(convId).run();
+        }
+      } catch {}
+    }
+
+    return c.json({ success: true, isMutual: false, message: 'Action recorded successfully.' });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   }
@@ -299,7 +341,7 @@ matchesRouter.get('/hub', async (c) => {
           AND m.receiver_id NOT IN (SELECT blocked_id FROM blocked_users WHERE blocker_id = ?)
           AND m.receiver_id NOT IN (SELECT blocker_id FROM blocked_users WHERE blocked_id = ?)
         ORDER BY m.created_at DESC
-        LIMIT 60
+        LIMIT 250
       `).bind(userId, userId, userId).all(),
 
       // D. Passed Profiles
@@ -316,7 +358,7 @@ matchesRouter.get('/hub', async (c) => {
           AND m.receiver_id NOT IN (SELECT blocked_id FROM blocked_users WHERE blocker_id = ?)
           AND m.receiver_id NOT IN (SELECT blocker_id FROM blocked_users WHERE blocked_id = ?)
         ORDER BY m.created_at DESC
-        LIMIT 60
+        LIMIT 250
       `).bind(userId, userId, userId).all(),
 
       // E. Blocked Users
@@ -365,33 +407,13 @@ matchesRouter.get('/hub', async (c) => {
       }
     }
 
-    const resolveSeedPhoto = (id: string, existingPhotos: string[]) => {
-      if (existingPhotos && existingPhotos.length > 0) return existingPhotos;
-      if (!id) return [];
-      if (id.startsWith('seed_female_') || id.startsWith('seed_male_')) {
-        const normalized = id.replace(/_0+(\d+)/, '_$1');
-        return [`/seeds/${normalized}.jpg`];
-      }
-      if (id.startsWith('usr_seed_pk_')) {
-        const rest = id.replace('usr_seed_pk_', '');
-        if (rest.startsWith('male_')) {
-          const num = parseInt(rest.replace('male_', ''), 10);
-          return [`/seeds/seed_male_${isNaN(num) ? 1 : num}.jpg`];
-        }
-        if (rest.startsWith('female_')) {
-          const num = parseInt(rest.replace('female_', ''), 10);
-          return [`/seeds/seed_female_${isNaN(num) ? 1 : num}.jpg`];
-        }
-        const num = parseInt(rest, 10);
-        return [`/seeds/seed_female_${isNaN(num) ? 1 : num}.jpg`];
-      }
-      return [];
-    };
-
     const mapCandidate = (row: any) => {
       const birthYear = new Date(row.dob || '1998-01-01').getFullYear();
       const age = new Date().getFullYear() - (birthYear || 1998);
-      const photos = resolveSeedPhoto(row.id, photoMap[row.id] || []);
+      let photos = resolveSeedPhoto(row.id, photoMap[row.id] || []);
+      if (!photos || photos.length === 0) {
+        photos = row.gender === 'female' ? ['/seeds/seed_female_1.jpg'] : ['/seeds/seed_male_1.jpg'];
+      }
       return {
         ...row,
         age: age || 26,
@@ -499,7 +521,13 @@ matchesRouter.get('/received', async (c) => {
     const formatted = (results || []).map((row: any) => {
       const birthYear = new Date(row.dob).getFullYear();
       const age = new Date().getFullYear() - (birthYear || 1998);
-      const userPhotos = photoMap[row.id] || [];
+      let userPhotos = photoMap[row.id] || [];
+      if (!userPhotos || userPhotos.length === 0) {
+        userPhotos = resolveSeedPhoto(row.id, []);
+      }
+      if (!userPhotos || userPhotos.length === 0) {
+        userPhotos = row.gender === 'female' ? ['/seeds/seed_female_1.jpg'] : ['/seeds/seed_male_1.jpg'];
+      }
 
       return {
         id: row.id,
@@ -643,7 +671,13 @@ matchesRouter.get('/mutual', async (c) => {
     const formatted = (results || []).map((row: any) => {
       const birthYear = new Date(row.dob).getFullYear();
       const age = new Date().getFullYear() - (birthYear || 1998);
-      const userPhotos = photoMap[row.id] || [];
+      let userPhotos = photoMap[row.id] || [];
+      if (!userPhotos || userPhotos.length === 0) {
+        userPhotos = resolveSeedPhoto(row.id, []);
+      }
+      if (!userPhotos || userPhotos.length === 0) {
+        userPhotos = row.gender === 'female' ? ['/seeds/seed_female_1.jpg'] : ['/seeds/seed_male_1.jpg'];
+      }
 
       return {
         id: row.id,

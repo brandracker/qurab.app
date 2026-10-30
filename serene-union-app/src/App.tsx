@@ -1103,6 +1103,7 @@ export const App: React.FC = () => {
                 <MatchesLikedYouScreen
                   onOpenChat={handleOpenChat}
                   onOpenDiscover={() => setActiveTab('discover')}
+                  onOpenSubscription={() => setShowVipUpgradeModal(true)}
                 />
               )}
 

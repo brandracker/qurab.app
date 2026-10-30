@@ -87,4 +87,57 @@ describe('UI & Button Interactions: Matrimonial Chat Screen', () => {
     const revealBtn = screen.getByText(/Reveal Photos/i);
     expect(revealBtn).toBeDefined();
   });
+
+  it('4. Renders Approve and Decline buttons when conversation has a pending Direct Salam for the current user', () => {
+    const handleBack = vi.fn();
+
+    const salamConv = {
+      id: 'conv_usr_me_usr_suitor',
+      participantOne: 'usr_suitor',
+      participantTwo: currentUser.id,
+      otherUser: {
+        id: 'usr_suitor',
+        fullName: 'Zayd Tariq',
+        gender: 'male' as const,
+        dob: '1996-01-01',
+        location: 'Manchester, UK',
+        profession: 'Civil Engineer',
+        marriageTimeline: 'within_1_year' as const,
+        bio: 'Suitor bio',
+        photos: []
+      },
+      lastMessageText: 'Assalamu Alaikum! Would love to connect for marriage.',
+      lastMessageSenderId: 'usr_suitor',
+      lastMessageTime: 'Just now',
+      unreadCount: 1,
+      status: 'active' as const,
+      isDirectSalamPending: true,
+      salamSenderId: 'usr_suitor',
+      messages: [{
+        id: 'msg_salam_1',
+        senderId: 'usr_suitor',
+        senderName: 'Zayd Tariq',
+        text: 'Assalamu Alaikum! Would love to connect for marriage.',
+        timestamp: 'Just now',
+        isRead: false,
+        waliNotified: true
+      }]
+    };
+
+    const convs = dbService.getConversations();
+    convs.unshift(salamConv);
+    localStorage.setItem('serene_real_conversations_v3', JSON.stringify(convs));
+
+    render(
+      <ChatScreen
+        currentUser={currentUser}
+        onBack={handleBack}
+        initialConvId="conv_usr_me_usr_suitor"
+      />
+    );
+
+    // Verify Approve and Decline action buttons are rendered
+    expect(screen.getByRole('button', { name: /Approve & Connect/i })).toBeDefined();
+    expect(screen.getByRole('button', { name: /Decline/i })).toBeDefined();
+  });
 });

@@ -30,7 +30,8 @@ import {
   Play,
   Pause,
   EyeOff,
-  Lock
+  Lock,
+  Unlock
 } from 'lucide-react';
 
 
@@ -47,9 +48,20 @@ interface Props {
   onLike?: (profile: UserProfile) => void;
   onPass?: (profileId: string) => void;
   customAction?: React.ReactNode;
+  forceBlurPhotos?: boolean;
+  onOpenSubscription?: () => void;
 }
 
-export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, onLike, onPass, customAction }) => {
+export const ProfileDetailModal: React.FC<Props> = ({ 
+  profile, 
+  isOpen, 
+  onClose, 
+  onLike, 
+  onPass, 
+  customAction, 
+  forceBlurPhotos,
+  onOpenSubscription
+}) => {
 
   const [selectedPhotoIdx, setSelectedPhotoIdx] = useState<number>(0);
   const [isPlayingVoice, setIsPlayingVoice] = useState<boolean>(false);
@@ -58,7 +70,7 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
   const currentUser = dbService.getCurrentUser();
   const currentUserId = currentUser?.id || 'usr_guest';
   const isRevealedToMe = Boolean(profile?.isPhotoRevealed) || (profile?.id ? dbService.isPhotoRevealedTo(profile.id, currentUserId) : false);
-  const isUnblurred = !profile?.blurPhotosByDefault || isRevealedToMe || Boolean(profile?.photoRevealApproved);
+  const isUnblurred = !forceBlurPhotos && (!profile?.blurPhotosByDefault || isRevealedToMe || Boolean(profile?.photoRevealApproved));
   const [showCompatibilityModal, setShowCompatibilityModal] = useState<boolean>(false);
 
   useEffect(() => {
@@ -112,7 +124,9 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
   const photos = (profile.photos || []).filter(
     (p: string) => typeof p === 'string' && p.trim().length > 0 && !p.includes('photo-1534528741775-53994a69daeb')
   );
-  const hasPhotos = photos.length > 0;
+  const fallbackSeed = profile.gender === 'female' ? '/seeds/seed_female_1.jpg' : '/seeds/seed_male_1.jpg';
+  const displayPhotos = photos.length > 0 ? photos : [fallbackSeed];
+  const hasPhotos = displayPhotos.length > 0;
 
   const rel = profile.religiousProfile;
 
@@ -141,23 +155,64 @@ export const ProfileDetailModal: React.FC<Props> = ({ profile, isOpen, onClose, 
             /* Main Photo Banner */
             <div className="relative w-full h-96 bg-surface-variant overflow-hidden group">
               <img
-                src={photos[selectedPhotoIdx] || photos[0]}
+                src={displayPhotos[selectedPhotoIdx] || displayPhotos[0]}
                 alt={profile.fullName}
                 className={`w-full h-full object-cover transition-all duration-300 ${
-                  !isUnblurred ? 'filter blur-xl scale-110 opacity-85' : 'scale-100'
+                  !isUnblurred 
+                    ? (forceBlurPhotos ? 'filter blur-[10px] scale-105 opacity-90 brightness-95' : 'filter blur-xl scale-110 opacity-85') 
+                    : 'scale-100'
                 }`}
               />
 
               {/* High-End Modesty Blur Center Overlay */}
               {!isUnblurred && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-15 p-4 text-center">
-                  <div className="w-18 h-18 rounded-full bg-black/45 backdrop-blur-md border border-white/25 flex items-center justify-center text-white/85 shadow-2xl mb-2.5">
-                    <EyeOff className="w-9 h-9" />
-                  </div>
-                  <div className="bg-black/60 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/20 flex items-center gap-2 text-white text-xs font-semibold shadow-lg">
-                    <Lock className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Photos blurred for modesty · Unlocks on mutual interest</span>
-                  </div>
+                <div 
+                  onClick={() => {
+                    if (forceBlurPhotos && onOpenSubscription) {
+                      onOpenSubscription();
+                    }
+                  }}
+                  className={`absolute inset-0 flex flex-col items-center justify-center z-15 p-4 text-center ${
+                    forceBlurPhotos ? 'cursor-pointer bg-black/35 hover:bg-black/45 transition-colors' : 'pointer-events-none'
+                  }`}
+                >
+                  {forceBlurPhotos ? (
+                    <>
+                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 border-2 border-white/80 flex items-center justify-center text-white shadow-2xl mb-2.5 group-hover:scale-105 transition-transform">
+                        <Crown className="w-8 h-8 drop-shadow" />
+                      </div>
+                      <div className="bg-black/75 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-amber-300/40 flex flex-col items-center gap-1 text-white shadow-xl max-w-xs">
+                        <span className="text-xs font-bold text-amber-200 flex items-center gap-1.5">
+                          <Lock className="w-3.5 h-3.5 text-amber-300" />
+                          <span>Liked Your Profile!</span>
+                        </span>
+                        <span className="text-[11px] text-white/90">
+                          Upgrade to Barakah VIP to unblur photos and start chatting.
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onOpenSubscription) onOpenSubscription();
+                          }}
+                          className="mt-1.5 px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-white text-[11px] font-bold shadow-brand flex items-center gap-1.5 active:scale-95 transition-all"
+                        >
+                          <Unlock className="w-3.5 h-3.5" />
+                          <span>Unlock with VIP</span>
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-18 h-18 rounded-full bg-black/45 backdrop-blur-md border border-white/25 flex items-center justify-center text-white/85 shadow-2xl mb-2.5">
+                        <EyeOff className="w-9 h-9" />
+                      </div>
+                      <div className="bg-black/60 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/20 flex items-center gap-2 text-white text-xs font-semibold shadow-lg">
+                        <Lock className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Photos blurred for modesty · Unlocks on mutual interest</span>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 

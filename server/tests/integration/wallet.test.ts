@@ -585,6 +585,41 @@ describe('Wallet, In-App Purchases & Rewarded Ads API Integration Tests', () => 
     expect(checkData.wallet.isVip).toBe(true);
     expect(checkData.wallet.daysRemaining).toBeGreaterThanOrEqual(29);
   });
+
+  it('23. Rapid duplicate /use-like requests within 650ms are debounced to prevent double-deduction', async () => {
+    // 1. Initialize user with fresh wallet
+    await app.request('/api/wallet/usr_test_debounce_user', { method: 'GET' }, env);
+
+    // First like call
+    const res1 = await app.request('/api/wallet/use-like', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-test-debounce': 'true' },
+      body: JSON.stringify({ userId: 'usr_test_debounce_user' })
+    }, env);
+    expect(res1.status).toBe(200);
+    const data1: any = await res1.json();
+    expect(data1.likesRemaining).toBe(49);
+    expect(data1.likesUsedToday).toBe(1);
+
+    // Immediate second duplicate like call (e.g. mobile onTouchEnd + onClick within 100ms)
+    const res2 = await app.request('/api/wallet/use-like', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-test-debounce': 'true' },
+      body: JSON.stringify({ userId: 'usr_test_debounce_user' })
+    }, env);
+    expect(res2.status).toBe(200);
+    const data2: any = await res2.json();
+    // Must be debounced! Likes remaining remains 49, used count remains 1
+    expect(data2.debounced).toBe(true);
+    expect(data2.likesRemaining).toBe(49);
+    expect(data2.likesUsedToday).toBe(1);
+
+    // Verify in database: exactly 1 like used in D1
+    const walletRow: any = await env.DB.prepare(
+      'SELECT likes_used_today FROM user_wallets WHERE user_id = ?'
+    ).bind('usr_test_debounce_user').first();
+    expect(walletRow.likes_used_today).toBe(1);
+  });
 });
 
 

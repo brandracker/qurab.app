@@ -578,9 +578,9 @@ export const DiscoverFeed: React.FC<Props> = ({
             <div className="w-16 h-16 rounded-full bg-primary/20 text-primary border border-primary/30 flex items-center justify-center mb-4">
               <Heart className="w-8 h-8 text-primary fill-current" />
             </div>
-            <h3 className="font-serif text-xl font-bold text-white tracking-wide">No Profiles Found</h3>
+            <h3 className="font-serif text-xl font-bold text-white tracking-wide">All Profiles Reviewed</h3>
             <p className="text-xs text-neutral-300 max-w-xs mt-2 leading-relaxed">
-              You have reviewed available candidates matching your filters. Tap below to reload verified candidates across all of Pakistan!
+              Alhamdulillah! You have reviewed all available profiles for now. New verified singles join every day!
             </p>
             <div className="flex flex-col gap-2.5 mt-6 w-full max-w-xs">
               <button
@@ -588,7 +588,7 @@ export const DiscoverFeed: React.FC<Props> = ({
                 className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-primary text-white text-xs font-bold shadow-brand hover:bg-primary-dark active:scale-98 transition-all cursor-pointer"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                <span>Show All Pakistan Profiles</span>
+                <span>Reload / Re-check Candidates</span>
               </button>
               <button
                 type="button"
@@ -882,10 +882,6 @@ export const DiscoverFeed: React.FC<Props> = ({
                 <button
                   type="button"
                   onClick={(e) => handleDirectSalam(currentProfile, e)}
-                  onTouchEnd={(e) => {
-                    e.stopPropagation();
-                    handleDirectSalam(currentProfile, e);
-                  }}
                   aria-label="Direct Salam"
                   className="relative w-14 h-14 min-w-[56px] min-h-[56px] rounded-full bg-white/20 backdrop-blur-md text-white border border-emerald-400/60 hover:bg-emerald-500/25 active:scale-90 flex flex-col items-center justify-center transition-all shadow-lg cursor-pointer pointer-events-auto group"
                   title="Send Direct Salam (instant message without waiting for mutual like)"
@@ -904,10 +900,6 @@ export const DiscoverFeed: React.FC<Props> = ({
                 <button
                   type="button"
                   onClick={(e) => handlePass(currentProfile.id, e)}
-                  onTouchEnd={(e) => {
-                    e.stopPropagation();
-                    handlePass(currentProfile.id, e);
-                  }}
                   aria-label="Pass"
                   className="w-14 h-14 min-w-[56px] min-h-[56px] rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white hover:bg-rose-500/80 hover:border-rose-400 active:scale-90 flex items-center justify-center transition-all shadow-lg cursor-pointer pointer-events-auto"
                   title="Pass"
@@ -919,10 +911,6 @@ export const DiscoverFeed: React.FC<Props> = ({
                 <button
                   type="button"
                   onClick={(e) => handleLike(currentProfile, e)}
-                  onTouchEnd={(e) => {
-                    e.stopPropagation();
-                    handleLike(currentProfile, e);
-                  }}
                   aria-label="Connect"
                   className="w-14 h-14 min-w-[56px] min-h-[56px] rounded-full bg-primary text-white hover:bg-primary-dark active:scale-90 flex items-center justify-center transition-all shadow-brand border border-primary-light cursor-pointer pointer-events-auto"
                   title="Express Interest / Like"

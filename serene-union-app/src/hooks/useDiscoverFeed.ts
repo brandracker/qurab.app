@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { UserProfile, FilterState } from '../types';
 import { dbService } from '../services/dbService';
 import { notificationService } from '../services/notificationService';
@@ -105,6 +105,9 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
   const [showRatingModal, setShowRatingModal] = useState<boolean>(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState<boolean>(false);
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState<boolean>(() => notificationService.hasUnread());
+  const lastActionTimeRef = useRef<number>(0);
+  const isFetchingMoreRef = useRef<boolean>(false);
+  const hasMoreCandidatesRef = useRef<boolean>(true);
 
   // Search filtering
   const filteredFeed = useMemo(() => {
@@ -163,6 +166,36 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
     return () => { isMounted = false; };
   }, [currentUser.id]);
 
+  // Infinite Seamless Swiping: Auto-Prefetch next batch when queue drops to <= 8 profiles
+  useEffect(() => {
+    if (profiles.length <= 8 && !isFetchingMoreRef.current && hasMoreCandidatesRef.current && !isLoading) {
+      isFetchingMoreRef.current = true;
+      dbService.fetchLiveProfiles(filters)
+        .then(fresh => {
+          if (!fresh || fresh.length === 0) {
+            hasMoreCandidatesRef.current = false;
+            return;
+          }
+          const valid = dbService.getDiscoverFeed(filters, fresh);
+          setProfiles(prev => {
+            const existingIdSet = new Set(prev.map(p => p.id));
+            const newCandidates = valid.filter(p => !existingIdSet.has(p.id));
+            if (newCandidates.length === 0) {
+              hasMoreCandidatesRef.current = false;
+              return prev;
+            }
+            return [...prev, ...newCandidates];
+          });
+        })
+        .catch(() => {
+          hasMoreCandidatesRef.current = false;
+        })
+        .finally(() => {
+          isFetchingMoreRef.current = false;
+        });
+    }
+  }, [profiles.length, filters, isLoading]);
+
   // Listen to cross-component quota events
   useEffect(() => {
     const handleLikesUpdate = (e: any) => {
@@ -200,6 +233,7 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
 
 
   const handleApplyFilters = useCallback((newFilters: FilterState) => {
+    hasMoreCandidatesRef.current = true;
     setFilters(newFilters);
     try {
       localStorage.setItem('serene_filters_v2', JSON.stringify(newFilters));
@@ -223,6 +257,13 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
 
   const handleLike = useCallback((profile: UserProfile, e?: React.MouseEvent | React.TouchEvent) => {
     if (e) e.stopPropagation();
+
+    // Prevent double-execution from rapid consecutive taps
+    const now = Date.now();
+    if (now - lastActionTimeRef.current < 450) {
+      return;
+    }
+    lastActionTimeRef.current = now;
 
     // Action Gating: Incomplete profiles (<60% or missing photo) must complete biodata before sending likes
     if (!userCompleteness.isGatePassed) {
@@ -351,6 +392,14 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
         e.preventDefault();
       }
     }
+
+    // Prevent double-execution from rapid consecutive taps
+    const now = Date.now();
+    if (now - lastActionTimeRef.current < 450) {
+      return;
+    }
+    lastActionTimeRef.current = now;
+
     const passTarget = profiles.find(p => p.id === profileId);
     if (passTarget) {
       setHistory(prev => [passTarget, ...prev]);
@@ -413,7 +462,7 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
 
     // Instant local consumption & conversation creation
     dbService.consumeDirectSalam(currentUser.id).catch(() => {});
-    const conv = dbService.createMatchConversation(target, customMessage);
+    const conv = dbService.createMatchConversation(target, customMessage, true, currentUser.id);
 
     notificationService.addNotification({
       type: 'salam',

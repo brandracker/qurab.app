@@ -40,27 +40,50 @@ function queryD1(sql, params = []) {
   });
 }
 
+function clampToFiveWords(text) {
+  if (!text) return text;
+  const clean = text.replace(/^["']|["']$/g, '').trim();
+  const words = clean.split(/\s+/);
+  if (words.length <= 5) return clean;
+  const clamped = words.slice(0, 5).join(' ').replace(/[,;]+$/, '');
+  return clamped + (text.includes('?') ? '?' : '.');
+}
+
 async function askGemini(prompt) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`;
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 1000,
-          thinkingConfig: { thinkingBudget: 0 }
-        }
-      })
-    });
-    const data = await res.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim()?.replace(/^["']|["']$/g, '');
-  } catch (e) {
-    console.error('Gemini error:', e);
-    return null;
+  const models = [
+    'models/gemini-flash-lite-latest',
+    'models/gemini-3.1-flash-lite',
+    'models/gemini-3.5-flash-lite',
+    'models/gemini-2.5-flash',
+    'models/gemini-flash-latest'
+  ];
+
+  for (const model of models) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/${model}:generateContent?key=${GEMINI_KEY}`;
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 1000,
+            thinkingConfig: { thinkingBudget: 0 }
+          }
+        })
+      });
+      if (!res.ok) continue;
+      const data = await res.json();
+      const reply = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      if (reply) {
+        return clampToFiveWords(reply);
+      }
+    } catch (e) {
+      console.error(`Gemini (${model}) error:`, e.message);
+    }
   }
+  return null;
 }
 
 function hasBiodataClues(text) {
@@ -166,15 +189,15 @@ async function main() {
 
     let turnDirective = '';
     if (currentTurnCount === 0) {
-      turnDirective = `TURN 1: Greet politely in authentic Pakistani Roman Urdu ("W Salam! G theek" / "Wa alikum Asalam"). Briefly ask for their city, education, or profession. Keep it short (8 to 18 words). Real girls text briefly.`;
+      turnDirective = `TURN 1: Greet politely and ask intro or city. STRICT RULE: MAXIMUM 1 TO 5 WORDS ONLY! (e.g. "W Salam! Kahan se?", "Wa alikum Asalam. Intro please?")`;
     } else if (currentTurnCount === 1) {
       if (userSharedBio) {
-        turnDirective = `TURN 2: Acknowledge details respectfully ("Acha mashAllah, achi qualification hai"). Mention that marriage decisions are taken with parents/family ("Ammi abbu se discuss kr k aage bat hogi"). Keep under 18 words.`;
+        turnDirective = `TURN 2: Acknowledge and mention family. STRICT RULE: MAXIMUM 1 TO 5 WORDS ONLY! (e.g. "Acha mashAllah, family dekhegi.", "MashaAllah, achi qualification hai.")`;
       } else {
-        turnDirective = `TURN 2: If user asked for picture: firmly refuse ("Aisy kaisy pic send kr dun? Pehle profile aur family batayein"). If user asked for number/insta: refuse ("Direct number allow nahi ghar se"). If user was overly casual/flirty: strictly rebuke ("Aap please serious baat karein, timepass ke liye nahi hun main"). Ask for their biodata or education. Keep under 18 words.`;
+        turnDirective = `TURN 2: If asked for picture/number or casual talk, firmly decline. Ask for biodata. STRICT RULE: MAXIMUM 1 TO 5 WORDS ONLY! (e.g. "Pic nahi bhej sakti.", "Direct number allow nahi.", "Pehle biodata share karein.")`;
       }
     } else {
-      turnDirective = `TURN 3 (FINAL EXIT): Gracefully conclude. State you noted details and will share with parents/ammi abbu. Wish them best for their partner search and say Allah Hafiz. Do NOT ask questions. Keep under 18 words.`;
+      turnDirective = `TURN 3 (FINAL EXIT): Gracefully conclude with family and Allah Hafiz. STRICT RULE: MAXIMUM 1 TO 5 WORDS ONLY! (e.g. "Ghar bataungi, Allah Hafiz.", "Family dekhegi, Allah Hafiz.")`;
     }
 
     const prompt = `
@@ -182,29 +205,27 @@ You are ${seedUser.full_name}, a ${age}-year-old ${seedUser.profession} from ${s
 Bio: "${seedUser.bio}"
 
 AUTHENTIC PAKISTANI FEMALE BEHAVIOR RULES (Extracted from real matrimony chats):
-1. Language & Vocabulary: Conversational Roman Urdu (the way young Pakistani women actually text on WhatsApp). Use natural spelling ("ap", "ni", "g", "W Salam", "theek", "mashAllah", "Alhamdulillah", "Allah ka shukar").
-2. Length: SHORT, CRISP, AND NATURAL (8 to 18 words). Real girls NEVER write long formal essays or robot paragraphs.
-3. Modesty & Boundaries:
-   - If asked for pictures: firmly refuse ("Aisy kaisy pic send kr dun? Pehle family background aur biodata batayein").
-   - If asked for phone number / WhatsApp / Instagram: firmly decline ("Direct number ya social media share krna ghar se allow nahi").
-   - If user is overly casual or flirtatious ("dear", "baby", "cute"): maintain strict boundaries ("Timepass chats ke liye nahi hun main, serious rishta baat karein").
-4. Do NOT sound like an AI bot or customer support agent. No corporate or bookish Urdu.
+1. Language & Vocabulary: Conversational Roman Urdu ("ap", "ni", "g", "W Salam", "theek", "mashAllah", "Alhamdulillah").
+2. STRICT LENGTH LIMIT: MAXIMUM 1 TO 5 WORDS ONLY! Never exceed 5 words under any circumstances!
+3. Modesty & Boundaries: Refuse pics/numbers instantly in 3-5 words.
+4. Zero bot vibe: Natural, human WhatsApp text.
 
 ${turnDirective}
 
 Real user message: "${userMsg}"
-Direct reply:`;
+Direct reply (1 TO 5 WORDS MAX):`;
 
     let reply = await askGemini(prompt);
     if (!reply) {
       reply = currentTurnCount === 0 
-        ? 'W Salam! G theek thak, aap sunayein? Kahan se hain aur kya karte hain?'
+        ? 'W Salam! Kahan se hain?'
         : (currentTurnCount === 1
-          ? 'Maine details note kar li hain, ghar walon se mashwara karungi. Serious baat ke liye biodata zaroori hai.'
-          : 'Maine aapki details note kar li hain aur ammi abbu se discuss karungi. Allah aapko behtar naseeb ata farmaye. Allah Hafiz.');
+          ? (userSharedBio ? 'Acha mashAllah, family dekhegi.' : 'Pehle basic biodata bhejein.')
+          : 'Ghar bataungi, Allah Hafiz.');
     }
+    reply = clampToFiveWords(reply);
 
-    console.log(`   🤖 Gemini Reply: "${reply}"`);
+    console.log(`   🤖 Gemini Reply: "${reply}" (${reply.split(/\s+/).length} words)`);
 
     // Insert into chat_messages
     const msgId = `msg_ai_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;

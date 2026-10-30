@@ -4,7 +4,7 @@ import {
   MoreVertical, Eye, EyeOff, ShieldCheck, Paperclip, Mic, Play, Pause, 
   Trash2, X, Download, File, Loader2, Volume2, VolumeX, Maximize2,
   Phone, Video, PhoneCall, PhoneOff, Search, CheckSquare, Square,
-  ExternalLink, Megaphone, Pin, Lock
+  ExternalLink, Megaphone, Pin, Lock, Hand, Sparkles, Check, Clock
 } from 'lucide-react';
 import { VerifiedBlueTick } from './VerifiedBlueTick';
 import type { Conversation, ChatMessage, UserProfile } from '../types';
@@ -1269,6 +1269,17 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
   const handleSendMessage = async () => {
     if (isOfficialChannel || !inputText.trim() || !activeConvId || !activeConv) return;
 
+    if (isPendingSalamForMe) {
+      setToastMessage('Please approve the Direct Salam invitation first to send messages.');
+      setTimeout(() => setToastMessage(null), 3000);
+      return;
+    }
+    if (isPendingSalamSentByMe) {
+      setToastMessage('Waiting for candidate to accept your Direct Salam invitation.');
+      setTimeout(() => setToastMessage(null), 3000);
+      return;
+    }
+
     const text = inputText.trim();
     const user = dbService.getCurrentUser();
     const targetRoomId = activeConv.otherUser?.id 
@@ -1396,6 +1407,56 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
     setActiveConvId(null);
     setToastMessage("Conversation closed respectfully with a blessed Islamic du'a.");
     setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const [isProcessingSalam, setIsProcessingSalam] = useState<boolean>(false);
+
+  const isPendingSalamForMe = Boolean(
+    activeConv &&
+    !isOfficialChannel &&
+    (activeConv.isDirectSalamPending || activeConv.salamSenderId) &&
+    activeConv.salamSenderId !== currentUser.id
+  );
+
+  const isPendingSalamSentByMe = Boolean(
+    activeConv &&
+    !isOfficialChannel &&
+    (activeConv.isDirectSalamPending || activeConv.salamSenderId) &&
+    activeConv.salamSenderId === currentUser.id
+  );
+
+  const handleApproveSalam = async () => {
+    if (!activeConv || !activeConv.otherUser || isProcessingSalam) return;
+    setIsProcessingSalam(true);
+    const partnerId = activeConv.otherUser.id;
+    try {
+      await dbService.approveDirectSalam(activeConv.id, partnerId);
+      setConversations(prev => prev.map(c => {
+        if (c.id === activeConv.id || c.otherUser?.id === partnerId) {
+          return { ...c, isDirectSalamPending: false, salamSenderId: null };
+        }
+        return c;
+      }));
+      setToastMessage('Direct Salam accepted! Halal conversation is now unlocked.');
+      setTimeout(() => setToastMessage(null), 3500);
+    } finally {
+      setIsProcessingSalam(false);
+    }
+  };
+
+  const handleRejectSalam = async () => {
+    if (!activeConv || !activeConv.otherUser || isProcessingSalam) return;
+    setIsProcessingSalam(true);
+    const partnerId = activeConv.otherUser.id;
+    try {
+      await dbService.rejectDirectSalam(activeConv.id, partnerId);
+      setConversations(prev => prev.filter(c => c.id !== activeConv.id && c.otherUser?.id !== partnerId));
+      setActiveConvId(null);
+      setToastMessage('Direct Salam invitation declined.');
+      setTimeout(() => setToastMessage(null), 3500);
+    } finally {
+      setIsProcessingSalam(false);
+    }
   };
 
   // If no active conversation, show conversation list
@@ -1776,6 +1837,18 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                             <span className="inline-flex items-center gap-1 text-[10px] font-bold text-primary bg-rose-50 border border-rose-200/80 px-2 py-0.5 rounded-full shadow-2xs">
                               <Pin className="w-2.5 h-2.5 rotate-45 text-primary" />
                               <span>Pinned</span>
+                            </span>
+                          )}
+                          {!isConvOfficial && (conv.isDirectSalamPending || conv.salamSenderId) && conv.salamSenderId !== currentUser.id && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-300 px-2 py-0.5 rounded-full shadow-2xs">
+                              <Sparkles className="w-2.5 h-2.5 text-emerald-600" />
+                              <span>Salam Request</span>
+                            </span>
+                          )}
+                          {!isConvOfficial && (conv.isDirectSalamPending || conv.salamSenderId) && conv.salamSenderId === currentUser.id && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full shadow-2xs">
+                              <Clock className="w-2.5 h-2.5 text-amber-600" />
+                              <span>Pending</span>
                             </span>
                           )}
                           <span className={`text-[11px] font-medium ${isIncomingUnread ? 'text-primary font-bold' : 'text-secondary'}`}>
@@ -2733,6 +2806,49 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
         <footer className="p-3.5 bg-white/95 backdrop-blur-md border-t border-slate-100 flex items-center justify-center gap-2 text-xs text-on-surface text-center z-20 shadow-xs">
           <VerifiedBlueTick size={15} />
           <span className="font-medium text-secondary">This is an official announcement channel. Only Qurb Admins can broadcast messages.</span>
+        </footer>
+      ) : isPendingSalamForMe ? (
+        <footer className="p-3 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border-t border-emerald-200/90 flex flex-col gap-2.5 z-20 shadow-md animate-fade-in">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-300/50">
+              <Hand className="w-4 h-4 text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-xs text-slate-800 font-bold leading-tight">
+                Direct Salam Invitation Received
+              </p>
+              <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">
+                <strong className="text-slate-900">{activeConv?.otherUser?.fullName?.split(' ')[0] || 'Candidate'}</strong> reached out with a Direct Salam. Accept to start halal conversation, or decline.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 pt-1 border-t border-emerald-200/50">
+            <button
+              type="button"
+              disabled={isProcessingSalam}
+              onClick={handleRejectSalam}
+              className="flex-1 py-2 px-3 rounded-xl bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 text-xs font-bold transition-all shadow-2xs flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer disabled:opacity-50"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Decline</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={isProcessingSalam}
+              onClick={handleApproveSalam}
+              className="flex-[1.5] py-2 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:brightness-105 text-white text-xs font-bold transition-all shadow-brand flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer disabled:opacity-50"
+            >
+              <Check className="w-3.5 h-3.5" />
+              <span>{isProcessingSalam ? 'Connecting...' : 'Approve & Connect'}</span>
+            </button>
+          </div>
+        </footer>
+      ) : isPendingSalamSentByMe ? (
+        <footer className="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-center gap-2 text-xs text-slate-600 text-center z-20">
+          <Clock className="w-4 h-4 text-amber-500 shrink-0" />
+          <span>Direct Salam invitation sent. Waiting for {activeConv?.otherUser?.fullName?.split(' ')[0] || 'member'} to accept your request.</span>
         </footer>
       ) : (
         <footer className="p-2.5 bg-white/95 backdrop-blur-md border-t border-slate-100 flex items-center gap-2 z-20 shadow-xs">

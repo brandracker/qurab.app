@@ -224,7 +224,7 @@ class DBService {
     try {
       const user = this.getCurrentUser();
       const targetGender = user.gender === 'female' ? 'male' : (user.gender === 'male' ? 'female' : '');
-      let queryParams = `userId=${encodeURIComponent(user.id || '')}&gender=${encodeURIComponent(user.gender || '')}&targetGender=${encodeURIComponent(targetGender)}&limit=25`;
+      let queryParams = `userId=${encodeURIComponent(user.id || '')}&gender=${encodeURIComponent(user.gender || '')}&targetGender=${encodeURIComponent(targetGender)}&limit=150`;
       if (typeof user.latitude === 'number' && typeof user.longitude === 'number') {
         queryParams += `&lat=${user.latitude}&lon=${user.longitude}`;
       } else if (user.city || user.location) {
@@ -2114,7 +2114,11 @@ class DBService {
               messages: msgsToSet,
               isPhotoRevealed,
               hasRevealedToPartner,
-              isOfficial
+              isOfficial,
+              salamSenderId: rc.salamSenderId !== undefined ? rc.salamSenderId : (existing?.salamSenderId ?? null),
+              isDirectSalamPending: typeof rc.isDirectSalamPending === 'boolean'
+                ? rc.isDirectSalamPending
+                : (existing?.isDirectSalamPending ?? Boolean(rc.salamSenderId))
             });
           });
 
@@ -2264,7 +2268,7 @@ class DBService {
     return this.getConversations();
   }
 
-  createMatchConversation(profile: UserProfile, openingMessage?: string): Conversation {
+  createMatchConversation(profile: UserProfile, openingMessage?: string, isDirectSalam?: boolean, salamSenderId?: string): Conversation {
     const user = this.getCurrentUser();
     const convId = `conv_${[user.id, profile.id].sort().join('_')}`;
 
@@ -2273,6 +2277,10 @@ class DBService {
     const initialText = openingMessage || "You matched! Start with Bismillah.";
 
     if (existing) {
+      if (isDirectSalam) {
+        existing.isDirectSalamPending = true;
+        existing.salamSenderId = salamSenderId || user.id;
+      }
       if (openingMessage) {
         existing.lastMessageText = openingMessage;
         existing.lastMessageSenderId = user.id;
@@ -2304,6 +2312,8 @@ class DBService {
       lastMessageTimestamp: Date.now(),
       unreadCount: 0,
       status: 'active',
+      isDirectSalamPending: Boolean(isDirectSalam),
+      salamSenderId: isDirectSalam ? (salamSenderId || user.id) : null,
       messages: openingMessage ? [{
         id: 'msg_' + Date.now(),
         senderId: user.id,
@@ -2329,6 +2339,54 @@ class DBService {
     }).catch(() => {});
 
     return newConv;
+  }
+
+  async approveDirectSalam(convId: string, partnerId: string): Promise<boolean> {
+    const convs = this.getConversations();
+    const conv = convs.find(c => c.id === convId || c.otherUser?.id === partnerId);
+    if (conv) {
+      conv.isDirectSalamPending = false;
+      conv.salamSenderId = null;
+      if (!conv.messages) conv.messages = [];
+      const acceptNote = 'Direct Salam accepted! Halal conversation is now unlocked. Start with Bismillah. 🌿';
+      conv.messages.push({
+        id: 'sys_' + Date.now(),
+        senderId: 'system',
+        senderName: 'System',
+        text: acceptNote,
+        timestamp: 'Just now',
+        isRead: true,
+        waliNotified: true
+      });
+      conv.lastMessageText = acceptNote;
+      conv.lastMessageTime = 'Just now';
+      conv.lastMessageTimestamp = Date.now();
+      localStorage.setItem(this.conversationsKey, JSON.stringify(convs));
+    }
+
+    window.dispatchEvent(new CustomEvent('serene_conversations_updated'));
+
+    try {
+      await this.sendMatchAction(partnerId, 'liked', undefined, conv?.otherUser, true);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async rejectDirectSalam(convId: string, partnerId: string): Promise<boolean> {
+    const convs = this.getConversations();
+    const filtered = convs.filter(c => c.id !== convId && c.otherUser?.id !== partnerId);
+    localStorage.setItem(this.conversationsKey, JSON.stringify(filtered));
+
+    window.dispatchEvent(new CustomEvent('serene_conversations_updated'));
+
+    try {
+      await this.sendMatchAction(partnerId, 'passed', undefined, undefined);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async fetchConversationMessages(conversationId: string, userId?: string): Promise<ChatMessage[]> {

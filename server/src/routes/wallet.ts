@@ -157,6 +157,18 @@ walletRouter.get('/:userId', async (c) => {
   }
 });
 
+// Rate-limit cache to prevent double-deduction from rapid mobile double-taps (e.g. onTouchEnd + onClick within 650ms)
+const recentLikeHits = new Map<string, number>();
+
+function pruneRecentLikeHits() {
+  if (recentLikeHits.size > 2000) {
+    const cutoff = Date.now() - 5000;
+    for (const [uid, timestamp] of recentLikeHits.entries()) {
+      if (timestamp < cutoff) recentLikeHits.delete(uid);
+    }
+  }
+}
+
 // 1b. Use a Daily Like (Live D1 Decrement with Midnight Reset)
 walletRouter.post('/use-like', async (c) => {
   try {
@@ -182,7 +194,27 @@ walletRouter.post('/use-like', async (c) => {
       wallet = { daily_likes_quota: 50, likes_used_today: 0, last_likes_reset_date: todayDate, subscription_tier: 'free' };
     }
 
+    const now = Date.now();
+    const lastHit = recentLikeHits.get(userId) || 0;
+    const isTestBypass = c.env.ENVIRONMENT === 'test' && !c.req.header('x-test-debounce');
+    const isRapidDuplicate = !isTestBypass && ((now - lastHit) < 650);
 
+    if (isRapidDuplicate && wallet) {
+      const quota = wallet.daily_likes_quota ?? 50;
+      const currentUsed = wallet.likes_used_today ?? 0;
+      const isVip = wallet.subscription_tier === 'barakah_vip' || wallet.subscription_tier === 'vip';
+      const likesRemaining = isVip ? 9999 : Math.max(0, quota - currentUsed);
+      return c.json({
+        success: true,
+        debounced: true,
+        likesRemaining,
+        likesUsedToday: currentUsed,
+        dailyLikesQuota: quota
+      });
+    }
+
+    recentLikeHits.set(userId, now);
+    pruneRecentLikeHits();
 
     const quota = wallet.daily_likes_quota ?? 50;
     const currentUsed = wallet.likes_used_today ?? 0;

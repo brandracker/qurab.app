@@ -2319,7 +2319,7 @@ adminRouter.get('/ai-agent/status', async (c) => {
     try {
       const keyRow = await c.env.DB.prepare("SELECT value FROM system_settings WHERE key = 'gemini_api_key'").first();
       if (keyRow?.value) {
-        apiKey = keyRow.value;
+        apiKey = String(keyRow.value);
       }
     } catch {}
 
@@ -2452,7 +2452,7 @@ adminRouter.post('/ai-agent/catchup', async (c) => {
     try {
       const keyRow = await c.env.DB.prepare("SELECT value FROM system_settings WHERE key = 'gemini_api_key'").first();
       if (keyRow?.value) {
-        apiKey = keyRow.value;
+        apiKey = String(keyRow.value);
       }
     } catch {}
 

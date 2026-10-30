@@ -27,6 +27,7 @@ firebase-adminsdk*.json
 # Cloudflare Wrangler & Miniflare
 .wrangler/
 .mf/
+*.sql
 
 # Editor & OS files
 .DS_Store

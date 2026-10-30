@@ -605,7 +605,7 @@ referralsRouter.post('/admin/simulate-invite', async (c) => {
     ).run();
 
     // Check reward milestone
-    let milestoneResult = { rewarded: false, milestoneTarget: 30 };
+    let milestoneResult: any = { rewarded: false, milestoneTarget: 30 };
     if (isCompleted) {
       const targetRow: any = await c.env.DB.prepare(`
         SELECT value FROM app_settings WHERE key = 'referral_target_invites'

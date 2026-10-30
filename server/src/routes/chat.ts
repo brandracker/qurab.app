@@ -129,6 +129,13 @@ chatRouter.get('/', async (c) => {
 
     const { results } = await c.env.DB.prepare(`
       SELECT c.*, 
+        (
+          SELECT m.sender_id FROM matches_and_likes m
+          WHERE ((m.sender_id = c.participant_one AND m.receiver_id = c.participant_two)
+             OR (m.sender_id = c.participant_two AND m.receiver_id = c.participant_one))
+            AND m.action = 'direct_salam'
+          LIMIT 1
+        ) as salam_sender_id,
         u1.full_name as p1_name, u2.full_name as p2_name,
         u1.last_active_at as p1_last_active, u2.last_active_at as p2_last_active,
         u1.gender as p1_gender, u2.gender as p2_gender,
@@ -311,6 +318,8 @@ chatRouter.get('/', async (c) => {
         lastMessageTime: row.last_message_time,
         unreadCount,
         status: row.status || 'active',
+        salamSenderId: row.salam_sender_id || null,
+        isDirectSalamPending: Boolean(row.salam_sender_id),
         hasRevealedToPartner,
         otherUser: {
           id: otherId,
@@ -410,7 +419,7 @@ chatRouter.get('/', async (c) => {
         }))
       };
 
-      formatted.unshift(officialConv);
+      formatted.unshift(officialConv as any);
     } catch (officialErr) {
       console.warn('[Official Chat Channel] Prepend notice:', officialErr);
     }

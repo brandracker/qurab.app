@@ -829,12 +829,12 @@ profilesRouter.get('/discover', async (c) => {
     const minAgeParam = c.req.query('minAge') ? parseInt(c.req.query('minAge')!, 10) : null;
     const maxAgeParam = c.req.query('maxAge') ? parseInt(c.req.query('maxAge')!, 10) : null;
 
-    // Task 03: Fast Batching (Limit & Offset)
-    const limitParam = c.req.query('limit') ? parseInt(c.req.query('limit')!, 10) : 25;
+    // Fast Batching (Limit & Offset) - Allow up to 300 candidates
+    const limitParam = c.req.query('limit') ? parseInt(c.req.query('limit')!, 10) : 100;
     const offsetParam = c.req.query('offset') ? parseInt(c.req.query('offset')!, 10) : 0;
-    const limit = isNaN(limitParam) ? 25 : Math.max(1, Math.min(limitParam, 50));
+    const limit = isNaN(limitParam) ? 100 : Math.max(1, Math.min(limitParam, 300));
     const offset = isNaN(offsetParam) ? 0 : Math.max(0, offsetParam);
-    const fetchLimit = maxDistanceKm ? Math.min(limit * 2, 60) : limit;
+    const fetchLimit = maxDistanceKm ? Math.min(limit * 2, 300) : limit;
 
     const sectList = sectsParam ? sectsParam.split(',').map(s => s.trim().toLowerCase()).filter(Boolean) : [];
     const sectFilter = sectList.length > 0 ? `AND LOWER(rp.sect) IN (${sectList.map(() => '?').join(',')})` : '';
@@ -901,11 +901,10 @@ profilesRouter.get('/discover', async (c) => {
       LEFT JOIN user_wallets uw ON u.id = uw.user_id
       WHERE u.id != ? 
         AND (u.full_name != 'New Member' OR u.full_name IS NULL)
-        AND (u.is_profile_completed != 0 OR u.is_profile_completed IS NULL)
-        AND (u.is_profile_completed = 1 OR (u.location != 'Global' AND u.location IS NOT NULL))
         AND (u.account_status NOT IN ('deactivated', 'banned') OR u.account_status IS NULL)
         AND (u.is_banned = 0 OR u.is_banned IS NULL)
         AND (u.profile_visibility != 'hidden' OR u.profile_visibility IS NULL)
+        AND (u.is_profile_completed = 1 OR u.is_profile_completed IS NULL)
         ${seedFilter}
         ${blockFilter}
         ${actionedFilter}
@@ -915,7 +914,7 @@ profilesRouter.get('/discover', async (c) => {
         ${cityFilter}
         ${ageFilter}
       ${geoFilter}
-      ORDER BY (CASE WHEN uw.spotlight_expires_at IS NOT NULL AND datetime(uw.spotlight_expires_at) > datetime('now') THEN 1 ELSE 0 END) DESC, (CASE WHEN u.voice_greeting_url IS NOT NULL AND u.voice_greeting_url != '' THEN 1 ELSE 0 END) DESC, u.is_vip DESC, u.created_at DESC
+      ORDER BY (CASE WHEN uw.spotlight_expires_at IS NOT NULL AND datetime(uw.spotlight_expires_at) > datetime('now') THEN 1 ELSE 0 END) DESC, (CASE WHEN u.voice_greeting_url IS NOT NULL AND u.voice_greeting_url != '' THEN 1 ELSE 0 END) DESC, u.is_vip DESC, RANDOM()
       LIMIT ? OFFSET ?
     `;
 
@@ -1045,6 +1044,7 @@ profilesRouter.get('/discover', async (c) => {
         bio: row.bio || row.deenRelationshipBio || 'Seeking half my deen.',
         blurPhotosByDefault: Boolean(row.blurPhotosByDefault),
         profileVisibility: row.profileVisibility || 'all_users',
+        isProfileCompleted: true,
         isVip: Boolean(row.isVip),
         isSpotlightActive: Boolean(row.isSpotlightActive),
         accountStatus: row.accountStatus || 'active',

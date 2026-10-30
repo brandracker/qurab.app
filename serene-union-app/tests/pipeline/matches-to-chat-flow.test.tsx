@@ -144,4 +144,54 @@ describe('Real-World Pipeline: Mutual Matches to Active Chat Flow', () => {
       expect.stringContaining('conv_')
     );
   });
+
+  it('4. Non-VIP user clicking Like Back in Liked You tab is redirected to Subscription page', async () => {
+    const handleOpenChat = vi.fn();
+    const handleOpenDiscover = vi.fn();
+    const handleOpenSubscription = vi.fn();
+
+    const candidateWhoLikedMe: UserProfile = {
+      id: 'usr_candidate_999',
+      fullName: 'Ayesha Siddiqua',
+      email: 'ayesha@example.com',
+      gender: 'female',
+      dob: '1998-01-01',
+      age: 28,
+      location: 'Karachi, PK',
+      city: 'Karachi',
+      country: 'Pakistan',
+      profession: 'Doctor',
+      marriageTimeline: 'within_1_year',
+      photos: []
+    };
+
+    vi.spyOn(dbService, 'fetchLikedYouCandidates').mockResolvedValue([candidateWhoLikedMe]);
+    vi.spyOn(dbService, 'fetchLikesRemaining').mockResolvedValue({
+      likesRemaining: 10,
+      isVip: false
+    } as any);
+
+    render(
+      <MatchesLikedYouScreen
+        onOpenChat={handleOpenChat}
+        onOpenDiscover={handleOpenDiscover}
+        onOpenSubscription={handleOpenSubscription}
+        initialTab="received"
+      />
+    );
+
+    // Wait for Candidate to render
+    await waitFor(() => {
+      expect(screen.getByText(/Ayesha/i)).toBeDefined();
+    });
+
+    // Find the Like Back (VIP) button
+    const likeBackBtn = screen.getByRole('button', { name: /Like Back \(VIP\)/i });
+    fireEvent.click(likeBackBtn);
+
+    // Verify onOpenSubscription was called to redirect user
+    expect(handleOpenSubscription).toHaveBeenCalled();
+    // And onOpenChat was NOT called because they are not VIP
+    expect(handleOpenChat).not.toHaveBeenCalled();
+  });
 });

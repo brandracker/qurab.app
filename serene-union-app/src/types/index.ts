@@ -121,6 +121,8 @@ export interface ChatMessage {
   actionUrl?: string;
   actionLabel?: string;
   isOfficial?: boolean;
+  salamSenderId?: string | null;
+  isDirectSalamPending?: boolean;
 }
 
 export interface Conversation {
@@ -141,6 +143,8 @@ export interface Conversation {
   isPhotoRevealed?: boolean;
   lastMessageTimestamp?: number;
   isOfficial?: boolean;
+  salamSenderId?: string | null;
+  isDirectSalamPending?: boolean;
 }
 
 

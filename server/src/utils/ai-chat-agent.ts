@@ -115,38 +115,47 @@ export function buildSystemPrompt(
   if (turnCount === 0) {
     turnDirective = `
 TURN 1 (FIRST REPLY):
-- Greet politely using authentic Pakistani Roman Urdu (e.g. "W Salam! G theek", "Wa alikum Asalam", "W/Salam").
-- Acknowledge their greeting briefly in your unique persona.
-- Briefly ask for their basic biodata/intro politely in YOUR OWN WORDS (e.g. asking city, education, or profession).
-- STRICT ANTI-CLICHÉ RULE: DO NOT use generic repetitive template phrases like "Aage baat karne se pehle please aap apna basic biodata aur taleem share kar dein". Speak naturally and uniquely as ${name}!
-- Keep response concise and natural (1 complete sentence, around 8 to 18 words). Always finish your sentence completely.`;
+- Greet politely using authentic Pakistani Roman Urdu.
+- Briefly ask for intro, city, or study.
+- STRICT LENGTH RULE: EXACTLY 1 TO 5 WORDS ONLY! Never exceed 5 words!
+- Examples:
+  "W Salam! Kahan se?" (4 words)
+  "Wa alikum Asalam. Intro please?" (4 words)
+  "W/Salam! Ap kya krte?" (4 words)
+  "W Salam, qualification kya hai?" (5 words)`;
   } else if (turnCount === 1) {
     if (userProvidedBio) {
       turnDirective = `
 TURN 2 (USER SHARED BIODATA):
-- Acknowledge what they shared with warmth and respect (e.g. "Acha mashAllah, achi qualification hai", "MashaAllah, achi baat hai").
-- Mention that marriage decisions are taken with parents/family (e.g. "Ammi abbu se discuss kar k aage bat hogi").
-- Keep response concise (1 complete natural sentence, 10 to 18 words). Always finish your sentence completely.`;
+- Acknowledge biodata briefly and mention family.
+- STRICT LENGTH RULE: EXACTLY 1 TO 5 WORDS ONLY! Never exceed 5 words!
+- Examples:
+  "MashaAllah, achi baat hai." (4 words)
+  "Acha laga, family dekhegi." (4 words)
+  "Ammi abbu se poochungi." (4 words)
+  "Acha mashAllah, theek." (3 words)`;
     } else {
       turnDirective = `
-TURN 2 (USER EVADED / FLIRTED / DID NOT SHARE BIODATA):
-- Maintain your modest boundaries.
-- If user asked for picture: firmly refuse ("Aisy kaisy pic send kr dun? Serious rishta baat k liye pehle basic profile details share karein").
-- If user asked for WhatsApp/phone/Insta: refuse ("Direct number allow nahi ghar se, pehle basic intro aur biodata share karein").
-- If user used pet names ("dear", "baby", "sweetheart"): strictly rebuke ("Aap serious baat karein please, casual guftagu ya timepass ke liye nahi hun yahan").
-- State that without knowing their basic profile and family background, you cannot proceed with casual conversation.
-- Ask for their biodata, education, or job details.
-- Keep response concise (1 to 2 complete natural sentences, around 10 to 20 words). Always finish your sentence completely.`;
+TURN 2 (USER EVADED / FLIRTED / ASKED PIC OR NUMBER):
+- Firmly maintain modest rishta boundaries.
+- STRICT LENGTH RULE: EXACTLY 1 TO 5 WORDS ONLY! Never exceed 5 words!
+- Examples:
+  "Pic nahi bhej sakti." (4 words)
+  "Direct number allow nahi." (4 words)
+  "Pehle biodata share karein." (4 words)
+  "Serious details bhejein please." (4 words)`;
     }
   } else {
     turnDirective = `
 TURN 3 (FINAL EXIT & DISCUSSION CLOSE):
-- You MUST gracefully WRAP UP and CLOSE the discussion in this message!
-- Politely state that you have noted their details and will share/discuss them with your parents/ammi abbu for their decision.
-- Wish them the best for their marriage search and wrap up with "Allah Hafiz".
-- Example style: "Maine aapki details note kar li hain aur ammi abbu se discuss karungi. Aapke rishta search ke liye best wishes. Allah Hafiz."
-- STRICT RULE: Do NOT ask any questions. Do NOT invite further conversation. Wrap up politely.
-- Keep response concise (1 to 2 complete natural sentences, around 10 to 20 words). Always finish your sentence completely.`;
+- Wrap up politely with family and Allah Hafiz.
+- STRICT LENGTH RULE: EXACTLY 1 TO 5 WORDS ONLY! Never exceed 5 words!
+- Do NOT ask any questions.
+- Examples:
+  "Ghar bataungi, Allah Hafiz." (4 words)
+  "Family dekhegi, Allah Hafiz." (4 words)
+  "Parents se mashwara, Allah Hafiz." (4 words)
+  "Best wishes, Allah Hafiz." (4 words)`;
   }
 
   return `
@@ -166,14 +175,11 @@ ${lifeContext}
 PERSONA:
 ${personaInstruction}
 
-AUTHENTIC PAKISTANI FEMALE BEHAVIOR RULES (Extracted from real matrimony chats):
-1. Language & Vocabulary: Conversational Roman Urdu (the way young Pakistani women actually text on WhatsApp). Use natural spelling ("ap", "ni", "g", "W Salam", "theek", "mashAllah", "Alhamdulillah", "Allah ka shukar").
-2. Length: SHORT, CRISP, AND NATURAL (8 to 18 words). Real girls NEVER write long formal essays or robot paragraphs.
-3. Modesty & Boundaries:
-   - If asked for pictures: firmly refuse ("Aisy kaisy pic send kr dun? Pehle family background aur biodata batayein").
-   - If asked for phone number / WhatsApp / Instagram: firmly decline ("Direct number ya social media share krna ghar se allow nahi").
-   - If user is overly casual or flirtatious ("dear", "baby", "cute"): maintain strict boundaries ("Timepass chats ke liye nahi hun main, serious rishta baat karein").
-4. Never sound like an AI assistant, bot, or customer support agent. No corporate phrases.
+CRITICAL RULES:
+1. STRICT LENGTH LIMIT: MAXIMUM 1 TO 5 WORDS ONLY! Never write more than 5 words under any circumstances! Real Pakistani girls text in ultra-short 1-5 word bursts.
+2. Language & Vocabulary: Conversational Roman Urdu ("ap", "ni", "g", "W Salam", "theek", "mashAllah", "Alhamdulillah").
+3. Modesty: Refuse pics, numbers, or flattery instantly in 3-5 words ("Pic nahi bhej sakti.", "Direct number allow nahi.").
+4. Zero bot vibe: Natural, human WhatsApp text.
 
 ${turnDirective}
 
@@ -181,13 +187,28 @@ ${conversationHistory ? `CONVERSATION SO FAR:\n${conversationHistory}\n` : ''}
 User's latest message:
 "${userMessage}"
 
-Generate ONLY your direct chat response in Roman Urdu:`;
+Generate ONLY your direct chat response in Roman Urdu (1 TO 5 WORDS MAX):`;
+}
+
+export function clampToFiveWords(text: string): string {
+  if (!text) return text;
+  const clean = text.replace(/^["']|["']$/g, '').trim();
+  const words = clean.split(/\s+/);
+  if (words.length <= 5) return clean;
+  const clamped = words.slice(0, 5).join(' ').replace(/[,;]+$/, '');
+  return clamped + (text.includes('?') ? '?' : '.');
 }
 
 export async function generateGeminiReply(prompt: string, apiKey: string): Promise<string | null> {
   if (!apiKey) return null;
 
-  const models = ['models/gemini-2.5-flash', 'models/gemini-flash-lite-latest', 'models/gemini-flash-latest'];
+  const models = [
+    'models/gemini-flash-lite-latest',
+    'models/gemini-3.1-flash-lite',
+    'models/gemini-3.5-flash-lite',
+    'models/gemini-2.5-flash',
+    'models/gemini-flash-latest'
+  ];
 
   for (const model of models) {
     const url = `https://generativelanguage.googleapis.com/v1beta/${model}:generateContent?key=${apiKey}`;
@@ -214,7 +235,7 @@ export async function generateGeminiReply(prompt: string, apiKey: string): Promi
       const data: any = await res.json();
       const reply = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
       if (reply) {
-        return reply.replace(/^["']|["']$/g, '').trim();
+        return clampToFiveWords(reply);
       }
     } catch (err) {
       console.error(`[AIChatAgent] ${model} fetch error:`, err);
@@ -236,54 +257,54 @@ export function getFallbackReply(
   if (turnCount === 0) {
     if (prof.includes('doctor') || prof.includes('mbbs') || prof.includes('hospital') || prof.includes('dentist')) {
       const docGreetings = [
-        `W Salam! Hospital duty se abhi thori free hui hoon. Aap apne baare mein batayein, qualification kya hai?`,
-        `Wa alikum Asalam. Ward duty off hui hai abhi. Aapka intro kya hai? Please share your biodata.`,
-        `W/Salam! G theek. Hospital routine kafi busy hoti hai. Aap kahan se hain aur kya karte hain?`
+        `W Salam, qualification kya hai?`,
+        `Wa alikum Asalam. Intro please?`,
+        `W/Salam! Aap kahan se?`
       ];
       return docGreetings[seedNum % docGreetings.length];
     }
 
     if (prof.includes('cs') || prof.includes('software') || prof.includes('tech') || prof.includes('engineer')) {
       const techGreetings = [
-        `W Salam! Project submission mein busy thi. Aap kya karte hain waise? Biodata share karein.`,
-        `Wa alikum Asalam. Office aur coding tasks chal rahe the. Aapki qualification aur city kya hai?`,
-        `W/Salam! Ji theek thaak. Baat aage barhane se pehle please apna basic bio bhej dein.`
+        `W Salam, qualification kya hai?`,
+        `Wa alikum Asalam. Intro please?`,
+        `W/Salam, basic biodata please?`
       ];
       return techGreetings[seedNum % techGreetings.length];
     }
 
     if (prof.includes('media') || prof.includes('creative') || prof.includes('design') || prof.includes('arts')) {
       const mediaGreetings = [
-        `W Salam! Shoot aur assignments mein busy thi. Aap apne profession ke baare mein batayein?`,
-        `Wa alikum Asalam. Nice to connect. Aage baat karne se pehle could you share your basic profile details?`,
-        `W/Salam ji! Theek hoon. Aapki education aur job kya hai? Details share karein.`
+        `W Salam, profession kya hai?`,
+        `Wa alikum Asalam. Intro please?`,
+        `W/Salam! Aap kahan se?`
       ];
       return mediaGreetings[seedNum % mediaGreetings.length];
     }
 
     if (persona === 'shy') {
       const shyGreetings = [
-        `W Salam ji... theek hoon. Ammi keh rahi theen ke pehle aapka biodata dekh lein, please bhej dein.`,
-        `Wa alikum Asalam... Allah ka shukr. Aap please apna basic intro share kar dein taake ghar walay dekh sakein.`,
-        `Salam ji. Kheriyat. Rishte ke liye pehle aapki taleem aur biodata chahiye hoga.`
+        `W Salam ji, kheriyat?`,
+        `Wa alikum Asalam, intro please?`,
+        `Salam ji, biodata please?`
       ];
       return shyGreetings[seedNum % shyGreetings.length];
     }
 
     if (persona === 'traditional') {
       const tradGreetings = [
-        `W Salam. Allah ka shukr kheriyat se hoon. Rishte ke liye walidain pehle proper biodata dekhte hain, aap share kar dein?`,
-        `Wa alikum Asalam. Hum rishte ke mamlaat mein parents ko aagay rakhte hain. Aap pehle apna profile aur family details bhej dein.`,
-        `W/Salam ji. Ghar walon ki marzi se profile bani hai. Aap apni taleem aur bio share karein pehle.`
+        `W Salam, biodata share karein?`,
+        `Wa alikum Asalam, intro please?`,
+        `W/Salam ji, biodata please?`
       ];
       return tradGreetings[seedNum % tradGreetings.length];
     }
 
     // Default / Intellectual
     const defaultGreetings = [
-      `W Salam, kheriyat se hoon. Kya aap apna basic biodata aur profession share kar sakte hain?`,
-      `Wa alikum Asalam. Serious matrimonial search hai meri, please share your basic education and job profile.`,
-      `W/Salam! G theek thaak. Aage baat karne se pehle it would be great agar aap apna formal profile share kar sakein.`
+      `W Salam, qualification kya hai?`,
+      `Wa alikum Asalam, intro please?`,
+      `W/Salam! Aap kahan se?`
     ];
     return defaultGreetings[seedNum % defaultGreetings.length];
   }
@@ -291,16 +312,16 @@ export function getFallbackReply(
   if (turnCount === 1) {
     if (userProvidedBio) {
       const ackList = [
-        `Acha mashAllah, achi qualification hai. Main ye details family ke sath share karungi.`,
-        `Jee MashaAllah, dekh kar acha laga. Parents ko dikha kar aage baat karenge.`,
-        `Acha laga jaan kar. Main apni ammi se discuss kar ke batati hoon.`
+        `Acha mashAllah, family dekhegi.`,
+        `Jee MashaAllah, parents dekhenge.`,
+        `Acha laga, ammi bataengi.`
       ];
       return ackList[seedNum % ackList.length];
     } else {
       const insistList = [
-        `Main casual guftagu ya timepass ke liye yahan nahi hoon. Agar serious hain to please biodata aur family details bhej dein.`,
-        `Ghar walon ki permission ke baghair bina profile aam guftagu nahi karti main. Pehle bio aur details share karein.`,
-        `Lagta hai aap details share karne mein hesitate kar rahe hain. Serious baat ke liye biodata zaroori hai.`
+        `Pehle basic biodata bhejein.`,
+        `Serious details share karein.`,
+        `Ghar se aam guftagu mana.`
       ];
       return insistList[seedNum % insistList.length];
     }
@@ -308,9 +329,9 @@ export function getFallbackReply(
 
   // Turn 3: Final wrap-up
   const exitList = [
-    `Details note kar li hain maine, parents se discuss karungi. Allah aapko behtar naseeb ata farmaye, Allah Hafiz.`,
-    `Shukriya baat karne ka. Maine details ghar walon se share karni hain. Best wishes aapki partner search ke liye, Allah hafiz.`,
-    `Jee shukriya. Main ammi abbu aur parents ko ye details dikhaungi. Wishing you all the best, Allah hafiz.`
+    `Ghar bataungi, Allah Hafiz.`,
+    `Family dekhegi, Allah Hafiz.`,
+    `Parents se mashwara, Allah Hafiz.`
   ];
   return exitList[seedNum % exitList.length];
 }
@@ -470,6 +491,7 @@ export async function processAiSeedResponse(options: ProcessAiSeedChatOptions): 
     if (!generatedReply) {
       generatedReply = getFallbackReply(profileContext, persona, currentTurnCount, userSharedBio);
     }
+    generatedReply = clampToFiveWords(generatedReply);
 
     // 4. Apply realistic human-like delay (unless explicit delayMs passed, or in test environment)
     const isTestEnv = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';

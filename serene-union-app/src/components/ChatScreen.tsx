@@ -22,6 +22,8 @@ import { webRtcService, type CallType, type CallerInfo } from '../services/webRt
 import { MembershipUpgradeModal } from './MembershipUpgradeModal';
 import { isUserOnline } from '../utils/onlineStatus';
 import { extractPartnerIdFromConvId, getCanonicalConversationId } from '../utils/conversation';
+import { formatDisplayName } from '../utils/formatters';
+import { backNavigationService } from '../services/backNavigationService';
 
 interface ChatVideoPlayerProps {
   src: string;
@@ -177,10 +179,11 @@ const ChatVideoPlayer: React.FC<ChatVideoPlayerProps> = ({ src, className, onOpe
 
 interface Props {
   initialConvId?: string;
+  onActiveConvChange?: (convId: string | null) => void;
   onBackToDiscover: () => void;
 }
 
-export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover }) => {
+export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange, onBackToDiscover }) => {
   const [conversations, setConversations] = useState<Conversation[]>(() => dbService.getConversations());
   const [activeConvId, setActiveConvId] = useState<string | null>(initialConvId || null);
   const [inputText, setInputText] = useState<string>('');
@@ -273,6 +276,75 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
 
   // WebRTC VIP Gating State
   const [showVipModalForCalling, setShowVipModalForCalling] = useState<boolean>(false);
+
+  // Hardware and Web Back-Button Interceptor
+  useEffect(() => {
+    const unregister = backNavigationService.register(() => {
+      // 1. Lightbox / Preview Modals
+      if (lightboxMedia) {
+        setLightboxMedia(null);
+        return true;
+      }
+      if (pendingAttachment) {
+        setPendingAttachment(null);
+        return true;
+      }
+      // 2. Biodata Profile Modal
+      if (selectedProfile) {
+        setSelectedProfile(null);
+        return true;
+      }
+      // 3. Modals and Dropdowns
+      if (showBlockModal) {
+        setShowBlockModal(false);
+        return true;
+      }
+      if (showRespectfulCloseModal) {
+        setShowRespectfulCloseModal(false);
+        return true;
+      }
+      if (showMoreMenu) {
+        setShowMoreMenu(false);
+        return true;
+      }
+      if (showVipModalForCalling) {
+        setShowVipModalForCalling(false);
+        return true;
+      }
+      // 4. In-Room Chat: Close active conversation and return to Chat Menu/List
+      if (activeConvId) {
+        setActiveConvId(null);
+        if (onActiveConvChange) onActiveConvChange(null);
+        return true;
+      }
+      // 5. Multi-select mode in conversation list
+      if (isSelectMode) {
+        setIsSelectMode(false);
+        setSelectedConvIds(new Set());
+        return true;
+      }
+      return false; // Delegate up to App.tsx (e.g. switch to Discover tab)
+    });
+    return unregister;
+  }, [
+    lightboxMedia,
+    pendingAttachment,
+    selectedProfile,
+    showBlockModal,
+    showRespectfulCloseModal,
+    showMoreMenu,
+    showVipModalForCalling,
+    activeConvId,
+    isSelectMode,
+    onActiveConvChange
+  ]);
+
+  // Synchronize active conversation with parent App.tsx
+  useEffect(() => {
+    if (onActiveConvChange) {
+      onActiveConvChange(activeConvId);
+    }
+  }, [activeConvId, onActiveConvChange]);
 
 
 
@@ -1674,7 +1746,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                       )}
                     </div>
                     <span className="text-[11px] font-semibold text-slate-800 mt-1.5 max-w-[62px] truncate group-hover:text-primary transition-colors">
-                      {match.fullName?.split(' ')[0] || 'Match'}
+                      {formatDisplayName(match.fullName).split(' ')[0] || 'Match'}
                     </span>
                   </button>
                 ))}
@@ -1820,7 +1892,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                           }`}
                           title={isConvOfficial ? "Qurb Official Channel" : "Click to view full biodata"}
                         >
-                          <span>{isConvOfficial ? 'Qurb Team' : (partner.fullName || 'Member').replace(/✓/g, '').trim()}</span>
+                          <span>{isConvOfficial ? 'Qurb Team' : formatDisplayName(partner.fullName, 'Member')}</span>
                           {isConvOfficial && (
                             <VerifiedBlueTick size={15} className="ml-0.5" />
                           )}
@@ -1916,11 +1988,15 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
   return (
     <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden font-sans select-none pb-0 text-on-surface">
       {/* Chat Top Header */}
-      <header className="sticky top-0 bg-white/95 backdrop-blur-md px-3.5 py-2.5 border-b border-slate-100 flex items-center justify-between z-20 shadow-xs">
-        <div className="flex items-center gap-2.5 min-w-0">
+      <header className="sticky top-0 bg-white/95 backdrop-blur-md px-3 py-2 border-b border-slate-100 flex items-center justify-between z-20 shadow-xs gap-2">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
           <button
-            onClick={() => setActiveConvId(null)}
+            onClick={() => {
+              setActiveConvId(null);
+              if (onActiveConvChange) onActiveConvChange(null);
+            }}
             className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200/80 flex items-center justify-center text-slate-700 hover:bg-slate-200 transition-colors shrink-0 cursor-pointer"
+            title="Back to conversations"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
@@ -1933,7 +2009,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
             className={`relative shrink-0 ${!isOfficialChannel ? 'cursor-pointer group/avatar' : ''}`}
             title={isOfficialChannel ? "Qurb Official Channel" : "Click to view full biodata"}
           >
-            <div className={`w-10 h-10 rounded-full overflow-hidden border flex items-center justify-center transition-all shadow-subtle ${
+            <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden border flex items-center justify-center transition-all shadow-subtle ${
               isOfficialChannel ? 'border-primary/20 bg-pastel-rose/50' : 'border-slate-200 group-hover/avatar:border-primary/60 bg-surface-variant ring-1 ring-primary/20'
             }`}>
               {isOfficialChannel ? (
@@ -1980,9 +2056,9 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
             </div>
             {!isOfficialChannel && (
               isUserOnline(activeConv?.otherUser) ? (
-                <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full shadow-2xs" title="Online" />
+                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full shadow-2xs" title="Online" />
               ) : (
-                <span className="absolute bottom-0 right-0 w-3 h-3 bg-amber-400 border-2 border-white rounded-full shadow-2xs" title="Offline / Away" />
+                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-amber-400 border-2 border-white rounded-full shadow-2xs" title="Offline / Away" />
               )
             )}
           </div>
@@ -1992,21 +2068,21 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
             onClick={() => {
               if (!isOfficialChannel && activeConv?.otherUser) setSelectedProfile(activeConv.otherUser);
             }}
-            className={`flex flex-col min-w-0 ${!isOfficialChannel ? 'cursor-pointer group' : ''}`}
+            className={`flex flex-col min-w-0 flex-1 ${!isOfficialChannel ? 'cursor-pointer group' : ''}`}
             title={isOfficialChannel ? "Qurb Official Channel" : "Click to view full biodata"}
           >
-            <h2 className="font-serif font-bold text-xs text-on-surface group-hover:text-primary transition-colors truncate flex items-center gap-1.5">
-              <span>{isOfficialChannel ? 'Qurb Team' : (activeConv?.otherUser?.fullName || '').replace(/✓/g, '').trim()}</span>
+            <h2 className="font-serif font-bold text-xs sm:text-sm text-on-surface group-hover:text-primary transition-colors truncate flex items-center gap-1">
+              <span className="truncate">{isOfficialChannel ? 'Qurb Team' : formatDisplayName(activeConv?.otherUser?.fullName)}</span>
               {isOfficialChannel && (
-                <VerifiedBlueTick size={15} />
+                <VerifiedBlueTick size={14} />
               )}
             </h2>
-            <div className="text-[10px] text-secondary truncate flex items-center gap-1.5">
+            <div className="text-[10px] text-secondary truncate flex items-center gap-1.5 mt-0.5">
               {isOfficialChannel ? (
                 'Verified Channel · Official Updates'
               ) : (
                 <>
-                  <span className="truncate">{activeConv?.otherUser?.profession || 'Member'} · {activeConv?.otherUser?.city || activeConv?.otherUser?.location || 'Global'}</span>
+                  <span className="truncate">{activeConv?.otherUser?.profession || 'Member'}</span>
                   <span className="w-1 h-1 rounded-full bg-slate-300 shrink-0" />
                   {isUserOnline(activeConv?.otherUser) ? (
                     <span className="flex items-center gap-1 text-emerald-600 font-semibold shrink-0">
@@ -2033,9 +2109,9 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
               <button
                 type="button"
                 onClick={() => handleStartCall('audio')}
-                className={`w-8.5 h-8.5 rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-xs ${
+                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-2xs ${
                   currentUser.isVip 
-                    ? 'bg-gradient-to-tr from-emerald-50 to-teal-50 hover:from-emerald-100 hover:to-teal-100 text-emerald-700 border border-emerald-300/80 shadow-emerald-500/10' 
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-300/80 hover:bg-emerald-100' 
                     : 'bg-surface-variant hover:bg-outline text-secondary border border-outline'
                 }`}
                 title={currentUser.isVip ? "Audio Call (VIP)" : "Audio Call (Requires Barakah VIP)"}
@@ -2047,9 +2123,9 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
               <button
                 type="button"
                 onClick={() => handleStartCall('video')}
-                className={`w-8.5 h-8.5 rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-xs ${
+                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-2xs ${
                   currentUser.isVip 
-                    ? 'bg-gradient-to-tr from-sky-50 to-indigo-50 hover:from-sky-100 hover:to-indigo-100 text-sky-700 border border-sky-300/80 shadow-sky-500/10' 
+                    ? 'bg-sky-50 text-sky-700 border border-sky-300/80 hover:bg-sky-100' 
                     : 'bg-surface-variant hover:bg-outline text-secondary border border-outline'
                 }`}
                 title={currentUser.isVip ? "Video Call (VIP)" : "Video Call (Requires Barakah VIP)"}
@@ -2057,19 +2133,21 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                 <Video className={`w-3.5 h-3.5 ${currentUser.isVip ? 'text-sky-700' : 'text-secondary'}`} />
               </button>
 
+              {/* Biodata Button (Sleek Icon Only) */}
               <button
+                type="button"
                 onClick={() => {
                   if (activeConv?.otherUser) setSelectedProfile(activeConv.otherUser);
                 }}
-                className="text-xs text-primary font-bold bg-pastel-rose hover:bg-pastel-rose/80 px-3 py-1.5 rounded-full border border-pastel-rose-border transition-all flex items-center gap-1.5 shadow-2xs active:scale-95"
+                className="w-8 h-8 rounded-full bg-pastel-rose hover:bg-pastel-rose/80 text-primary border border-pastel-rose-border flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-2xs"
                 title="View Full Biodata"
               >
                 <FileText className="w-3.5 h-3.5" />
-                <span>Biodata</span>
               </button>
 
               {/* 3-Dots Menu Button */}
               <button
+                type="button"
                 onClick={() => setShowMoreMenu(prev => !prev)}
                 className="w-8 h-8 rounded-full bg-surface-variant hover:bg-outline border border-outline flex items-center justify-center text-secondary hover:text-on-surface transition-all active:scale-95"
                 title="More options"
@@ -2079,13 +2157,25 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
             </>
           )}
 
-          {/* 3-Dots Dropdown Menu */}
+          {/* 3-Dots Dropdown Menu with View Full Biodata */}
           {showMoreMenu && (
             <div 
               className="absolute right-0 top-10 w-48 bg-white rounded-2xl shadow-xl border border-outline py-1.5 z-50 animate-fade-in divide-y divide-outline text-left"
               onClick={() => setShowMoreMenu(false)}
             >
               <button
+                type="button"
+                onClick={() => {
+                  setShowMoreMenu(false);
+                  if (activeConv?.otherUser) setSelectedProfile(activeConv.otherUser);
+                }}
+                className="w-full px-3.5 py-2.5 text-xs text-on-surface hover:text-primary hover:bg-surface-variant flex items-center gap-2.5 transition-colors font-medium text-left"
+              >
+                <FileText className="w-4 h-4 text-primary shrink-0" />
+                <span className="font-semibold">View Full Biodata</span>
+              </button>
+              <button
+                type="button"
                 onClick={handleToggleRevealPhotos}
                 className="w-full px-3.5 py-2.5 text-xs text-on-surface hover:text-primary hover:bg-surface-variant flex items-center gap-2.5 transition-colors font-medium text-left"
               >
@@ -2102,6 +2192,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                 )}
               </button>
               <button
+                type="button"
                 onClick={() => setShowRespectfulCloseModal(true)}
                 className="w-full px-3.5 py-2.5 text-xs text-secondary hover:text-primary hover:bg-surface-variant flex items-center gap-2.5 transition-colors font-medium text-left"
               >
@@ -2109,6 +2200,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onBackToDiscover })
                 <span>Close with Du'a</span>
               </button>
               <button
+                type="button"
                 onClick={() => setShowBlockModal(true)}
                 className="w-full px-3.5 py-2.5 text-xs text-rose-600 hover:bg-rose-50 flex items-center gap-2.5 transition-colors font-medium text-left"
               >

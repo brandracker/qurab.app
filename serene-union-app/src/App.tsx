@@ -555,7 +555,13 @@ export const App: React.FC = () => {
       });
     }
 
+    const handlePopState = () => {
+      handleHardwareBack();
+    };
+    window.addEventListener('popstate', handlePopState);
+
     return () => {
+      window.removeEventListener('popstate', handlePopState);
       if (listenerHandle?.remove) {
         listenerHandle.remove();
       }
@@ -1109,8 +1115,9 @@ export const App: React.FC = () => {
 
               {activeTab === 'chat' && (
                 <ChatScreen
-                  key={activeConvId || 'conversations_list'}
+                  key="chat_screen_main"
                   initialConvId={activeConvId || undefined}
+                  onActiveConvChange={(id) => setActiveConvId(id)}
                   onBackToDiscover={() => setActiveTab('discover')}
                 />
               )}

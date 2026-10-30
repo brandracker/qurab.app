@@ -1177,7 +1177,7 @@ chatRouter.post('/call/initiate', async (c) => {
           token: recipientUser.fcm_token,
           title: `Incoming ${callTypeName}`,
           body: `${callerFirstName} is calling you on Qurb...`,
-          channelId: 'qurb_calls',
+          channelId: 'qurb_calls_v2',
           isCall: true,
           data: {
             type: 'incoming_call',
@@ -1195,7 +1195,11 @@ chatRouter.post('/call/initiate', async (c) => {
       );
     }
 
-    return c.json({ success: true, message: 'Call push notification queued' });
+    return c.json({
+      success: true,
+      message: 'Call push notification queued',
+      hasFcmToken: Boolean(recipientUser?.fcm_token)
+    });
   } catch (err: any) {
     return c.json({ success: false, error: err.message }, 500);
   }

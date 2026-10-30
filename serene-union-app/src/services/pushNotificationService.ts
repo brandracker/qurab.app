@@ -46,7 +46,7 @@ class PushNotificationService {
       });
 
       await PushNotifications.createChannel({
-        id: 'qurb_calls',
+        id: 'qurb_calls_v2',
         name: 'Incoming Calls',
         description: 'Full-screen incoming audio and video calls',
         importance: 5,
@@ -173,9 +173,39 @@ class PushNotificationService {
         }
       });
 
+      // 8. Check if native Android cold boot captured a pending incoming call
+      if (typeof window !== 'undefined' && window.AndroidAudioBridge?.getPendingIncomingCall) {
+        try {
+          const pendingJson = window.AndroidAudioBridge.getPendingIncomingCall();
+          if (pendingJson) {
+            const pendingData = JSON.parse(pendingJson);
+            if (pendingData && pendingData.type === 'incoming_call') {
+              console.log('[Push] Dispatching native pending incoming call from cold boot:', pendingData);
+              window.dispatchEvent(
+                new CustomEvent('qurb_incoming_call_push', { detail: pendingData })
+              );
+            }
+          }
+        } catch (e) {
+          console.warn('[Push] Error reading native pending call:', e);
+        }
+      }
+
     } catch (err) {
       console.warn('[Push] Initialization notice:', err);
     }
+  }
+
+  /**
+   * Syncs saved user FCM token with Cloudflare D1
+   */
+  async syncSavedToken(userId: string): Promise<boolean> {
+    if (!userId || userId === 'usr_guest') return false;
+    const token = localStorage.getItem('qurb_fcm_token');
+    if (token) {
+      return await this.syncTokenWithBackend(userId, token);
+    }
+    return false;
   }
 
   /**

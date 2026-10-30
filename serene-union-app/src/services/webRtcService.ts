@@ -10,6 +10,7 @@ declare global {
       setCallMode: (inCall: boolean) => void;
       setSpeakerphoneOn: (on: boolean) => void;
       isSpeakerphoneOn: () => boolean;
+      getPendingIncomingCall?: () => string | null;
     };
   }
 }
@@ -315,6 +316,8 @@ export class WebRtcService {
           callerInfo: currentUserInfo,
           conversationId: `conv_${[this.currentUserId || currentUserInfo.id, partnerId].sort().join('_')}`
         })
+      }).then(r => r.json()).then(res => {
+        console.log('[WebRTC] Call initiate push notification response:', res);
       }).catch(err => {
         console.warn('Call initiate push notification notice:', err);
       });

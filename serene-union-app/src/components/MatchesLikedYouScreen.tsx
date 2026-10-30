@@ -29,6 +29,7 @@ import { isUserOnline } from '../utils/onlineStatus';
 
 import { ProfileDetailModal } from './ProfileDetailModal';
 import { getCanonicalConversationId } from '../utils/conversation';
+import { formatDisplayName, formatTimeline } from '../utils/formatters';
 
 interface Props {
   onOpenChat: (convId: string) => void;
@@ -578,7 +579,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
                     <div className="p-2.5 flex-1 flex flex-col justify-between gap-1.5">
                       <div onClick={() => setSelectedProfile(candidate)} className="cursor-pointer">
                         <h3 className="font-serif font-bold text-xs text-slate-800 truncate hover:text-primary transition-colors flex items-center gap-1">
-                          <span className="truncate">{candidate.fullName || 'Member'}</span>
+                          <span className="truncate">{formatDisplayName(candidate.fullName || 'Member')}</span>
                           {!isVip && (
                             <span className="shrink-0 text-[9px] text-amber-800 bg-amber-100/90 font-bold px-1.5 py-0.2 rounded border border-amber-200/60">
                               Liked You
@@ -651,9 +652,10 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
             <div className="space-y-2.5">
               {sentLikes.map(item => {
                 const matchedProf = dbService.getAllProfiles().find(p => p.id === item.id);
-                const displayName = (item.fullName && item.fullName !== 'Candidate' && item.fullName !== 'Member')
+                const rawName = (item.fullName && item.fullName !== 'Candidate' && item.fullName !== 'Member')
                   ? item.fullName
                   : (matchedProf?.fullName || item.fullName || 'Candidate');
+                const displayName = formatDisplayName(rawName);
                 const rawPhotos = (item.photos && item.photos.length > 0)
                   ? item.photos
                   : (matchedProf?.photos && matchedProf.photos.length > 0 ? matchedProf.photos : (item.id && item.id.startsWith('seed_') ? [`/seeds/${item.id}.jpg`] : []));
@@ -682,7 +684,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
                     }}
                     className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] hover:border-primary/40 flex items-center justify-between gap-3 cursor-pointer transition-all duration-200 active:scale-[0.99] group"
                   >
-                    <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
                       <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-sm ring-1 ring-slate-100 flex items-center justify-center shrink-0">
                         {thumbUrl ? (
                           <img
@@ -708,23 +710,23 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
                           {initial}
                         </div>
                       </div>
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <h4 className="font-serif font-bold text-sm text-slate-800 truncate group-hover:text-primary transition-colors">
                           {displayName}
                         </h4>
-                        <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium mt-0.5">
-                          <span className="truncate max-w-[130px]">{profession}</span>
+                        <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium mt-0.5 min-w-0">
+                          <span className="truncate shrink-0 max-w-[120px] sm:max-w-[180px]">{profession}</span>
                           <span className="w-1 h-1 rounded-full bg-slate-300 shrink-0" />
-                          <span className="flex items-center gap-0.5 text-slate-400 shrink-0 truncate max-w-[120px]">
+                          <span className="flex items-center gap-0.5 text-slate-400 truncate min-w-0">
                             <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
-                            {location}
+                            <span className="truncate">{location}</span>
                           </span>
                         </div>
                         {timeline && (
                           <div className="mt-1">
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-rose-50 text-rose-600 border border-rose-100">
                               <Clock className="w-2.5 h-2.5 text-rose-500 shrink-0" />
-                              <span>Timeline: {timeline.replace(/_/g, ' ')}</span>
+                              <span>Timeline: {formatTimeline(timeline)}</span>
                             </span>
                           </div>
                         )}
@@ -822,10 +824,10 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
                           {initial}
                         </div>
                       </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 min-w-0">
                           <h4 className="font-serif font-bold text-sm text-slate-800 group-hover:text-primary transition-colors truncate">
-                            {match.fullName}
+                            {formatDisplayName(match.fullName)}
                           </h4>
                           {isUserOnline(match) ? (
                             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-100 shrink-0 shadow-2xs" title="Online" />
@@ -834,21 +836,21 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
                           )}
                         </div>
 
-                        <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium mt-0.5">
-                          <span className="text-primary font-semibold truncate max-w-[130px]">{match.profession || 'Professional'}</span>
+                        <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium mt-0.5 min-w-0">
+                          <span className="text-primary font-semibold truncate shrink-0 max-w-[110px] sm:max-w-[180px]">{match.profession || 'Professional'}</span>
                           <span className="w-1 h-1 rounded-full bg-slate-300 shrink-0" />
-                          <span className="flex items-center gap-0.5 text-slate-400 shrink-0 truncate max-w-[120px]">
+                          <span className="flex items-center gap-0.5 text-slate-400 truncate min-w-0">
                             <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
-                            {match.location}
+                            <span className="truncate">{match.location}</span>
                           </span>
                         </div>
-                        <span className="text-[10px] text-slate-400 mt-0.5 block">
+                        <span className="text-[10px] text-slate-400 mt-0.5 block truncate">
                           Tap to chat · Tap eye for biodata
                         </span>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0">
                       <button
                         type="button"
                         onClick={(e) => {
@@ -856,9 +858,9 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
                           setSelectedProfile(match);
                         }}
                         title="View Full Profile"
-                        className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 hover:text-primary hover:bg-slate-200 flex items-center justify-center transition-colors shadow-2xs active:scale-95"
+                        className="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 hover:text-primary hover:bg-slate-200 flex items-center justify-center transition-colors shadow-2xs active:scale-95"
                       >
-                        <Eye className="w-4 h-4" />
+                        <Eye className="w-3.5 h-3.5" />
                       </button>
 
                       <button
@@ -868,7 +870,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
                           const newConv = dbService.createMatchConversation(match);
                           onOpenChat(newConv.id);
                         }}
-                        className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white text-xs font-bold flex items-center gap-1.5 shadow-brand hover:brightness-105 active:scale-95 transition-all"
+                        className="h-8 px-3 rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white text-xs font-bold flex items-center gap-1 shadow-brand hover:brightness-105 active:scale-95 transition-all"
                       >
                         <MessageCircle className="w-3.5 h-3.5" />
                         <span>Chat</span>
@@ -902,9 +904,10 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
               </p>
               {passedProfiles.map(item => {
                 const matchedProf = dbService.getAllProfiles().find(p => p.id === item.id);
-                const displayName = (item.fullName && item.fullName !== 'Candidate' && item.fullName !== 'Member')
+                const rawName = (item.fullName && item.fullName !== 'Candidate' && item.fullName !== 'Member')
                   ? item.fullName
                   : (matchedProf?.fullName || item.fullName || 'Candidate');
+                const displayName = formatDisplayName(rawName);
                 const rawPhotos = (item.photos && item.photos.length > 0)
                   ? item.photos
                   : (matchedProf?.photos && matchedProf.photos.length > 0 ? matchedProf.photos : (item.id && item.id.startsWith('seed_') ? [`/seeds/${item.id}.jpg`] : []));
@@ -917,7 +920,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
                     key={item.id}
                     className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-[0_2px_8px_rgba(0,0,0,0.03)] flex items-center justify-between gap-3"
                   >
-                    <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
                       <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-white shadow-sm ring-1 ring-slate-100 bg-slate-100 flex items-center justify-center shrink-0">
                         {thumbUrl ? (
                           <img src={thumbUrl} alt={displayName} className="w-full h-full object-cover" />
@@ -927,14 +930,14 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
                           </div>
                         )}
                       </div>
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <h4 className="font-serif font-bold text-xs text-slate-800 truncate">{displayName}</h4>
-                        <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-medium mt-0.5">
-                          <span className="truncate max-w-[120px]">{(matchedProf?.profession || item.profession || 'Professional')}</span>
+                        <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-medium mt-0.5 min-w-0">
+                          <span className="truncate shrink-0 max-w-[110px] sm:max-w-[160px]">{(matchedProf?.profession || item.profession || 'Professional')}</span>
                           <span className="w-1 h-1 rounded-full bg-slate-300 shrink-0" />
-                          <span className="flex items-center gap-0.5 text-slate-400 shrink-0 truncate max-w-[110px]">
+                          <span className="flex items-center gap-0.5 text-slate-400 truncate min-w-0">
                             <MapPin className="w-2.5 h-2.5 text-slate-400 shrink-0" />
-                            {(matchedProf?.location || item.location || 'Global')}
+                            <span className="truncate">{(matchedProf?.location || item.location || 'Global')}</span>
                           </span>
                         </div>
                       </div>

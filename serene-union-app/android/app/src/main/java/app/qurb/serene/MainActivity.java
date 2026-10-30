@@ -12,6 +12,8 @@ import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.BridgeWebChromeClient;
 
 public class MainActivity extends BridgeActivity {
+    public static volatile String sPendingIncomingCallPayload = null;
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(AdMobPlugin.class);
@@ -143,19 +145,29 @@ public class MainActivity extends BridgeActivity {
             String safeConv = conversationId != null ? conversationId : "";
             String safeAction = callAction != null ? callAction : "view";
 
-            String js = "window.dispatchEvent(new CustomEvent('qurb_incoming_call_push', { detail: { " +
-                "type: 'incoming_call'," +
-                "callerId: '" + safeId + "'," +
-                "callerName: '" + safeName + "'," +
-                "callType: '" + safeType + "'," +
-                "callerPhoto: '" + safePhoto + "'," +
-                "conversationId: '" + safeConv + "'," +
-                "callAction: '" + safeAction + "'" +
-                "} }));";
+            String jsonPayload = "{" +
+                "\"type\":\"incoming_call\"," +
+                "\"callerId\":\"" + safeId.replace("\"", "\\\"") + "\"," +
+                "\"callerName\":\"" + safeName.replace("\"", "\\\"") + "\"," +
+                "\"callType\":\"" + safeType.replace("\"", "\\\"") + "\"," +
+                "\"callerPhoto\":\"" + safePhoto.replace("\"", "\\\"") + "\"," +
+                "\"conversationId\":\"" + safeConv.replace("\"", "\\\"") + "\"," +
+                "\"callAction\":\"" + safeAction.replace("\"", "\\\"") + "\"" +
+                "}";
+            sPendingIncomingCallPayload = jsonPayload;
+
+            String js = "window.dispatchEvent(new CustomEvent('qurb_incoming_call_push', { detail: " + jsonPayload + " }));";
             if (getBridge() != null && getBridge().getWebView() != null) {
+                // Multi-stage dispatch to ensure WebView catches incoming call whether already warm or cold-starting
                 getBridge().getWebView().postDelayed(() -> {
                     getBridge().getWebView().evaluateJavascript(js, null);
-                }, 800);
+                }, 600);
+                getBridge().getWebView().postDelayed(() -> {
+                    getBridge().getWebView().evaluateJavascript(js, null);
+                }, 1500);
+                getBridge().getWebView().postDelayed(() -> {
+                    getBridge().getWebView().evaluateJavascript(js, null);
+                }, 2600);
             }
         } else {
             // Handle chat notification or general notification redirection (Cold boot and Background resume)
@@ -256,6 +268,13 @@ public class MainActivity extends BridgeActivity {
                 } catch (Exception ignored) {}
             }
             return false;
+        }
+
+        @JavascriptInterface
+        public String getPendingIncomingCall() {
+            String pending = MainActivity.sPendingIncomingCallPayload;
+            MainActivity.sPendingIncomingCallPayload = null; // consume once
+            return pending;
         }
     }
 }

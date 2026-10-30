@@ -49,8 +49,8 @@ describe('UI & Button Interactions: Matrimonial Chat Screen', () => {
 
     // Verify Partner First Name
     expect(screen.getByText(/Aisha/i)).toBeDefined();
-    // Verify Biodata Header Action Button
-    expect(screen.getByText(/Biodata/i)).toBeDefined();
+    // Verify Biodata Header Action Button (Title / Aria)
+    expect(screen.getAllByTitle(/View Full Biodata/i).length).toBeGreaterThan(0);
   });
 
   it('2. Sends message on clicking Send button and updates message history', () => {

@@ -111,14 +111,15 @@ export async function sendFcmNotification(env: any, payload: FcmPayload): Promis
     const projectId = serviceAccount.project_id || 'marriage-app-1ca27';
     const accessToken = await getGoogleAccessToken(serviceAccount);
 
-    const targetChannel = payload.channelId || (payload.isCall ? 'qurb_calls' : 'qurb_messages');
+    const targetChannel = payload.channelId || (payload.isCall ? 'qurb_calls_v2' : 'qurb_messages');
 
     const isCall = Boolean(payload.isCall);
     const fcmMessage: any = {
       message: {
         token: payload.token,
         android: {
-          priority: 'high'
+          priority: 'high',
+          ...(isCall ? { ttl: '45s' } : {})
         },
         data: {
           ...(payload.data || {}),

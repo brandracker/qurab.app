@@ -29,7 +29,7 @@ import java.util.Map;
  */
 public class QurbFirebaseMessagingService extends MessagingService {
     private static final String TAG = "QurbFCM";
-    public static final String CHANNEL_CALLS_ID = "qurb_calls";
+    public static final String CHANNEL_CALLS_ID = "qurb_calls_v2";
     public static final int CALL_NOTIFICATION_ID = 999999;
 
     @Override
@@ -65,7 +65,7 @@ public class QurbFirebaseMessagingService extends MessagingService {
                     PowerManager.SCREEN_BRIGHT_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP,
                     "qurb:incoming_call_wakelock"
                 );
-                wakeLock.acquire(15000); // Hold screen wake for 15 seconds
+                wakeLock.acquire(30000); // Hold screen wake for 30 seconds while incoming call rings
             }
         } catch (Exception e) {
             Log.w(TAG, "Failed to acquire screen WakeLock: " + e.getMessage());
@@ -174,7 +174,10 @@ public class QurbFirebaseMessagingService extends MessagingService {
             .addAction(android.R.drawable.ic_menu_call, "Accept", acceptPendingIntent);
 
         if (nm != null) {
-            nm.notify(CALL_NOTIFICATION_ID, builder.build());
+            Notification notification = builder.build();
+            // Continuous loop ringtone until answered or dismissed (WhatsApp style)
+            notification.flags |= Notification.FLAG_INSISTENT;
+            nm.notify(CALL_NOTIFICATION_ID, notification);
         }
 
         // Also notify Capacitor plugin in case WebView is active in memory

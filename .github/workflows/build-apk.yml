@@ -133,10 +133,10 @@ jobs:
         continue-on-error: true
         with:
           fail_on_unmatched_files: false
-          tag_name: v1.0.41
-          name: "Qurb v1.0.41 (Build 42 - WhatsApp-Style Background Calling, Looping Ringtone & VIP Matches)"
+          tag_name: v1.0.42
+          name: "Qurb v1.0.42 (Build 43 - WhatsApp-Style Background Calling, Looping Ringtone & VIP Matches)"
           body: |
-            ### Qurb Matrimony v1.0.41 (Build 42)
+            ### Qurb Matrimony v1.0.42 (Build 43)
             - **WhatsApp-Style Background Calling**: Native waking up on incoming VoIP calls even when the app is completely closed/killed.
             - **Continuous Looping Ringtone**: Continuous ringtone and vibration until accepted, declined, or timed out.
             - **Cold-Boot Native Bridge**: Instant launch into call screen without dropping call events during WebView boot.

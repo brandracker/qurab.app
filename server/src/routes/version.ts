@@ -52,9 +52,9 @@ async function handleVersionCheck(c: any) {
       }
     }
 
-    const minSupportedVersionCode = parseInt(configMap['min_supported_version_code'] || '41', 10);
-    const latestVersionCode = parseInt(configMap['latest_version_code'] || '41', 10);
-    const latestVersionName = configMap['latest_version_name'] || '1.0.40';
+    const minSupportedVersionCode = parseInt(configMap['min_supported_version_code'] || '42', 10);
+    const latestVersionCode = parseInt(configMap['latest_version_code'] || '42', 10);
+    const latestVersionName = configMap['latest_version_name'] || '1.0.41';
     const forceUpdateEnabled = configMap['force_update_enabled'] !== undefined 
       ? configMap['force_update_enabled'] === '1' 
       : true;

@@ -133,13 +133,14 @@ jobs:
         continue-on-error: true
         with:
           fail_on_unmatched_files: false
-          tag_name: v1.0.39
-          name: "Qurb v1.0.39 (Build 40 - Blurred Photo Teaser Paywall, VIP Unlock & Direct Salam Approval)"
+          tag_name: v1.0.41
+          name: "Qurb v1.0.41 (Build 42 - WhatsApp-Style Background Calling, Looping Ringtone & VIP Matches)"
           body: |
-            ### Qurb Matrimony v1.0.39 (Build 40)
-            - **Blurred Photo Teaser & VIP Paywall**: Enticing silhouette teaser blur on Liked You screen for non-VIP seekers with gold VIP unlock CTA and candidate preview.
-            - **Direct Salam Approval System**: Instant halal greetings with inline Approve & Connect / Decline actions and pending state protection in chat.
-            - **Dynamic Seed Photo Fallback**: Zero blank photo states across Liked You and Matches Hub with gender-aware deterministic assets.
+            ### Qurb Matrimony v1.0.41 (Build 42)
+            - **WhatsApp-Style Background Calling**: Native waking up on incoming VoIP calls even when the app is completely closed/killed.
+            - **Continuous Looping Ringtone**: Continuous ringtone and vibration until accepted, declined, or timed out.
+            - **Cold-Boot Native Bridge**: Instant launch into call screen without dropping call events during WebView boot.
+            - **Matches & UI Polish**: Clean candidate display names, timeline formatting, and layout stability.
             - **app-release.apk**: Production Signed APK for direct device installation & testing.
             - **app-release.aab**: Production Signed Android App Bundle (.aab) ready for Google Play Console.
           files: |

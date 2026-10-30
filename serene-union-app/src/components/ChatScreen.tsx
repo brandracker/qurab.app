@@ -2439,6 +2439,34 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                 );
               }
 
+              const isAudioMsg = Boolean(
+                msg.mediaUrl && (
+                  msg.mediaType === 'audio' || 
+                  msg.text?.includes('Voice message') || 
+                  msg.text?.includes('🎤') || 
+                  Boolean(msg.mediaUrl.match(/\.(webm|mp3|m4a|wav|aac|ogg)(\?|$)/i))
+                )
+              );
+              const isVideoMsg = Boolean(
+                !isAudioMsg && msg.mediaUrl && (
+                  msg.mediaType === 'video' || 
+                  msg.text?.includes('🎥') || 
+                  Boolean(msg.mediaUrl.match(/\.(mp4|mov|mkv|3gp)(\?|$)/i))
+                )
+              );
+              const isFileMsg = Boolean(
+                !isAudioMsg && !isVideoMsg && msg.mediaUrl && (
+                  msg.mediaType === 'file' || 
+                  Boolean(msg.mediaUrl.match(/\.(pdf|doc|docx|zip|txt)(\?|$)/i))
+                )
+              );
+              const isImageMsg = Boolean(
+                !isAudioMsg && !isVideoMsg && !isFileMsg && msg.mediaUrl && (
+                  msg.mediaType === 'image' || 
+                  Boolean(msg.mediaUrl)
+                )
+              );
+
               return (
                 <div
                   key={msg.id || idx}
@@ -2452,7 +2480,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                     }`}
                   >
                     {/* 1. Voice Message Bubble */}
-                    {msg.mediaType === 'audio' && msg.mediaUrl ? (
+                    {isAudioMsg ? (
                       <div className="flex items-center gap-2.5 min-w-[210px] py-0.5">
                         <button
                           type="button"
@@ -2487,7 +2515,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                           </div>
                         </div>
                       </div>
-                    ) : (msg.mediaType === 'image' || msg.mediaType === 'video') && msg.isViewOnce ? (
+                    ) : (isImageMsg || isVideoMsg) && msg.isViewOnce ? (
                       /* 2. View Once (1-Time Show) Bubble */
                       !isMe ? (
                         msg.isOpened ? (
@@ -2507,8 +2535,8 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                               if (msg.mediaUrl) {
                                 setLightboxMedia({
                                   url: msg.mediaUrl,
-                                  type: msg.mediaType === 'video' ? 'video' : 'image',
-                                  title: msg.mediaType === 'video' ? 'View Once Video' : 'View Once Photo',
+                                  type: isVideoMsg ? 'video' : 'image',
+                                  title: isVideoMsg ? 'View Once Video' : 'View Once Photo',
                                   isViewOnce: true,
                                   messageId: msg.id
                                 });
@@ -2521,7 +2549,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="font-bold text-xs text-emerald-950 flex items-center gap-1.5">
-                                <span>{msg.mediaType === 'video' ? 'Video' : 'Photo'}</span>
+                                <span>{isVideoMsg ? 'Video' : 'Photo'}</span>
                                 <span className="text-[9px] bg-emerald-200/90 text-emerald-900 px-1.5 py-0.5 rounded-full font-bold">1-Time</span>
                               </p>
                               <p className="text-[10px] text-emerald-800">Tap to view (Disappears)</p>
@@ -2535,14 +2563,14 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                               1
                             </div>
                             <div className="text-left">
-                              <p className="font-semibold text-[11px] leading-tight">{msg.mediaType === 'video' ? 'Video' : 'Photo'} (View Once)</p>
+                              <p className="font-semibold text-[11px] leading-tight">{isVideoMsg ? 'Video' : 'Photo'} (View Once)</p>
                               <p className="text-[9px] opacity-75">Opened by recipient</p>
                             </div>
                           </div>
                         ) : (
                           <div className="space-y-1.5 max-w-[280px]">
                             <div className="rounded-xl overflow-hidden relative shadow-xs">
-                              {msg.mediaType === 'video' ? (
+                              {isVideoMsg ? (
                                 <ChatVideoPlayer 
                                   src={msg.mediaUrl!} 
                                   onOpenLightbox={() => setLightboxMedia({ url: msg.mediaUrl!, type: 'video', title: 'Sent View Once Video' })}
@@ -2566,8 +2594,8 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                           </div>
                         )
                       )
-                    ) : msg.mediaType === 'image' && msg.mediaUrl ? (
-                      /* 2. Photo Attachment Bubble / Official Announcement Banner Card */
+                    ) : isImageMsg && msg.mediaUrl ? (
+                      /* 3. Photo Attachment Bubble / Official Announcement Banner Card */
                       (isOfficialChannel || msg.isOfficial) ? (
                         <div className="space-y-2.5 max-w-[340px] sm:max-w-[440px] text-left">
                           <div 
@@ -2665,8 +2693,8 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                           )}
                         </div>
                       )
-                    ) : msg.mediaType === 'video' && msg.mediaUrl ? (
-                      /* 3. Video Attachment Bubble */
+                    ) : isVideoMsg && msg.mediaUrl ? (
+                      /* 4. Video Attachment Bubble */
                       <div className="space-y-1.5 max-w-[280px]">
                         <ChatVideoPlayer 
                           src={msg.mediaUrl} 
@@ -2676,8 +2704,8 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                           <p className="mt-1">{msg.text}</p>
                         )}
                       </div>
-                    ) : msg.mediaType === 'file' && msg.mediaUrl ? (
-                      /* 4. Document / File Attachment Bubble */
+                    ) : isFileMsg && msg.mediaUrl ? (
+                      /* 5. Document / File Attachment Bubble */
                       <a
                         href={msg.mediaUrl}
                         target="_blank"

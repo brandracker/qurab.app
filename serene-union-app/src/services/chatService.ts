@@ -180,19 +180,38 @@ export const chatService = {
         const conv = conversations.find(c => c.id === conversationId || (c.otherUser && conversationId.includes(c.otherUser.id)));
         const isOfficialConv = conversationId.includes('qurb_official');
         const mappedMessages: ChatMessage[] = data.messages.map((m: any) => {
-          const bannerUrl = m.mediaUrl || m.media_url || m.imageUrl || m.image_url || 
+          const rawMedia = m.mediaUrl || m.media_url || m.imageUrl || m.image_url || 
             (isOfficialConv && m.text?.includes('v1.0.37') ? 'https://qurb.app/announcement_v1037_banner.jpg' : null);
+
+          const msgText = m.text || m.content || '';
+          let resolvedMediaType = m.mediaType || m.media_type;
+
+          if (!resolvedMediaType && rawMedia) {
+            if (rawMedia.match(/\.(webm|mp3|m4a|wav|aac|ogg)(\?|$)/i) || msgText.includes('Voice message') || msgText.includes('🎤')) {
+              resolvedMediaType = 'audio';
+            } else if (rawMedia.match(/\.(mp4|mov|webm|mkv|3gp)(\?|$)/i) || msgText.includes('Video') || msgText.includes('🎥')) {
+              resolvedMediaType = 'video';
+            } else if (rawMedia.match(/\.(pdf|doc|docx|zip|txt)(\?|$)/i)) {
+              resolvedMediaType = 'file';
+            } else {
+              resolvedMediaType = 'image';
+            }
+          } else if (resolvedMediaType === 'image' && (msgText.includes('Voice message') || msgText.includes('🎤') || rawMedia?.match(/\.(webm|mp3|m4a|wav|aac|ogg)(\?|$)/i))) {
+            resolvedMediaType = 'audio';
+          } else if (resolvedMediaType === 'image' && (msgText.includes('Video') || msgText.includes('🎥') || rawMedia?.match(/\.(mp4|mov|mkv|3gp)(\?|$)/i))) {
+            resolvedMediaType = 'video';
+          }
 
           return {
             id: m.id || 'msg_' + Math.random().toString(36).substring(2, 7),
             senderId: m.senderId || m.sender_id,
             senderName: isOfficialConv ? 'Qurb Team' : (m.senderName || m.sender_name || 'Member'),
-            text: m.text || m.content || '',
+            text: msgText,
             timestamp: m.timestamp || (m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'),
             isRead: Boolean(m.isRead ?? m.is_read),
             waliNotified: Boolean(m.waliNotified ?? m.wali_notified ?? true),
-            mediaUrl: bannerUrl || undefined,
-            mediaType: bannerUrl ? 'image' : (m.mediaType || m.media_type || 'text'),
+            mediaUrl: rawMedia || undefined,
+            mediaType: resolvedMediaType || undefined,
             mediaDuration: m.mediaDuration || m.media_duration,
             fileName: m.fileName || m.file_name,
             fileSize: m.fileSize || m.file_size,

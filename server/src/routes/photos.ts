@@ -131,7 +131,7 @@ photosRouter.post('/upload-voice', async (c) => {
   }
 });
 
-// 3. Stream Voice Media directly from R2 Storage
+// 3. Stream Voice & Video Media directly from R2 Storage with HTTP 206 Range Support
 photosRouter.get('/media/:fileId', async (c) => {
   try {
     const fileId = c.req.param('fileId');
@@ -139,16 +139,39 @@ photosRouter.get('/media/:fileId', async (c) => {
       return c.text('Media bucket not configured', 404);
     }
 
-    const object = await c.env.MEDIA_BUCKET.get(fileId);
+    const rangeHeader = c.req.header('range');
+    let object: any;
+    if (rangeHeader) {
+      object = await c.env.MEDIA_BUCKET.get(fileId, {
+        range: c.req.raw.headers,
+        onlyIf: c.req.raw.headers
+      });
+    } else {
+      object = await c.env.MEDIA_BUCKET.get(fileId);
+    }
+
     if (!object) {
-      return c.text('Audio file not found in storage', 404);
+      return c.text('Media file not found in storage', 404);
     }
 
     const headers = new Headers();
     object.writeHttpMetadata(headers);
-    const ext = fileId.split('.').pop()?.toLowerCase();
-    const isImage = ext === 'jpg' || ext === 'jpeg' || ext === 'png' || ext === 'webp';
-    const fallbackMime = isImage ? (ext === 'jpg' ? 'image/jpeg' : `image/${ext}`) : 'audio/webm';
+
+    const ext = fileId.split('.').pop()?.toLowerCase() || '';
+    let fallbackMime = 'application/octet-stream';
+    if (ext === 'jpg' || ext === 'jpeg') fallbackMime = 'image/jpeg';
+    else if (ext === 'png') fallbackMime = 'image/png';
+    else if (ext === 'webp') fallbackMime = 'image/webp';
+    else if (ext === 'gif') fallbackMime = 'image/gif';
+    else if (ext === 'mp4') fallbackMime = 'video/mp4';
+    else if (ext === 'webm') fallbackMime = fileId.includes('voice_') ? 'audio/webm' : 'video/webm';
+    else if (ext === 'mov') fallbackMime = 'video/quicktime';
+    else if (ext === 'mp3') fallbackMime = 'audio/mpeg';
+    else if (ext === 'm4a') fallbackMime = 'audio/mp4';
+    else if (ext === 'aac') fallbackMime = 'audio/aac';
+    else if (ext === 'ogg') fallbackMime = 'audio/ogg';
+    else if (ext === 'wav') fallbackMime = 'audio/wav';
+
     headers.set('Content-Type', object.httpMetadata?.contentType || fallbackMime);
     headers.set('Accept-Ranges', 'bytes');
     
@@ -165,12 +188,22 @@ photosRouter.get('/media/:fileId', async (c) => {
     headers.set('Cache-Control', 'public, max-age=31536000, immutable');
     headers.set('Access-Control-Allow-Origin', '*');
     headers.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+    headers.set('Access-Control-Expose-Headers', 'Content-Range, Content-Length, Accept-Ranges');
 
-    return new Response(object.body, { headers });
+    // If HTTP Range was requested, return 206 Partial Content with proper Content-Range
+    if (rangeHeader && object.range) {
+      const start = object.range.offset;
+      const end = object.range.offset + object.range.length - 1;
+      const total = object.size;
+      headers.set('Content-Range', `bytes ${start}-${end}/${total}`);
+      headers.set('Content-Length', String(object.range.length));
+      return new Response(object.body, { status: 206, headers });
+    }
+
+    return new Response(object.body, { status: 200, headers });
   } catch (error: any) {
     return c.text(`Error reading media: ${error.message}`, 500);
   }
-
 });
 
 

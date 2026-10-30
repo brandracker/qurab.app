@@ -2,11 +2,13 @@ export class ChatRoomDO {
   state: any;
   env: any;
   sessions: Map<any, { userId: string; joinedAt: number }>;
+  recentCallSignals: Array<any>;
 
   constructor(state: any, env: any) {
     this.state = state;
     this.env = env;
     this.sessions = new Map();
+    this.recentCallSignals = [];
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -26,6 +28,16 @@ export class ChatRoomDO {
       // Accept server side of the connection
       server.accept();
       this.sessions.set(server, { userId, joinedAt: Date.now() });
+
+      // Replay any active pending call signals if peer joined right after call initiate/offer
+      const now = Date.now();
+      for (const sig of this.recentCallSignals) {
+        if (now - sig.timestamp < 35000 && sig.senderId !== userId) {
+          try {
+            server.send(JSON.stringify(sig));
+          } catch {}
+        }
+      }
 
       // Notify peer that a user joined the live room
       this.broadcast(server, JSON.stringify({
@@ -53,8 +65,7 @@ export class ChatRoomDO {
               message: data.message
             }));
           } else if (data.type === 'call_signal') {
-            // Forward WebRTC Calling signals (initiate, ringing, accept, reject, ice, end)
-            this.broadcast(server, JSON.stringify({
+            const sigObj = {
               type: 'call_signal',
               signal: data.signal,
               senderId: data.senderId || userId,
@@ -63,7 +74,10 @@ export class ChatRoomDO {
               callerInfo: data.callerInfo || null,
               payload: data.payload || null,
               timestamp: Date.now()
-            }));
+            };
+            this.recordCallSignal(sigObj);
+            // Forward WebRTC Calling signals (initiate, ringing, accept, reject, ice, end)
+            this.broadcast(server, JSON.stringify(sigObj));
           }
         } catch {}
       });
@@ -89,6 +103,9 @@ export class ChatRoomDO {
     if (url.pathname === '/broadcast' && request.method === 'POST') {
       try {
         const payload = await request.json();
+        if (payload?.type === 'call_signal' || payload?.signal) {
+          this.recordCallSignal(payload);
+        }
         const payloadStr = JSON.stringify(payload);
         this.broadcastAll(payloadStr);
         return new Response(JSON.stringify({ success: true, receivers: this.sessions.size }), {
@@ -102,7 +119,19 @@ export class ChatRoomDO {
       }
     }
 
-    // 3. Status check endpoint
+    // 3. Call Signals Lookup (for fast HTTP polling fallback when socket connecting)
+    if (url.pathname === '/call-signals') {
+      const now = Date.now();
+      const active = this.recentCallSignals.filter(s => now - s.timestamp < 35000);
+      return new Response(JSON.stringify({
+        success: true,
+        signals: active
+      }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // 4. Status check endpoint
     if (url.pathname === '/status') {
       return new Response(JSON.stringify({
         activeSessions: this.sessions.size,
@@ -133,6 +162,21 @@ export class ChatRoomDO {
         ws.send(message);
       } catch {
         this.sessions.delete(ws);
+      }
+    }
+  }
+
+  recordCallSignal(sig: any) {
+    if (!sig) return;
+    if (sig.signal === 'end' || sig.signal === 'reject') {
+      this.recentCallSignals = [];
+    } else {
+      const now = Date.now();
+      this.recentCallSignals = this.recentCallSignals
+        .filter(s => now - s.timestamp < 35000)
+        .concat({ ...sig, timestamp: sig.timestamp || now });
+      if (this.recentCallSignals.length > 10) {
+        this.recentCallSignals = this.recentCallSignals.slice(-10);
       }
     }
   }

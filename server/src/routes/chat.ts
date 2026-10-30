@@ -514,13 +514,25 @@ chatRouter.post('/upload-media', async (c) => {
       return c.json({ success: false, error: 'fileBase64 is required' }, 400);
     }
 
-    let contentType = fileType || (mediaType === 'audio' ? 'audio/webm' : (mediaType === 'image' ? 'image/jpeg' : 'application/octet-stream'));
+    let contentType = fileType || (
+      mediaType === 'audio' ? 'audio/webm' : (
+        mediaType === 'video' ? 'video/mp4' : (
+          mediaType === 'image' ? 'image/jpeg' : 'application/octet-stream'
+        )
+      )
+    );
     const mimeMatch = fileBase64.match(/^data:([^;]+);/);
     if (mimeMatch && mimeMatch[1]) {
       contentType = mimeMatch[1];
     }
 
-    const ext = fileName?.split('.').pop()?.toLowerCase() || (mediaType === 'audio' ? 'webm' : (mediaType === 'image' ? 'jpg' : (mediaType === 'video' ? 'mp4' : 'bin')));
+    const ext = fileName?.split('.').pop()?.toLowerCase() || (
+      mediaType === 'audio' ? 'webm' : (
+        mediaType === 'image' ? 'jpg' : (
+          mediaType === 'video' ? 'mp4' : 'bin'
+        )
+      )
+    );
     const safeConv = (conversationId || 'chat').replace(/[^a-zA-Z0-9_-]/g, '');
     const fileId = `chat_${safeConv}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${ext}`;
 
@@ -530,12 +542,11 @@ chatRouter.post('/upload-media', async (c) => {
     if (c.env.MEDIA_BUCKET) {
       try {
         const commaIdx = fileBase64.indexOf(',');
-        const rawBase64 = commaIdx !== -1 ? fileBase64.substring(commaIdx + 1) : fileBase64;
-        const base64Clean = rawBase64.replace(/[^A-Za-z0-9+/=]/g, '');
-        const binaryString = atob(base64Clean);
+        const rawBase64 = (commaIdx !== -1 ? fileBase64.substring(commaIdx + 1) : fileBase64).trim();
+        const binaryString = atob(rawBase64);
         size = binaryString.length;
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
+        const bytes = new Uint8Array(size);
+        for (let i = 0; i < size; i++) {
           bytes[i] = binaryString.charCodeAt(i);
         }
         await c.env.MEDIA_BUCKET.put(fileId, bytes.buffer, {
@@ -1227,6 +1238,28 @@ chatRouter.post('/call/signal', async (c) => {
     }
 
     return c.json({ success: true });
+  } catch (err: any) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+// 5.2 Poll Active WebRTC Call Signals via Durable Objects fallback
+chatRouter.get('/call/signal', async (c) => {
+  try {
+    const conversationId = c.req.query('conversationId');
+    if (!conversationId) {
+      return c.json({ success: false, error: 'conversationId required' }, 400);
+    }
+
+    if (c.env.CHAT_ROOM) {
+      const id = c.env.CHAT_ROOM.idFromName(conversationId);
+      const room = c.env.CHAT_ROOM.get(id);
+      const res = await room.fetch('https://dummy-url/call-signals');
+      const data: any = await res.json();
+      return c.json(data);
+    }
+
+    return c.json({ success: true, signals: [] });
   } catch (err: any) {
     return c.json({ success: false, error: err.message }, 500);
   }

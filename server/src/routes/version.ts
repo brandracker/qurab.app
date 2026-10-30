@@ -52,12 +52,10 @@ async function handleVersionCheck(c: any) {
       }
     }
 
-    const minSupportedVersionCode = parseInt(configMap['min_supported_version_code'] || '43', 10);
-    const latestVersionCode = parseInt(configMap['latest_version_code'] || '43', 10);
-    const latestVersionName = configMap['latest_version_name'] || '1.0.42';
-    const forceUpdateEnabled = configMap['force_update_enabled'] !== undefined 
-      ? configMap['force_update_enabled'] === '1' 
-      : true;
+    const minSupportedVersionCode = parseInt(configMap['min_supported_version_code'] || '37', 10);
+    const latestVersionCode = parseInt(configMap['latest_version_code'] || '38', 10);
+    const latestVersionName = configMap['latest_version_name'] || '1.0.37';
+    const forceUpdateEnabled = configMap['force_update_enabled'] === '1';
     const updateTitle = configMap['update_title'] || 'Critical Update Required';
     const updateMessage = configMap['update_message'] || 
       'A new version of Qurb is required to continue. Please update now from the Google Play Store for critical features and fixes.';

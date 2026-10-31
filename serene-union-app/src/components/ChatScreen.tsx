@@ -4,12 +4,14 @@ import {
   MoreVertical, Eye, EyeOff, ShieldCheck, Paperclip, Mic, Play, Pause, 
   Trash2, X, Download, File, Loader2, Volume2, VolumeX, Maximize2,
   Phone, Video, PhoneCall, PhoneOff, Search, CheckSquare, Square,
-  ExternalLink, Megaphone, Pin, Lock, Hand, Sparkles, Check, Clock
+  ExternalLink, Megaphone, Pin, Lock, Hand, Sparkles, Check, Clock,
+  Sun, Moon
 } from 'lucide-react';
 import { VerifiedBlueTick } from './VerifiedBlueTick';
 import type { Conversation, ChatMessage, UserProfile } from '../types';
 
 import { dbService, API_BASE } from '../services/dbService';
+import { themeService } from '../services/themeService';
 import { ProfileDetailModal } from './ProfileDetailModal';
 import { 
   VoiceRecorder, 
@@ -204,6 +206,13 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
   const [showListMenuDropdown, setShowListMenuDropdown] = useState<boolean>(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const currentUser = dbService.getCurrentUser();
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => themeService.isDark());
+
+  useEffect(() => {
+    return themeService.subscribe((theme) => {
+      setIsDarkMode(theme === 'dark');
+    });
+  }, []);
 
   // Modern Horizontal Match Stories Strip
   const [mutualMatches, setMutualMatches] = useState<UserProfile[]>(() => {
@@ -1565,16 +1574,27 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
               <p className="text-[11px] text-secondary mt-0.5">Respectful & Intentional Matrimonial Discussions</p>
             </div>
 
-            {/* 3-Dots Management Menu */}
-            <div className="relative">
+            {/* Quick Theme Toggle & 3-Dots Management Menu */}
+            <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setShowListMenuDropdown(prev => !prev)}
-                className="w-9 h-9 rounded-full bg-surface-variant hover:bg-outline flex items-center justify-center text-secondary hover:text-on-surface transition-all shadow-subtle"
-                title="Conversation Options"
+                onClick={() => themeService.toggleTheme()}
+                aria-label="Toggle Theme"
+                title={isDarkMode ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+                className="w-9 h-9 rounded-full bg-surface-variant hover:bg-outline flex items-center justify-center text-secondary hover:text-on-surface transition-all shadow-subtle cursor-pointer"
               >
-                <MoreVertical className="w-4 h-4" />
+                {isDarkMode ? <Moon className="w-4 h-4 text-amber-400" /> : <Sun className="w-4 h-4 text-amber-500" />}
               </button>
+
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowListMenuDropdown(prev => !prev)}
+                  className="w-9 h-9 rounded-full bg-surface-variant hover:bg-outline flex items-center justify-center text-secondary hover:text-on-surface transition-all shadow-subtle"
+                  title="Conversation Options"
+                >
+                  <MoreVertical className="w-4 h-4" />
+                </button>
 
               {showListMenuDropdown && (
                 <div className="absolute right-0 top-11 w-52 bg-white rounded-2xl shadow-elevated border border-outline py-1.5 z-30 text-xs">
@@ -1625,6 +1645,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                   </button>
                 </div>
               )}
+            </div>
             </div>
           </div>
 
@@ -2101,8 +2122,19 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
           </div>
         </div>
 
-        {/* Action Controls: Call Buttons, Biodata Button & 3-Dots Kebab Menu */}
+        {/* Action Controls: Theme Toggle, Call Buttons, Biodata Button & 3-Dots Kebab Menu */}
         <div className="flex items-center gap-1.5 shrink-0 relative">
+          {/* Quick Toggle Theme */}
+          <button
+            type="button"
+            onClick={() => themeService.toggleTheme()}
+            aria-label="Toggle Theme"
+            title={isDarkMode ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+            className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200/80 flex items-center justify-center text-slate-700 transition-colors cursor-pointer"
+          >
+            {isDarkMode ? <Moon className="w-3.5 h-3.5 text-amber-400" /> : <Sun className="w-3.5 h-3.5 text-amber-500" />}
+          </button>
+
           {isOfficialChannel ? null : (
             <>
               {/* Audio Call Button */}
@@ -2263,11 +2295,11 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
 
 
       {/* Messages Scroll Area */}
-      <main className="flex-1 overflow-y-auto p-3.5 space-y-3 bg-[#FAF8F5]/60">
+      <main className="flex-1 overflow-y-auto p-3.5 space-y-3 bg-[#FAF8F5]/60 dark:bg-[#0c0c0e]">
         {/* Date Marker */}
         <div className="flex justify-center my-1">
-          <span className="text-[10px] text-amber-900/90 bg-white/90 backdrop-blur-md px-3.5 py-1 rounded-full border border-amber-200/80 font-medium shadow-2xs flex items-center gap-1.5 font-serif">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+          <span className="text-[10px] text-amber-900/90 dark:text-amber-200 bg-white/90 dark:bg-[#1a1712] backdrop-blur-md px-3.5 py-1 rounded-full border border-amber-200/80 dark:border-amber-500/30 font-medium shadow-2xs flex items-center gap-1.5 font-serif">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
             <span>Conversation Began with Bismillah</span>
           </span>
         </div>

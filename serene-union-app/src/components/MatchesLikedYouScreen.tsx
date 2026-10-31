@@ -16,11 +16,14 @@ import {
   Send,
   Loader2,
   MapPin,
-  ChevronRight
+  ChevronRight,
+  Sun,
+  Moon
 } from 'lucide-react';
 import type { UserProfile } from '../types';
 
 import { dbService } from '../services/dbService';
+import { themeService } from '../services/themeService';
 import { notificationService } from '../services/notificationService';
 import { MembershipUpgradeModal } from './MembershipUpgradeModal';
 import { getThumbnailUrl } from '../utils/mediaCompressor';
@@ -51,6 +54,13 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
   const currentUser = propUser || dbService.getCurrentUser();
   const [activeTab, setActiveTab] = useState<TabType>(initialTab || 'sent');
   const [selectedProfile, setSelectedProfile] = useState<UserProfile | null>(null);
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => themeService.isDark());
+
+  useEffect(() => {
+    return themeService.subscribe((theme) => {
+      setIsDarkMode(theme === 'dark');
+    });
+  }, []);
   
   // Instant SWR cache initialization: loads immediately from local memory with 0ms delay
   const initialCache = dbService.getCachedMatchesHub(currentUser.id);
@@ -298,12 +308,25 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
           <p className="text-[11px] text-slate-500 mt-0.5">Manage connections, sent interests & privacy history</p>
         </div>
 
-        {isVip && (
-          <span className="bg-gradient-to-r from-amber-50 to-amber-100/90 text-amber-700 border border-amber-300/60 text-[10px] font-bold px-3 py-1 rounded-full shadow-2xs flex items-center gap-1.5">
-            <Crown className="w-3.5 h-3.5 text-amber-600" />
-            <span>VIP Active</span>
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {/* Quick Toggle Theme */}
+          <button
+            type="button"
+            onClick={() => themeService.toggleTheme()}
+            aria-label="Toggle Theme"
+            title={isDarkMode ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+            className="p-1.5 rounded-full border border-slate-200/80 bg-white hover:bg-slate-100 text-slate-700 transition-all shadow-2xs cursor-pointer"
+          >
+            {isDarkMode ? <Moon className="w-4 h-4 text-amber-400" /> : <Sun className="w-4 h-4 text-amber-500" />}
+          </button>
+
+          {isVip && (
+            <span className="bg-gradient-to-r from-amber-50 to-amber-100/90 text-amber-700 border border-amber-300/60 text-[10px] font-bold px-3 py-1 rounded-full shadow-2xs flex items-center gap-1.5">
+              <Crown className="w-3.5 h-3.5 text-amber-600" />
+              <span>VIP Active</span>
+            </span>
+          )}
+        </div>
       </header>
 
       {/* Main 2-Section Segmented Control */}

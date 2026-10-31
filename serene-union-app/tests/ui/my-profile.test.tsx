@@ -143,5 +143,48 @@ describe('UI & Button Interactions: My Profile Screen', () => {
     expect(screen.getByText(/Non-Negotiable Dealbreakers/i)).toBeDefined();
     expect(screen.getAllByText(/What I am Looking For/i)[0]).toBeDefined();
   });
+
+  it('8. Supports previewing and switching across all uploaded photos in the top banner', () => {
+    const multiPhotoUser: UserProfile = {
+      ...mockUser,
+      photos: [
+        'https://example.com/hamza_photo_1.jpg',
+        'https://example.com/hamza_photo_2.jpg',
+        'https://example.com/hamza_photo_3.jpg'
+      ]
+    };
+
+    render(<MyProfileScreen user={multiPhotoUser} />);
+
+    // Initial banner photo is photo 1
+    const bannerImg = screen.getByAltText(/Hamza Farooq photo 1/i) as HTMLImageElement;
+    expect(bannerImg).toBeDefined();
+    expect(bannerImg.src).toContain('hamza_photo_1.jpg');
+
+    // Photo counter is visible
+    expect(screen.getByText('1 / 3')).toBeDefined();
+
+    // Clicking Next button cycles to photo 2
+    const nextBtn = screen.getByRole('button', { name: /Next Photo/i });
+    fireEvent.click(nextBtn);
+
+    expect(screen.getByAltText(/Hamza Farooq photo 2/i)).toBeDefined();
+    expect(screen.getByText('2 / 3')).toBeDefined();
+
+    // Clicking thumbnail for photo 3 switches directly to photo 3
+    const photo3Thumbnails = screen.getAllByRole('button', { name: /View photo 3/i });
+    // One from story bar, one from thumbnail grid
+    fireEvent.click(photo3Thumbnails[photo3Thumbnails.length - 1]);
+
+    expect(screen.getByAltText(/Hamza Farooq photo 3/i)).toBeDefined();
+    expect(screen.getByText('3 / 3')).toBeDefined();
+
+    // Clicking Previous button goes back to photo 2
+    const prevBtn = screen.getByRole('button', { name: /Previous Photo/i });
+    fireEvent.click(prevBtn);
+
+    expect(screen.getByAltText(/Hamza Farooq photo 2/i)).toBeDefined();
+    expect(screen.getByText('2 / 3')).toBeDefined();
+  });
 });
 

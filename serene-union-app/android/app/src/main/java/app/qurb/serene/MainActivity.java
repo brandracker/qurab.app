@@ -222,6 +222,9 @@ public class MainActivity extends BridgeActivity {
                 getBridge().getWebView().postDelayed(() -> {
                     getBridge().getWebView().evaluateJavascript(js, null);
                 }, 400);
+                getBridge().getWebView().postDelayed(() -> {
+                    getBridge().getWebView().evaluateJavascript(js, null);
+                }, 1200);
             }
             try {
                 intent.removeExtra("type");

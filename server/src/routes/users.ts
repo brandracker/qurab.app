@@ -858,10 +858,10 @@ profilesRouter.get('/discover', async (c) => {
     const fetchLimit = maxDistanceKm ? Math.min(limit * 2, 300) : limit;
 
     const sectList = sectsParam ? sectsParam.split(',').map(s => s.trim().toLowerCase()).filter(Boolean) : [];
-    const sectFilter = sectList.length > 0 ? `AND LOWER(rp.sect) IN (${sectList.map(() => '?').join(',')})` : '';
+    const sectFilter = sectList.length > 0 ? `AND LOWER(COALESCE(rp.sect, 'sunni')) IN (${sectList.map(() => '?').join(',')})` : '';
 
     const practiceList = practiceLevelsParam ? practiceLevelsParam.split(',').map(p => p.trim().toLowerCase()).filter(Boolean) : [];
-    const practiceFilter = practiceList.length > 0 ? `AND LOWER(rp.practice_level) IN (${practiceList.map(() => '?').join(',')})` : '';
+    const practiceFilter = practiceList.length > 0 ? `AND LOWER(COALESCE(rp.practice_level, 'practicing')) IN (${practiceList.map(() => '?').join(',')})` : '';
 
     // Backward Compatibility: Legacy mobile apps sent viewer's own location as &city=...
     // Only apply candidate city restriction if filterCity is explicitly passed, or unauthenticated guest query
@@ -921,11 +921,8 @@ profilesRouter.get('/discover', async (c) => {
       LEFT JOIN wali_details w ON u.id = w.user_id
       LEFT JOIN user_wallets uw ON u.id = uw.user_id
       WHERE u.id != ? 
-        AND (u.full_name != 'New Member' OR u.full_name IS NULL)
-        AND (u.account_status NOT IN ('deactivated', 'banned') OR u.account_status IS NULL)
         AND (u.is_banned = 0 OR u.is_banned IS NULL)
-        AND (u.profile_visibility != 'hidden' OR u.profile_visibility IS NULL)
-        AND (u.is_profile_completed = 1 OR u.is_profile_completed IS NULL)
+        AND (u.account_status != 'banned' OR u.account_status IS NULL)
         ${seedFilter}
         ${blockFilter}
         ${actionedFilter}

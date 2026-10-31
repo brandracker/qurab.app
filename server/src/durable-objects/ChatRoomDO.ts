@@ -102,7 +102,7 @@ export class ChatRoomDO {
     // 2. HTTP Broadcast Endpoint (invoked by REST API on message / photo reveal / dua)
     if (url.pathname === '/broadcast' && request.method === 'POST') {
       try {
-        const payload = await request.json();
+        const payload: any = await request.json();
         if (payload?.type === 'call_signal' || payload?.signal) {
           this.recordCallSignal(payload);
         }

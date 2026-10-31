@@ -174,26 +174,38 @@ class PushNotificationService {
       });
 
       // 8. Check if native Android cold boot captured a pending incoming call
-      if (typeof window !== 'undefined' && window.AndroidAudioBridge?.getPendingIncomingCall) {
-        try {
-          const pendingJson = window.AndroidAudioBridge.getPendingIncomingCall();
-          if (pendingJson) {
-            const pendingData = JSON.parse(pendingJson);
-            if (pendingData && pendingData.type === 'incoming_call') {
-              console.log('[Push] Dispatching native pending incoming call from cold boot:', pendingData);
-              window.dispatchEvent(
-                new CustomEvent('qurb_incoming_call_push', { detail: pendingData })
-              );
-            }
-          }
-        } catch (e) {
-          console.warn('[Push] Error reading native pending call:', e);
-        }
+      const pendingCall = this.checkPendingIncomingCall();
+      if (pendingCall) {
+        console.log('[Push] Dispatching native pending incoming call from cold boot:', pendingCall);
+        window.dispatchEvent(
+          new CustomEvent('qurb_incoming_call_push', { detail: pendingCall })
+        );
       }
 
     } catch (err) {
       console.warn('[Push] Initialization notice:', err);
     }
+  }
+
+  /**
+   * Reads and consumes any pending incoming call captured natively by AndroidAudioBridge on boot
+   */
+  public checkPendingIncomingCall(): any {
+    if (typeof window !== 'undefined' && window.AndroidAudioBridge?.getPendingIncomingCall) {
+      try {
+        const pendingJson = window.AndroidAudioBridge.getPendingIncomingCall();
+        if (pendingJson) {
+          const pendingData = JSON.parse(pendingJson);
+          if (pendingData && (pendingData.type === 'incoming_call' || pendingData.callerId)) {
+            console.log('[Push] Found native pending incoming call:', pendingData);
+            return pendingData;
+          }
+        }
+      } catch (e) {
+        console.warn('[Push] Error reading native pending call:', e);
+      }
+    }
+    return null;
   }
 
   /**

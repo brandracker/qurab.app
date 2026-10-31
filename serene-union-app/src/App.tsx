@@ -36,6 +36,7 @@ import { ActiveCallModal } from './components/calling/ActiveCallModal';
 import { versionCheckService, type VersionPolicy } from './services/versionCheckService';
 import { HardUpdateModal } from './components/HardUpdateModal';
 import { googlePlayUpdateService } from './services/googlePlayUpdateService';
+import { themeService } from './services/themeService';
 
 type OnboardingStep = 
   | 'welcome' 
@@ -191,6 +192,13 @@ export const App: React.FC = () => {
   const [showTrialPromo, setShowTrialPromo] = useState<boolean>(false);
   const [showVipUpgradeModal, setShowVipUpgradeModal] = useState<boolean>(false);
   const [hardUpdateData, setHardUpdateData] = useState<VersionPolicy | null>(null);
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => themeService.isDark());
+
+  useEffect(() => {
+    return themeService.subscribe((theme) => {
+      setIsDarkMode(theme === 'dark');
+    });
+  }, []);
 
   // Remote Version Check & Hard Force-Update Gate
   useEffect(() => {
@@ -297,6 +305,19 @@ export const App: React.FC = () => {
             }
           }
         }
+
+        // Check for any active incoming call fallback if currently idle
+        if (webRtcService.getState() === 'idle') {
+          try {
+            const callRes = await fetch(`${API_BASE}/conversations/call/active?userId=${encodeURIComponent(currentUser.id)}`);
+            const callData = await callRes.json();
+            if (callData.success && callData.activeCall && webRtcService.getState() === 'idle') {
+              window.dispatchEvent(
+                new CustomEvent('qurb_incoming_call_push', { detail: callData.activeCall })
+              );
+            }
+          } catch {}
+        }
       } catch {}
     };
 
@@ -336,10 +357,8 @@ export const App: React.FC = () => {
     };
   }, [currentUser.id, activeConvId]);
 
-  // Native Push Notifications & FCM Startup
+  // Native Push Notifications, FCM Startup & Incoming Call Wiring
   useEffect(() => {
-    pushNotificationService.init();
-
     const handleOpenChatEvent = (e: any) => {
       if (e.detail?.conversationId) {
         if (currentUser?.id && currentUser.id !== 'usr_guest') {
@@ -372,32 +391,134 @@ export const App: React.FC = () => {
         gender: data.callerGender || 'female',
         city: data.callerCity || 'Pakistan',
         photoUrl: data.callerPhoto || undefined,
-        isVip: data.callerVip === 'true'
+        isVip: data.callerVip === 'true' || Boolean(data.callerVip)
       };
 
-      if (data.conversationId) {
-        setActiveConvId(data.conversationId);
-        setActiveTab('chat');
-        setShowNotifications(false);
+      const targetId = (currentUser?.id && currentUser.id !== 'usr_guest')
+        ? currentUser.id
+        : (data.recipientId || data.targetUserId || dbService.getCurrentUser()?.id);
+
+      if (targetId) {
+        webRtcService.init(targetId);
       }
 
       webRtcService.handleIncomingSignal({
         type: 'call_signal',
         signal: 'initiate',
         senderId: data.callerId,
-        targetUserId: currentUser.id,
+        targetUserId: targetId || currentUser.id,
         callType: (data.callType as CallType) || 'audio',
         callerInfo
       });
+
+      // If user accepted directly from Android native notification action button
+      if (data.callAction === 'accept') {
+        if (data.conversationId) {
+          setActiveConvId(data.conversationId);
+          setActiveTab('chat');
+        }
+        setTimeout(() => {
+          webRtcService.acceptCall(data.callType === 'video');
+        }, 200);
+      }
     };
 
+    // Attach listeners FIRST so no incoming events are lost during startup
     window.addEventListener('qurb_open_chat', handleOpenChatEvent);
     window.addEventListener('qurb_navigate_tab', handleNavigateTabEvent);
     window.addEventListener('qurb_incoming_call_push', handleIncomingCallPushEvent);
+
+    // Initialize native push notification channels
+    pushNotificationService.init();
+
+    // Catch any pending incoming call captured from Android native bridge on startup
+    const pendingCall = pushNotificationService.checkPendingIncomingCall();
+    if (pendingCall) {
+      handleIncomingCallPushEvent({ detail: pendingCall });
+    }
+    const pendingRetryTimer = setTimeout(() => {
+      const latePending = pushNotificationService.checkPendingIncomingCall();
+      if (latePending) {
+        handleIncomingCallPushEvent({ detail: latePending });
+      }
+    }, 500);
+
     return () => {
+      clearTimeout(pendingRetryTimer);
       window.removeEventListener('qurb_open_chat', handleOpenChatEvent);
       window.removeEventListener('qurb_navigate_tab', handleNavigateTabEvent);
       window.removeEventListener('qurb_incoming_call_push', handleIncomingCallPushEvent);
+    };
+  }, [currentUser.id]);
+
+  // Global Real-time User WebSocket (Zero-latency In-App Calls & Direct Signal Broadcast)
+  useEffect(() => {
+    if (!currentUser.id || currentUser.id === 'usr_guest') return;
+
+    let ws: WebSocket | null = null;
+    let pingInterval: any = null;
+    let isCleanedUp = false;
+
+    const connectGlobalUserSocket = () => {
+      if (isCleanedUp) return;
+      try {
+        if (typeof window !== 'undefined' && typeof WebSocket !== 'undefined') {
+          const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+          const wsBase = API_BASE.replace(/^https?:/, wsProtocol);
+          const wsUrl = `${wsBase}/conversations/user_${currentUser.id}/ws?userId=${currentUser.id}`;
+
+          ws = new WebSocket(wsUrl);
+
+          ws.onopen = () => {
+            try { ws?.send(JSON.stringify({ type: 'ping' })); } catch {}
+            if (pingInterval) clearInterval(pingInterval);
+            pingInterval = setInterval(() => {
+              if (ws && ws.readyState === WebSocket.OPEN) {
+                try { ws.send(JSON.stringify({ type: 'ping' })); } catch {}
+              }
+            }, 25000);
+          };
+
+          ws.onmessage = (event) => {
+            try {
+              const data = JSON.parse(event.data);
+              if (data.type === 'incoming_call') {
+                console.log('[GlobalWS] In-app incoming call received:', data);
+                window.dispatchEvent(
+                  new CustomEvent('qurb_incoming_call_push', { detail: data })
+                );
+              } else if (data.type === 'call_ended') {
+                console.log('[GlobalWS] Remote call ended/cancelled:', data);
+                if (webRtcService.getState() === 'incoming_ringing') {
+                  webRtcService.endCall(data.reason || 'caller_cancelled');
+                }
+              }
+            } catch {}
+          };
+
+          ws.onclose = () => {
+            if (!isCleanedUp) {
+              setTimeout(connectGlobalUserSocket, 3500);
+            }
+          };
+
+          ws.onerror = () => {
+            try { ws?.close(); } catch {}
+          };
+        }
+      } catch (err) {
+        console.warn('Global user socket notice:', err);
+      }
+    };
+
+    connectGlobalUserSocket();
+
+    return () => {
+      isCleanedUp = true;
+      if (pingInterval) clearInterval(pingInterval);
+      if (ws) {
+        try { ws.close(); } catch {}
+      }
     };
   }, [currentUser.id]);
 
@@ -936,10 +1057,10 @@ export const App: React.FC = () => {
   return (
     <div className="w-full min-h-screen bg-[#121212] flex items-center justify-center font-sans antialiased text-on-surface">
       {/* Centered Mobile Screen Container */}
-      <div className={`w-full max-w-[440px] h-[100dvh] sm:h-[90vh] sm:max-h-[900px] ${['basic_info', 'practice', 'family_lifestyle', 'career_intent', 'photos_modesty'].includes(currentStep) ? 'bg-[#FF2560]' : activeTab === 'discover' && currentStep === 'main_app' ? 'bg-black' : 'bg-white'} sm:rounded-[36px] overflow-hidden shadow-2xl flex flex-col relative border border-[#262626]`}>
+      <div className={`w-full max-w-[440px] h-[100dvh] sm:h-[90vh] sm:max-h-[900px] ${['basic_info', 'practice', 'family_lifestyle', 'career_intent', 'photos_modesty'].includes(currentStep) ? 'bg-[#FF2560]' : activeTab === 'discover' && currentStep === 'main_app' ? 'bg-black' : isDarkMode ? 'bg-[#161619]' : 'bg-white'} sm:rounded-[36px] overflow-hidden shadow-2xl flex flex-col relative border border-[#262626]`}>
         
         {/* Top Simulated Status Bar on Mobile View */}
-        <div className={`hidden sm:flex w-full ${['basic_info', 'practice', 'family_lifestyle', 'career_intent', 'photos_modesty'].includes(currentStep) ? 'bg-[#FF2560] text-white border-white/10' : activeTab === 'discover' && currentStep === 'main_app' ? 'bg-black text-white/70 border-white/5' : 'bg-white text-[#737373] border-[#F4F4F5]'} px-6 pt-3 pb-1 items-center justify-between z-40 select-none text-[11px] font-medium border-b`}>
+        <div className={`hidden sm:flex w-full ${['basic_info', 'practice', 'family_lifestyle', 'career_intent', 'photos_modesty'].includes(currentStep) ? 'bg-[#FF2560] text-white border-white/10' : (activeTab === 'discover' || isDarkMode) && currentStep === 'main_app' ? 'bg-[#111114] text-white/70 border-white/5' : 'bg-white text-[#737373] border-[#F4F4F5]'} px-6 pt-3 pb-1 items-center justify-between z-40 select-none text-[11px] font-medium border-b`}>
           <span>9:41</span>
           <div className={`w-20 h-4 ${['basic_info', 'practice', 'family_lifestyle', 'career_intent', 'photos_modesty'].includes(currentStep) ? 'bg-black/20' : 'bg-[#171717]'} rounded-full mx-auto`} />
           <div className="flex items-center gap-1.5">
@@ -1177,10 +1298,10 @@ export const App: React.FC = () => {
               />
             )}
 
-            {/* CLEAN SOLID BOTTOM NAVIGATION BAR (Adapts to Discover Dark vs Light Tabs) */}
+            {/* CLEAN SOLID BOTTOM NAVIGATION BAR (Adapts to Discover Dark vs Light Tabs or Global Dark Theme) */}
             <nav className={`w-full px-2 py-2 flex items-center justify-around z-30 transition-all duration-200 ${
-              activeTab === 'discover'
-                ? 'bg-black border-t border-white/10 shadow-2xl'
+              activeTab === 'discover' || isDarkMode
+                ? 'bg-black sm:bg-[#111114] border-t border-zinc-800/80 shadow-2xl'
                 : 'bg-white border-t border-outline shadow-subtle'
             }`}>
               {[
@@ -1191,7 +1312,7 @@ export const App: React.FC = () => {
                 { id: 'settings', label: 'Settings', Icon: Settings }
               ].map(({ id, label, Icon }) => {
                 const isActive = activeTab === id;
-                const isDiscoverMode = activeTab === 'discover';
+                const isDiscoverMode = activeTab === 'discover' || isDarkMode;
                 return (
                   <button
                     key={id}
@@ -1199,10 +1320,10 @@ export const App: React.FC = () => {
                       setActiveTab(id as MainTab);
                       if (id !== 'chat') setActiveConvId(null);
                     }}
-                    className={`relative flex flex-col items-center gap-1 py-1 px-3 rounded-2xl transition-all duration-150 ${
+                    className={`relative flex flex-col items-center gap-1 py-1 px-3 rounded-2xl transition-all duration-150 cursor-pointer ${
                       isActive 
                         ? (isDiscoverMode ? 'text-rose-400' : 'text-primary')
-                        : (isDiscoverMode ? 'text-white/60 hover:text-white' : 'text-secondary hover:text-on-surface')
+                        : (isDiscoverMode ? 'text-zinc-400 hover:text-white' : 'text-secondary hover:text-on-surface')
                     }`}
                   >
                     <Icon className={`w-5 h-5 transition-transform ${isActive ? 'stroke-[2.5px] scale-105' : 'stroke-[1.75px]'}`} />

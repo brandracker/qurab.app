@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Crown, 
-  ArrowUpRight, 
   CheckCircle2, 
-  Heart, 
   Eye, 
   Shield, 
   TrendingUp, 
@@ -16,12 +14,19 @@ import {
   Trash2,
   PauseCircle,
   RefreshCw,
-  X
+  X,
+  PlusCircle,
+  Gift,
+  ChevronRight,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { dbService } from '../services/dbService';
 import { walletService } from '../services/walletService';
 import { MembershipUpgradeModal } from './MembershipUpgradeModal';
 import { RewardedAdModal } from './RewardedAdModal';
+import { ReferralHubModal } from './ReferralHubModal';
+import { themeService } from '../services/themeService';
 import type { UserProfile } from '../types';
 
 
@@ -46,11 +51,29 @@ export const SettingsPrivacy: React.FC<Props> = ({
   const [savedNotice, setSavedNotice] = useState<boolean>(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState<boolean>(false);
   const [showAdModal, setShowAdModal] = useState<boolean>(false);
+  const [adRewardType, setAdRewardType] = useState<'likes' | 'salam' | 'messages' | 'photo_unblur'>('likes');
+  const [showReferralModal, setShowReferralModal] = useState<boolean>(false);
+  const [spotlightInfo, setSpotlightInfo] = useState<{ isSpotlightActive: boolean; spotlightExpiresAt: string | null }>(() => {
+    return dbService.getSpotlightInfo(currentUser.id);
+  });
   const [showDeactivateModal, setShowDeactivateModal] = useState<boolean>(false);
   const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState<string>('');
   const [isProcessingAction, setIsProcessingAction] = useState<boolean>(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => themeService.isDark());
+
+  useEffect(() => {
+    return themeService.subscribe((theme) => {
+      setIsDarkMode(theme === 'dark');
+    });
+  }, []);
+
+  const handleToggleTheme = () => {
+    themeService.toggleTheme();
+    showNotice();
+  };
 
   const isDeactivated = currentUser.accountStatus === 'deactivated' || profileVisibility === 'hidden';
 
@@ -73,10 +96,11 @@ export const SettingsPrivacy: React.FC<Props> = ({
     const vipVal = localStorage.getItem(`serene_vip_${currentUser.id}`);
     setIsVip(vipVal !== null ? vipVal === 'true' : Boolean(currentUser.isVip));
     
-    dbService.fetchLikesRemaining(currentUser.id).then(({ likesRemaining: liveRem, isVip: liveVip, directSalams: liveSalams }) => {
+    dbService.fetchLikesRemaining(currentUser.id).then(({ likesRemaining: liveRem, isVip: liveVip, directSalams: liveSalams, isSpotlightActive, spotlightExpiresAt }) => {
       setLikesRemaining(liveRem);
       setIsVip(liveVip);
       if (typeof liveSalams === 'number') setDirectSalams(liveSalams);
+      setSpotlightInfo({ isSpotlightActive: Boolean(isSpotlightActive), spotlightExpiresAt: spotlightExpiresAt || null });
     });
 
     const handleVipUpdate = (e: any) => {
@@ -105,17 +129,38 @@ export const SettingsPrivacy: React.FC<Props> = ({
         }
       }
     };
+    const handleSpotlight = (e: any) => {
+      const targetUserId = e.detail?.userId;
+      if (!targetUserId || targetUserId === currentUser.id) {
+        setSpotlightInfo({
+          isSpotlightActive: Boolean(e.detail?.isSpotlightActive),
+          spotlightExpiresAt: e.detail?.spotlightExpiresAt || null
+        });
+      }
+    };
+
     window.addEventListener('serene_activity_updated', handleActivity);
     window.addEventListener('serene_likes_updated', handleLikes);
     window.addEventListener('serene_salams_updated', handleSalams);
+    window.addEventListener('serene_spotlight_updated', handleSpotlight);
 
     return () => {
       window.removeEventListener('serene_vip_updated', handleVipUpdate);
       window.removeEventListener('serene_activity_updated', handleActivity);
       window.removeEventListener('serene_likes_updated', handleLikes);
       window.removeEventListener('serene_salams_updated', handleSalams);
+      window.removeEventListener('serene_spotlight_updated', handleSpotlight);
     };
   }, [currentUser.id, currentUser.isVip]);
+
+  const formatSpotlightRemaining = (expiresAt: string | null): string => {
+    if (!expiresAt) return 'Active';
+    const diffMs = new Date(expiresAt).getTime() - Date.now();
+    if (diffMs <= 0) return 'Expiring';
+    const hours = Math.floor(diffMs / (1000 * 60 * 60));
+    const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hours}h ${mins}m left`;
+  };
 
 
   const handleToggleBlur = () => {
@@ -209,6 +254,15 @@ export const SettingsPrivacy: React.FC<Props> = ({
             </span>
           )}
           <button
+            type="button"
+            onClick={handleToggleTheme}
+            aria-label="Toggle Theme"
+            title={isDarkMode ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+            className="p-1.5 rounded-full border border-outline hover:bg-surface-variant text-on-surface transition-all shadow-2xs cursor-pointer"
+          >
+            {isDarkMode ? <Moon className="w-4 h-4 text-amber-400" /> : <Sun className="w-4 h-4 text-amber-500" />}
+          </button>
+          <button
             onClick={handleLogout}
             className="flex items-center gap-1 text-xs text-error font-semibold hover:bg-pastel-rose px-3 py-1.5 rounded-full border border-error/20 transition-all shadow-subtle"
             title="Log Out"
@@ -237,6 +291,246 @@ export const SettingsPrivacy: React.FC<Props> = ({
             <span className="inline-block mt-0.5 text-[10px] font-bold text-primary bg-pastel-rose px-2 py-0.2 rounded-full border border-pastel-rose-border">
               Account ID: {currentUser.id}
             </span>
+          </div>
+        </section>
+
+        {/* MEMBERSHIP PASS CARD (The exact Pink card from user's image) */}
+        <section className={`rounded-3xl p-4 sm:p-5 border transition-all ${
+          isVip 
+            ? 'bg-pastel-amber border-pastel-amber-border' 
+            : 'bg-pastel-rose border-pastel-rose-border'
+        } flex flex-col gap-3 shadow-subtle`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-xs ${
+                isVip 
+                  ? 'bg-amber-50 text-amber-600 border border-amber-200' 
+                  : 'bg-rose-50 text-primary border border-rose-200'
+              }`}>
+                <Crown className={`w-5 h-5 ${isVip ? 'text-amber-600 fill-amber-500/20' : 'text-primary'}`} />
+              </div>
+              <div>
+                <h3 className="font-serif text-sm font-bold text-on-surface">
+                  {isVip ? 'Barakah VIP Active' : 'Free Member'}
+                </h3>
+                <p className="text-[10px] text-secondary mt-0.5">
+                  {isVip 
+                    ? 'All Premium Features Unlocked · Unlimited Likes & Direct Salam' 
+                    : `${likesRemaining} / ${Math.max(50, likesRemaining)} Daily Likes Left Today · Free Tier Member · Free Halal Chat`}
+                </p>
+              </div>
+            </div>
+
+            {!isVip ? (
+              <button
+                type="button"
+                onClick={() => setShowUpgradeModal(true)}
+                className="bg-primary text-white text-xs font-bold px-3.5 py-1.5 rounded-full shadow-brand hover:bg-primary-dark active:scale-95 transition-all flex items-center gap-1 shrink-0"
+              >
+                <PlusCircle className="w-3.5 h-3.5" />
+                <span>Upgrade</span>
+              </button>
+            ) : (
+              <span className="px-2.5 py-1 rounded-full bg-white text-emerald-700 text-[10px] font-bold border border-emerald-200 flex items-center gap-1 shadow-xs">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Active</span>
+              </span>
+            )}
+          </div>
+
+          {isVip ? (
+            <div className="space-y-2 pt-2.5 border-t border-pastel-amber-border/70 text-xs">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="p-2.5 rounded-2xl bg-white border border-pastel-amber-border/80 flex items-center gap-2.5 shadow-xs">
+                  <div className="w-7 h-7 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center shrink-0">
+                    <Infinity className="w-3.5 h-3.5 text-amber-600" />
+                  </div>
+                  <div className="min-w-0">
+                    <strong className="block text-[10px] text-on-surface font-bold truncate">Unlimited Likes</strong>
+                    <span className="text-[9px] text-secondary">Active Forever</span>
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-2xl bg-white border border-pastel-amber-border/80 flex items-center gap-2.5 shadow-xs">
+                  <div className="w-7 h-7 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center shrink-0">
+                    <Hand className="w-3.5 h-3.5 text-amber-600" />
+                  </div>
+                  <div className="min-w-0">
+                    <strong className="block text-[10px] text-on-surface font-bold truncate">Direct Salams</strong>
+                    <span className="text-[9px] font-bold text-amber-700">{directSalams} Passes Available</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* VIP Spotlight Boost Status */}
+              <div className="p-2.5 rounded-2xl bg-white border border-pastel-amber-border/80 flex items-center justify-between shadow-xs">
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 border ${
+                    spotlightInfo.isSpotlightActive ? 'bg-amber-500 text-white border-amber-600 animate-pulse' : 'bg-amber-50 text-amber-600 border-amber-200'
+                  }`}>
+                    <TrendingUp className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <strong className="block text-[10px] text-on-surface font-bold">
+                      {spotlightInfo.isSpotlightActive ? '24h Spotlight Boost Active' : 'City Spotlight Boost'}
+                    </strong>
+                    <span className="text-[9px] text-secondary">
+                      {spotlightInfo.isSpotlightActive
+                        ? `${formatSpotlightRemaining(spotlightInfo.spotlightExpiresAt)} · #1 Top Spot in City`
+                        : 'Feature your profile at #1 top spot in city Discover feed'}
+                    </span>
+                  </div>
+                </div>
+
+                {!spotlightInfo.isSpotlightActive && (
+                  <button
+                    type="button"
+                    onClick={() => setShowUpgradeModal(true)}
+                    className="bg-pastel-amber text-pastel-amber-text border border-pastel-amber-border text-[10px] font-bold px-2.5 py-1 rounded-full hover:bg-pastel-amber/80 transition-all active:scale-95"
+                  >
+                    Boost ($0.99)
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2 pt-2 border-t border-outline/50 text-xs">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdRewardType('likes');
+                    setShowAdModal(true);
+                  }}
+                  className="p-2 rounded-xl bg-white border border-outline hover:bg-surface-variant text-left flex items-center gap-2 transition-colors active:scale-95 shadow-subtle"
+                >
+                  <PlayCircle className="text-primary w-4 h-4 shrink-0" />
+                  <div>
+                    <strong className="block text-[10px] text-on-surface">+10 Extra Likes</strong>
+                    <span className="text-[9px] text-secondary">Watch 15s ad</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdRewardType('salam');
+                    setShowAdModal(true);
+                  }}
+                  className="p-2 rounded-xl bg-white border border-outline hover:bg-surface-variant text-left flex items-center gap-2 transition-colors active:scale-95 shadow-subtle"
+                >
+                  <Hand className="text-primary w-4 h-4 shrink-0" />
+                  <div>
+                    <strong className="block text-[10px] text-on-surface">Direct Salams: {directSalams}</strong>
+                    <span className="text-[9px] text-secondary">Watch 3 ads for +1</span>
+                  </div>
+                </button>
+              </div>
+
+              {/* Free Member Spotlight & VIP row */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowUpgradeModal(true)}
+                  className="p-2 rounded-xl bg-white border border-outline hover:bg-surface-variant text-left flex items-center gap-2 transition-colors active:scale-95 shadow-subtle"
+                >
+                  <TrendingUp className="text-amber-500 w-4 h-4 shrink-0" />
+                  <div>
+                    <strong className="block text-[10px] text-on-surface">
+                      {spotlightInfo.isSpotlightActive ? 'Boost Active' : 'City Spotlight'}
+                    </strong>
+                    <span className="text-[9px] text-secondary">
+                      {spotlightInfo.isSpotlightActive ? formatSpotlightRemaining(spotlightInfo.spotlightExpiresAt) : 'Rank #1 ($0.99)'}
+                    </span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowUpgradeModal(true)}
+                  className="p-2 rounded-xl bg-white border border-pastel-amber-border hover:bg-surface-variant text-left flex items-center gap-2 transition-colors active:scale-95 shadow-subtle"
+                >
+                  <Crown className="text-pastel-amber-text w-4 h-4 shrink-0" />
+                  <div>
+                    <strong className="block text-[10px] text-primary">Barakah VIP</strong>
+                    <span className="text-[9px] text-secondary">20 Passes · PKR 830</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* REFERRAL PERK BANNER: 30 Invites -> 1 Month Free VIP */}
+        <section className="rounded-3xl p-4 bg-gradient-to-r from-emerald-900 via-emerald-800 to-teal-900 text-white shadow-md border border-emerald-700/60 flex items-center justify-between gap-3 relative overflow-hidden group">
+          <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-white/5 to-transparent pointer-events-none" />
+          
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-11 h-11 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0 shadow-inner group-hover:scale-105 transition-transform">
+              <Gift className="w-5 h-5 text-amber-300" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[9px] font-bold uppercase tracking-wider text-amber-300 bg-amber-400/20 px-2 py-0.5 rounded-full border border-amber-300/30">
+                  Free 1-Month VIP Perk
+                </span>
+              </div>
+              <h3 className="font-serif text-sm font-bold text-white truncate mt-0.5">
+                Invite Friends & Unlock Free VIP
+              </h3>
+              <p className="text-[10px] text-emerald-100/80 leading-tight">
+                Invite 30 genuine friends to earn 1 month Barakah VIP 100% Free!
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowReferralModal(true)}
+            className="bg-amber-400 hover:bg-amber-300 active:scale-95 text-emerald-950 text-xs font-bold px-3.5 py-2 rounded-full shadow-md transition-all shrink-0 flex items-center gap-1"
+          >
+            <span>Invite</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </section>
+
+        {/* Appearance & Theme Section */}
+        <section className="space-y-2">
+          <h2 className="font-serif text-xs font-bold text-on-surface">Appearance & Theme</h2>
+
+          <div className="bg-white rounded-2xl p-4 border border-outline shadow-subtle">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3 pr-4">
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center border transition-all ${
+                  isDarkMode 
+                    ? 'bg-zinc-800 text-amber-400 border-zinc-700' 
+                    : 'bg-pastel-amber text-amber-600 border-pastel-amber-border'
+                }`}>
+                  {isDarkMode ? <Moon className="w-5 h-5 fill-amber-400/20" /> : <Sun className="w-5 h-5" />}
+                </div>
+                <div className="space-y-0.5">
+                  <span className="font-serif font-bold text-xs text-on-surface block">Dark Theme</span>
+                  <span className="text-[11px] text-secondary leading-relaxed">
+                    {isDarkMode ? 'Eye-comfort dark mode active for low-light environments.' : 'Clean daylight appearance with bright surfaces.'}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                aria-label="Toggle Dark Theme"
+                onClick={handleToggleTheme}
+                className={`w-11 h-6 rounded-full p-0.5 transition-colors relative shrink-0 cursor-pointer ${
+                  isDarkMode ? 'bg-primary' : 'bg-surface-variant'
+                }`}
+              >
+                <div
+                  className={`w-5 h-5 rounded-full bg-white shadow-2xs transition-transform ${
+                    isDarkMode ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
           </div>
         </section>
 
@@ -293,130 +587,48 @@ export const SettingsPrivacy: React.FC<Props> = ({
           </div>
         </section>
 
-        {/* Membership & Subscription Status Section */}
+        {/* VIP Privileges Overview Section */}
         <section className="space-y-2">
-          <h2 className="font-serif text-xs font-bold text-on-surface">Membership & Plan Privileges</h2>
-
-          <div className="bg-pastel-amber rounded-3xl p-4 sm:p-5 border border-pastel-amber-border shadow-subtle flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center shadow-xs shrink-0">
-                  <Crown className="w-5 h-5 fill-amber-500/20 text-amber-600" />
-                </div>
-                <div>
-                  <h3 className="font-serif font-bold text-sm text-on-surface">
-                    {isVip ? 'Barakah VIP Active' : 'Free Tier Member'}
-                  </h3>
-                  <p className="text-[10px] text-secondary mt-0.5">
-                    {isVip 
-                      ? 'All Premium Features Unlocked · Unlimited Likes & Direct Salam' 
-                      : `${likesRemaining} / 50 Daily Free Likes Left Today`}
-                  </p>
-                </div>
+          <h2 className="font-serif text-xs font-bold text-on-surface">VIP Privileges Overview</h2>
+          <div className="bg-white rounded-2xl p-3.5 border border-outline shadow-subtle space-y-1.5 text-[11px]">
+            <div className="flex items-center justify-between p-2 rounded-xl bg-surface-variant/50 border border-outline/50 shadow-2xs">
+              <div className="flex items-center gap-2">
+                <Eye className="w-3.5 h-3.5 text-primary" />
+                <span className="text-on-surface font-medium text-xs">See Who Liked You (Unblurred)</span>
               </div>
-
-              {!isVip ? (
-                <button
-                  type="button"
-                  onClick={() => setShowUpgradeModal(true)}
-                  className="px-3.5 py-1.5 rounded-full bg-primary text-white text-xs font-bold shadow-brand hover:bg-primary-dark active:scale-95 transition-all flex items-center gap-1"
-                >
-                  <ArrowUpRight className="w-3.5 h-3.5" />
-                  <span>Upgrade</span>
-                </button>
-              ) : (
-                <span className="px-2.5 py-1 rounded-full bg-white text-emerald-700 border border-emerald-200 text-[10px] font-bold flex items-center gap-1 shadow-xs">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Active</span>
-                </span>
-              )}
+              <span className={`text-[10px] font-bold ${isVip ? 'text-primary' : 'text-secondary'}`}>
+                {isVip ? '✓ Unlocked' : 'VIP Only'}
+              </span>
             </div>
 
-            {/* Grid of Key Quotas */}
-            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-pastel-amber-border/40 text-xs">
-              <div className="p-2.5 rounded-xl bg-white border border-pastel-amber-border flex items-center justify-between gap-1.5 shadow-subtle">
-                <div className="flex items-center gap-2 min-w-0">
-                  <Heart className="w-4 h-4 text-primary shrink-0" />
-                  <div className="min-w-0">
-                    <span className="text-[10px] text-secondary block">Likes Quota</span>
-                    <strong className="text-[11px] text-on-surface truncate block">
-                      {isVip ? 'Unlimited' : `${likesRemaining} / 50 Left`}
-                    </strong>
-                  </div>
-                </div>
-
-                {!isVip && (
-                  <button
-                    onClick={() => setShowAdModal(true)}
-                    className="px-2 py-1 rounded-lg bg-pastel-rose text-primary text-[10px] font-bold hover:bg-primary hover:text-white transition-all flex items-center gap-0.5 shadow-2xs shrink-0"
-                    title="Watch 15s ad for +10 likes"
-                  >
-                    <PlayCircle className="w-3 h-3" />
-                    <span>+10</span>
-                  </button>
-                )}
+            <div className="flex items-center justify-between p-2 rounded-xl bg-surface-variant/50 border border-outline/50 shadow-2xs">
+              <div className="flex items-center gap-2">
+                <Shield className="w-3.5 h-3.5 text-primary" />
+                <span className="text-on-surface font-medium text-xs">100% Ad-Free (Zero Video Ads)</span>
               </div>
-
-              <div className="p-2.5 rounded-xl bg-white border border-pastel-amber-border flex items-center gap-2 shadow-subtle">
-                <Hand className="w-4 h-4 text-primary shrink-0" />
-                <div>
-                  <span className="text-[10px] text-secondary block">Direct Salams</span>
-                  <strong className="text-[11px] text-primary font-bold">
-                    {isVip ? `${directSalams} VIP Passes` : `${directSalams} Passes Left`}
-                  </strong>
-                </div>
-              </div>
+              <span className={`text-[10px] font-bold ${isVip ? 'text-primary' : 'text-secondary'}`}>
+                {isVip ? '✓ Active' : 'VIP Only'}
+              </span>
             </div>
 
-
-            {/* Unlocked VIP Privileges List */}
-            <div className="pt-2 border-t border-pastel-amber-border/40 space-y-1.5">
-              <h4 className="font-serif font-bold text-[10px] text-pastel-amber-text uppercase tracking-wide flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>{isVip ? 'Your Active VIP Privileges:' : 'VIP Privileges Preview:'}</span>
-              </h4>
-
-              <div className="space-y-1.5 text-[11px]">
-                <div className="flex items-center justify-between p-2 rounded-xl bg-white border border-pastel-amber-border shadow-subtle">
-                  <div className="flex items-center gap-2">
-                    <Eye className="w-3.5 h-3.5 text-primary" />
-                    <span className="text-on-surface font-medium text-xs">See Who Liked You (Unblurred)</span>
-                  </div>
-                  <span className={`text-[10px] font-bold ${isVip ? 'text-primary' : 'text-secondary'}`}>
-                    {isVip ? '✓ Unlocked' : 'VIP Only'}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between p-2 rounded-xl bg-white border border-pastel-amber-border shadow-subtle">
-                  <div className="flex items-center gap-2">
-                    <Shield className="w-3.5 h-3.5 text-primary" />
-                    <span className="text-on-surface font-medium text-xs">100% Ad-Free (Zero Video Ads)</span>
-                  </div>
-                  <span className={`text-[10px] font-bold ${isVip ? 'text-primary' : 'text-secondary'}`}>
-                    {isVip ? '✓ Active' : 'VIP Only'}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between p-2 rounded-xl bg-white border border-pastel-amber-border shadow-subtle">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="w-3.5 h-3.5 text-primary" />
-                    <span className="text-on-surface font-medium text-xs">Priority Stream Ranking (3x Views)</span>
-                  </div>
-                  <span className={`text-[10px] font-bold ${isVip ? 'text-primary' : 'text-secondary'}`}>
-                    {isVip ? '✓ Active' : 'VIP Only'}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between p-2 rounded-xl bg-white border border-pastel-amber-border shadow-subtle">
-                  <div className="flex items-center gap-2">
-                    <Infinity className="w-3.5 h-3.5 text-primary" />
-                    <span className="text-on-surface font-medium text-xs">Unlimited Daily Likes (No 50 Cap)</span>
-                  </div>
-                  <span className={`text-[10px] font-bold ${isVip ? 'text-primary' : 'text-secondary'}`}>
-                    {isVip ? '✓ Unlimited' : '50 / day'}
-                  </span>
-                </div>
+            <div className="flex items-center justify-between p-2 rounded-xl bg-surface-variant/50 border border-outline/50 shadow-2xs">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-3.5 h-3.5 text-primary" />
+                <span className="text-on-surface font-medium text-xs">Priority Stream Ranking (3x Views)</span>
               </div>
+              <span className={`text-[10px] font-bold ${isVip ? 'text-primary' : 'text-secondary'}`}>
+                {isVip ? '✓ Active' : 'VIP Only'}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between p-2 rounded-xl bg-surface-variant/50 border border-outline/50 shadow-2xs">
+              <div className="flex items-center gap-2">
+                <Infinity className="w-3.5 h-3.5 text-primary" />
+                <span className="text-on-surface font-medium text-xs">Unlimited Daily Likes (No 50 Cap)</span>
+              </div>
+              <span className={`text-[10px] font-bold ${isVip ? 'text-primary' : 'text-secondary'}`}>
+                {isVip ? '✓ Unlimited' : '50 / day'}
+              </span>
             </div>
           </div>
         </section>
@@ -579,15 +791,31 @@ export const SettingsPrivacy: React.FC<Props> = ({
       {showAdModal && (
         <RewardedAdModal
           userId={currentUser.id}
-          rewardType="likes"
+          rewardType={adRewardType}
           isOpen={showAdModal}
           onClose={() => setShowAdModal(false)}
           onRewardClaimed={() => {
-            const nextLikes = likesRemaining + 10;
-            setLikesRemaining(nextLikes);
-            localStorage.setItem(walletService.getTodayLikeKey(currentUser.id), nextLikes.toString());
-            window.dispatchEvent(new CustomEvent('serene_activity_updated'));
+            if (adRewardType === 'likes') {
+              const nextLikes = likesRemaining + 10;
+              setLikesRemaining(nextLikes);
+              localStorage.setItem(walletService.getTodayLikeKey(currentUser.id), nextLikes.toString());
+              window.dispatchEvent(new CustomEvent('serene_activity_updated'));
+            } else if (adRewardType === 'salam') {
+              const nextSalams = directSalams + 1;
+              setDirectSalams(nextSalams);
+              localStorage.setItem(`serene_salams_left_${currentUser.id}`, nextSalams.toString());
+              window.dispatchEvent(new CustomEvent('serene_salams_updated', { detail: { userId: currentUser.id, directSalams: nextSalams } }));
+            }
           }}
+        />
+      )}
+
+      {/* Referral Hub Modal */}
+      {showReferralModal && (
+        <ReferralHubModal
+          userId={currentUser.id}
+          isOpen={showReferralModal}
+          onClose={() => setShowReferralModal(false)}
         />
       )}
 

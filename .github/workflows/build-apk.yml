@@ -133,16 +133,15 @@ jobs:
         continue-on-error: true
         with:
           fail_on_unmatched_files: false
-          tag_name: v1.0.43
-          name: "Qurb v1.0.43 (Build 44 - DEX Optimization, Single Device Policy, Photo Unblur & Calling Upgrades)"
+          tag_name: v1.0.44
+          name: "Qurb v1.0.44 (Build 45 - Dark Mode Contrast, Chat Styling & Profile UX)"
           body: |
-            ### Qurb Matrimony v1.0.43 (Build 44)
-            - **Google Play Console DEX Code Optimization**: Enabled R8 code shrinking and resource shrinking with exhaustive ProGuard rules.
-            - **New Profile Photos Unblur by Default**: Profiles created via email, phone OTP, and Google OAuth now default to unblurred photos.
-            - **Strict Single Active Device Policy**: Multi-device logins are strictly disallowed; logging into a new device automatically terminates previous sessions.
-            - **Voice Greeting Delete Sync**: Permanent deletion and synchronization across Cloudflare D1 and R2 storage.
-            - **Match Celebration Blank Screen Freeze Resolved**: Bounded in-modal particle canvas prevents Android WebView GPU compositor stalls.
-            - **Calling & VoIP Upgrades**: Android 14+ Full-Screen Intent handler, battery optimization exemption prompts for background calling, audio focus, dynamic audio->video renegotiation, and ICE restart on WiFi/4G transitions.
+            ### Qurb Matrimony v1.0.44 (Build 45)
+            - **Dark Mode Card Contrast & Surface Hierarchy**: Fixed white card flashes and subtle borders on candidate and chat cards in dark mode.
+            - **Chat Room Background & Styling**: Pure dark background `#0c0c0e`, high-contrast Bismillah banner, and refined WhatsApp-style message bubbles.
+            - **Relationship with Deen Text Readability**: High-contrast, emerald-tinted badges in candidate detail drawers.
+            - **Matches & Chat Screen Adjustments**: Enhanced dark-theme visibility across all tabs.
+            - **Profile Banners & Badges**: Cleanly separated location and membership upgrade pills.
             - **app-release.apk**: Production Signed APK for direct device installation & testing.
             - **app-release.aab**: Production Signed Android App Bundle (.aab) ready for Google Play Console submission.
           files: |

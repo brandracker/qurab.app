@@ -1177,10 +1177,34 @@ chatRouter.post('/call/initiate', async (c) => {
       "SELECT fcm_token, full_name FROM users WHERE id = ?"
     ).bind(recipientId).first();
 
+    const convId = conversationId || getCanonicalConversationId(callerId, recipientId);
+
+    // Instant in-app notification to recipient's personal user room via Cloudflare DO
+    if (c.env.CHAT_ROOM) {
+      try {
+        const userRoomId = `user_${recipientId}`;
+        const userRoom = c.env.CHAT_ROOM.get(c.env.CHAT_ROOM.idFromName(userRoomId));
+        await userRoom.fetch('https://dummy-url/broadcast', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'incoming_call',
+            callerId,
+            recipientId,
+            callType: callType || 'audio',
+            callerInfo,
+            conversationId: convId,
+            timestamp: Date.now()
+          })
+        });
+      } catch (doErr) {
+        console.warn('[CallInitiate] User room DO broadcast notice:', doErr);
+      }
+    }
+
     if (recipientUser?.fcm_token) {
       const callerFirstName = callerInfo?.fullName?.split(' ')[0] || 'Match Candidate';
       const callTypeName = callType === 'video' ? 'Video Call 📹' : 'Audio Call 📞';
-      const convId = conversationId || getCanonicalConversationId(callerId, recipientId);
 
       // High-priority FCM push notification
       c.executionCtx.waitUntil(
@@ -1235,6 +1259,26 @@ chatRouter.post('/call/signal', async (c) => {
           ...payload
         })
       });
+
+      // If call is rejected or ended, notify recipient's and sender's user rooms immediately
+      if (payload?.signal === 'end' || payload?.signal === 'reject') {
+        const notifyTargets = [payload?.targetUserId, payload?.senderId].filter(Boolean);
+        for (const tid of notifyTargets) {
+          try {
+            const uRoom = c.env.CHAT_ROOM.get(c.env.CHAT_ROOM.idFromName(`user_${tid}`));
+            await uRoom.fetch('https://dummy-url/broadcast', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                type: 'call_ended',
+                signal: payload.signal,
+                reason: payload?.payload?.reason || 'ended',
+                timestamp: Date.now()
+              })
+            });
+          } catch {}
+        }
+      }
     }
 
     return c.json({ success: true });
@@ -1262,6 +1306,35 @@ chatRouter.get('/call/signal', async (c) => {
     return c.json({ success: true, signals: [] });
   } catch (err: any) {
     return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+// 5.3 Active Incoming Call Check (for foreground poll and resume fallback)
+chatRouter.get('/call/active', async (c) => {
+  try {
+    const userId = c.req.query('userId');
+    if (!userId) return c.json({ success: true, activeCall: null });
+
+    if (c.env.CHAT_ROOM) {
+      const userRoom = c.env.CHAT_ROOM.get(c.env.CHAT_ROOM.idFromName(`user_${userId}`));
+      const res = await userRoom.fetch('https://dummy-url/call-signals');
+      const data: any = await res.json();
+      if (data.success && Array.isArray(data.signals)) {
+        const now = Date.now();
+        // Look for incoming_call or initiate signal within last 35 seconds
+        const active = data.signals.slice().reverse().find((s: any) => 
+          (s.type === 'incoming_call' || s.signal === 'initiate') && 
+          (now - (s.timestamp || 0) < 35000)
+        );
+        if (active) {
+          return c.json({ success: true, activeCall: active });
+        }
+      }
+    }
+
+    return c.json({ success: true, activeCall: null });
+  } catch (err: any) {
+    return c.json({ success: false, activeCall: null, error: err.message });
   }
 });
 

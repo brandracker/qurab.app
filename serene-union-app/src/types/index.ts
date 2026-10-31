@@ -79,7 +79,7 @@ export interface UserProfile {
   distanceKm?: number | null;
   partnerRequirements?: PartnerRequirements;
   isProfileCompleted?: boolean;
-  accountStatus?: 'active' | 'deactivated' | 'deleted';
+  accountStatus?: 'active' | 'deactivated' | 'deleted' | 'banned';
 }
 
 export interface PartnerRequirements {

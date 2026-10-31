@@ -261,7 +261,7 @@ class DBService {
           if (!res.ok) continue;
           const data = await res.json();
           if (data.success && Array.isArray(data.profiles) && data.profiles.length > 0) {
-            const activeProfiles = data.profiles.filter((p: UserProfile) => p.accountStatus !== 'deactivated' && p.profileVisibility !== 'hidden');
+            const activeProfiles = data.profiles.filter((p: UserProfile) => p.accountStatus !== 'deactivated' && p.accountStatus !== 'banned' && p.profileVisibility !== 'hidden');
             // Sanitize heavy base64 photos to prevent QuotaExceededError on Android WebView
             const lightweightProfiles = activeProfiles.map((p: UserProfile) => ({
               ...p,
@@ -978,7 +978,7 @@ class DBService {
 
     const all = source.filter(p => {
       if (!p.id || excludedIds.has(p.id) || seen.has(p.id)) return false;
-      if (p.accountStatus === 'deactivated' || p.profileVisibility === 'hidden') return false;
+      if (p.accountStatus === 'deactivated' || p.accountStatus === 'banned' || p.profileVisibility === 'hidden') return false;
       if (targetGender && p.gender && p.gender.toLowerCase() !== targetGender) return false;
       seen.add(p.id);
       return true;

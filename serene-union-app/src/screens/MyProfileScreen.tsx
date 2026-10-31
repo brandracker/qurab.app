@@ -9,8 +9,6 @@ import {
   Heart,
   Globe2,
   Compass,
-  Infinity,
-  PlayCircle, 
   BookOpen, 
   Home, 
   GraduationCap, 
@@ -35,11 +33,13 @@ import {
   Trash2,
   Volume2,
   Loader2,
-  Hand,
   TrendingUp,
   Sliders,
-  Gift,
-  ChevronRight
+  ChevronLeft,
+  ChevronRight,
+  Camera,
+  Sun,
+  Moon
 } from 'lucide-react';
 import type { UserProfile } from '../types';
 import { dbService } from '../services/dbService';
@@ -50,6 +50,7 @@ import { RewardedAdModal } from '../components/RewardedAdModal';
 import { EditProfileModal } from '../components/EditProfileModal';
 import { ReferralHubModal } from '../components/ReferralHubModal';
 import { calculateProfileCompleteness } from '../utils/profileCompleteness';
+import { themeService } from '../services/themeService';
 
 interface Props {
   user: UserProfile;
@@ -65,6 +66,15 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
     return (cur?.id && cur.id !== 'usr_guest') ? cur : propUser;
   });
   const user = (currentUserProfile?.id && currentUserProfile.id !== 'usr_guest') ? currentUserProfile : propUser;
+
+  const [selectedPhotoIdx, setSelectedPhotoIdx] = useState<number>(0);
+
+  const profilePhotos = (user.photos || []).filter(
+    (p): p is string => typeof p === 'string' && p.trim().length > 0
+  );
+  const activePhotoIdx = profilePhotos.length > 0
+    ? Math.min(selectedPhotoIdx, profilePhotos.length - 1)
+    : 0;
 
   const [showEditModal, setShowEditModal] = useState<boolean>(false);
   const [editModalTab, setEditModalTab] = useState<'personal' | 'career' | 'deen' | 'lifestyle' | 'partner'>('personal');
@@ -116,12 +126,13 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
     return saved !== null ? parseInt(saved, 10) : 50;
   });
 
-  const [directSalams, setDirectSalams] = useState<number>(() => {
-    return dbService.getDirectSalams(user.id);
-  });
-  const [spotlightInfo, setSpotlightInfo] = useState<{ isSpotlightActive: boolean; spotlightExpiresAt: string | null }>(() => {
-    return dbService.getSpotlightInfo(user.id);
-  });
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => themeService.isDark());
+
+  useEffect(() => {
+    return themeService.subscribe((theme) => {
+      setIsDarkMode(theme === 'dark');
+    });
+  }, []);
 
   const [isEditingBio, setIsEditingBio] = useState<boolean>(false);
   const [editedBioText, setEditedBioText] = useState<string>(() => user.bio || user.religiousProfile?.deenRelationshipBio || '');
@@ -178,11 +189,9 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
       });
     }
 
-    dbService.fetchLikesRemaining(user.id).then(({ likesRemaining: liveRem, isVip: liveVip, directSalams: liveSalams, isSpotlightActive, spotlightExpiresAt }) => {
+    dbService.fetchLikesRemaining(user.id).then(({ likesRemaining: liveRem, isVip: liveVip }) => {
       setLikesRemaining(liveRem);
       setIsVip(liveVip);
-      if (typeof liveSalams === 'number') setDirectSalams(liveSalams);
-      setSpotlightInfo({ isSpotlightActive: Boolean(isSpotlightActive), spotlightExpiresAt: spotlightExpiresAt || null });
     });
 
     const handleProfileUpdate = (e: any) => {
@@ -203,46 +212,17 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
         }
       }
     };
-    const handleSalams = (e: any) => {
-      if (!e.detail?.userId || e.detail.userId === user.id) {
-        if (typeof e.detail?.directSalams === 'number') {
-          setDirectSalams(e.detail.directSalams);
-        }
-      }
-    };
-    const handleSpotlight = (e: any) => {
-      if (!e.detail?.userId || e.detail.userId === user.id) {
-        setSpotlightInfo({
-          isSpotlightActive: Boolean(e.detail?.isSpotlightActive),
-          spotlightExpiresAt: e.detail?.spotlightExpiresAt || null
-        });
-      }
-    };
 
     window.addEventListener('serene_user_profile_updated', handleProfileUpdate);
     window.addEventListener('serene_activity_updated', handleActivity);
     window.addEventListener('serene_likes_updated', handleLikes);
-    window.addEventListener('serene_salams_updated', handleSalams);
-    window.addEventListener('serene_spotlight_updated', handleSpotlight);
 
     return () => {
       window.removeEventListener('serene_user_profile_updated', handleProfileUpdate);
       window.removeEventListener('serene_activity_updated', handleActivity);
       window.removeEventListener('serene_likes_updated', handleLikes);
-      window.removeEventListener('serene_salams_updated', handleSalams);
-      window.removeEventListener('serene_spotlight_updated', handleSpotlight);
     };
   }, [user.id, propUser.id]);
-
-  const formatSpotlightRemaining = (expiresAt: string | null): string => {
-    if (!expiresAt) return '';
-    const diff = new Date(expiresAt).getTime() - Date.now();
-    if (diff <= 0) return 'Expiring soon';
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    if (hours > 0) return `${hours}h ${mins}m left`;
-    return `${mins}m left`;
-  };
 
 
   const [hasCompletedQuiz, setHasCompletedQuiz] = useState<boolean>(() => {
@@ -434,15 +414,26 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
           <p className="text-[11px] text-secondary mt-0.5">Manage profile, modesty settings & VIP membership</p>
         </div>
 
-        {onLogout && (
+        <div className="flex items-center gap-2">
           <button
-            onClick={onLogout}
-            className="flex items-center gap-1 text-xs text-error font-semibold hover:bg-pastel-rose px-3 py-1 rounded-full border border-error/20 transition-colors"
+            type="button"
+            onClick={() => themeService.toggleTheme()}
+            aria-label="Quick Toggle Theme"
+            title={isDarkMode ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+            className="p-1.5 rounded-full border border-outline hover:bg-surface-variant text-on-surface transition-all shadow-2xs cursor-pointer"
           >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>Logout</span>
+            {isDarkMode ? <Moon className="w-3.5 h-3.5 text-amber-400" /> : <Sun className="w-3.5 h-3.5 text-amber-500" />}
           </button>
-        )}
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              className="flex items-center gap-1 text-xs text-error font-semibold hover:bg-pastel-rose px-3 py-1 rounded-full border border-error/20 transition-colors"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Logout</span>
+            </button>
+          )}
+        </div>
       </header>
 
       {/* Main Profile Body */}
@@ -507,217 +498,88 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
           );
         })()}
 
-        {/* MEMBERSHIP PASS CARD (Pastel Amber or Rose) */}
-        <div className={`rounded-3xl p-4 border transition-all ${
-          isVip 
-            ? 'bg-pastel-amber border-pastel-amber-border' 
-            : 'bg-pastel-rose border-pastel-rose-border'
-        } flex flex-col gap-3 shadow-subtle`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-xs ${
-                isVip 
-                  ? 'bg-amber-50 text-amber-600 border border-amber-200' 
-                  : 'bg-rose-50 text-primary border border-rose-200'
-              }`}>
-                <Crown className={`w-5 h-5 ${isVip ? 'text-amber-600 fill-amber-500/20' : 'text-primary'}`} />
-              </div>
-              <div>
-                <h3 className="font-serif text-sm font-bold text-on-surface">
-                  {isVip ? 'Barakah VIP Active' : 'Free Member'}
-                </h3>
-                <p className="text-[10px] text-secondary mt-0.5">
-                  {isVip 
-                    ? 'All Premium Privileges Active · Unlimited Likes & Direct Salam' 
-                    : `${likesRemaining} / ${Math.max(50, likesRemaining)} Daily Likes Left Today · Free Halal Chat`}
-                </p>
-              </div>
-            </div>
-
-
-            {!isVip ? (
-              <button
-                onClick={() => setShowUpgradeModal(true)}
-                className="bg-primary text-white text-xs font-bold px-3.5 py-1.5 rounded-full shadow-brand hover:bg-primary-dark active:scale-95 transition-all flex items-center gap-1 shrink-0"
-              >
-                <PlusCircle className="w-3.5 h-3.5" />
-                <span>Upgrade</span>
-              </button>
-            ) : (
-              <span className="px-2.5 py-1 rounded-full bg-white text-emerald-700 text-[10px] font-bold border border-emerald-200 flex items-center gap-1 shadow-xs">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Unlocked</span>
-              </span>
-            )}
-          </div>
-
-          {isVip ? (
-            <div className="space-y-2 pt-2.5 border-t border-pastel-amber-border/70 text-xs">
-              <div className="grid grid-cols-2 gap-2">
-                <div className="p-2.5 rounded-2xl bg-white border border-pastel-amber-border/80 flex items-center gap-2.5 shadow-xs">
-                  <div className="w-7 h-7 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center shrink-0">
-                    <Infinity className="w-3.5 h-3.5 text-amber-600" />
-                  </div>
-                  <div className="min-w-0">
-                    <strong className="block text-[10px] text-on-surface font-bold truncate">Unlimited Likes</strong>
-                    <span className="text-[9px] text-secondary">Active Forever</span>
-                  </div>
-                </div>
-
-                <div className="p-2.5 rounded-2xl bg-white border border-pastel-amber-border/80 flex items-center gap-2.5 shadow-xs">
-                  <div className="w-7 h-7 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center shrink-0">
-                    <Hand className="w-3.5 h-3.5 text-amber-600" />
-                  </div>
-                  <div className="min-w-0">
-                    <strong className="block text-[10px] text-on-surface font-bold truncate">Direct Salams</strong>
-                    <span className="text-[9px] font-bold text-amber-700">{directSalams} Passes Available</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* VIP Spotlight Boost Status */}
-              <div className="p-2.5 rounded-2xl bg-white border border-pastel-amber-border/80 flex items-center justify-between shadow-xs">
-                <div className="flex items-center gap-2.5">
-                  <div className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 border ${
-                    spotlightInfo.isSpotlightActive ? 'bg-amber-500 text-white border-amber-600 animate-pulse' : 'bg-amber-50 text-amber-600 border-amber-200'
-                  }`}>
-                    <TrendingUp className="w-3.5 h-3.5" />
-                  </div>
-                  <div>
-                    <strong className="block text-[10px] text-on-surface font-bold">
-                      {spotlightInfo.isSpotlightActive ? '24h Spotlight Boost Active' : 'City Spotlight Boost'}
-                    </strong>
-                    <span className="text-[9px] text-secondary">
-                      {spotlightInfo.isSpotlightActive
-                        ? `${formatSpotlightRemaining(spotlightInfo.spotlightExpiresAt)} · #1 Top Spot in City`
-                        : 'Feature your profile at #1 top spot in city Discover feed'}
-                    </span>
-                  </div>
-                </div>
-
-                {!spotlightInfo.isSpotlightActive && (
-                  <button
-                    onClick={() => setShowUpgradeModal(true)}
-                    className="bg-pastel-amber text-pastel-amber-text border border-pastel-amber-border text-[10px] font-bold px-2.5 py-1 rounded-full hover:bg-pastel-amber/80 transition-all active:scale-95"
-                  >
-                    Boost ($0.99)
-                  </button>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-2 pt-2 border-t border-outline/50 text-xs">
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => {
-                    setAdRewardType('likes');
-                    setShowAdModal(true);
-                  }}
-                  className="p-2 rounded-xl bg-white border border-outline hover:bg-surface-variant text-left flex items-center gap-2 transition-colors active:scale-95 shadow-subtle"
-                >
-                  <PlayCircle className="text-primary w-4 h-4 shrink-0" />
-                  <div>
-                    <strong className="block text-[10px] text-on-surface">+10 Extra Likes</strong>
-                    <span className="text-[9px] text-secondary">Watch 15s ad</span>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => {
-                    setAdRewardType('salam');
-                    setShowAdModal(true);
-                  }}
-                  className="p-2 rounded-xl bg-white border border-outline hover:bg-surface-variant text-left flex items-center gap-2 transition-colors active:scale-95 shadow-subtle"
-                >
-                  <Hand className="text-primary w-4 h-4 shrink-0" />
-                  <div>
-                    <strong className="block text-[10px] text-on-surface">Direct Salams: {directSalams}</strong>
-                    <span className="text-[9px] text-secondary">Watch 3 ads for +1</span>
-                  </div>
-                </button>
-              </div>
-
-              {/* Free Member Spotlight & VIP row */}
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => setShowUpgradeModal(true)}
-                  className="p-2 rounded-xl bg-white border border-outline hover:bg-surface-variant text-left flex items-center gap-2 transition-colors active:scale-95 shadow-subtle"
-                >
-                  <TrendingUp className="text-amber-500 w-4 h-4 shrink-0" />
-                  <div>
-                    <strong className="block text-[10px] text-on-surface">
-                      {spotlightInfo.isSpotlightActive ? 'Boost Active' : 'City Spotlight'}
-                    </strong>
-                    <span className="text-[9px] text-secondary">
-                      {spotlightInfo.isSpotlightActive ? formatSpotlightRemaining(spotlightInfo.spotlightExpiresAt) : 'Rank #1 ($0.99)'}
-                    </span>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => setShowUpgradeModal(true)}
-                  className="p-2 rounded-xl bg-white border border-pastel-amber-border hover:bg-surface-variant text-left flex items-center gap-2 transition-colors active:scale-95 shadow-subtle"
-                >
-                  <Crown className="text-pastel-amber-text w-4 h-4 shrink-0" />
-                  <div>
-                    <strong className="block text-[10px] text-primary">Barakah VIP</strong>
-                    <span className="text-[9px] text-secondary">20 Passes · PKR 830</span>
-                  </div>
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* REFERRAL PERK BANNER: 30 Invites -> 1 Month Free VIP */}
-        <div className="rounded-3xl p-4 bg-gradient-to-r from-emerald-900 via-emerald-800 to-teal-900 text-white shadow-md border border-emerald-700/60 flex items-center justify-between gap-3 relative overflow-hidden group">
-          <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-white/5 to-transparent pointer-events-none" />
-          
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-11 h-11 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0 shadow-inner group-hover:scale-105 transition-transform">
-              <Gift className="w-5 h-5 text-amber-300" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="text-[9px] font-bold uppercase tracking-wider text-amber-300 bg-amber-400/20 px-2 py-0.5 rounded-full border border-amber-300/30">
-                  Free 1-Month VIP Perk
-                </span>
-              </div>
-              <h3 className="font-serif text-sm font-bold text-white truncate mt-0.5">
-                Invite Friends & Unlock Free VIP
-              </h3>
-              <p className="text-[10px] text-emerald-100/80 leading-tight">
-                Invite 30 genuine friends to earn 1 month Barakah VIP 100% Free!
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={() => setShowReferralModal(true)}
-            className="bg-amber-400 hover:bg-amber-300 active:scale-95 text-emerald-950 text-xs font-bold px-3.5 py-2 rounded-full shadow-md transition-all shrink-0 flex items-center gap-1"
-          >
-            <span>Invite</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
+        {/* Main Profile Card (Photo Banner & Biodata Details) */}
         <div className="bg-white rounded-3xl overflow-hidden shadow-card border border-outline flex flex-col">
           {/* Main Photo Banner */}
-          <div className="relative w-full h-72 bg-surface-variant overflow-hidden">
-            {user.photos && user.photos.length > 0 && user.photos[0] ? (
+          <div className="relative w-full h-72 sm:h-80 bg-surface-variant overflow-hidden group select-none">
+            {profilePhotos.length > 0 ? (
               <img
-                src={user.photos[0]}
-                alt={user.fullName}
-                className={`w-full h-full object-cover transition-all ${user.blurPhotosByDefault ? 'filter blur-md scale-110' : ''}`}
+                src={profilePhotos[activePhotoIdx]}
+                alt={`${user.fullName} photo ${activePhotoIdx + 1}`}
+                className={`w-full h-full object-cover transition-all duration-300 ${user.blurPhotosByDefault ? 'filter blur-md scale-110' : ''}`}
               />
             ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center text-secondary">
-                <span className="text-xs font-semibold">No profile photo uploaded</span>
+              <div className="w-full h-full flex flex-col items-center justify-center text-secondary gap-2 p-6 text-center">
+                <div className="w-16 h-16 rounded-full bg-pastel-rose text-primary flex items-center justify-center text-2xl font-bold font-serif shadow-subtle border border-pastel-rose-border">
+                  {user.fullName ? user.fullName[0].toUpperCase() : 'U'}
+                </div>
+                <div>
+                  <span className="text-xs font-semibold block text-on-surface">No profile photo uploaded</span>
+                  <span className="text-[11px] text-secondary">Upload photos to get 10x more profile visits</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleOpenEditProfile}
+                  className="mt-1 px-3.5 py-1.5 rounded-full bg-primary hover:bg-primary-dark text-white text-xs font-bold shadow-brand flex items-center gap-1.5 active:scale-95 transition-all"
+                >
+                  <PlusCircle className="w-3.5 h-3.5" />
+                  <span>Upload Photos</span>
+                </button>
               </div>
             )}
             
-            {user.blurPhotosByDefault && user.photos && user.photos.length > 0 && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/25 backdrop-blur-xs">
+            {/* Story Progress Bars */}
+            {profilePhotos.length > 1 && (
+              <div className="absolute top-2.5 inset-x-4 flex items-center gap-1.5 z-20">
+                {profilePhotos.map((_, pIdx) => (
+                  <button
+                    key={pIdx}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedPhotoIdx(pIdx);
+                    }}
+                    aria-label={`View photo ${pIdx + 1}`}
+                    className={`h-1 flex-1 rounded-full cursor-pointer transition-all ${
+                      pIdx === activePhotoIdx
+                        ? 'bg-white shadow'
+                        : 'bg-white/40 hover:bg-white/70'
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Left / Right Carousel Controls */}
+            {profilePhotos.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedPhotoIdx(prev => (prev > 0 ? prev - 1 : profilePhotos.length - 1));
+                  }}
+                  aria-label="Previous Photo"
+                  className="absolute left-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center backdrop-blur-sm opacity-80 hover:opacity-100 hover:scale-105 active:scale-95 transition-all z-20"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedPhotoIdx(prev => (prev < profilePhotos.length - 1 ? prev + 1 : 0));
+                  }}
+                  aria-label="Next Photo"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center backdrop-blur-sm opacity-80 hover:opacity-100 hover:scale-105 active:scale-95 transition-all z-20"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </>
+            )}
+
+            {user.blurPhotosByDefault && profilePhotos.length > 0 && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/25 backdrop-blur-xs pointer-events-none z-10">
                 <span className="bg-white/95 text-on-surface text-xs px-3 py-1 rounded-full flex items-center gap-1.5 shadow-subtle border border-outline font-semibold">
                   <EyeOff className="w-3.5 h-3.5 text-primary" />
                   <span>Modesty Protection Active</span>
@@ -725,16 +587,29 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
               </div>
             )}
             
-            <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-full flex items-center gap-1 text-white text-xs font-semibold">
-              <MapPin className="w-3.5 h-3.5 text-primary-light" />
-              <span>{user.location || 'Global'}</span>
-            </div>
-            
-            {isVip && (
-              <div className="absolute top-4 right-4 bg-pastel-amber text-pastel-amber-text border border-pastel-amber-border px-3 py-1 rounded-full flex items-center gap-1 text-xs font-bold shadow-subtle z-10">
-                <Crown className="w-3.5 h-3.5 text-pastel-amber-text" />
+            {/* Photo Counter Badge (Bottom-Right, only when multiple photos exist) */}
+            {profilePhotos.length > 1 && (
+              <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-full text-white text-xs font-semibold flex items-center gap-1 z-20 shadow-xs">
+                <Camera className="w-3.5 h-3.5 text-white/90" />
+                <span>{activePhotoIdx + 1} / {profilePhotos.length}</span>
+              </div>
+            )}
+
+            {/* Top-Left Membership Pill / Upgrade Action */}
+            {isVip ? (
+              <div className={`absolute ${profilePhotos.length > 1 ? 'top-6' : 'top-3.5'} left-3 bg-pastel-amber text-pastel-amber-text border border-pastel-amber-border px-3 py-1 rounded-full flex items-center gap-1.5 text-xs font-bold shadow-subtle z-20`}>
+                <Crown className="w-3.5 h-3.5 text-pastel-amber-text shrink-0" />
                 <span>Barakah VIP</span>
               </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowUpgradeModal(true)}
+                className={`absolute ${profilePhotos.length > 1 ? 'top-6' : 'top-3.5'} left-3 bg-white/95 backdrop-blur-xs text-primary border border-primary/30 px-3 py-1 rounded-full flex items-center gap-1.5 text-xs font-bold shadow-subtle z-20 hover:bg-white active:scale-95 transition-all cursor-pointer`}
+              >
+                <Crown className="w-3.5 h-3.5 text-amber-500 fill-amber-400 shrink-0" />
+                <span>Free Member · Upgrade</span>
+              </button>
             )}
           </div>
 
@@ -742,12 +617,13 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
           {/* User Details */}
           <div className="p-4 space-y-4">
             <div>
+              {/* Primary Header Row: Name & Age */}
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="font-serif text-xl font-bold text-on-surface">
+                <h2 className="font-serif text-xl sm:text-2xl font-bold text-on-surface">
                   {user.fullName}, {user.age || 28}
                 </h2>
                 {isVip && (
-                  <Crown className="w-4 h-4 text-amber-500" />
+                  <Crown className="w-4 h-4 text-amber-500 fill-amber-400" />
                 )}
                 {currentUserProfile.voiceGreetingUrl && (
                   <button
@@ -765,29 +641,78 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
                   </button>
                 )}
               </div>
-              <p className="text-xs text-primary font-semibold mt-0.5">
-                {rel?.sect || 'Sunni'} ({rel?.madhhab || 'Hanafi'}) · {user.profession || 'Professional'}
-              </p>
 
+              {/* Location and Religious / Career Meta Row */}
+              <div className="flex items-center gap-2 text-xs text-secondary mt-1.5 flex-wrap">
+                <span className="inline-flex items-center gap-1 text-on-surface font-medium">
+                  <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <span>{user.location || 'Global'}</span>
+                </span>
+                <span className="text-secondary/60 font-bold">·</span>
+                <span className="text-primary font-semibold">
+                  {rel?.sect || 'Sunni'} ({rel?.madhhab || 'Hanafi'})
+                </span>
+                <span className="text-secondary/60 font-bold">·</span>
+                <span>{user.profession || 'Professional'}</span>
+              </div>
             </div>
 
             {/* Photo Gallery Grid */}
-            {user.photos && user.photos.length > 0 && (
+            {profilePhotos.length > 0 && (
               <div>
-                <h3 className="text-xs font-bold text-secondary uppercase tracking-wider mb-2">
-                  My Photos ({user.photos.length})
-                </h3>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-xs font-bold text-secondary uppercase tracking-wider">
+                    My Photos ({profilePhotos.length})
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={handleOpenEditProfile}
+                    className="text-primary hover:text-primary-dark text-xs font-bold flex items-center gap-1 active:scale-95 transition-all"
+                  >
+                    <Edit3 className="w-3 h-3" />
+                    <span>Manage</span>
+                  </button>
+                </div>
                 <div className="grid grid-cols-3 gap-2">
-                  {user.photos.map((p, idx) => (
-                    <div key={idx} className="aspect-square rounded-2xl overflow-hidden border border-outline relative shadow-subtle">
-                      <img src={p} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
-                      {idx === 0 && (
-                        <span className="absolute bottom-1 left-1 bg-primary text-white text-[8px] font-bold px-1.5 py-0.2 rounded">
-                          Main
-                        </span>
-                      )}
-                    </div>
-                  ))}
+                  {profilePhotos.map((p, idx) => {
+                    const isSelected = idx === activePhotoIdx;
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setSelectedPhotoIdx(idx)}
+                        className={`aspect-square rounded-2xl overflow-hidden border relative shadow-subtle transition-all cursor-pointer group text-left ${
+                          isSelected
+                            ? 'ring-2 ring-primary ring-offset-2 border-primary scale-[1.02] shadow-md'
+                            : 'border-outline hover:border-primary/50 opacity-90 hover:opacity-100'
+                        }`}
+                        aria-label={`View photo ${idx + 1}`}
+                      >
+                        <img src={p} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
+                        {idx === 0 && (
+                          <span className="absolute bottom-1 left-1 bg-primary text-white text-[8px] font-bold px-1.5 py-0.2 rounded z-10 shadow-xs">
+                            Main
+                          </span>
+                        )}
+                        {isSelected && idx !== 0 && (
+                          <span className="absolute bottom-1 left-1 bg-black/70 backdrop-blur-xs text-white text-[8px] font-bold px-1.5 py-0.2 rounded z-10">
+                            Viewing
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                  {profilePhotos.length < 6 && (
+                    <button
+                      type="button"
+                      onClick={handleOpenEditProfile}
+                      className="aspect-square rounded-2xl border-2 border-dashed border-outline hover:border-primary/60 bg-surface-variant/40 hover:bg-pastel-rose/20 flex flex-col items-center justify-center gap-1 text-secondary hover:text-primary transition-all active:scale-95"
+                      aria-label="Add more photos"
+                    >
+                      <PlusCircle className="w-5 h-5" />
+                      <span className="text-[10px] font-bold">Add Photo</span>
+                    </button>
+                  )}
                 </div>
               </div>
             )}

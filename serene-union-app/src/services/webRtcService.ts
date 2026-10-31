@@ -294,7 +294,8 @@ export class WebRtcService {
         const data = await res.json();
         if (data.success && Array.isArray(data.signals)) {
           for (const sig of data.signals) {
-            const sigKey = `${sig.signal}_${sig.senderId}_${sig.timestamp || ''}`;
+            const candPart = sig.payload?.candidate?.candidate || sig.payload?.sdp?.type || sig.payload?.reason || '';
+            const sigKey = `${sig.signal}_${sig.senderId}_${sig.timestamp || ''}_${candPart}`;
             if (!this.processedSignals.has(sigKey)) {
               this.processedSignals.add(sigKey);
               if (sig.senderId !== this.currentUserId) {

@@ -111,3 +111,570 @@
     transform: translate(8px, 8px) scale(1.02);
   }
 }
+
+/* ==========================================================================
+   GLOBAL DARK THEME ENGINE
+   Comprehensive, wise dark theme:
+   - All white and light backgrounds become deep elegant dark surfaces
+   - All dark text & dark icons become crisp white/light
+   - Brand pink & semantic accents remain vibrant & readable
+   - Opacity variants (/80, /60, /50, /40) properly inverted
+   ========================================================================== */
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark body {
+  background-color: #0c0c0e !important;
+  color: #f4f4f5 !important;
+}
+
+/* 1. APP ROOT & CORE SURFACES */
+html.dark .bg-background,
+html.dark [class*="bg-background"],
+html.dark .bg-surface,
+html.dark [class*="bg-surface"]:not([class*="bg-surface-variant"]) {
+  background-color: #0c0c0e !important;
+}
+
+html.dark .bg-surface-variant,
+html.dark [class*="bg-surface-variant"] {
+  background-color: #1a1a20 !important;
+}
+
+/* All white background variants (bg-white, bg-white/80, bg-white/60, etc.) */
+html.dark .bg-white,
+html.dark [class*="bg-white"] {
+  background-color: #16161c !important;
+}
+
+/* All slate / gray light background variants */
+html.dark .bg-slate-50,
+html.dark [class*="bg-slate-50"],
+html.dark .bg-slate-100,
+html.dark [class*="bg-slate-100"],
+html.dark .bg-gray-50,
+html.dark [class*="bg-gray-50"],
+html.dark .bg-gray-100,
+html.dark [class*="bg-gray-100"] {
+  background-color: #0e0e13 !important;
+}
+
+html.dark .bg-slate-200,
+html.dark [class*="bg-slate-200"],
+html.dark .bg-gray-200,
+html.dark [class*="bg-gray-200"] {
+  background-color: #1f1f27 !important;
+}
+
+/* 2. PROTECT ELEMENTS THAT MUST REMAIN WHITE OR ORIGINAL */
+/* Toggle switch knobs only */
+html.dark [class*="translate-x-"].bg-white,
+html.dark [class*="translate-x-0"].bg-white,
+html.dark [class*="translate-x-5"].bg-white,
+html.dark button[aria-label*="Toggle"] [class*="transition-transform"],
+html.dark button[role="switch"] [class*="transition-transform"] {
+  background-color: #ffffff !important;
+}
+
+/* Story active progress indicator bars */
+html.dark .h-1.bg-white:not([class*="rounded-2xl"]):not([class*="p-"]) {
+  background-color: #ffffff !important;
+}
+
+/* Floating Upgrade Pill & Modesty tag over photo banner */
+html.dark .absolute [class*="bg-white\/95"],
+html.dark .absolute.left-3[class*="bg-white"] {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  color: #FF2560 !important;
+}
+
+/* Colored buttons with white text must keep pure white text */
+html.dark .text-white,
+html.dark [class*="text-white"],
+html.dark .bg-primary,
+html.dark [class*="bg-primary"],
+html.dark .bg-emerald-600,
+html.dark [class*="bg-emerald-600"] {
+  color: #ffffff !important;
+}
+
+/* 3. INVERT ALL DARK TEXT TO CRISP WHITE / LIGHT */
+html.dark .text-on-surface,
+html.dark [class*="text-on-surface"],
+html.dark .text-slate-900,
+html.dark [class*="text-slate-900"],
+html.dark .text-slate-800,
+html.dark [class*="text-slate-800"],
+html.dark .text-slate-700,
+html.dark [class*="text-slate-700"],
+html.dark .text-zinc-900,
+html.dark [class*="text-zinc-900"],
+html.dark .text-zinc-800,
+html.dark [class*="text-zinc-800"],
+html.dark .text-gray-900,
+html.dark [class*="text-gray-900"],
+html.dark .text-gray-800,
+html.dark [class*="text-gray-800"] {
+  color: #f4f4f5 !important;
+}
+
+/* Secondary muted text */
+html.dark .text-secondary,
+html.dark [class*="text-secondary"],
+html.dark .text-slate-500,
+html.dark [class*="text-slate-500"],
+html.dark .text-slate-600,
+html.dark [class*="text-slate-600"],
+html.dark .text-gray-500,
+html.dark [class*="text-gray-500"],
+html.dark .text-zinc-500,
+html.dark [class*="text-zinc-500"] {
+  color: #a1a1aa !important;
+}
+
+/* 4. INVERT ALL BORDERS & DIVIDERS TO SUBTLE DARK OUTLINES */
+html.dark .border-outline,
+html.dark [class*="border-outline"],
+html.dark .border-slate-100,
+html.dark .border-slate-200,
+html.dark [class*="border-slate-200"],
+html.dark .border-slate-300,
+html.dark .border-gray-200,
+html.dark [class*="border-gray-200"],
+html.dark .border-zinc-200,
+html.dark [class*="border-zinc-200"] {
+  border-color: #27272f !important;
+}
+
+html.dark [class*="divide-outline"] > :not([hidden]) ~ :not([hidden]),
+html.dark [class*="divide-slate-200"] > :not([hidden]) ~ :not([hidden]) {
+  border-color: #27272f !important;
+}
+
+/* 5. WISELY CRAFTED PASTEL SECTIONS IN DARK MODE */
+html.dark .bg-pastel-rose,
+html.dark [class*="bg-pastel-rose"] {
+  background-color: #1b1518 !important;
+  border-color: rgba(255, 37, 96, 0.28) !important;
+}
+html.dark .border-pastel-rose-border,
+html.dark [class*="border-pastel-rose-border"] {
+  border-color: rgba(255, 37, 96, 0.28) !important;
+}
+html.dark .text-pastel-rose-text,
+html.dark [class*="text-pastel-rose-text"] {
+  color: #fb7185 !important;
+}
+
+html.dark .bg-pastel-mint,
+html.dark [class*="bg-pastel-mint"] {
+  background-color: #131b16 !important;
+  border-color: rgba(16, 185, 129, 0.28) !important;
+}
+html.dark .border-pastel-mint-border,
+html.dark [class*="border-pastel-mint-border"] {
+  border-color: rgba(16, 185, 129, 0.28) !important;
+}
+html.dark .text-pastel-mint-text,
+html.dark [class*="text-pastel-mint-text"] {
+  color: #34d399 !important;
+}
+
+html.dark .bg-pastel-amber,
+html.dark [class*="bg-pastel-amber"] {
+  background-color: #1b1812 !important;
+  border-color: rgba(245, 158, 11, 0.28) !important;
+}
+html.dark .border-pastel-amber-border,
+html.dark [class*="border-pastel-amber-border"] {
+  border-color: rgba(245, 158, 11, 0.28) !important;
+}
+html.dark .text-pastel-amber-text,
+html.dark [class*="text-pastel-amber-text"] {
+  color: #fbbf24 !important;
+}
+
+html.dark .bg-pastel-sky,
+html.dark [class*="bg-pastel-sky"] {
+  background-color: #131820 !important;
+  border-color: rgba(14, 165, 233, 0.28) !important;
+}
+html.dark .border-pastel-sky-border,
+html.dark [class*="border-pastel-sky-border"] {
+  border-color: rgba(14, 165, 233, 0.28) !important;
+}
+html.dark .text-pastel-sky-text,
+html.dark [class*="text-pastel-sky-text"] {
+  color: #38bdf8 !important;
+}
+
+html.dark .bg-pastel-lavender,
+html.dark [class*="bg-pastel-lavender"] {
+  background-color: #181420 !important;
+  border-color: rgba(139, 92, 246, 0.28) !important;
+}
+html.dark .border-pastel-lavender-border,
+html.dark [class*="border-pastel-lavender-border"] {
+  border-color: rgba(139, 92, 246, 0.28) !important;
+}
+html.dark .text-pastel-lavender-text,
+html.dark [class*="text-pastel-lavender-text"] {
+  color: #c4b5fd !important;
+}
+
+html.dark .bg-pastel-sand,
+html.dark [class*="bg-pastel-sand"] {
+  background-color: #191814 !important;
+  border-color: rgba(180, 83, 9, 0.28) !important;
+}
+html.dark .border-pastel-sand-border,
+html.dark [class*="border-pastel-sand-border"] {
+  border-color: rgba(180, 83, 9, 0.28) !important;
+}
+html.dark .text-pastel-sand-text,
+html.dark [class*="text-pastel-sand-text"] {
+  color: #d6d3d1 !important;
+}
+
+/* Inner field cells inside pastel sections */
+html.dark [class*="bg-pastel-"] [class*="bg-white"] {
+  background-color: #21212a !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* 6. NESTED ICON BADGE CONTAINERS & ACCENTS */
+html.dark [class*="bg-pink-50"],
+html.dark [class*="bg-purple-50"],
+html.dark [class*="bg-indigo-50"],
+html.dark [class*="bg-blue-50"],
+html.dark [class*="bg-emerald-50"],
+html.dark [class*="bg-amber-50"],
+html.dark [class*="bg-sky-50"],
+html.dark [class*="bg-rose-50"],
+html.dark [class*="bg-emerald-100"],
+html.dark [class*="bg-rose-100"] {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* Semantic icons & colored text */
+html.dark .text-emerald-700,
+html.dark .text-emerald-600 {
+  color: #34d399 !important;
+}
+html.dark .text-amber-700,
+html.dark .text-amber-600 {
+  color: #fbbf24 !important;
+}
+html.dark .text-rose-700,
+html.dark .text-rose-600 {
+  color: #fb7185 !important;
+}
+html.dark .text-sky-700,
+html.dark .text-sky-600 {
+  color: #38bdf8 !important;
+}
+html.dark .text-purple-600 {
+  color: #c084fc !important;
+}
+html.dark .text-indigo-600 {
+  color: #818cf8 !important;
+}
+html.dark .text-blue-600 {
+  color: #60a5fa !important;
+}
+
+/* 7. FORM INPUTS, TEXTAREAS, SELECTS & DROPDOWNS */
+html.dark input:not([type="checkbox"]):not([type="radio"]),
+html.dark textarea,
+html.dark select {
+  background-color: #1a1a22 !important;
+  color: #f4f4f5 !important;
+  border-color: #353540 !important;
+}
+
+html.dark select option {
+  background-color: #1a1a22 !important;
+  color: #f4f4f5 !important;
+}
+
+/* 8. MODALS & POPUPS */
+html.dark .shadow-card,
+html.dark .shadow-subtle,
+html.dark .shadow-elevated {
+  box-shadow: 0 6px 24px -2px rgba(0, 0, 0, 0.65) !important;
+}
+
+html.dark header.bg-white,
+html.dark header[class*="bg-white"] {
+  background-color: #131318 !important;
+  border-color: #24242c !important;
+}
+
+/* 9. MATCHES & ACTIVITY HUB DARK MODE REFINEMENTS */
+html.dark [class*="bg-slate-50/50"],
+html.dark [class*="bg-slate-50"] {
+  background-color: #0c0c0e !important;
+}
+
+/* Inactive sub-tabs and cards in Matches */
+html.dark .bg-white.text-slate-600,
+html.dark [class*="bg-white"][class*="text-slate-600"] {
+  background-color: #16161c !important;
+  color: #cbd5e1 !important;
+  border-color: #27272f !important;
+}
+
+/* VIP Candidate Like Banner in Matches */
+html.dark [class*="from-amber-50"] {
+  background: linear-gradient(to right, #1f1b14, #262017, #1f1b14) !important;
+  border-color: rgba(245, 158, 11, 0.3) !important;
+}
+html.dark [class*="from-amber-50"] h3,
+html.dark [class*="from-amber-50"] span {
+  color: #fde68a !important;
+}
+html.dark [class*="from-amber-50"] p {
+  color: #d1d5db !important;
+}
+
+/* 10. CHAT TAB & ACTIVE CONVERSATIONS DARK MODE REFINEMENTS */
+/* Chat sticky footers */
+html.dark footer.bg-white,
+html.dark footer[class*="bg-white"] {
+  background-color: #131318 !important;
+  border-color: #24242c !important;
+}
+
+/* Direct Salam Pending Footer in Active Chat */
+html.dark footer[class*="from-emerald-50"] {
+  background: linear-gradient(to right, #112019, #0f271f, #112019) !important;
+  border-color: rgba(16, 185, 129, 0.35) !important;
+}
+html.dark footer[class*="from-emerald-50"] p {
+  color: #e4e4e7 !important;
+}
+html.dark footer[class*="from-emerald-50"] strong {
+  color: #34d399 !important;
+}
+
+/* Quick greeting reply chips in Chat */
+html.dark [class*="hover:bg-rose-50/80"] {
+  background-color: #1a1a24 !important;
+  color: #e4e4e7 !important;
+  border-color: #2e2e3d !important;
+}
+html.dark [class*="hover:bg-rose-50/80"]:hover {
+  background-color: #262635 !important;
+  color: #ea284e !important;
+  border-color: rgba(234, 40, 78, 0.4) !important;
+}
+
+/* Incoming message bubbles */
+html.dark [class*="rounded-bl-2xs"] {
+  background-color: #1c1c24 !important;
+  color: #f4f4f5 !important;
+  border-color: #2a2a36 !important;
+}
+
+/* Chat conversation items with subtle gradients */
+html.dark [class*="from-rose-50/50"] {
+  background: linear-gradient(to right, #20171d, #16161c, #16161c) !important;
+  border-color: rgba(234, 40, 78, 0.3) !important;
+}
+
+/* Modesty locked / revealed inline event pills */
+html.dark [class*="bg-amber-50/90"] {
+  background-color: #221c13 !important;
+  border-color: #453414 !important;
+  color: #fde68a !important;
+}
+html.dark [class*="bg-amber-50/90"] span {
+  color: #fde68a !important;
+}
+
+html.dark [class*="bg-emerald-50/90"] {
+  background-color: #112318 !important;
+  border-color: #174e2d !important;
+  color: #a7f3d0 !important;
+}
+html.dark [class*="bg-emerald-50/90"] span {
+  color: #a7f3d0 !important;
+}
+
+/* Search bar in chat conversations */
+html.dark .bg-surface-variant {
+  background-color: #1c1c25 !important;
+  border-color: #2a2a38 !important;
+  color: #f4f4f5 !important;
+}
+
+/* 11. MATCHES & CHAT CARDS DARK MODE REFINEMENTS */
+html.dark [class*="p-3.5"][class*="bg-white"],
+html.dark [class*="p-3"][class*="bg-white"],
+html.dark .bg-white.p-3\.5,
+html.dark div[class*="bg-white"][class*="rounded-2xl"],
+html.dark div[class*="bg-white"][class*="rounded-3xl"] {
+  background-color: #16161c !important;
+  border-color: #272733 !important;
+}
+
+/* Hover state for dark cards */
+html.dark div[class*="bg-white"][class*="rounded-2xl"]:hover,
+html.dark div[class*="bg-white"][class*="rounded-3xl"]:hover,
+html.dark [class*="p-3.5"][class*="bg-white"]:hover {
+  background-color: #1a1a24 !important;
+  border-color: rgba(234, 40, 78, 0.4) !important;
+}
+
+/* Card titles and headings in Matches and Chat */
+html.dark [class*="bg-white"][class*="rounded-2xl"] h4,
+html.dark [class*="bg-white"][class*="rounded-2xl"] h3,
+html.dark [class*="bg-white"][class*="rounded-2xl"] h2,
+html.dark [class*="bg-white"][class*="rounded-3xl"] h4,
+html.dark [class*="bg-white"][class*="rounded-3xl"] h3,
+html.dark [class*="bg-white"][class*="rounded-3xl"] h2 {
+  color: #f4f4f5 !important;
+}
+
+/* Card metadata texts */
+html.dark .text-slate-800,
+html.dark [class*="text-slate-800"] {
+  color: #f4f4f5 !important;
+}
+html.dark .text-slate-500,
+html.dark [class*="text-slate-500"] {
+  color: #9ca3af !important;
+}
+html.dark .text-slate-400,
+html.dark [class*="text-slate-400"] {
+  color: #9ca3af !important;
+}
+
+/* Dot separator */
+html.dark .bg-slate-300,
+html.dark [class*="bg-slate-300"] {
+  background-color: #4b5563 !important;
+}
+
+/* Avatar border ring in cards */
+html.dark .border-2.border-white {
+  border-color: #272733 !important;
+}
+html.dark .ring-slate-100,
+html.dark [class*="ring-slate-100"] {
+  --tw-ring-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* 'Matched' badge in 'You Liked' tab */
+html.dark [class*="bg-emerald-50"][class*="text-emerald-700"] {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+  color: #34d399 !important;
+}
+
+/* 'Pending' badge in 'You Liked' tab */
+html.dark [class*="bg-slate-50"][class*="text-slate-600"] {
+  background-color: #21212b !important;
+  border-color: #2e2e3d !important;
+  color: #9ca3af !important;
+}
+
+/* Timeline pill on card */
+html.dark [class*="bg-rose-50"][class*="text-rose-600"] {
+  background-color: rgba(234, 40, 78, 0.12) !important;
+  border-color: rgba(234, 40, 78, 0.25) !important;
+  color: #fb7185 !important;
+}
+
+/* Story avatars strip ring in ChatScreen */
+html.dark .w-13.h-13.rounded-full[class*="bg-white"] {
+  background-color: #1a1a24 !important;
+}
+
+/* 12. CHAT ROOM MAIN BACKGROUND & TEXT READABILITY FIXES */
+html.dark main[class*="bg-[#FAF8F5]"],
+html.dark [class*="bg-[#FAF8F5]"],
+html.dark main.bg-\[\#FAF8F5\]\/60 {
+  background-color: #0c0c0e !important;
+}
+
+/* Bismillah conversation header in Chat Room */
+html.dark [class*="border-amber-200"][class*="text-amber-900"],
+html.dark [class*="text-amber-900/90"] {
+  background-color: #1a1712 !important;
+  border-color: rgba(245, 158, 11, 0.35) !important;
+  color: #fde68a !important;
+}
+html.dark [class*="border-amber-200"][class*="text-amber-900"] span {
+  color: #fde68a !important;
+}
+
+/* Relationship with Deen & Ideal Spouse note boxes */
+html.dark [class*="bg-emerald-50/70"],
+html.dark [class*="bg-emerald-50"][class*="text-emerald-900"] {
+  background-color: rgba(16, 185, 129, 0.12) !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+  color: #d1fae5 !important;
+}
+html.dark [class*="bg-emerald-50/70"] span,
+html.dark [class*="bg-emerald-50"][class*="text-emerald-900"] span {
+  color: #34d399 !important;
+}
+
+html.dark [class*="bg-amber-50/70"],
+html.dark [class*="bg-amber-50"][class*="text-amber-900"] {
+  background-color: rgba(245, 158, 11, 0.12) !important;
+  border-color: rgba(245, 158, 11, 0.3) !important;
+  color: #fef3c7 !important;
+}
+html.dark [class*="bg-amber-50/70"] span,
+html.dark [class*="bg-amber-50"][class*="text-amber-900"] span {
+  color: #fde68a !important;
+}
+
+/* Global high-contrast text color overrides for dark mode */
+html.dark .text-emerald-900,
+html.dark .text-emerald-950,
+html.dark .text-emerald-800 {
+  color: #d1fae5 !important;
+}
+
+html.dark .text-amber-900,
+html.dark .text-amber-950,
+html.dark .text-amber-800 {
+  color: #fde68a !important;
+}
+
+html.dark .text-rose-900,
+html.dark .text-rose-950,
+html.dark .text-rose-800 {
+  color: #fecdd3 !important;
+}
+
+html.dark .text-sky-900,
+html.dark .text-sky-950,
+html.dark .text-sky-800 {
+  color: #bae6fd !important;
+}
+
+html.dark .text-blue-900,
+html.dark .text-blue-950,
+html.dark .text-blue-800 {
+  color: #bfdbfe !important;
+}
+
+html.dark .text-indigo-900,
+html.dark .text-indigo-950,
+html.dark .text-indigo-800 {
+  color: #c7d2fe !important;
+}
+
+html.dark .text-purple-900,
+html.dark .text-purple-950,
+html.dark .text-purple-800 {
+  color: #e9d5ff !important;
+}
+
+

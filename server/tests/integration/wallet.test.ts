@@ -729,6 +729,51 @@ describe('Wallet, In-App Purchases & Rewarded Ads API Integration Tests', () => 
     walletData = await walletCheck.json();
     expect(walletData.wallet.directSalams).toBe(22); // Must stay 22, NOT 42!
   });
+
+  it('26. Concurrent duplicate /purchase-google-play requests within 15s are debounced and do NOT duplicate Salams (Never 42)', async () => {
+    // 1. Initial wallet setup (Default 2 Salams)
+    const initRes = await app.request('/api/wallet/usr_test_concurrent_user', { method: 'GET' }, env);
+    const initData: any = await initRes.json();
+    expect(initData.wallet.directSalams).toBe(2);
+
+    const payload = {
+      userId: 'usr_test_concurrent_user',
+      productId: 'qurb_barakah_monthly',
+      orderId: 'GPA.9999-8888-7777-66660',
+      purchaseToken: 'gp_token_concurrent_trial_1',
+      amountCents: 0,
+      currency: 'USD',
+      isTrial: true,
+      durationDays: 7
+    };
+
+    // First call: Should credit 20 Direct Salams
+    const res1 = await app.request('/api/wallet/purchase-google-play', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-test-debounce': 'true' },
+      body: JSON.stringify(payload)
+    }, env);
+    expect(res1.status).toBe(200);
+    const data1: any = await res1.json();
+    expect(data1.success).toBe(true);
+    expect(data1.alreadyCredited).toBe(false);
+
+    // Concurrent/Rapid duplicate call within 15s:
+    const res2 = await app.request('/api/wallet/purchase-google-play', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-test-debounce': 'true' },
+      body: JSON.stringify(payload)
+    }, env);
+    expect(res2.status).toBe(200);
+    const data2: any = await res2.json();
+    expect(data2.success).toBe(true);
+    expect(data2.alreadyCredited).toBe(true);
+    expect(data2.directSalamsCredited).toBe(0);
+
+    const walletCheck = await app.request('/api/wallet/usr_test_concurrent_user', { method: 'GET' }, env);
+    const walletData: any = await walletCheck.json();
+    expect(walletData.wallet.directSalams).toBe(22); // 2 default + 20 credited once = 22, NEVER 42!
+  });
 });
 
 

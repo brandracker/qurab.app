@@ -8,6 +8,9 @@ import { ReferralHubModal } from './ReferralHubModal';
 
 const GooglePlayBilling = registerPlugin<any>('GooglePlayBillingPlugin');
 
+// Module-level deduplication set to avoid double-processing from listener + billing flow race conditions
+const inFlightPurchases = new Set<string>();
+
 interface Props {
   userId: string;
   isOpen: boolean;
@@ -51,6 +54,14 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
       try {
         sub = (GooglePlayBilling as any).addListener?.('onPurchaseCompleted', async (event: any) => {
           if (event?.productId && (event.productId === 'qurb_barakah_monthly' || event.productId === 'serene_barakah_monthly')) {
+            const listenerKey = `${userId}_${event.productId}_${event.purchaseToken || event.orderId || 'pending'}`;
+            if (inFlightPurchases.has(listenerKey)) {
+              console.log('[GooglePlay] Listener skipping already processing purchase:', listenerKey);
+              return;
+            }
+            inFlightPurchases.add(listenerKey);
+            setTimeout(() => inFlightPurchases.delete(listenerKey), 30000);
+
             try {
               await fetch(`${API_BASE}/wallet/purchase-google-play`, {
                 method: 'POST',
@@ -209,6 +220,20 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
       facebookEventsService.logSubscribe('barakah_vip', currentPriceVal, 'USD');
     }
     facebookEventsService.logPurchase(currentPriceVal, 'USD', currentItem.id);
+
+    const billingKey = `${userId}_${currentItem.id}_${purchaseToken || orderId || 'pending'}`;
+    if (inFlightPurchases.has(billingKey)) {
+      console.log('[GooglePlay] Purchase already handled by listener:', billingKey);
+      setIsProcessing(false);
+      setPurchaseStep('success');
+      setTimeout(() => {
+        onPurchaseSuccess(currentItem.id);
+        onClose();
+      }, 1200);
+      return;
+    }
+    inFlightPurchases.add(billingKey);
+    setTimeout(() => inFlightPurchases.delete(billingKey), 30000);
 
     try {
       const res = await fetch(`${API_BASE}/wallet/purchase-google-play`, {

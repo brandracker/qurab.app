@@ -297,6 +297,12 @@ public class MainActivity extends BridgeActivity {
                             if (inCall) {
                                 audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
                                 audioManager.requestAudioFocus(null, AudioManager.STREAM_VOICE_CALL, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
+                                try {
+                                    android.app.NotificationManager nm = (android.app.NotificationManager) activity.getSystemService(Context.NOTIFICATION_SERVICE);
+                                    if (nm != null) {
+                                        nm.cancel(QurbFirebaseMessagingService.CALL_NOTIFICATION_ID);
+                                    }
+                                } catch (Exception ignored) {}
                             } else {
                                 audioManager.abandonAudioFocus(null);
                                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
@@ -307,6 +313,20 @@ public class MainActivity extends BridgeActivity {
                             }
                         } catch (Exception ignored) {}
                     }
+                });
+            }
+        }
+
+        @JavascriptInterface
+        public void dismissCallNotification() {
+            if (activity != null) {
+                activity.runOnUiThread(() -> {
+                    try {
+                        android.app.NotificationManager nm = (android.app.NotificationManager) activity.getSystemService(Context.NOTIFICATION_SERVICE);
+                        if (nm != null) {
+                            nm.cancel(QurbFirebaseMessagingService.CALL_NOTIFICATION_ID);
+                        }
+                    } catch (Exception ignored) {}
                 });
             }
         }

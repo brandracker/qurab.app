@@ -169,6 +169,18 @@ function pruneRecentLikeHits() {
   }
 }
 
+// In-flight & rapid deduplication lock for in-app purchases to prevent race-condition double crediting
+const recentPurchaseHits = new Map<string, number>();
+
+function pruneRecentPurchaseHits() {
+  if (recentPurchaseHits.size > 1000) {
+    const cutoff = Date.now() - 30000;
+    for (const [key, timestamp] of recentPurchaseHits.entries()) {
+      if (timestamp < cutoff) recentPurchaseHits.delete(key);
+    }
+  }
+}
+
 // 1b. Use a Daily Like (Live D1 Decrement with Midnight Reset)
 walletRouter.post('/use-like', async (c) => {
   try {
@@ -382,20 +394,31 @@ walletRouter.post('/purchase-google-play', async (c) => {
     const resolvedDays = isFreeTrial ? 7 : (durationDays ? Number(durationDays) : 30);
     const resolvedAmountCents = isFreeTrial ? 0 : (amountCents !== undefined ? Number(amountCents) : (isSubscription ? 299 : 99));
 
-    // If purchase was already completed, verify status/VIP but PREVENT duplicate salams or benefits
-    if (existingPurchase && existingPurchase.status === 'completed') {
+    // Deduplication lock: prevent concurrent double-hits (e.g. onPurchaseCompleted listener + handleConfirmBilling within 15s)
+    const purchaseLockKey = cleanOrderId || cleanToken || `${userId}_${productId}`;
+    const nowPurchaseTime = Date.now();
+    const lastPurchaseTime = recentPurchaseHits.get(purchaseLockKey) || 0;
+    const isPurchaseTestBypass = c.env.ENVIRONMENT === 'test' && !c.req.header('x-test-debounce');
+    const isRapidDuplicatePurchase = !isPurchaseTestBypass && ((nowPurchaseTime - lastPurchaseTime) < 15000);
+    recentPurchaseHits.set(purchaseLockKey, nowPurchaseTime);
+    pruneRecentPurchaseHits();
+
+    // If purchase was already completed or concurrent duplicate hit, verify status/VIP but PREVENT duplicate salams or benefits
+    if (isRapidDuplicatePurchase || (existingPurchase && existingPurchase.status === 'completed')) {
       if (isSubscription) {
+        const fallbackExpiry = calculateSubscriptionExpiry(resolvedDays);
         await c.env.DB.prepare(`
           UPDATE users SET is_vip = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?
         `).bind(userId).run();
 
         await c.env.DB.prepare(`
-          INSERT INTO user_wallets (user_id, subscription_tier, direct_salams_balance, daily_messages_quota)
-          VALUES (?, 'barakah_vip', 20, 9999)
+          INSERT INTO user_wallets (user_id, subscription_tier, direct_salams_balance, daily_messages_quota, subscription_expiry)
+          VALUES (?, 'barakah_vip', 20, 9999, ?)
           ON CONFLICT(user_id) DO UPDATE SET 
             subscription_tier = 'barakah_vip', 
-            daily_messages_quota = 9999
-        `).bind(userId).run();
+            daily_messages_quota = 9999,
+            subscription_expiry = COALESCE(user_wallets.subscription_expiry, excluded.subscription_expiry)
+        `).bind(userId, fallbackExpiry).run();
 
         const currentWallet: any = await c.env.DB.prepare(
           'SELECT subscription_expiry FROM user_wallets WHERE user_id = ?'
@@ -404,7 +427,7 @@ walletRouter.post('/purchase-google-play', async (c) => {
         return c.json({
           success: true,
           message: 'Google Play subscription verified & active (duplicate benefits avoided).',
-          purchaseId: existingPurchase.id,
+          purchaseId: existingPurchase?.id || purchaseId,
           productId,
           isTrial: isFreeTrial,
           daysGranted: resolvedDays,
@@ -418,7 +441,7 @@ walletRouter.post('/purchase-google-play', async (c) => {
       return c.json({
         success: true,
         message: 'Purchase already processed & credited.',
-        purchaseId: existingPurchase.id,
+        purchaseId: existingPurchase?.id || purchaseId,
         productId,
         alreadyCredited: true,
         directSalamsCredited: 0
@@ -464,7 +487,10 @@ walletRouter.post('/purchase-google-play', async (c) => {
           subscription_tier = 'barakah_vip', 
           daily_messages_quota = 9999, 
           subscription_expiry = excluded.subscription_expiry,
-          direct_salams_balance = direct_salams_balance + 20
+          direct_salams_balance = CASE 
+            WHEN user_wallets.subscription_tier = 'barakah_vip' AND (user_wallets.subscription_expiry IS NULL OR user_wallets.subscription_expiry > datetime('now')) THEN user_wallets.direct_salams_balance
+            ELSE user_wallets.direct_salams_balance + 20
+          END
       `).bind(userId, expiryIso).run();
     }
 

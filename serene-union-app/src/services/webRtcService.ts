@@ -12,6 +12,7 @@ declare global {
       isSpeakerphoneOn: () => boolean;
       requestCallPermissions?: (withVideo: boolean) => void;
       getPendingIncomingCall?: () => string | null;
+      dismissCallNotification?: () => void;
     };
   }
 }
@@ -166,6 +167,7 @@ export class WebRtcService {
   private notifyState(state: CallState, data?: any) {
     this.currentCallState = state;
     if (state === 'connected') {
+      this.stopRingtone();
       if (!this.callConnectedTime) {
         this.callConnectedTime = Date.now();
       }
@@ -283,6 +285,11 @@ export class WebRtcService {
       clearInterval(this.ringToneInterval);
       this.ringToneInterval = null;
     }
+    try {
+      if (typeof window !== 'undefined' && window.AndroidAudioBridge?.dismissCallNotification) {
+        window.AndroidAudioBridge.dismissCallNotification();
+      }
+    } catch {}
   }
 
   private playTone(freqStart: number, freqEnd: number, duration: number = 0.3) {
@@ -932,6 +939,7 @@ export class WebRtcService {
   }
 
   private transitionToConnected() {
+    this.stopRingtone();
     if (this.connectionFallbackTimer) {
       clearTimeout(this.connectionFallbackTimer);
       this.connectionFallbackTimer = null;

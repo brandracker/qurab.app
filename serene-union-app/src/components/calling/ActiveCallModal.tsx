@@ -43,9 +43,11 @@ export const ActiveCallModal: React.FC<ActiveCallModalProps> = ({
     const attachStreams = (localStream: MediaStream | null, remoteStream: MediaStream | null) => {
       if (localVideoRef.current && localStream) {
         localVideoRef.current.srcObject = localStream;
+        localVideoRef.current.play().catch(() => {});
       }
       if (outgoingPreviewVideoRef.current && localStream) {
         outgoingPreviewVideoRef.current.srcObject = localStream;
+        outgoingPreviewVideoRef.current.play().catch(() => {});
       }
       if (remoteVideoRef.current && remoteStream) {
         remoteVideoRef.current.srcObject = remoteStream;
@@ -184,9 +186,17 @@ export const ActiveCallModal: React.FC<ActiveCallModalProps> = ({
 
           {/* Actual Remote Video Feed */}
           <video
-            ref={remoteVideoRef}
+            ref={(el) => {
+              remoteVideoRef.current = el;
+              const rem = webRtcService.getRemoteStream();
+              if (el && rem && el.srcObject !== rem) {
+                el.srcObject = rem;
+                el.play().catch(() => {});
+              }
+            }}
             autoPlay
             playsInline
+            muted
             onPlaying={() => setIsRemoteVideoActive(true)}
             onPause={() => setIsRemoteVideoActive(false)}
             onEnded={() => setIsRemoteVideoActive(false)}
@@ -393,7 +403,14 @@ export const ActiveCallModal: React.FC<ActiveCallModalProps> = ({
           title="Tap to reposition preview"
         >
           <video
-            ref={localVideoRef}
+            ref={(el) => {
+              localVideoRef.current = el;
+              const loc = webRtcService.getLocalStream();
+              if (el && loc && el.srcObject !== loc) {
+                el.srcObject = loc;
+                el.play().catch(() => {});
+              }
+            }}
             autoPlay
             playsInline
             muted

@@ -1,6 +1,7 @@
 package app.qurb.serene;
 
 import android.app.Activity;
+import android.content.Context;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -44,13 +45,18 @@ public class AdMobPlugin extends Plugin {
         if (isInitializing) return;
         isInitializing = true;
 
-        try {
-            MobileAds.initialize(getContext(), initializationStatus -> {
-                Log.d(TAG, "Google AdMob MobileAds initialized successfully with App ID: ca-app-pub-5486823026870276~3052992520");
-            });
-        } catch (Exception e) {
-            Log.e(TAG, "Exception during MobileAds.initialize: " + e.getMessage());
-        }
+        new Thread(() -> {
+            try {
+                Context context = getContext();
+                if (context != null) {
+                    MobileAds.initialize(context, initializationStatus -> {
+                        Log.d(TAG, "Google AdMob MobileAds initialized successfully in background thread with App ID: ca-app-pub-5486823026870276~3052992520");
+                    });
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Exception during MobileAds.initialize: " + e.getMessage());
+            }
+        }).start();
     }
 
     private void preloadRewardedAd(final Runnable onSuccess, final Runnable onFailure) {

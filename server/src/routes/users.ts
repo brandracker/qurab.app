@@ -207,8 +207,29 @@ usersRouter.post('/heartbeat', async (c) => {
     const body = await c.req.json().catch(() => ({}));
     const userId = body.userId;
     const activeSeconds = Math.min(300, Math.max(10, Number(body.activeSeconds || 60)));
+    const authHeader = c.req.header('Authorization') || '';
+    const clientToken = body.token || authHeader.replace(/^Bearer\s+/i, '').trim();
 
     if (userId) {
+      // Check Single Active Device session token
+      if (clientToken) {
+        try {
+          const userSession: any = await c.env.DB.prepare(`
+            SELECT current_session_token FROM users WHERE id = ?
+          `).bind(userId).first();
+
+          if (userSession?.current_session_token && userSession.current_session_token !== clientToken) {
+            return c.json({
+              success: false,
+              code: 'SESSION_TERMINATED_CONCURRENT_LOGIN',
+              error: 'This account was opened on another device. For your security, you have been logged out of this session.'
+            }, 401);
+          }
+        } catch (sessionErr) {
+          console.warn('Session verification notice:', sessionErr);
+        }
+      }
+
       const rawCf = (c.req.raw as any)?.cf || {};
       const clientIp = c.req.header('cf-connecting-ip') || c.req.header('x-real-ip') || null;
       const city = c.req.header('cf-ipcity') || rawCf.city || null;

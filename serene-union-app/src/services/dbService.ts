@@ -927,12 +927,27 @@ class DBService {
     }
   }
 
-  deleteVoiceGreeting(_userId?: string): void {
+  async deleteVoiceGreeting(userId?: string): Promise<{ success: boolean }> {
     const user = this.getCurrentUser();
+    const targetUserId = userId || user.id;
     delete user.voiceGreetingUrl;
     delete user.voiceGreetingDuration;
     this.setCurrentUser(user);
     window.dispatchEvent(new CustomEvent('serene_user_profile_updated', { detail: { user } }));
+
+    try {
+      if (targetUserId && targetUserId !== 'usr_guest') {
+        await fetch(`${API_BASE}/photos/delete-voice`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: targetUserId })
+        });
+      }
+      return { success: true };
+    } catch (err) {
+      console.warn('Delete voice greeting server sync notice:', err);
+      return { success: true };
+    }
   }
 
 

@@ -29,7 +29,7 @@ export interface CallerInfo {
 
 export interface CallSignalPayload {
   type: 'call_signal';
-  signal: 'initiate' | 'ringing' | 'accept' | 'reject' | 'sdp_offer' | 'sdp_answer' | 'ice_candidate' | 'end';
+  signal: 'initiate' | 'ringing' | 'accept' | 'reject' | 'sdp_offer' | 'sdp_answer' | 'ice_candidate' | 'end' | 'video_toggle';
   senderId: string;
   targetUserId?: string;
   callType: CallType;
@@ -99,7 +99,21 @@ export class WebRtcService {
   private hasLoggedCall: boolean = false;
 
   constructor() {
-    // Lazy AudioContext initialization on first user interaction
+    // Network Switch ICE Restart Listener (WiFi <-> 4G Data)
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', () => {
+        if (this.peerConnection && this.currentCallState === 'connected') {
+          console.log('[WebRTC] Network reconnected (online event), triggering ICE restart...');
+          try {
+            if (typeof this.peerConnection.restartIce === 'function') {
+              this.peerConnection.restartIce();
+            }
+          } catch (e) {
+            console.warn('[WebRTC] restartIce on online failed:', e);
+          }
+        }
+      });
+    }
   }
 
   public init(currentUserId: string, sendSignalFn?: (payload: CallSignalPayload) => void) {
@@ -859,6 +873,17 @@ export class WebRtcService {
 
     this.peerConnection.oniceconnectionstatechange = () => {
       const state = this.peerConnection?.iceConnectionState;
+      if (state === 'disconnected') {
+        // Attempt immediate ICE restart on network transition (WiFi <-> 4G)
+        console.warn('[WebRTC] ICE state disconnected, attempting ICE restart...');
+        try {
+          if (this.peerConnection && typeof this.peerConnection.restartIce === 'function') {
+            this.peerConnection.restartIce();
+          }
+        } catch (e) {
+          console.warn('[WebRTC] restartIce error:', e);
+        }
+      }
       if (state === 'disconnected' || state === 'failed') {
         if (!this.iceDisconnectTimer) {
           this.iceDisconnectTimer = setTimeout(() => {
@@ -867,7 +892,7 @@ export class WebRtcService {
               console.warn('[WebRTC] Network connection lost permanently, ending call.');
               this.endCall('connection_lost');
             }
-          }, 3500);
+          }, 4500);
         }
       } else if (state === 'connected' || state === 'completed') {
         if (this.iceDisconnectTimer) {
@@ -921,6 +946,27 @@ export class WebRtcService {
             this.localStream.addTrack(newTrack);
             if (this.peerConnection) {
               this.peerConnection.addTrack(newTrack, this.localStream);
+              // Perfect renegotiation offer for dynamic audio->video upgrade
+              if (this.currentPartnerId && this.currentCallState === 'connected') {
+                try {
+                  this.currentCallType = 'video';
+                  const offer = await this.peerConnection.createOffer({
+                    offerToReceiveAudio: true,
+                    offerToReceiveVideo: true
+                  });
+                  await this.peerConnection.setLocalDescription(offer);
+                  this.sendSignal({
+                    type: 'call_signal',
+                    signal: 'sdp_offer',
+                    senderId: this.currentUserId || '',
+                    targetUserId: this.currentPartnerId,
+                    callType: 'video',
+                    payload: { sdp: offer }
+                  });
+                } catch (renegErr) {
+                  console.warn('Dynamic video renegotiation notice:', renegErr);
+                }
+              }
             }
           }
         } catch (err) {
@@ -928,6 +974,18 @@ export class WebRtcService {
           this.isVideoEnabled = false;
         }
       }
+    }
+
+    // Broadcast video toggle state to call partner
+    if (this.currentPartnerId && this.currentCallState === 'connected') {
+      this.sendSignal({
+        type: 'call_signal',
+        signal: 'video_toggle',
+        senderId: this.currentUserId || '',
+        targetUserId: this.currentPartnerId,
+        callType: this.currentCallType,
+        payload: { isVideoEnabled: this.isVideoEnabled }
+      });
     }
 
     this.notifyStreams();

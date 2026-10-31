@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import { HeartHandshake, MessageCircle, EyeOff } from 'lucide-react';
 import type { UserProfile } from '../types';
@@ -14,6 +14,7 @@ interface Props {
 
 export const MutualMatchModal: React.FC<Props> = ({ profile, currentUser: propUser, onStartChat, onClose }) => {
   const currentUser = propUser || dbService.getCurrentUser();
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
     return backNavigationService.register(() => {
@@ -23,22 +24,36 @@ export const MutualMatchModal: React.FC<Props> = ({ profile, currentUser: propUs
   }, [onClose]);
 
   useEffect(() => {
-    // Defer confetti by 120ms to let modal paint smoothly without GPU compositor lag or blank screen flicker
+    // Bounded in-modal confetti: prevents Android WebView full-screen GPU compositor stall/blank screen
+    let myConfetti: any = null;
     const timer = setTimeout(() => {
       try {
-        confetti({
-          particleCount: 70,
-          spread: 60,
-          origin: { y: 0.6 },
-          colors: ['#FF2560', '#FF4D7D', '#FFF0F3', '#ffffff'],
-          disableForReducedMotion: true
-        });
+        if (canvasRef.current) {
+          myConfetti = confetti.create(canvasRef.current, {
+            resize: true,
+            useWorker: false
+          });
+          myConfetti({
+            particleCount: 50,
+            spread: 55,
+            origin: { y: 0.5 },
+            colors: ['#FF2560', '#FF4D7D', '#FFF0F3', '#ffffff'],
+            disableForReducedMotion: true
+          });
+        }
       } catch (e) {
         console.warn('Confetti animation suppressed:', e);
       }
-    }, 120);
+    }, 100);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      if (myConfetti) {
+        try {
+          myConfetti.reset();
+        } catch {}
+      }
+    };
   }, []);
 
   const myPhoto = currentUser?.photos && currentUser.photos.length > 0 && currentUser.photos[0]
@@ -52,6 +67,9 @@ export const MutualMatchModal: React.FC<Props> = ({ profile, currentUser: propUs
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 px-4 animate-fade-in select-none text-on-surface">
       <div className="w-full max-w-[420px] bg-white rounded-[36px] p-6 sm:p-7 shadow-2xl border border-outline flex flex-col items-center text-center relative overflow-hidden animate-slide-up">
+        {/* Hardware-safe Bounded In-Modal Canvas */}
+        <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-30" />
+
         {/* Header Badge */}
         <div className="bg-pastel-rose border border-pastel-rose-border text-primary px-4 py-1.5 rounded-full font-sans text-xs font-bold tracking-wider uppercase mb-3 flex items-center gap-1.5 shadow-subtle">
           <HeartHandshake className="w-3.5 h-3.5 text-primary" />

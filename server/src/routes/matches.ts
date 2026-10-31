@@ -287,7 +287,7 @@ matchesRouter.get('/hub', async (c) => {
           COALESCE(u.ethnicity, 'Global') as ethnicity,
           COALESCE(u.marriage_timeline, 'within_1_year') as marriageTimeline,
           COALESCE(u.bio, 'Seeking half my deen.') as bio,
-          COALESCE(u.blur_photos_by_default, 1) as blurPhotosByDefault,
+          COALESCE(u.blur_photos_by_default, 0) as blurPhotosByDefault,
           m.action as matchAction,
           m.created_at as likedAt
         FROM matches_and_likes m
@@ -316,7 +316,7 @@ matchesRouter.get('/hub', async (c) => {
           COALESCE(u.height, '180 cm') as height,
           COALESCE(u.marriage_timeline, 'within_1_year') as marriageTimeline,
           COALESCE(u.bio, 'Connected on Qurb.') as bio,
-          COALESCE(u.blur_photos_by_default, 1) as blurPhotosByDefault,
+          COALESCE(u.blur_photos_by_default, 0) as blurPhotosByDefault,
           m.created_at as matchedAt
         FROM matches_and_likes m
         LEFT JOIN users u ON u.id = CASE WHEN m.sender_id = ? THEN m.receiver_id ELSE m.sender_id END
@@ -475,7 +475,7 @@ matchesRouter.get('/received', async (c) => {
         COALESCE(u.languages_spoken, 'English, Urdu') as languagesSpoken,
         COALESCE(u.mahr_philosophy, 'mutual_agreement') as mahrPhilosophy, 
         COALESCE(u.children_desire, 'desires_children') as childrenDesire,
-        COALESCE(u.blur_photos_by_default, 1) as blurPhotosByDefault, 
+        COALESCE(u.blur_photos_by_default, 0) as blurPhotosByDefault, 
         COALESCE(u.profile_visibility, 'all_users') as profileVisibility,
         rp.practice_level as practiceLevel, rp.sect, rp.madhhab, rp.prayer_frequency as prayerFrequency, 
         rp.halal_diet as halalDiet, rp.quran_recitation as quranRecitation,
@@ -621,7 +621,7 @@ matchesRouter.get('/mutual', async (c) => {
         COALESCE(u.languages_spoken, 'English, Urdu') as languagesSpoken,
         COALESCE(u.mahr_philosophy, 'mutual_agreement') as mahrPhilosophy, 
         COALESCE(u.children_desire, 'desires_children') as childrenDesire,
-        COALESCE(u.blur_photos_by_default, 1) as blurPhotosByDefault, 
+        COALESCE(u.blur_photos_by_default, 0) as blurPhotosByDefault, 
         COALESCE(u.profile_visibility, 'all_users') as profileVisibility,
         rp.practice_level as practiceLevel, rp.sect, rp.madhhab, rp.prayer_frequency as prayerFrequency, 
         rp.halal_diet as halalDiet, rp.quran_recitation as quranRecitation,

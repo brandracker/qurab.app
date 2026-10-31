@@ -33,6 +33,14 @@ public class MainActivity extends BridgeActivity {
             setShowWhenLocked(true);
             setTurnScreenOn(true);
         }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            try {
+                android.app.KeyguardManager km = (android.app.KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
+                if (km != null) {
+                    km.requestDismissKeyguard(this, null);
+                }
+            } catch (Exception ignored) {}
+        }
         getWindow().addFlags(
             android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON |
             android.view.WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD |
@@ -51,6 +59,14 @@ public class MainActivity extends BridgeActivity {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true);
             setTurnScreenOn(true);
+        }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            try {
+                android.app.KeyguardManager km = (android.app.KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
+                if (km != null) {
+                    km.requestDismissKeyguard(this, null);
+                }
+            } catch (Exception ignored) {}
         }
         handleDeepLink(intent);
     }
@@ -84,21 +100,66 @@ public class MainActivity extends BridgeActivity {
 
     private void checkAndRequestCallingPermissions() {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-            String[] perms = new String[]{
-                android.Manifest.permission.CAMERA,
-                android.Manifest.permission.RECORD_AUDIO,
-                android.Manifest.permission.MODIFY_AUDIO_SETTINGS
-            };
-            boolean needsPerm = false;
-            for (String p : perms) {
+            java.util.List<String> permsList = new java.util.ArrayList<>();
+            permsList.add(android.Manifest.permission.CAMERA);
+            permsList.add(android.Manifest.permission.RECORD_AUDIO);
+            permsList.add(android.Manifest.permission.MODIFY_AUDIO_SETTINGS);
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                permsList.add(android.Manifest.permission.BLUETOOTH_CONNECT);
+            }
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                permsList.add(android.Manifest.permission.POST_NOTIFICATIONS);
+            }
+
+            java.util.List<String> needed = new java.util.ArrayList<>();
+            for (String p : permsList) {
                 if (checkSelfPermission(p) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                    needsPerm = true;
-                    break;
+                    needed.add(p);
                 }
             }
-            if (needsPerm) {
-                requestPermissions(perms, 1002);
+            if (!needed.isEmpty()) {
+                requestPermissions(needed.toArray(new String[0]), 1002);
             }
+        }
+
+        // Android 14+ Full-Screen Intent Permission Handler (TASK-A1)
+        if (android.os.Build.VERSION.SDK_INT >= 34) {
+            try {
+                android.app.NotificationManager nm = (android.app.NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                if (nm != null && !nm.canUseFullScreenIntent()) {
+                    android.content.SharedPreferences sp = getSharedPreferences("qurb_calling_prefs", Context.MODE_PRIVATE);
+                    boolean alreadyPrompted = sp.getBoolean("fsi_prompted", false);
+                    if (!alreadyPrompted) {
+                        sp.edit().putBoolean("fsi_prompted", true).apply();
+                        Intent fsIntent = new Intent(android.provider.Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT);
+                        fsIntent.setData(Uri.parse("package:" + getPackageName()));
+                        fsIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        startActivity(fsIntent);
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+
+        // Battery Optimization Exemption Handler (TASK-A2)
+        checkBatteryOptimizationExemption();
+    }
+
+    private void checkBatteryOptimizationExemption() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            try {
+                android.os.PowerManager pm = (android.os.PowerManager) getSystemService(Context.POWER_SERVICE);
+                if (pm != null && !pm.isIgnoringBatteryOptimizations(getPackageName())) {
+                    android.content.SharedPreferences sp = getSharedPreferences("qurb_calling_prefs", Context.MODE_PRIVATE);
+                    boolean alreadyPrompted = sp.getBoolean("battery_prompted", false);
+                    if (!alreadyPrompted) {
+                        sp.edit().putBoolean("battery_prompted", true).apply();
+                        Intent intent = new Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                        intent.setData(Uri.parse("package:" + getPackageName()));
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        startActivity(intent);
+                    }
+                }
+            } catch (Exception ignored) {}
         }
     }
 
@@ -231,7 +292,9 @@ public class MainActivity extends BridgeActivity {
                         try {
                             if (inCall) {
                                 audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+                                audioManager.requestAudioFocus(null, AudioManager.STREAM_VOICE_CALL, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
                             } else {
+                                audioManager.abandonAudioFocus(null);
                                 audioManager.setSpeakerphoneOn(false);
                                 audioManager.setMode(AudioManager.MODE_NORMAL);
                             }
@@ -272,6 +335,38 @@ public class MainActivity extends BridgeActivity {
             String pending = MainActivity.sPendingIncomingCallPayload;
             MainActivity.sPendingIncomingCallPayload = null; // consume once
             return pending;
+        }
+
+        @JavascriptInterface
+        public boolean isIgnoringBatteryOptimizations() {
+            try {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M && activity != null) {
+                    android.os.PowerManager pm = (android.os.PowerManager) activity.getSystemService(Context.POWER_SERVICE);
+                    if (pm != null) {
+                        return pm.isIgnoringBatteryOptimizations(activity.getPackageName());
+                    }
+                }
+            } catch (Exception ignored) {}
+            return true;
+        }
+
+        @JavascriptInterface
+        public void requestIgnoreBatteryOptimizations() {
+            if (activity != null) {
+                activity.runOnUiThread(() -> {
+                    try {
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                            android.os.PowerManager pm = (android.os.PowerManager) activity.getSystemService(Context.POWER_SERVICE);
+                            if (pm != null && !pm.isIgnoringBatteryOptimizations(activity.getPackageName())) {
+                                Intent intent = new Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                                intent.setData(Uri.parse("package:" + activity.getPackageName()));
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                activity.startActivity(intent);
+                            }
+                        }
+                    } catch (Exception ignored) {}
+                });
+            }
         }
     }
 }

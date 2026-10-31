@@ -133,16 +133,18 @@ jobs:
         continue-on-error: true
         with:
           fail_on_unmatched_files: false
-          tag_name: v1.0.42
-          name: "Qurb v1.0.42 (Build 43 - WhatsApp-Style Background Calling, Looping Ringtone & VIP Matches)"
+          tag_name: v1.0.43
+          name: "Qurb v1.0.43 (Build 44 - DEX Optimization, Single Device Policy, Photo Unblur & Calling Upgrades)"
           body: |
-            ### Qurb Matrimony v1.0.42 (Build 43)
-            - **WhatsApp-Style Background Calling**: Native waking up on incoming VoIP calls even when the app is completely closed/killed.
-            - **Continuous Looping Ringtone**: Continuous ringtone and vibration until accepted, declined, or timed out.
-            - **Cold-Boot Native Bridge**: Instant launch into call screen without dropping call events during WebView boot.
-            - **Matches & UI Polish**: Clean candidate display names, timeline formatting, and layout stability.
+            ### Qurb Matrimony v1.0.43 (Build 44)
+            - **Google Play Console DEX Code Optimization**: Enabled R8 code shrinking and resource shrinking with exhaustive ProGuard rules.
+            - **New Profile Photos Unblur by Default**: Profiles created via email, phone OTP, and Google OAuth now default to unblurred photos.
+            - **Strict Single Active Device Policy**: Multi-device logins are strictly disallowed; logging into a new device automatically terminates previous sessions.
+            - **Voice Greeting Delete Sync**: Permanent deletion and synchronization across Cloudflare D1 and R2 storage.
+            - **Match Celebration Blank Screen Freeze Resolved**: Bounded in-modal particle canvas prevents Android WebView GPU compositor stalls.
+            - **Calling & VoIP Upgrades**: Android 14+ Full-Screen Intent handler, battery optimization exemption prompts for background calling, audio focus, dynamic audio->video renegotiation, and ICE restart on WiFi/4G transitions.
             - **app-release.apk**: Production Signed APK for direct device installation & testing.
-            - **app-release.aab**: Production Signed Android App Bundle (.aab) ready for Google Play Console.
+            - **app-release.aab**: Production Signed Android App Bundle (.aab) ready for Google Play Console submission.
           files: |
             serene-union-app/android/app/build/outputs/apk/release/app-release.apk
             serene-union-app/android/app/build/outputs/bundle/release/app-release.aab

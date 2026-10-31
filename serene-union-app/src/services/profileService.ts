@@ -279,12 +279,22 @@ export const profileService = {
   async sendHeartbeat(userId: string): Promise<boolean> {
     if (!userId || userId === 'usr_guest') return false;
     try {
+      const token = localStorage.getItem('serene_auth_token_v1') || localStorage.getItem('serene_auth_token') || '';
       const res = await fetch(`${API_BASE}/users/heartbeat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, activeSeconds: 45 })
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ userId, activeSeconds: 45, token })
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401 && data.code === 'SESSION_TERMINATED_CONCURRENT_LOGIN') {
+        window.dispatchEvent(new CustomEvent('serene_concurrent_session_terminated', {
+          detail: { message: data.error || 'This account was opened on another device. Only 1 active device is permitted.' }
+        }));
+        return false;
+      }
       return Boolean(data.success);
     } catch {
       return false;

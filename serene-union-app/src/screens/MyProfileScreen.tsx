@@ -400,7 +400,7 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
     }
   };
 
-  const deleteVoiceGreeting = () => {
+  const deleteVoiceGreeting = async () => {
     if (audioPlayerRef.current) {
       audioPlayerRef.current.pause();
     }
@@ -408,7 +408,7 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
     setRecordedAudioBlob(null);
     setRecordedAudioUrl(null);
     setRecordSeconds(0);
-    dbService.deleteVoiceGreeting(user.id);
+    await dbService.deleteVoiceGreeting(user.id);
     const updatedUser = dbService.getCurrentUser();
     setCurrentUserProfile({ ...updatedUser });
     setVoiceToast('Voice greeting removed');

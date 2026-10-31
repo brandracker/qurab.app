@@ -49,7 +49,7 @@ export class MockD1Database {
         children_desire TEXT,
         marriage_timeline TEXT,
         bio TEXT,
-        blur_photos_by_default BOOLEAN DEFAULT 1,
+        blur_photos_by_default BOOLEAN DEFAULT 0,
         profile_visibility TEXT DEFAULT 'approved_only',
         is_phone_verified BOOLEAN DEFAULT 0,
         is_id_verified BOOLEAN DEFAULT 0,
@@ -72,6 +72,12 @@ export class MockD1Database {
         is_banned BOOLEAN DEFAULT 0,
         ban_reason TEXT DEFAULT NULL,
         fcm_token TEXT DEFAULT NULL,
+        current_session_token TEXT DEFAULT NULL,
+        last_device_id TEXT DEFAULT NULL,
+        last_ip TEXT,
+        last_ip_city TEXT,
+        last_ip_country TEXT,
+        last_ip_isp TEXT,
         last_active_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -230,6 +236,22 @@ export class MockD1Database {
         action_url TEXT,
         image_url TEXT,
         action_label TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS user_daily_activity (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        activity_date TEXT NOT NULL,
+        total_active_seconds INTEGER DEFAULT 0,
+        first_active_at DATETIME,
+        last_active_at DATETIME,
+        last_ip TEXT,
+        last_city TEXT,
+        last_country TEXT,
+        last_isp TEXT,
+        user_agent TEXT,
+        updated_at DATETIME,
+        UNIQUE(user_id, activity_date)
       );
 
       CREATE TABLE IF NOT EXISTS in_app_purchases (

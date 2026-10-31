@@ -1827,12 +1827,10 @@ adminRouter.get('/daily-activity', async (c) => {
             OR u.id IN (
               SELECT sender_id FROM matches_and_likes WHERE date(created_at) = ?
               UNION
-              SELECT receiver_id FROM matches_and_likes WHERE date(created_at) = ?
-              UNION
               SELECT sender_id FROM chat_messages WHERE date(created_at) = ?
             )
           )
-      `).bind(targetDate, targetDate, targetDate, targetDate, targetDate, targetDate).first();
+      `).bind(targetDate, targetDate, targetDate, targetDate, targetDate).first();
       totalActiveUsersCount = Number(totalActiveRes?.total_active || 0);
     } catch (e) {
       console.warn('Failed to count total active users:', e);
@@ -1865,14 +1863,12 @@ adminRouter.get('/daily-activity', async (c) => {
           OR u.id IN (
             SELECT sender_id FROM matches_and_likes WHERE date(created_at) = ?
             UNION
-            SELECT receiver_id FROM matches_and_likes WHERE date(created_at) = ?
-            UNION
             SELECT sender_id FROM chat_messages WHERE date(created_at) = ?
           )
         )
       ORDER BY COALESCE(uda.last_active_at, u.last_active_at, u.created_at) DESC
       LIMIT 250
-    `).bind(targetDate, targetDate, targetDate, targetDate, targetDate, targetDate).all();
+    `).bind(targetDate, targetDate, targetDate, targetDate, targetDate).all();
 
     const userList = rawRows || [];
     const userIds = userList.map((r: any) => r.id);

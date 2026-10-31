@@ -131,6 +131,49 @@ photosRouter.post('/upload-voice', async (c) => {
   }
 });
 
+// 2.5 Delete Voice Greeting (Cloudflare R2 + D1 integration)
+photosRouter.post('/delete-voice', async (c) => {
+  try {
+    const { userId } = await c.req.json();
+    if (!userId) {
+      return c.json({ success: false, error: 'userId is required' }, 400);
+    }
+
+    // Check current voice greeting URL to optionally purge R2 object
+    if (c.env.MEDIA_BUCKET) {
+      try {
+        const userRow: any = await c.env.DB.prepare(`
+          SELECT voice_greeting_url FROM users WHERE id = ?
+        `).bind(userId).first();
+
+        if (userRow?.voice_greeting_url) {
+          const url = userRow.voice_greeting_url;
+          const match = url.match(/voice_[a-zA-Z0-9_\-]+\.webm/);
+          if (match && match[0]) {
+            await c.env.MEDIA_BUCKET.delete(match[0]);
+          }
+        }
+      } catch (r2Err) {
+        console.warn('R2 delete-voice cleanup notice:', r2Err);
+      }
+    }
+
+    // Clear voice greeting fields in D1
+    await c.env.DB.prepare(`
+      UPDATE users 
+      SET voice_greeting_url = NULL, voice_greeting_duration = 0, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).bind(userId).run();
+
+    return c.json({
+      success: true,
+      message: 'Voice greeting deleted successfully'
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
 // 3. Stream Voice & Video Media directly from R2 Storage with HTTP 206 Range Support
 photosRouter.get('/media/:fileId', async (c) => {
   try {

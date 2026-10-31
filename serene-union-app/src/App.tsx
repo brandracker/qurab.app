@@ -314,14 +314,25 @@ export const App: React.FC = () => {
       dbService.sendHeartbeat(currentUser.id);
     }, 60000);
 
+    const handleConcurrentSession = (e: any) => {
+      const msg = e.detail?.message || 'This account was opened on another device. Only 1 active device is permitted at a time.';
+      localStorage.removeItem('serene_auth_token_v1');
+      localStorage.removeItem('serene_auth_token');
+      setCurrentUser(dbService.getGuestUser());
+      setCurrentStep('welcome');
+      alert(msg);
+    };
+
     window.addEventListener('serene_conversations_updated', updateChatUnread);
     window.addEventListener('focus', syncLiveChats);
+    window.addEventListener('serene_concurrent_session_terminated', handleConcurrentSession);
 
     return () => {
       clearInterval(chatPollInterval);
       clearInterval(heartbeatInterval);
       window.removeEventListener('serene_conversations_updated', updateChatUnread);
       window.removeEventListener('focus', syncLiveChats);
+      window.removeEventListener('serene_concurrent_session_terminated', handleConcurrentSession);
     };
   }, [currentUser.id, activeConvId]);
 
@@ -679,6 +690,10 @@ export const App: React.FC = () => {
   };
 
   const handleAuthSuccess = (session: { token: string; user: any; isNewUser: boolean }) => {
+    if (session?.token) {
+      localStorage.setItem('serene_auth_token_v1', session.token);
+      localStorage.setItem('serene_auth_token', session.token);
+    }
     const user = session.user;
     const isProfileCompleted = user?.isProfileCompleted ?? (user?.city || (user?.location && user?.location !== 'Global'));
     const needsOnboarding = session.isNewUser || !isProfileCompleted;

@@ -22,13 +22,12 @@ authRouter.post('/signup', async (c) => {
     const passwordHash = await hashPassword(password);
     const name = fullName?.trim() || cleanEmail.split('@')[0];
     const userGender = gender === 'female' ? 'female' : (gender === 'male' ? 'male' : (name.toLowerCase().includes('zainab') || name.toLowerCase().includes('fatima') || name.toLowerCase().includes('maryam') || name.toLowerCase().includes('aisha') ? 'female' : 'male'));
+    const sessionToken = generateSessionToken(userId);
 
     await c.env.DB.prepare(`
-      INSERT INTO users (id, phone, email, password_hash, full_name, dob, gender, location, marriage_timeline, blur_photos_by_default, is_profile_completed)
-      VALUES (?, ?, ?, ?, ?, '1998-01-01', ?, 'Global', 'within_1_year', 1, 0)
-    `).bind(userId, cleanEmail, cleanEmail, passwordHash, name, userGender).run();
-
-    const sessionToken = generateSessionToken(userId);
+      INSERT INTO users (id, phone, email, password_hash, full_name, dob, gender, location, marriage_timeline, blur_photos_by_default, is_profile_completed, current_session_token)
+      VALUES (?, ?, ?, ?, ?, '1998-01-01', ?, 'Global', 'within_1_year', 0, 0, ?)
+    `).bind(userId, cleanEmail, cleanEmail, passwordHash, name, userGender, sessionToken).run();
 
     return c.json({
       success: true,
@@ -90,6 +89,14 @@ authRouter.post('/login', async (c) => {
     `).bind(user.id).all();
 
     const sessionToken = generateSessionToken(user.id);
+
+    try {
+      await c.env.DB.prepare(`
+        UPDATE users SET current_session_token = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+      `).bind(sessionToken, user.id).run();
+    } catch (sessionErr) {
+      console.warn('Session token update notice:', sessionErr);
+    }
 
     return c.json({
       success: true,
@@ -201,7 +208,7 @@ authRouter.post('/verify-phone-otp', async (c) => {
 
       await c.env.DB.prepare(`
         INSERT INTO users (id, phone, email, full_name, dob, gender, location, marriage_timeline, blur_photos_by_default, is_phone_verified)
-        VALUES (?, ?, ?, ?, '1998-01-01', 'male', 'Global', 'within_1_year', 1, 1)
+        VALUES (?, ?, ?, ?, '1998-01-01', 'male', 'Global', 'within_1_year', 0, 1)
       `).bind(userId, cleanPhone, `${cleanPhone}@phone.sereneunion.com`, name).run();
 
       user = {
@@ -214,6 +221,14 @@ authRouter.post('/verify-phone-otp', async (c) => {
 
     await c.env.DB.prepare(`DELETE FROM phone_otps WHERE phone = ?`).bind(cleanPhone).run();
     const sessionToken = generateSessionToken(user.id);
+
+    try {
+      await c.env.DB.prepare(`
+        UPDATE users SET current_session_token = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+      `).bind(sessionToken, user.id).run();
+    } catch (sessionErr) {
+      console.warn('Session token update notice:', sessionErr);
+    }
 
     return c.json({
       success: true,
@@ -274,7 +289,7 @@ authRouter.post('/google-login', async (c) => {
 
       await c.env.DB.prepare(`
         INSERT INTO users (id, phone, email, full_name, dob, gender, location, marriage_timeline, blur_photos_by_default, is_profile_completed)
-        VALUES (?, ?, ?, ?, '1998-01-01', ?, 'Global', 'within_1_year', 1, 0)
+        VALUES (?, ?, ?, ?, '1998-01-01', ?, 'Global', 'within_1_year', 0, 0)
       `).bind(userId, cleanEmail, cleanEmail, name, userGender).run();
 
       if (photoUrl) {
@@ -301,6 +316,14 @@ authRouter.post('/google-login', async (c) => {
     `).bind(user.id).all();
 
     const sessionToken = generateSessionToken(user.id);
+
+    try {
+      await c.env.DB.prepare(`
+        UPDATE users SET current_session_token = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+      `).bind(sessionToken, user.id).run();
+    } catch (sessionErr) {
+      console.warn('Session token update notice:', sessionErr);
+    }
     const isProfileCompleted = user.is_profile_completed === 1 || (user.is_profile_completed === null && user.location !== 'Global' && user.full_name !== 'New Member');
     const needsOnboarding = isNewUser || !isProfileCompleted;
 
@@ -364,7 +387,7 @@ authRouter.post('/email-sync', async (c) => {
 
       await c.env.DB.prepare(`
         INSERT INTO users (id, phone, email, full_name, dob, gender, location, marriage_timeline, blur_photos_by_default, is_profile_completed)
-        VALUES (?, ?, ?, ?, '1998-01-01', ?, 'Global', 'within_1_year', 1, 0)
+        VALUES (?, ?, ?, ?, '1998-01-01', ?, 'Global', 'within_1_year', 0, 0)
       `).bind(userId, cleanEmail, cleanEmail, name, userGender).run();
 
       user = {
@@ -400,6 +423,14 @@ authRouter.post('/email-sync', async (c) => {
     `).bind(user.id).all();
 
     const sessionToken = generateSessionToken(user.id);
+
+    try {
+      await c.env.DB.prepare(`
+        UPDATE users SET current_session_token = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+      `).bind(sessionToken, user.id).run();
+    } catch (sessionErr) {
+      console.warn('Session token update notice:', sessionErr);
+    }
     const isProfileCompleted = user.is_profile_completed === 1 || (user.is_profile_completed === null && user.location !== 'Global' && user.full_name !== 'New Member');
     const needsOnboarding = isNewUser || !isProfileCompleted;
 
@@ -447,6 +478,44 @@ authRouter.post('/email-sync', async (c) => {
         needsOnboarding
       }
     });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// 6. Strict Single Active Device Session Validation
+authRouter.post('/validate-session', async (c) => {
+  try {
+    const authHeader = c.req.header('Authorization') || '';
+    const body = await c.req.json().catch(() => ({}));
+    const token = body.token || authHeader.replace(/^Bearer\s+/i, '').trim();
+    const userId = body.userId;
+
+    if (!userId || !token) {
+      return c.json({ success: false, error: 'userId and token are required' }, 400);
+    }
+
+    const user: any = await c.env.DB.prepare(`
+      SELECT current_session_token, is_banned FROM users WHERE id = ?
+    `).bind(userId).first();
+
+    if (!user) {
+      return c.json({ success: false, error: 'User not found' }, 404);
+    }
+
+    if (user.is_banned) {
+      return c.json({ success: false, code: 'USER_BANNED', error: 'Account has been suspended' }, 403);
+    }
+
+    if (user.current_session_token && user.current_session_token !== token) {
+      return c.json({
+        success: false,
+        code: 'SESSION_TERMINATED_CONCURRENT_LOGIN',
+        error: 'This account was opened on another device. For your security, you have been logged out of this session.'
+      }, 401);
+    }
+
+    return c.json({ success: true, valid: true });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   }

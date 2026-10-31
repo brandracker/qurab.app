@@ -1844,14 +1844,14 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                         setActiveConvId(conv.id);
                       }
                     }}
-                    className={`p-3.5 bg-white rounded-2xl border transition-all shadow-subtle group flex items-center gap-3 cursor-pointer ${
+                    className={`p-3.5 bg-white dark:bg-[#16161c] rounded-2xl border transition-all shadow-subtle group flex items-center gap-3 cursor-pointer ${
                       isSelected
-                        ? 'border-primary bg-pastel-rose/30 ring-1 ring-primary'
+                        ? 'border-primary bg-pastel-rose/30 dark:bg-rose-950/40 ring-1 ring-primary'
                         : isConvOfficial
-                          ? 'border-primary/25 bg-gradient-to-r from-rose-50/50 via-white to-white hover:border-primary/50 hover:shadow-brand/5'
+                          ? 'border-primary/25 dark:border-rose-900/40 bg-gradient-to-r from-rose-50/50 via-white to-white dark:from-rose-950/30 dark:via-[#16161c] dark:to-[#16161c] hover:border-primary/50 hover:shadow-brand/5'
                           : isIncomingUnread 
-                            ? 'border-primary/60 bg-pastel-rose/25 border-l-4 border-l-primary shadow-brand/10' 
-                            : 'border-slate-100 hover:border-primary/40 hover:shadow-subtle'
+                            ? 'border-primary/60 dark:border-primary/70 bg-pastel-rose/25 dark:bg-rose-950/20 border-l-4 border-l-primary shadow-brand/10' 
+                            : 'border-slate-100 dark:border-[#272733] hover:border-primary/40 dark:hover:border-primary/50 hover:shadow-subtle dark:hover:bg-[#1c1c24]'
                     }`}
                   >
                     {/* Multi-Select Checkbox */}
@@ -1860,7 +1860,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                         {isSelected ? (
                           <CheckSquare className="w-5 h-5 fill-primary text-white" />
                         ) : (
-                          <Square className="w-5 h-5 text-secondary" />
+                          <Square className="w-5 h-5 text-secondary dark:text-slate-500" />
                         )}
                       </div>
                     )}
@@ -1882,8 +1882,8 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                     >
                       <div className={`w-12 h-12 rounded-full overflow-hidden border flex items-center justify-center transition-all shadow-subtle ${
                         isConvOfficial
-                          ? 'border-primary/20 bg-pastel-rose/40'
-                          : isIncomingUnread ? 'border-primary ring-2 ring-primary/20 bg-surface-variant' : 'border-outline bg-surface-variant'
+                          ? 'border-primary/20 dark:border-rose-800/40 bg-pastel-rose/40 dark:bg-rose-950/40'
+                          : isIncomingUnread ? 'border-primary ring-2 ring-primary/20 bg-surface-variant dark:bg-[#1c1c24]' : 'border-outline dark:border-[#272733] bg-surface-variant dark:bg-[#1c1c24]'
                       }`}>
                         {isConvOfficial ? (
                           <div className="w-full h-full p-2.5 flex items-center justify-center">
@@ -1936,7 +1936,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                             }
                           }}
                           className={`font-serif text-xs truncate group-hover:text-primary transition-colors cursor-pointer hover:underline flex items-center gap-1 ${
-                            isIncomingUnread ? 'font-black text-primary' : 'font-bold text-on-surface'
+                            isIncomingUnread ? 'font-black text-primary dark:text-rose-400' : 'font-bold text-on-surface dark:text-white'
                           }`}
                           title={isConvOfficial ? "Qurb Official Channel" : "Click to view full biodata"}
                         >
@@ -1947,24 +1947,24 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                         </h3>
                         <div className="flex items-center gap-1.5 shrink-0">
                           {isConvOfficial && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-primary bg-rose-50 border border-rose-200/80 px-2 py-0.5 rounded-full shadow-2xs">
-                              <Pin className="w-2.5 h-2.5 rotate-45 text-primary" />
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-primary dark:text-rose-300 bg-rose-50 dark:bg-rose-950/50 border border-rose-200/80 dark:border-rose-800/40 px-2 py-0.5 rounded-full shadow-2xs">
+                              <Pin className="w-2.5 h-2.5 rotate-45 text-primary dark:text-rose-400" />
                               <span>Pinned</span>
                             </span>
                           )}
                           {!isConvOfficial && (conv.isDirectSalamPending || conv.salamSenderId) && conv.salamSenderId !== currentUser.id && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-300 px-2 py-0.5 rounded-full shadow-2xs">
-                              <Sparkles className="w-2.5 h-2.5 text-emerald-600" />
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800/40 px-2 py-0.5 rounded-full shadow-2xs">
+                              <Sparkles className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" />
                               <span>Salam Request</span>
                             </span>
                           )}
                           {!isConvOfficial && (conv.isDirectSalamPending || conv.salamSenderId) && conv.salamSenderId === currentUser.id && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full shadow-2xs">
-                              <Clock className="w-2.5 h-2.5 text-amber-600" />
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/40 px-2 py-0.5 rounded-full shadow-2xs">
+                              <Clock className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400" />
                               <span>Pending</span>
                             </span>
                           )}
-                          <span className={`text-[11px] font-medium ${isIncomingUnread ? 'text-primary font-bold' : 'text-secondary'}`}>
+                          <span className={`text-[11px] font-medium ${isIncomingUnread ? 'text-primary dark:text-rose-400 font-bold' : 'text-secondary dark:text-slate-400'}`}>
                             {formatChatTime(conv.lastMessageTime)}
                           </span>
                           {isIncomingUnread && (
@@ -1976,16 +1976,16 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                       </div>
 
                       <div className={`text-xs truncate ${
-                        isIncomingUnread ? 'font-bold text-on-surface' : 'text-secondary'
+                        isIncomingUnread ? 'font-bold text-on-surface dark:text-white' : 'text-secondary dark:text-slate-400'
                       }`}>
                         {(() => {
                           const text = conv.lastMessageText || (isConvOfficial ? 'Official announcements and verified updates.' : 'Tap to start conversation...');
                           if (text.includes('restored photo blur') || text.includes('photo blur for modesty') || text.startsWith('🔒')) {
                             const cleanText = text.replace(/^[🔒\s]+/, '').replace(/^dY"'\s*/, '');
                             return (
-                              <span className="inline-flex items-center gap-1.5 text-slate-600 font-medium truncate max-w-full">
-                                <span className="w-4 h-4 rounded-full bg-amber-100 border border-amber-300/80 flex items-center justify-center shrink-0 shadow-2xs">
-                                  <Lock className="w-2.5 h-2.5 text-amber-700" />
+                              <span className="inline-flex items-center gap-1.5 text-slate-600 dark:text-slate-300 font-medium truncate max-w-full">
+                                <span className="w-4 h-4 rounded-full bg-amber-100 dark:bg-amber-950/50 border border-amber-300/80 dark:border-amber-700/50 flex items-center justify-center shrink-0 shadow-2xs">
+                                  <Lock className="w-2.5 h-2.5 text-amber-700 dark:text-amber-400" />
                                 </span>
                                 <span className="truncate">{cleanText}</span>
                               </span>
@@ -1994,9 +1994,9 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                           if (text.includes('revealed their unblurred photos') || text.startsWith('📸')) {
                             const cleanText = text.replace(/^[📸\s]+/, '').replace(/^dY",\s*/, '');
                             return (
-                              <span className="inline-flex items-center gap-1.5 text-slate-600 font-medium truncate max-w-full">
-                                <span className="w-4 h-4 rounded-full bg-emerald-100 border border-emerald-300/80 flex items-center justify-center shrink-0 shadow-2xs">
-                                  <Eye className="w-2.5 h-2.5 text-emerald-700" />
+                              <span className="inline-flex items-center gap-1.5 text-slate-600 dark:text-slate-300 font-medium truncate max-w-full">
+                                <span className="w-4 h-4 rounded-full bg-emerald-100 dark:bg-emerald-950/50 border border-emerald-300/80 dark:border-emerald-700/50 flex items-center justify-center shrink-0 shadow-2xs">
+                                  <Eye className="w-2.5 h-2.5 text-emerald-700 dark:text-emerald-400" />
                                 </span>
                                 <span className="truncate">{cleanText}</span>
                               </span>
@@ -2011,12 +2011,12 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                 );
               })
             ) : (
-              <div className="flex flex-col items-center justify-center py-20 text-center px-4 bg-white rounded-3xl border border-outline my-6 shadow-card">
-                <div className="w-12 h-12 rounded-full bg-pastel-rose text-primary flex items-center justify-center mb-3">
+              <div className="flex flex-col items-center justify-center py-20 text-center px-4 bg-white dark:bg-[#16161c] rounded-3xl border border-outline dark:border-[#272733] my-6 shadow-card">
+                <div className="w-12 h-12 rounded-full bg-pastel-rose dark:bg-rose-950/40 text-primary flex items-center justify-center mb-3 border border-pastel-rose-border dark:border-rose-900/40">
                   <MessageCircle className="w-6 h-6 text-primary" />
                 </div>
-                <h3 className="font-serif text-base font-bold text-on-surface">No Conversations Yet</h3>
-                <p className="text-xs text-secondary max-w-xs mt-1 leading-relaxed">
+                <h3 className="font-serif text-base font-bold text-on-surface dark:text-white">No Conversations Yet</h3>
+                <p className="text-xs text-secondary dark:text-slate-400 max-w-xs mt-1 leading-relaxed">
                   Explore profiles in the Discover tab and express mutual interest or send a Direct Salam to start a blessed conversation.
                 </p>
                 <button
@@ -2034,16 +2034,16 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden font-sans select-none pb-0 text-on-surface">
+    <div className="flex-1 flex flex-col h-full bg-background dark:bg-[#0c0c0e] relative overflow-hidden font-sans select-none pb-0 text-on-surface">
       {/* Chat Top Header */}
-      <header className="sticky top-0 bg-white/95 backdrop-blur-md px-3 py-2 border-b border-slate-100 flex items-center justify-between z-20 shadow-xs gap-2">
+      <header className="sticky top-0 bg-white/95 dark:bg-[#121218]/95 backdrop-blur-md px-3 py-2 border-b border-slate-100 dark:border-[#272733] flex items-center justify-between z-20 shadow-xs gap-2">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <button
             onClick={() => {
               setActiveConvId(null);
               if (onActiveConvChange) onActiveConvChange(null);
             }}
-            className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200/80 flex items-center justify-center text-slate-700 hover:bg-slate-200 transition-colors shrink-0 cursor-pointer"
+            className="w-8 h-8 rounded-full bg-slate-100 dark:bg-[#1c1c24] border border-slate-200/80 dark:border-[#272733] flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-[#252532] transition-colors shrink-0 cursor-pointer"
             title="Back to conversations"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -2058,7 +2058,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
             title={isOfficialChannel ? "Qurb Official Channel" : "Click to view full biodata"}
           >
             <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden border flex items-center justify-center transition-all shadow-subtle ${
-              isOfficialChannel ? 'border-primary/20 bg-pastel-rose/50' : 'border-slate-200 group-hover/avatar:border-primary/60 bg-surface-variant ring-1 ring-primary/20'
+              isOfficialChannel ? 'border-primary/20 dark:border-rose-900/40 bg-pastel-rose/50 dark:bg-rose-950/40' : 'border-slate-200 dark:border-[#272733] group-hover/avatar:border-primary/60 bg-surface-variant dark:bg-[#1c1c24] ring-1 ring-primary/20'
             }`}>
               {isOfficialChannel ? (
                 <div className="w-full h-full p-2 flex items-center justify-center">
@@ -2104,9 +2104,9 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
             </div>
             {!isOfficialChannel && (
               isUserOnline(activeConv?.otherUser) ? (
-                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full shadow-2xs" title="Online" />
+                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white dark:border-[#121218] rounded-full shadow-2xs" title="Online" />
               ) : (
-                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-amber-400 border-2 border-white rounded-full shadow-2xs" title="Offline / Away" />
+                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-amber-400 border-2 border-white dark:border-[#121218] rounded-full shadow-2xs" title="Offline / Away" />
               )
             )}
           </div>
@@ -2119,26 +2119,26 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
             className={`flex flex-col min-w-0 flex-1 ${!isOfficialChannel ? 'cursor-pointer group' : ''}`}
             title={isOfficialChannel ? "Qurb Official Channel" : "Click to view full biodata"}
           >
-            <h2 className="font-serif font-bold text-xs sm:text-sm text-on-surface group-hover:text-primary transition-colors truncate flex items-center gap-1">
+            <h2 className="font-serif font-bold text-xs sm:text-sm text-on-surface dark:text-white group-hover:text-primary transition-colors truncate flex items-center gap-1">
               <span className="truncate">{isOfficialChannel ? 'Qurb Team' : formatDisplayName(activeConv?.otherUser?.fullName)}</span>
               {isOfficialChannel && (
                 <VerifiedBlueTick size={14} />
               )}
             </h2>
-            <div className="text-[10px] text-secondary truncate flex items-center gap-1.5 mt-0.5">
+            <div className="text-[10px] text-secondary dark:text-slate-400 truncate flex items-center gap-1.5 mt-0.5">
               {isOfficialChannel ? (
                 'Verified Channel · Official Updates'
               ) : (
                 <>
                   <span className="truncate">{activeConv?.otherUser?.profession || 'Member'}</span>
-                  <span className="w-1 h-1 rounded-full bg-slate-300 shrink-0" />
+                  <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0" />
                   {isUserOnline(activeConv?.otherUser) ? (
-                    <span className="flex items-center gap-1 text-emerald-600 font-semibold shrink-0">
+                    <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold shrink-0">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                       <span>Online</span>
                     </span>
                   ) : (
-                    <span className="flex items-center gap-1 text-amber-600 font-semibold shrink-0">
+                    <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-semibold shrink-0">
                       <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
                       <span>Away</span>
                     </span>
@@ -2157,7 +2157,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
             onClick={() => themeService.toggleTheme()}
             aria-label="Toggle Theme"
             title={isDarkMode ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
-            className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200/80 flex items-center justify-center text-slate-700 transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-full bg-slate-100 dark:bg-[#1c1c24] hover:bg-slate-200 dark:hover:bg-[#252532] border border-slate-200/80 dark:border-[#272733] flex items-center justify-center text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
           >
             {isDarkMode ? <Moon className="w-3.5 h-3.5 text-amber-400" /> : <Sun className="w-3.5 h-3.5 text-amber-500" />}
           </button>
@@ -2170,12 +2170,12 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                 onClick={() => handleStartCall('audio')}
                 className={`w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-2xs ${
                   currentUser.isVip 
-                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-300/80 hover:bg-emerald-100' 
-                    : 'bg-surface-variant hover:bg-outline text-secondary border border-outline'
+                    ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300/80 dark:border-emerald-700/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/50' 
+                    : 'bg-surface-variant dark:bg-[#1c1c24] hover:bg-outline text-secondary dark:text-slate-400 border border-outline dark:border-[#272733]'
                 }`}
                 title={currentUser.isVip ? "Audio Call (VIP)" : "Audio Call (Requires Barakah VIP)"}
               >
-                <Phone className={`w-3.5 h-3.5 ${currentUser.isVip ? 'text-emerald-700' : 'text-secondary'}`} />
+                <Phone className={`w-3.5 h-3.5 ${currentUser.isVip ? 'text-emerald-700 dark:text-emerald-300' : 'text-secondary dark:text-slate-400'}`} />
               </button>
 
               {/* Video Call Button */}
@@ -2184,12 +2184,12 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                 onClick={() => handleStartCall('video')}
                 className={`w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-2xs ${
                   currentUser.isVip 
-                    ? 'bg-sky-50 text-sky-700 border border-sky-300/80 hover:bg-sky-100' 
-                    : 'bg-surface-variant hover:bg-outline text-secondary border border-outline'
+                    ? 'bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-300/80 dark:border-sky-700/50 hover:bg-sky-100 dark:hover:bg-sky-900/50' 
+                    : 'bg-surface-variant dark:bg-[#1c1c24] hover:bg-outline text-secondary dark:text-slate-400 border border-outline dark:border-[#272733]'
                 }`}
                 title={currentUser.isVip ? "Video Call (VIP)" : "Video Call (Requires Barakah VIP)"}
               >
-                <Video className={`w-3.5 h-3.5 ${currentUser.isVip ? 'text-sky-700' : 'text-secondary'}`} />
+                <Video className={`w-3.5 h-3.5 ${currentUser.isVip ? 'text-sky-700 dark:text-sky-300' : 'text-secondary dark:text-slate-400'}`} />
               </button>
 
               {/* Biodata Button (Sleek Icon Only) */}
@@ -2198,7 +2198,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                 onClick={() => {
                   if (activeConv?.otherUser) setSelectedProfile(activeConv.otherUser);
                 }}
-                className="w-8 h-8 rounded-full bg-pastel-rose hover:bg-pastel-rose/80 text-primary border border-pastel-rose-border flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-2xs"
+                className="w-8 h-8 rounded-full bg-pastel-rose dark:bg-rose-950/40 hover:bg-pastel-rose/80 dark:hover:bg-rose-900/50 text-primary dark:text-rose-400 border border-pastel-rose-border dark:border-rose-900/40 flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-2xs"
                 title="View Full Biodata"
               >
                 <FileText className="w-3.5 h-3.5" />
@@ -2208,7 +2208,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
               <button
                 type="button"
                 onClick={() => setShowMoreMenu(prev => !prev)}
-                className="w-8 h-8 rounded-full bg-surface-variant hover:bg-outline border border-outline flex items-center justify-center text-secondary hover:text-on-surface transition-all active:scale-95"
+                className="w-8 h-8 rounded-full bg-surface-variant dark:bg-[#1c1c24] hover:bg-outline border border-outline dark:border-[#272733] flex items-center justify-center text-secondary dark:text-slate-400 hover:text-on-surface dark:hover:text-white transition-all active:scale-95"
                 title="More options"
               >
                 <MoreVertical className="w-4 h-4" />
@@ -2219,7 +2219,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
           {/* 3-Dots Dropdown Menu with View Full Biodata */}
           {showMoreMenu && (
             <div 
-              className="absolute right-0 top-10 w-48 bg-white rounded-2xl shadow-xl border border-outline py-1.5 z-50 animate-fade-in divide-y divide-outline text-left"
+              className="absolute right-0 top-10 w-48 bg-white dark:bg-[#1a1a24] rounded-2xl shadow-xl border border-outline dark:border-[#272733] py-1.5 z-50 animate-fade-in divide-y divide-outline dark:divide-[#272733] text-left"
               onClick={() => setShowMoreMenu(false)}
             >
               <button
@@ -2228,7 +2228,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                   setShowMoreMenu(false);
                   if (activeConv?.otherUser) setSelectedProfile(activeConv.otherUser);
                 }}
-                className="w-full px-3.5 py-2.5 text-xs text-on-surface hover:text-primary hover:bg-surface-variant flex items-center gap-2.5 transition-colors font-medium text-left"
+                className="w-full px-3.5 py-2.5 text-xs text-on-surface dark:text-slate-200 hover:text-primary dark:hover:text-rose-400 hover:bg-surface-variant dark:hover:bg-[#232330] flex items-center gap-2.5 transition-colors font-medium text-left"
               >
                 <FileText className="w-4 h-4 text-primary shrink-0" />
                 <span className="font-semibold">View Full Biodata</span>
@@ -2236,11 +2236,11 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
               <button
                 type="button"
                 onClick={handleToggleRevealPhotos}
-                className="w-full px-3.5 py-2.5 text-xs text-on-surface hover:text-primary hover:bg-surface-variant flex items-center gap-2.5 transition-colors font-medium text-left"
+                className="w-full px-3.5 py-2.5 text-xs text-on-surface dark:text-slate-200 hover:text-primary dark:hover:text-rose-400 hover:bg-surface-variant dark:hover:bg-[#232330] flex items-center gap-2.5 transition-colors font-medium text-left"
               >
                 {hasRevealedToPartner ? (
                   <>
-                    <EyeOff className="w-4 h-4 text-secondary shrink-0" />
+                    <EyeOff className="w-4 h-4 text-secondary dark:text-slate-400 shrink-0" />
                     <span>Blur My Photos</span>
                   </>
                 ) : (
@@ -2253,7 +2253,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
               <button
                 type="button"
                 onClick={() => setShowRespectfulCloseModal(true)}
-                className="w-full px-3.5 py-2.5 text-xs text-secondary hover:text-primary hover:bg-surface-variant flex items-center gap-2.5 transition-colors font-medium text-left"
+                className="w-full px-3.5 py-2.5 text-xs text-secondary dark:text-slate-400 hover:text-primary dark:hover:text-rose-400 hover:bg-surface-variant dark:hover:bg-[#232330] flex items-center gap-2.5 transition-colors font-medium text-left"
               >
                 <Heart className="w-4 h-4 text-primary shrink-0" />
                 <span>Close with Du'a</span>
@@ -2261,9 +2261,9 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
               <button
                 type="button"
                 onClick={() => setShowBlockModal(true)}
-                className="w-full px-3.5 py-2.5 text-xs text-rose-600 hover:bg-rose-50 flex items-center gap-2.5 transition-colors font-medium text-left"
+                className="w-full px-3.5 py-2.5 text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 flex items-center gap-2.5 transition-colors font-medium text-left"
               >
-                <Ban className="w-4 h-4 text-rose-600 shrink-0" />
+                <Ban className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
                 <span>Block Candidate</span>
               </button>
             </div>
@@ -2273,10 +2273,10 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
 
       {/* 1-to-1 Modesty Photo Reveal Privacy Quick Bar (Only for candidate-to-candidate matches) */}
       {!isOfficialChannel && (
-        <div className="bg-surface-variant/80 backdrop-blur-xs px-3.5 py-1.5 border-b border-outline flex items-center justify-between z-10 text-xs shadow-2xs">
+        <div className="bg-surface-variant/80 dark:bg-[#16161c]/90 backdrop-blur-xs px-3.5 py-1.5 border-b border-outline dark:border-[#272733] flex items-center justify-between z-10 text-xs shadow-2xs">
           <div className="flex items-center gap-1.5 min-w-0">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-            <span className="text-[11px] font-medium text-on-surface truncate">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span className="text-[11px] font-medium text-on-surface dark:text-slate-200 truncate">
               {(() => {
                 const partnerRevealedToMe = Boolean(activeConv?.otherUser?.isPhotoRevealed || activeConv?.isPhotoRevealed);
                 const partnerFirstName = activeConv?.otherUser?.fullName ? activeConv.otherUser.fullName.split(' ')[0] : 'Partner';
@@ -2298,7 +2298,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
             onClick={handleToggleRevealPhotos}
             className={`px-3 py-1 rounded-full text-[10px] font-bold border transition-all flex items-center gap-1 shrink-0 shadow-2xs active:scale-95 ${
               hasRevealedToPartner
-                ? 'bg-white border-outline text-secondary hover:bg-surface-variant hover:text-on-surface'
+                ? 'bg-white dark:bg-[#232330] border-outline dark:border-[#353545] text-secondary dark:text-slate-300 hover:bg-surface-variant hover:text-on-surface'
                 : 'bg-primary text-white border-primary shadow-brand hover:bg-primary-dark'
             }`}
           >
@@ -2317,15 +2317,11 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
         </div>
       )}
 
-
       {/* Messages Scroll Area */}
-
-
-      {/* Messages Scroll Area */}
-      <main className="flex-1 overflow-y-auto p-3.5 space-y-3 bg-[#FAF8F5]/60 dark:bg-[#0c0c0e]">
+      <main className="flex-1 overflow-y-auto p-3.5 space-y-3 bg-[#FAF8F5] dark:bg-[#0c0c0e]">
         {/* Date Marker */}
         <div className="flex justify-center my-1">
-          <span className="text-[10px] text-amber-900/90 dark:text-amber-200 bg-white/90 dark:bg-[#1a1712] backdrop-blur-md px-3.5 py-1 rounded-full border border-amber-200/80 dark:border-amber-500/30 font-medium shadow-2xs flex items-center gap-1.5 font-serif">
+          <span className="text-[10px] text-amber-900/90 dark:text-amber-300 bg-white/90 dark:bg-[#1e1912] backdrop-blur-md px-3.5 py-1 rounded-full border border-amber-200/80 dark:border-amber-500/40 font-medium shadow-2xs flex items-center gap-1.5 font-serif">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
             <span>Conversation Began with Bismillah</span>
           </span>
@@ -2535,7 +2531,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                     className={`p-3 rounded-2xl text-xs leading-relaxed transition-all ${
                       isMe
                         ? 'bg-gradient-to-tr from-primary via-rose-600 to-rose-500 text-white rounded-br-2xs shadow-sm shadow-primary/20'
-                        : 'bg-white text-slate-800 rounded-bl-2xs border border-slate-200/80 shadow-xs'
+                        : 'bg-white dark:bg-[#1c1c24] text-slate-800 dark:text-slate-100 rounded-bl-2xs border border-slate-200/80 dark:border-[#2a2a36] shadow-xs'
                     }`}
                   >
                     {/* 1. Voice Message Bubble */}
@@ -2923,11 +2919,11 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
             })
           ) : (
             <div className="flex flex-col items-center justify-center py-12 px-4 text-center my-auto">
-              <div className="w-12 h-12 rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center mb-2.5 text-primary shadow-xs">
+              <div className="w-12 h-12 rounded-full bg-rose-50 dark:bg-rose-950/40 border border-rose-100 dark:border-rose-900/40 flex items-center justify-center mb-2.5 text-primary shadow-xs">
                 <MessageCircle className="w-6 h-6 text-primary" />
               </div>
-              <p className="font-serif font-bold text-sm text-slate-800">Start a Blessed Conversation</p>
-              <p className="text-xs text-secondary max-w-xs mt-1 leading-relaxed">Send a respectful Islamic Salam to initiate matrimonial discussions.</p>
+              <p className="font-serif font-bold text-sm text-slate-800 dark:text-white">Start a Blessed Conversation</p>
+              <p className="text-xs text-secondary dark:text-slate-400 max-w-xs mt-1 leading-relaxed">Send a respectful Islamic Salam to initiate matrimonial discussions.</p>
               
               {/* Quick Salam Chips */}
               <div className="mt-4 flex flex-wrap justify-center gap-2 max-w-xs">
@@ -2938,7 +2934,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                     onClick={() => {
                       setInputText(salam);
                     }}
-                    className="text-[11px] font-medium bg-white hover:bg-rose-50/80 text-slate-700 hover:text-primary px-3 py-1.5 rounded-full border border-slate-200/90 shadow-2xs transition-all active:scale-95 cursor-pointer"
+                    className="text-[11px] font-medium bg-white dark:bg-[#1a1a24] hover:bg-rose-50/80 dark:hover:bg-rose-950/40 text-slate-700 dark:text-slate-200 hover:text-primary dark:hover:text-rose-400 px-3 py-1.5 rounded-full border border-slate-200/90 dark:border-[#272733] shadow-2xs transition-all active:scale-95 cursor-pointer"
                   >
                     {salam}
                   </button>
@@ -2950,13 +2946,13 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
 
         {/* Live Partner Typing Indicator */}
         {isPartnerTyping && (
-          <div className="flex items-center gap-2 px-3.5 py-1.5 text-xs text-secondary bg-surface-variant/90 border border-outline rounded-2xl w-fit animate-fade-in self-start mb-2 shadow-2xs">
+          <div className="flex items-center gap-2 px-3.5 py-1.5 text-xs text-secondary dark:text-slate-400 bg-surface-variant/90 dark:bg-[#1c1c24]/90 border border-outline dark:border-[#272733] rounded-2xl w-fit animate-fade-in self-start mb-2 shadow-2xs">
             <div className="flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce"></span>
               <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce [animation-delay:0.2s]"></span>
               <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce [animation-delay:0.4s]"></span>
             </div>
-            <span className="text-[11px] font-medium text-on-surface">
+            <span className="text-[11px] font-medium text-on-surface dark:text-white">
               {activeConv?.otherUser?.fullName?.split(' ')[0] || 'Partner'} is typing...
             </span>
           </div>
@@ -2967,40 +2963,40 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
 
       {/* Uploading / Compressing Indicator */}
       {isUploadingMedia && (
-        <div className="px-3.5 py-1.5 bg-sky-50 border-t border-sky-100 flex items-center gap-2 text-sky-700 text-xs font-medium animate-fade-in">
-          <Loader2 className="w-3.5 h-3.5 animate-spin text-sky-600" />
+        <div className="px-3.5 py-1.5 bg-sky-50 dark:bg-sky-950/40 border-t border-sky-100 dark:border-sky-900/40 flex items-center gap-2 text-sky-700 dark:text-sky-300 text-xs font-medium animate-fade-in">
+          <Loader2 className="w-3.5 h-3.5 animate-spin text-sky-600 dark:text-sky-400" />
           <span>{uploadStatus || 'Processing media...'}</span>
         </div>
       )}
 
       {/* Message Input Footer with Voice Record & Auto-Compressed Attachment */}
       {isOfficialChannel ? (
-        <footer className="p-3.5 bg-white/95 backdrop-blur-md border-t border-slate-100 flex items-center justify-center gap-2 text-xs text-on-surface text-center z-20 shadow-xs">
+        <footer className="p-3.5 bg-white/95 dark:bg-[#121218]/95 backdrop-blur-md border-t border-slate-100 dark:border-[#272733] flex items-center justify-center gap-2 text-xs text-on-surface dark:text-slate-200 text-center z-20 shadow-xs">
           <VerifiedBlueTick size={15} />
-          <span className="font-medium text-secondary">This is an official announcement channel. Only Qurb Admins can broadcast messages.</span>
+          <span className="font-medium text-secondary dark:text-slate-400">This is an official announcement channel. Only Qurb Admins can broadcast messages.</span>
         </footer>
       ) : isPendingSalamForMe ? (
-        <footer className="p-3 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border-t border-emerald-200/90 flex flex-col gap-2.5 z-20 shadow-md animate-fade-in">
+        <footer className="p-3 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 dark:from-emerald-950/40 dark:via-[#0e1a14] dark:to-teal-950/40 border-t border-emerald-200/90 dark:border-emerald-800/40 flex flex-col gap-2.5 z-20 shadow-md animate-fade-in">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-300/50">
-              <Hand className="w-4 h-4 text-emerald-600" />
+            <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0 border border-emerald-300/50 dark:border-emerald-700/50">
+              <Hand className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div>
-              <p className="text-xs text-slate-800 font-bold leading-tight">
+              <p className="text-xs text-slate-800 dark:text-white font-bold leading-tight">
                 Direct Salam Invitation Received
               </p>
-              <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">
-                <strong className="text-slate-900">{activeConv?.otherUser?.fullName?.split(' ')[0] || 'Candidate'}</strong> reached out with a Direct Salam. Accept to start halal conversation, or decline.
+              <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5 leading-snug">
+                <strong className="text-slate-900 dark:text-white">{activeConv?.otherUser?.fullName?.split(' ')[0] || 'Candidate'}</strong> reached out with a Direct Salam. Accept to start halal conversation, or decline.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 pt-1 border-t border-emerald-200/50">
+          <div className="flex items-center gap-2 pt-1 border-t border-emerald-200/50 dark:border-emerald-800/40">
             <button
               type="button"
               disabled={isProcessingSalam}
               onClick={handleRejectSalam}
-              className="flex-1 py-2 px-3 rounded-xl bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 text-xs font-bold transition-all shadow-2xs flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer disabled:opacity-50"
+              className="flex-1 py-2 px-3 rounded-xl bg-white dark:bg-[#1c1c24] hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40 text-xs font-bold transition-all shadow-2xs flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer disabled:opacity-50"
             >
               <X className="w-3.5 h-3.5" />
               <span>Decline</span>
@@ -3018,12 +3014,12 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
           </div>
         </footer>
       ) : isPendingSalamSentByMe ? (
-        <footer className="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-center gap-2 text-xs text-slate-600 text-center z-20">
+        <footer className="p-3 bg-slate-50 dark:bg-[#121218] border-t border-slate-200 dark:border-[#272733] flex items-center justify-center gap-2 text-xs text-slate-600 dark:text-slate-300 text-center z-20">
           <Clock className="w-4 h-4 text-amber-500 shrink-0" />
           <span>Direct Salam invitation sent. Waiting for {activeConv?.otherUser?.fullName?.split(' ')[0] || 'member'} to accept your request.</span>
         </footer>
       ) : (
-        <footer className="p-2.5 bg-white/95 backdrop-blur-md border-t border-slate-100 flex items-center gap-2 z-20 shadow-xs">
+        <footer className="p-2.5 bg-white/95 dark:bg-[#121218]/95 backdrop-blur-md border-t border-slate-100 dark:border-[#272733] flex items-center gap-2 z-20 shadow-xs">
           {/* Hidden File Attachment Input */}
           <input
             ref={fileInputRef}
@@ -3035,13 +3031,13 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
 
           {isRecording ? (
             /* Live Recording Bar */
-            <div className="flex-1 flex items-center justify-between bg-rose-50 border border-rose-200 rounded-full px-4 py-1.5 animate-fade-in shadow-2xs">
+            <div className="flex-1 flex items-center justify-between bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/40 rounded-full px-4 py-1.5 animate-fade-in shadow-2xs">
               <div className="flex items-center gap-2.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-ping" />
-                <span className="text-xs font-mono font-bold text-rose-700">
+                <span className="text-xs font-mono font-bold text-rose-700 dark:text-rose-300">
                   {formatSeconds(recordingSeconds)}
                 </span>
-                <span className="text-xs text-rose-600/80 italic font-medium hidden sm:inline">
+                <span className="text-xs text-rose-600/80 dark:text-rose-300/80 italic font-medium hidden sm:inline">
                   Recording voice note...
                 </span>
               </div>
@@ -3051,7 +3047,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                 <button
                   type="button"
                   onClick={handleCancelRecording}
-                  className="w-8 h-8 rounded-full bg-white hover:bg-rose-100 text-rose-600 flex items-center justify-center transition-all shadow-2xs cursor-pointer active:scale-95"
+                  className="w-8 h-8 rounded-full bg-white dark:bg-[#1c1c24] hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 flex items-center justify-center transition-all shadow-2xs cursor-pointer active:scale-95"
                   title="Cancel recording"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -3077,7 +3073,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                 type="button"
                 onClick={handleAttachmentClick}
                 disabled={isUploadingMedia}
-                className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200/80 flex items-center justify-center text-slate-500 hover:text-primary transition-all active:scale-95 disabled:opacity-40 shrink-0 cursor-pointer"
+                className="w-9 h-9 rounded-full bg-slate-100 dark:bg-[#1c1c24] hover:bg-slate-200 dark:hover:bg-[#252532] border border-slate-200/80 dark:border-[#272733] flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-rose-400 transition-all active:scale-95 disabled:opacity-40 shrink-0 cursor-pointer"
                 title="Attach photo, video, or document (auto-compressed)"
               >
                 <Paperclip className="w-4 h-4" />
@@ -3093,7 +3089,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                 }}
                 placeholder="Write a respectful message..."
                 disabled={isUploadingMedia}
-                className="flex-1 bg-slate-100/90 border border-slate-200/80 rounded-full px-4 py-2 text-xs text-slate-800 outline-none focus:bg-white focus:border-primary/50 focus:ring-2 focus:ring-primary/20 placeholder:text-slate-400 transition-all"
+                className="flex-1 bg-slate-100/90 dark:bg-[#1a1a24] border border-slate-200/80 dark:border-[#272733] rounded-full px-4 py-2 text-xs text-slate-800 dark:text-white outline-none focus:bg-white dark:focus:bg-[#20202c] focus:border-primary/50 focus:ring-2 focus:ring-primary/20 placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-all"
               />
 
               {/* Conditional Send vs Mic Button */}
@@ -3112,7 +3108,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                   type="button"
                   onClick={handleStartRecording}
                   disabled={isUploadingMedia}
-                  className="w-9 h-9 rounded-full bg-rose-50 hover:bg-primary text-primary hover:text-white border border-rose-200/80 flex items-center justify-center shadow-xs active:scale-95 disabled:opacity-40 transition-all shrink-0 cursor-pointer"
+                  className="w-9 h-9 rounded-full bg-rose-50 dark:bg-rose-950/40 hover:bg-primary text-primary hover:text-white border border-rose-200/80 dark:border-rose-900/40 flex items-center justify-center shadow-xs active:scale-95 disabled:opacity-40 transition-all shrink-0 cursor-pointer"
                   title="Record voice note"
                 >
                   <Mic className="w-4 h-4" />

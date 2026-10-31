@@ -294,7 +294,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
   const [mainSection, setMainSection] = useState<'activity' | 'privacy'>('activity');
 
   return (
-    <div className="w-full h-full flex flex-col p-4 overflow-y-auto pb-24 font-sans bg-slate-50/50 select-none text-on-surface relative">
+    <div className="w-full h-full flex flex-col p-4 overflow-y-auto pb-24 font-sans bg-slate-50/50 dark:bg-[#0c0c0e] select-none text-on-surface relative">
       {/* Subtle Ambient Decorative Glows */}
       <div className="absolute top-0 right-0 w-64 h-64 bg-primary/4 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute top-24 left-0 w-48 h-48 bg-emerald-500/4 rounded-full blur-2xl pointer-events-none" />
@@ -302,10 +302,10 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
       {/* Top Header */}
       <header className="mb-3.5 flex items-center justify-between pt-1 relative z-10">
         <div>
-          <h1 className="font-serif text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+          <h1 className="font-serif text-xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
             <span>Matches & Activity</span>
           </h1>
-          <p className="text-[11px] text-slate-500 mt-0.5">Manage connections, sent interests & privacy history</p>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Manage connections, sent interests & privacy history</p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -315,14 +315,14 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
             onClick={() => themeService.toggleTheme()}
             aria-label="Toggle Theme"
             title={isDarkMode ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
-            className="p-1.5 rounded-full border border-slate-200/80 bg-white hover:bg-slate-100 text-slate-700 transition-all shadow-2xs cursor-pointer"
+            className="p-1.5 rounded-full border border-slate-200/80 dark:border-[#272733] bg-white dark:bg-[#1a1a24] hover:bg-slate-100 dark:hover:bg-[#232330] text-slate-700 dark:text-slate-200 transition-all shadow-2xs cursor-pointer"
           >
             {isDarkMode ? <Moon className="w-4 h-4 text-amber-400" /> : <Sun className="w-4 h-4 text-amber-500" />}
           </button>
 
           {isVip && (
-            <span className="bg-gradient-to-r from-amber-50 to-amber-100/90 text-amber-700 border border-amber-300/60 text-[10px] font-bold px-3 py-1 rounded-full shadow-2xs flex items-center gap-1.5">
-              <Crown className="w-3.5 h-3.5 text-amber-600" />
+            <span className="bg-gradient-to-r from-amber-50 to-amber-100/90 dark:from-amber-950/40 dark:to-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-300/60 dark:border-amber-500/40 text-[10px] font-bold px-3 py-1 rounded-full shadow-2xs flex items-center gap-1.5">
+              <Crown className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
               <span>VIP Active</span>
             </span>
           )}
@@ -330,7 +330,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
       </header>
 
       {/* Main 2-Section Segmented Control */}
-      <div className="bg-slate-200/60 p-1 rounded-2xl flex items-center mb-3 border border-slate-200/80 shadow-2xs backdrop-blur-xs relative z-10">
+      <div className="bg-slate-200/60 dark:bg-[#181822] p-1 rounded-2xl flex items-center mb-3 border border-slate-200/80 dark:border-[#272733] shadow-2xs backdrop-blur-xs relative z-10">
         <button
           onClick={() => {
             setMainSection('activity');
@@ -340,8 +340,8 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
           }}
           className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
             mainSection === 'activity'
-              ? 'bg-white text-primary shadow-xs'
-              : 'text-slate-500 hover:text-slate-800'
+              ? 'bg-white dark:bg-[#252532] text-primary dark:text-rose-400 shadow-xs'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
           }`}
         >
           <Heart className="w-3.5 h-3.5" />
@@ -357,8 +357,8 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
           }}
           className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
             mainSection === 'privacy'
-              ? 'bg-white text-primary shadow-xs'
-              : 'text-slate-500 hover:text-slate-800'
+              ? 'bg-white dark:bg-[#252532] text-primary dark:text-rose-400 shadow-xs'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
           }`}
         >
           <Shield className="w-3.5 h-3.5" />
@@ -376,7 +376,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
               className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all border ${
                 activeTab === 'sent'
                   ? 'bg-gradient-to-r from-primary to-primary-dark text-white border-transparent shadow-brand'
-                  : 'bg-white text-slate-600 border-slate-200/80 hover:bg-slate-50 hover:border-slate-300 shadow-2xs'
+                  : 'bg-white dark:bg-[#16161c] text-slate-600 dark:text-slate-300 border-slate-200/80 dark:border-[#272733] hover:bg-slate-50 dark:hover:bg-[#1f1f28] shadow-2xs'
               }`}
             >
               <span>You Liked</span>
@@ -388,7 +388,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
               className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all border ${
                 activeTab === 'mutual'
                   ? 'bg-gradient-to-r from-primary to-primary-dark text-white border-transparent shadow-brand'
-                  : 'bg-white text-slate-600 border-slate-200/80 hover:bg-slate-50 hover:border-slate-300 shadow-2xs'
+                  : 'bg-white dark:bg-[#16161c] text-slate-600 dark:text-slate-300 border-slate-200/80 dark:border-[#272733] hover:bg-slate-50 dark:hover:bg-[#1f1f28] shadow-2xs'
               }`}
             >
               <span>Mutual</span>
@@ -400,7 +400,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
               className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all border ${
                 activeTab === 'received'
                   ? 'bg-gradient-to-r from-primary to-primary-dark text-white border-transparent shadow-brand'
-                  : 'bg-white text-slate-600 border-slate-200/80 hover:bg-slate-50 hover:border-slate-300 shadow-2xs'
+                  : 'bg-white dark:bg-[#16161c] text-slate-600 dark:text-slate-300 border-slate-200/80 dark:border-[#272733] hover:bg-slate-50 dark:hover:bg-[#1f1f28] shadow-2xs'
               }`}
             >
               <span>Liked You</span>
@@ -413,7 +413,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
               className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all border ${
                 activeTab === 'passed'
                   ? 'bg-gradient-to-r from-primary to-primary-dark text-white border-transparent shadow-brand'
-                  : 'bg-white text-slate-600 border-slate-200/80 hover:bg-slate-50 hover:border-slate-300 shadow-2xs'
+                  : 'bg-white dark:bg-[#16161c] text-slate-600 dark:text-slate-300 border-slate-200/80 dark:border-[#272733] hover:bg-slate-50 dark:hover:bg-[#1f1f28] shadow-2xs'
               }`}
             >
               <Undo2 className="w-3.5 h-3.5" />
@@ -425,7 +425,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
               className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all border ${
                 activeTab === 'blocked'
                   ? 'bg-gradient-to-r from-primary to-primary-dark text-white border-transparent shadow-brand'
-                  : 'bg-white text-slate-600 border-slate-200/80 hover:bg-slate-50 hover:border-slate-300 shadow-2xs'
+                  : 'bg-white dark:bg-[#16161c] text-slate-600 dark:text-slate-300 border-slate-200/80 dark:border-[#272733] hover:bg-slate-50 dark:hover:bg-[#1f1f28] shadow-2xs'
               }`}
             >
               <Ban className="w-3.5 h-3.5" />
@@ -507,7 +507,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
                 return (
                   <div
                     key={candidate.id}
-                    className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden flex flex-col shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] hover:border-primary/40 transition-all duration-200 relative group"
+                    className="bg-white dark:bg-[#16161c] rounded-2xl border border-slate-200/80 dark:border-[#272733] overflow-hidden flex flex-col shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] hover:border-primary/40 dark:hover:border-primary/50 transition-all duration-200 relative group"
                   >
                     <div 
                       onClick={() => {
@@ -601,20 +601,20 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
 
                     <div className="p-2.5 flex-1 flex flex-col justify-between gap-1.5">
                       <div onClick={() => setSelectedProfile(candidate)} className="cursor-pointer">
-                        <h3 className="font-serif font-bold text-xs text-slate-800 truncate hover:text-primary transition-colors flex items-center gap-1">
+                        <h3 className="font-serif font-bold text-xs text-slate-800 dark:text-white truncate hover:text-primary transition-colors flex items-center gap-1">
                           <span className="truncate">{formatDisplayName(candidate.fullName || 'Member')}</span>
                           {!isVip && (
-                            <span className="shrink-0 text-[9px] text-amber-800 bg-amber-100/90 font-bold px-1.5 py-0.2 rounded border border-amber-200/60">
+                            <span className="shrink-0 text-[9px] text-amber-800 dark:text-amber-200 bg-amber-100/90 dark:bg-amber-950/40 font-bold px-1.5 py-0.2 rounded border border-amber-200/60 dark:border-amber-500/40">
                               Liked You
                             </span>
                           )}
                         </h3>
-                        <p className="text-[10px] text-slate-500 truncate mt-0.5">
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
                           {candidate.profession || 'Professional'} · {candidate.religiousProfile?.sect || 'Sunni'}
                         </p>
                       </div>
 
-                      <div className="pt-1.5 border-t border-slate-100">
+                      <div className="pt-1.5 border-t border-slate-100 dark:border-[#272733]">
                         <div className="flex items-center gap-1.5">
                           <button
                             onClick={() => handleInstantMatch(candidate)}
@@ -640,7 +640,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
 
                           <button
                             onClick={() => handlePassCandidate(candidate)}
-                            className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-semibold transition-all"
+                            className="px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-[#232330] hover:bg-slate-200 dark:hover:bg-[#2c2c3c] text-slate-600 dark:text-slate-300 text-[10px] font-semibold transition-all"
                             title="Pass"
                           >
                             <X className="w-3 h-3" />
@@ -655,12 +655,12 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
             </div>
           ) : (
 
-            <div className="flex flex-col items-center justify-center py-14 text-center px-4 bg-white rounded-3xl border border-slate-200/80 shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
-              <div className="w-12 h-12 rounded-2xl bg-rose-50 text-primary flex items-center justify-center mb-2.5 border border-rose-100">
+            <div className="flex flex-col items-center justify-center py-14 text-center px-4 bg-white dark:bg-[#16161c] rounded-3xl border border-slate-200/80 dark:border-[#272733] shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
+              <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-950/40 text-primary flex items-center justify-center mb-2.5 border border-rose-100 dark:border-rose-900/40">
                 <Heart className="w-6 h-6 text-primary" />
               </div>
-              <h3 className="font-serif font-bold text-sm text-slate-800">No New Likes Yet</h3>
-              <p className="text-xs text-slate-500 mt-1 max-w-xs leading-relaxed">
+              <h3 className="font-serif font-bold text-sm text-slate-800 dark:text-white">No New Likes Yet</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs leading-relaxed">
                 When prospective matches like your profile on Discover, they will appear here!
               </p>
             </div>
@@ -705,10 +705,10 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
                       };
                       setSelectedProfile(prof as UserProfile);
                     }}
-                    className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] hover:border-primary/40 flex items-center justify-between gap-3 cursor-pointer transition-all duration-200 active:scale-[0.99] group"
+                    className="bg-white dark:bg-[#16161c] p-3.5 rounded-2xl border border-slate-200/80 dark:border-[#272733] shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] hover:border-primary/40 dark:hover:border-primary/50 dark:hover:bg-[#1c1c24] flex items-center justify-between gap-3 cursor-pointer transition-all duration-200 active:scale-[0.99] group"
                   >
                     <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-sm ring-1 ring-slate-100 flex items-center justify-center shrink-0">
+                      <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-white dark:border-[#16161c] shadow-sm ring-1 ring-slate-100 dark:ring-[#272733] flex items-center justify-center shrink-0">
                         {thumbUrl ? (
                           <img
                             src={thumbUrl}
@@ -734,21 +734,21 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
                         </div>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h4 className="font-serif font-bold text-sm text-slate-800 truncate group-hover:text-primary transition-colors">
+                        <h4 className="font-serif font-bold text-sm text-slate-800 dark:text-white truncate group-hover:text-primary transition-colors">
                           {displayName}
                         </h4>
-                        <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium mt-0.5 min-w-0">
+                        <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5 min-w-0">
                           <span className="truncate shrink-0 max-w-[120px] sm:max-w-[180px]">{profession}</span>
-                          <span className="w-1 h-1 rounded-full bg-slate-300 shrink-0" />
-                          <span className="flex items-center gap-0.5 text-slate-400 truncate min-w-0">
-                            <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                          <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0" />
+                          <span className="flex items-center gap-0.5 text-slate-400 dark:text-slate-500 truncate min-w-0">
+                            <MapPin className="w-3 h-3 text-slate-400 dark:text-slate-500 shrink-0" />
                             <span className="truncate">{location}</span>
                           </span>
                         </div>
                         {timeline && (
                           <div className="mt-1">
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-rose-50 text-rose-600 border border-rose-100">
-                              <Clock className="w-2.5 h-2.5 text-rose-500 shrink-0" />
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-300 border border-rose-100 dark:border-rose-900/40">
+                              <Clock className="w-2.5 h-2.5 text-rose-500 dark:text-rose-400 shrink-0" />
                               <span>Timeline: {formatTimeline(timeline)}</span>
                             </span>
                           </div>
@@ -759,22 +759,22 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
                     <div className="flex items-center gap-1.5 shrink-0">
                       <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold flex items-center gap-1.5 transition-colors ${
                         item.action === 'mutual_match'
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs'
-                          : 'bg-slate-50 text-slate-600 border border-slate-200/90 shadow-2xs group-hover:border-primary/40 group-hover:text-primary'
+                          ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/40 shadow-2xs'
+                          : 'bg-slate-50 dark:bg-[#232330] text-slate-600 dark:text-slate-300 border border-slate-200/90 dark:border-[#323242] shadow-2xs group-hover:border-primary/40 group-hover:text-primary'
                       }`}>
                         {item.action === 'mutual_match' ? (
                           <>
-                            <Heart className="w-3 h-3 text-emerald-600 fill-current" />
+                            <Heart className="w-3 h-3 text-emerald-600 dark:text-emerald-400 fill-current" />
                             <span>Matched</span>
                           </>
                         ) : (
                           <>
-                            <Clock className="w-3 h-3 text-slate-400 group-hover:text-primary transition-colors" />
+                            <Clock className="w-3 h-3 text-slate-400 dark:text-slate-400 group-hover:text-primary transition-colors" />
                             <span>Pending</span>
                           </>
                         )}
                       </span>
-                      <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                      <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
                     </div>
                   </div>
                 );
@@ -782,12 +782,12 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
             </div>
 
           ) : (
-            <div className="flex flex-col items-center justify-center py-14 text-center px-4 bg-white rounded-3xl border border-slate-200/80 shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
-              <div className="w-12 h-12 rounded-2xl bg-rose-50 text-primary flex items-center justify-center mb-2.5 border border-rose-100">
+            <div className="flex flex-col items-center justify-center py-14 text-center px-4 bg-white dark:bg-[#16161c] rounded-3xl border border-slate-200/80 dark:border-[#272733] shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
+              <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-950/40 text-primary flex items-center justify-center mb-2.5 border border-rose-100 dark:border-rose-900/40">
                 <Send className="w-6 h-6 text-primary" />
               </div>
-              <h3 className="font-serif font-bold text-sm text-slate-800">No Sent Likes Yet</h3>
-              <p className="text-xs text-slate-500 mt-1 max-w-xs leading-relaxed">
+              <h3 className="font-serif font-bold text-sm text-slate-800 dark:text-white">No Sent Likes Yet</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs leading-relaxed">
                 Explore Discover and express interest to candidates you feel aligned with.
               </p>
             </div>
@@ -817,10 +817,10 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
                       const newConv = dbService.createMatchConversation(match);
                       onOpenChat(newConv.id);
                     }}
-                    className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] hover:border-primary/40 flex items-center justify-between gap-3 cursor-pointer group transition-all duration-200 active:scale-[0.99]"
+                    className="bg-white dark:bg-[#16161c] p-3.5 rounded-2xl border border-slate-200/80 dark:border-[#272733] shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] hover:border-primary/40 dark:hover:border-primary/50 dark:hover:bg-[#1c1c24] flex items-center justify-between gap-3 cursor-pointer group transition-all duration-200 active:scale-[0.99]"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-sm ring-2 ring-primary/40 shrink-0 group-hover:scale-105 transition-transform flex items-center justify-center">
+                      <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-white dark:border-[#16161c] shadow-sm ring-2 ring-primary/40 shrink-0 group-hover:scale-105 transition-transform flex items-center justify-center">
                         {photo ? (
                           <img
                             src={photo}
@@ -849,25 +849,25 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 min-w-0">
-                          <h4 className="font-serif font-bold text-sm text-slate-800 group-hover:text-primary transition-colors truncate">
+                          <h4 className="font-serif font-bold text-sm text-slate-800 dark:text-white group-hover:text-primary transition-colors truncate">
                             {formatDisplayName(match.fullName)}
                           </h4>
                           {isUserOnline(match) ? (
-                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-100 shrink-0 shadow-2xs" title="Online" />
+                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-100 dark:ring-emerald-950 shrink-0 shadow-2xs" title="Online" />
                           ) : (
-                            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 ring-2 ring-amber-100 shrink-0 shadow-2xs" title="Offline / Away" />
+                            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 ring-2 ring-amber-100 dark:ring-amber-950 shrink-0 shadow-2xs" title="Offline / Away" />
                           )}
                         </div>
 
-                        <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium mt-0.5 min-w-0">
+                        <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5 min-w-0">
                           <span className="text-primary font-semibold truncate shrink-0 max-w-[110px] sm:max-w-[180px]">{match.profession || 'Professional'}</span>
-                          <span className="w-1 h-1 rounded-full bg-slate-300 shrink-0" />
-                          <span className="flex items-center gap-0.5 text-slate-400 truncate min-w-0">
-                            <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                          <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0" />
+                          <span className="flex items-center gap-0.5 text-slate-400 dark:text-slate-500 truncate min-w-0">
+                            <MapPin className="w-3 h-3 text-slate-400 dark:text-slate-500 shrink-0" />
                             <span className="truncate">{match.location}</span>
                           </span>
                         </div>
-                        <span className="text-[10px] text-slate-400 mt-0.5 block truncate">
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5 block truncate">
                           Tap to chat · Tap eye for biodata
                         </span>
                       </div>
@@ -881,7 +881,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
                           setSelectedProfile(match);
                         }}
                         title="View Full Profile"
-                        className="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 hover:text-primary hover:bg-slate-200 flex items-center justify-center transition-colors shadow-2xs active:scale-95"
+                        className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-[#232330] border border-slate-200 dark:border-[#323242] text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-rose-400 hover:bg-slate-200 dark:hover:bg-[#2c2c3c] flex items-center justify-center transition-colors shadow-2xs active:scale-95"
                       >
                         <Eye className="w-3.5 h-3.5" />
                       </button>
@@ -904,12 +904,12 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
               })}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-14 text-center px-4 bg-white rounded-3xl border border-slate-200/80 shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-2.5 border border-emerald-100">
-                <Heart className="w-6 h-6 text-emerald-600 fill-current" />
+            <div className="flex flex-col items-center justify-center py-14 text-center px-4 bg-white dark:bg-[#16161c] rounded-3xl border border-slate-200/80 dark:border-[#272733] shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-2.5 border border-emerald-100 dark:border-emerald-900/40">
+                <Heart className="w-6 h-6 text-emerald-600 dark:text-emerald-400 fill-current" />
               </div>
-              <h3 className="font-serif font-bold text-sm text-slate-800">No Mutual Matches Yet</h3>
-              <p className="text-xs text-slate-500 mt-1 max-w-xs leading-relaxed">
+              <h3 className="font-serif font-bold text-sm text-slate-800 dark:text-white">No Mutual Matches Yet</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs leading-relaxed">
                 When two profiles mutually like each other, you can immediately start a respectful chat here.
               </p>
             </div>
@@ -922,7 +922,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
         <div className="space-y-2.5">
           {passedProfiles.length > 0 ? (
             <div className="space-y-2.5">
-              <p className="text-[11px] text-slate-500 font-medium">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
                 You passed on these profiles. You can reconsider or undo any pass below to return them to Discover:
               </p>
               {passedProfiles.map(item => {
@@ -941,10 +941,10 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
                 return (
                   <div
                     key={item.id}
-                    className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-[0_2px_8px_rgba(0,0,0,0.03)] flex items-center justify-between gap-3"
+                    className="bg-white dark:bg-[#16161c] p-3.5 rounded-2xl border border-slate-200/80 dark:border-[#272733] shadow-[0_2px_8px_rgba(0,0,0,0.03)] flex items-center justify-between gap-3"
                   >
                     <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-white shadow-sm ring-1 ring-slate-100 bg-slate-100 flex items-center justify-center shrink-0">
+                      <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-white dark:border-[#16161c] shadow-sm ring-1 ring-slate-100 dark:ring-[#272733] bg-slate-100 dark:bg-[#232330] flex items-center justify-center shrink-0">
                         {thumbUrl ? (
                           <img src={thumbUrl} alt={displayName} className="w-full h-full object-cover" />
                         ) : (
@@ -954,12 +954,12 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h4 className="font-serif font-bold text-xs text-slate-800 truncate">{displayName}</h4>
-                        <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-medium mt-0.5 min-w-0">
+                        <h4 className="font-serif font-bold text-xs text-slate-800 dark:text-white truncate">{displayName}</h4>
+                        <div className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-0.5 min-w-0">
                           <span className="truncate shrink-0 max-w-[110px] sm:max-w-[160px]">{(matchedProf?.profession || item.profession || 'Professional')}</span>
-                          <span className="w-1 h-1 rounded-full bg-slate-300 shrink-0" />
-                          <span className="flex items-center gap-0.5 text-slate-400 truncate min-w-0">
-                            <MapPin className="w-2.5 h-2.5 text-slate-400 shrink-0" />
+                          <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0" />
+                          <span className="flex items-center gap-0.5 text-slate-400 dark:text-slate-500 min-w-0">
+                            <MapPin className="w-2.5 h-2.5 text-slate-400 dark:text-slate-500 shrink-0" />
                             <span className="truncate">{(matchedProf?.location || item.location || 'Global')}</span>
                           </span>
                         </div>
@@ -968,7 +968,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
 
                     <button
                       onClick={() => handleUndoPass(item.id, displayName)}
-                      className="px-3 py-1.5 rounded-xl bg-white border border-primary/70 text-primary hover:bg-rose-50 text-xs font-bold flex items-center gap-1 transition-all active:scale-95 shadow-2xs shrink-0"
+                      className="px-3 py-1.5 rounded-xl bg-white dark:bg-[#232330] border border-primary/70 dark:border-primary/60 text-primary dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-xs font-bold flex items-center gap-1 transition-all active:scale-95 shadow-2xs shrink-0"
                     >
                       <Undo2 className="w-3.5 h-3.5" />
                       <span>Undo Pass</span>
@@ -979,12 +979,12 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
             </div>
 
           ) : (
-            <div className="flex flex-col items-center justify-center py-14 text-center px-4 bg-white rounded-3xl border border-slate-200/80 shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
-              <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-600 flex items-center justify-center mb-2.5 border border-slate-200">
+            <div className="flex flex-col items-center justify-center py-14 text-center px-4 bg-white dark:bg-[#16161c] rounded-3xl border border-slate-200/80 dark:border-[#272733] shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
+              <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-[#232330] text-slate-600 dark:text-slate-300 flex items-center justify-center mb-2.5 border border-slate-200 dark:border-[#323242]">
                 <Clock className="w-6 h-6" />
               </div>
-              <h3 className="font-serif font-bold text-sm text-slate-800">No Passed Profiles</h3>
-              <p className="text-xs text-slate-500 mt-1 max-w-xs leading-relaxed">
+              <h3 className="font-serif font-bold text-sm text-slate-800 dark:text-white">No Passed Profiles</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs leading-relaxed">
                 Any candidate profiles you pass on will appear here with an option to reconsider.
               </p>
             </div>
@@ -997,22 +997,22 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
         <div className="space-y-2.5">
           {blockedProfiles.length > 0 ? (
             <div className="space-y-2.5">
-              <p className="text-[11px] text-slate-500 font-medium">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
                 Profiles you have shielded or blocked for privacy:
               </p>
               {blockedProfiles.map(item => (
                 <div
                   key={item.id}
-                  className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-[0_2px_8px_rgba(0,0,0,0.03)] flex items-center justify-between gap-3"
+                  className="bg-white dark:bg-[#16161c] p-3.5 rounded-2xl border border-slate-200/80 dark:border-[#272733] shadow-[0_2px_8px_rgba(0,0,0,0.03)] flex items-center justify-between gap-3"
                 >
                   <div className="min-w-0">
-                    <h4 className="font-serif font-bold text-xs text-slate-800 truncate">{item.fullName}</h4>
-                    <p className="text-[10px] text-slate-500 mt-0.5">{item.reason || 'Blocked'} · {item.location || 'Global'}</p>
+                    <h4 className="font-serif font-bold text-xs text-slate-800 dark:text-white truncate">{item.fullName}</h4>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{item.reason || 'Blocked'} · {item.location || 'Global'}</p>
                   </div>
 
                   <button
                     onClick={() => handleUnblock(item.id, item.fullName)}
-                    className="px-3 py-1.5 rounded-xl bg-white border border-red-200 text-red-600 hover:bg-red-50 text-xs font-bold flex items-center gap-1 transition-all active:scale-95 shadow-2xs shrink-0"
+                    className="px-3 py-1.5 rounded-xl bg-white dark:bg-[#232330] border border-red-200 dark:border-red-900/40 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 text-xs font-bold flex items-center gap-1 transition-all active:scale-95 shadow-2xs shrink-0"
                   >
                     <Unlock className="w-3.5 h-3.5" />
                     <span>Unblock</span>
@@ -1021,12 +1021,12 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
               ))}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-14 text-center px-4 bg-white rounded-3xl border border-slate-200/80 shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
-              <div className="w-12 h-12 rounded-2xl bg-rose-50 text-primary flex items-center justify-center mb-2.5 border border-rose-100">
+            <div className="flex flex-col items-center justify-center py-14 text-center px-4 bg-white dark:bg-[#16161c] rounded-3xl border border-slate-200/80 dark:border-[#272733] shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
+              <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-950/40 text-primary flex items-center justify-center mb-2.5 border border-rose-100 dark:border-rose-900/40">
                 <Shield className="w-6 h-6 text-primary" />
               </div>
-              <h3 className="font-serif font-bold text-sm text-slate-800">No Blocked Profiles</h3>
-              <p className="text-xs text-slate-500 mt-1 max-w-xs leading-relaxed">
+              <h3 className="font-serif font-bold text-sm text-slate-800 dark:text-white">No Blocked Profiles</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs leading-relaxed">
                 You have not blocked any members. Your account privacy shield is active.
               </p>
             </div>
@@ -1038,7 +1038,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
       <div className="pt-4 text-center">
         <button
           onClick={onOpenDiscover}
-          className="px-5 py-2.5 rounded-full bg-white border border-slate-200 text-slate-700 hover:text-primary hover:border-primary font-medium text-xs shadow-2xs hover:shadow-xs transition-all inline-flex items-center gap-1.5 active:scale-95"
+          className="px-5 py-2.5 rounded-full bg-white dark:bg-[#16161c] border border-slate-200 dark:border-[#272733] text-slate-700 dark:text-slate-300 hover:text-primary dark:hover:text-rose-400 hover:border-primary dark:hover:border-primary/50 font-medium text-xs shadow-2xs hover:shadow-xs transition-all inline-flex items-center gap-1.5 active:scale-95"
         >
           <Compass className="w-4 h-4 text-primary" />
           <span>Explore More on Discover</span>

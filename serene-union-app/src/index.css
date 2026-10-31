@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 @config "../tailwind.config.js";
 
 *, *::before, *::after {
@@ -675,6 +676,29 @@ html.dark .text-purple-900,
 html.dark .text-purple-950,
 html.dark .text-purple-800 {
   color: #e9d5ff !important;
+}
+
+/* 13. BARAKAH VIP & PASSES MODAL DARK REFINEMENTS */
+html.dark [class*="via-white"][class*="to-amber-50"],
+html.dark [class*="from-rose-50/70"] {
+  background: linear-gradient(135deg, rgba(76, 5, 25, 0.5), #181317, rgba(69, 26, 3, 0.4)) !important;
+  border-color: #f43f5e !important;
+}
+html.dark [class*="from-rose-50/70"] h4,
+html.dark [class*="from-rose-50/70"] p {
+  color: #f4f4f5 !important;
+}
+
+/* Barakah Invite Friends 1 Month VIP card */
+html.dark [class*="via-teal-50"],
+html.dark [class*="from-emerald-50"][class*="to-emerald-50"] {
+  background: linear-gradient(to right, rgba(6, 78, 59, 0.45), #0f1c16, rgba(19, 78, 74, 0.4)) !important;
+  border-color: rgba(16, 185, 129, 0.45) !important;
+}
+html.dark [class*="via-teal-50"] h5,
+html.dark [class*="via-teal-50"] p,
+html.dark [class*="via-teal-50"] span {
+  color: #a7f3d0 !important;
 }
 
 

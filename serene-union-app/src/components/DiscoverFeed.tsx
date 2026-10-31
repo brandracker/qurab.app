@@ -1050,9 +1050,11 @@ export const DiscoverFeed: React.FC<Props> = ({
                         </div>
 
                         {currentProfile.religiousProfile?.deenRelationshipBio && (
-                          <div className="p-3 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-500/30 text-xs text-emerald-900 dark:text-emerald-100 leading-relaxed">
-                            <span className="font-bold text-[10px] uppercase text-emerald-700 dark:text-emerald-400 block mb-1">Relationship with Deen</span>
-                            "{currentProfile.religiousProfile.deenRelationshipBio}"
+                          <div className="p-3 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-500/30 text-xs leading-relaxed">
+                            <span className="font-bold text-[10px] uppercase text-emerald-700 dark:text-emerald-300 block mb-1 tracking-wider">Relationship with Deen</span>
+                            <p className="text-emerald-950 dark:text-emerald-100 font-medium">
+                              "{currentProfile.religiousProfile.deenRelationshipBio}"
+                            </p>
                           </div>
                         )}
                       </div>
@@ -1195,8 +1197,8 @@ export const DiscoverFeed: React.FC<Props> = ({
                         </div>
 
                         <div className="p-3.5 rounded-2xl bg-amber-50/70 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-500/30">
-                          <span className="font-bold text-[10px] uppercase text-amber-800 dark:text-amber-300 block mb-1">Ideal Spouse Description</span>
-                          <p className="text-xs text-on-surface leading-relaxed italic">
+                          <span className="font-bold text-[10px] uppercase text-amber-800 dark:text-amber-300 block mb-1 tracking-wider">Ideal Spouse Description</span>
+                          <p className="text-xs text-amber-950 dark:text-amber-100 leading-relaxed italic font-medium">
                             "{currentProfile.partnerRequirements?.description || 'Seeking a practicing, kind-hearted spouse with good Islamic manners.'}"
                           </p>
                         </div>

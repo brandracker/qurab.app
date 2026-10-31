@@ -117,4 +117,86 @@ describe('Calling Bug Fixes Suite (10 Reported Bugs Verification)', () => {
     expect((webRtcService as any).peerConnection.createOffer).not.toHaveBeenCalled();
     expect(typeof result).toBe('boolean');
   });
+
+  it('Camera Flip Fix: switchCamera stops existing video track before requesting new facingMode', async () => {
+    webRtcService.init(mockCaller.id);
+    (webRtcService as any).isVideoEnabled = true;
+
+    const stopMock = vi.fn();
+    const oldTrack = {
+      kind: 'video',
+      stop: stopMock,
+      enabled: true
+    };
+
+    const mockLocalStream = {
+      getVideoTracks: vi.fn().mockReturnValue([oldTrack]),
+      getAudioTracks: vi.fn().mockReturnValue([]),
+      getTracks: vi.fn().mockReturnValue([oldTrack]),
+      removeTrack: vi.fn(),
+      addTrack: vi.fn()
+    };
+    (webRtcService as any).localStream = mockLocalStream;
+
+    const newTrack = { kind: 'video', stop: vi.fn(), enabled: true };
+    const newStream = {
+      getVideoTracks: vi.fn().mockReturnValue([newTrack])
+    };
+
+    const getUserMediaSpy = vi.fn().mockResolvedValue(newStream);
+    Object.defineProperty(global.navigator, 'mediaDevices', {
+      value: { getUserMedia: getUserMediaSpy },
+      configurable: true,
+      writable: true
+    });
+
+    const isFrontBefore = webRtcService.getIsFrontCamera();
+    expect(isFrontBefore).toBe(true);
+
+    const isFrontAfter = await webRtcService.switchCamera();
+
+    // Critical assertion: old track stopped to avoid Android Camera2 hardware lock
+    expect(stopMock).toHaveBeenCalled();
+    expect(mockLocalStream.removeTrack).toHaveBeenCalledWith(oldTrack);
+    expect(mockLocalStream.addTrack).toHaveBeenCalledWith(newTrack);
+    expect(isFrontAfter).toBe(false);
+
+    webRtcService.endCall();
+  });
+
+  it('Audio Toggle Fix: toggleMute dispatches partner_audio_toggle and notifies partner in real-time', async () => {
+    webRtcService.init(mockReceiver.id);
+    (webRtcService as any).currentPartnerId = mockCaller.id;
+    let partnerMutedState: boolean | undefined = undefined;
+
+    const unsub = webRtcService.subscribe((_state, data) => {
+      if (typeof data?.partnerMuted === 'boolean') {
+        partnerMutedState = data.partnerMuted;
+      }
+    });
+
+    await webRtcService.handleIncomingSignal({
+      type: 'call_signal',
+      signal: 'partner_audio_toggle',
+      senderId: mockCaller.id,
+      targetUserId: mockReceiver.id,
+      callType: 'audio',
+      payload: { isMuted: true }
+    });
+
+    expect(partnerMutedState).toBe(true);
+
+    await webRtcService.handleIncomingSignal({
+      type: 'call_signal',
+      signal: 'partner_audio_toggle',
+      senderId: mockCaller.id,
+      targetUserId: mockReceiver.id,
+      callType: 'audio',
+      payload: { isMuted: false }
+    });
+
+    expect(partnerMutedState).toBe(false);
+    unsub();
+  });
 });
+

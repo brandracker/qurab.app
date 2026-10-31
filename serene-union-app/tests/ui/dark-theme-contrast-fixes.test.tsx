@@ -38,3 +38,4 @@ describe('Dark Theme Contrast & UI Styling Fixes', () => {
     expect(container).not.toBeNull();
   });
 });
+

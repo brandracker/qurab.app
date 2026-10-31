@@ -74,7 +74,8 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onResume() {
         super.onResume();
-        checkAndRequestCallingPermissions();
+        // Just-In-Time Permissions: Calling and camera permissions are requested on-demand
+        // when a call or photo action is initiated, avoiding user suspicion on startup.
     }
 
     private void setupWebRtcMediaPermissions() {
@@ -298,6 +299,9 @@ public class MainActivity extends BridgeActivity {
                                 audioManager.requestAudioFocus(null, AudioManager.STREAM_VOICE_CALL, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
                             } else {
                                 audioManager.abandonAudioFocus(null);
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                                    audioManager.clearCommunicationDevice();
+                                }
                                 audioManager.setSpeakerphoneOn(false);
                                 audioManager.setMode(AudioManager.MODE_NORMAL);
                             }
@@ -316,7 +320,27 @@ public class MainActivity extends BridgeActivity {
                             if (audioManager.getMode() != AudioManager.MODE_IN_COMMUNICATION) {
                                 audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
                             }
-                            audioManager.setSpeakerphoneOn(on);
+                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                                if (on) {
+                                    java.util.List<android.media.AudioDeviceInfo> devices = audioManager.getAvailableCommunicationDevices();
+                                    boolean deviceSet = false;
+                                    for (android.media.AudioDeviceInfo device : devices) {
+                                        if (device.getType() == android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) {
+                                            audioManager.setCommunicationDevice(device);
+                                            deviceSet = true;
+                                            break;
+                                        }
+                                    }
+                                    if (!deviceSet) {
+                                        audioManager.setSpeakerphoneOn(true);
+                                    }
+                                } else {
+                                    audioManager.clearCommunicationDevice();
+                                    audioManager.setSpeakerphoneOn(false);
+                                }
+                            } else {
+                                audioManager.setSpeakerphoneOn(on);
+                            }
                         } catch (Exception ignored) {}
                     }
                 });
@@ -327,10 +351,34 @@ public class MainActivity extends BridgeActivity {
         public boolean isSpeakerphoneOn() {
             if (audioManager != null) {
                 try {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                        android.media.AudioDeviceInfo commDevice = audioManager.getCommunicationDevice();
+                        if (commDevice != null) {
+                            return commDevice.getType() == android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER;
+                        }
+                    }
                     return audioManager.isSpeakerphoneOn();
                 } catch (Exception ignored) {}
             }
             return false;
+        }
+
+        @JavascriptInterface
+        public void requestCallPermissions(boolean withVideo) {
+            if (activity != null && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                activity.runOnUiThread(() -> {
+                    java.util.List<String> perms = new java.util.ArrayList<>();
+                    if (activity.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                        perms.add(android.Manifest.permission.RECORD_AUDIO);
+                    }
+                    if (withVideo && activity.checkSelfPermission(android.Manifest.permission.CAMERA) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                        perms.add(android.Manifest.permission.CAMERA);
+                    }
+                    if (!perms.isEmpty()) {
+                        activity.requestPermissions(perms.toArray(new String[0]), 1002);
+                    }
+                });
+            }
         }
 
         @JavascriptInterface

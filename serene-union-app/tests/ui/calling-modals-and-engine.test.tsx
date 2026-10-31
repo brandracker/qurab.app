@@ -1,6 +1,6 @@
 import React from 'react';
-import { render, screen, fireEvent, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, act, cleanup } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { IncomingCallModal } from '../../src/components/calling/IncomingCallModal';
 import { ActiveCallModal } from '../../src/components/calling/ActiveCallModal';
 import { webRtcService, type CallerInfo } from '../../src/services/webRtcService';
@@ -17,6 +17,10 @@ describe('Calling Modals & WebRTC Control Suite', () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    cleanup();
   });
 
   describe('IncomingCallModal UI & Action Wiring', () => {

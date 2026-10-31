@@ -10,6 +10,7 @@ declare global {
       setCallMode: (inCall: boolean) => void;
       setSpeakerphoneOn: (on: boolean) => void;
       isSpeakerphoneOn: () => boolean;
+      requestCallPermissions?: (withVideo: boolean) => void;
       getPendingIncomingCall?: () => string | null;
     };
   }
@@ -29,7 +30,7 @@ export interface CallerInfo {
 
 export interface CallSignalPayload {
   type: 'call_signal';
-  signal: 'initiate' | 'ringing' | 'accept' | 'reject' | 'sdp_offer' | 'sdp_answer' | 'ice_candidate' | 'end' | 'video_toggle';
+  signal: 'initiate' | 'ringing' | 'accept' | 'reject' | 'sdp_offer' | 'sdp_answer' | 'ice_candidate' | 'end' | 'video_toggle' | 'partner_audio_toggle';
   senderId: string;
   targetUserId?: string;
   callType: CallType;
@@ -699,6 +700,18 @@ export class WebRtcService {
         break;
       }
 
+      case 'partner_audio_toggle': {
+        // Handle partner mic mute/unmute notification in real-time
+        if (this.currentPartnerId && payload.senderId !== this.currentPartnerId) return;
+        const isPartnerMuted = Boolean(payload.payload?.isMuted);
+        this.notifyState(this.currentCallState, {
+          partner: this.currentPartnerInfo,
+          callType: this.currentCallType,
+          partnerMuted: isPartnerMuted
+        });
+        break;
+      }
+
       case 'ice_candidate': {
         if (this.currentPartnerId && payload.senderId !== this.currentPartnerId) return;
         const candidate = payload.payload?.candidate;
@@ -798,7 +811,9 @@ export class WebRtcService {
     this.stopSignalingPoll();
     this.triggerCallHistoryLog(reason);
     if (this.localStream) {
-      this.localStream.getTracks().forEach(t => t.stop());
+      if (typeof this.localStream.getTracks === 'function') {
+        this.localStream.getTracks().forEach(t => t.stop());
+      }
       this.localStream = null;
     }
     if (this.peerConnection) {
@@ -832,7 +847,9 @@ export class WebRtcService {
     this.stopSignalingPoll();
     this.triggerCallHistoryLog(reason);
     if (this.localStream) {
-      this.localStream.getTracks().forEach(t => t.stop());
+      if (typeof this.localStream.getTracks === 'function') {
+        this.localStream.getTracks().forEach(t => t.stop());
+      }
       this.localStream = null;
     }
     if (this.peerConnection) {
@@ -849,6 +866,15 @@ export class WebRtcService {
   // --- Media Setup & WebRTC Negotiation ---
   private async setupLocalMedia(video: boolean): Promise<MediaStream | null> {
     try {
+      // Just-In-Time native calling permissions request
+      if (typeof window !== 'undefined' && window.AndroidAudioBridge?.requestCallPermissions) {
+        try {
+          window.AndroidAudioBridge.requestCallPermissions(video);
+        } catch (bridgeErr) {
+          console.warn('[WebRTC] Native audio bridge permission request notice:', bridgeErr);
+        }
+      }
+
       if (this.localStream) {
         this.localStream.getTracks().forEach(t => t.stop());
       }
@@ -1135,6 +1161,19 @@ export class WebRtcService {
     this.localStream.getAudioTracks().forEach(track => {
       track.enabled = !this.isMuted;
     });
+
+    // Notify partner in real-time so they receive visual feedback
+    if (this.currentPartnerId && this.currentCallState === 'connected') {
+      this.sendSignal({
+        type: 'call_signal',
+        signal: 'partner_audio_toggle',
+        senderId: this.currentUserId || '',
+        targetUserId: this.currentPartnerId,
+        callType: this.currentCallType,
+        payload: { isMuted: this.isMuted }
+      });
+    }
+
     this.notifyStreams();
     return this.isMuted;
   }
@@ -1210,15 +1249,34 @@ export class WebRtcService {
     return this.isVideoEnabled;
   }
 
-  public async switchCamera(): Promise<void> {
-    if (!this.peerConnection || !this.isVideoEnabled) return;
-    this.isFrontCamera = !this.isFrontCamera;
+  public getIsFrontCamera(): boolean {
+    return this.isFrontCamera;
+  }
+
+  public async switchCamera(): Promise<boolean> {
+    if (!this.isVideoEnabled) return this.isFrontCamera;
+
+    const targetFacingMode = this.isFrontCamera ? 'environment' : 'user';
 
     try {
       if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
+        // Android Camera2 Hardware Lock Fix:
+        // Must stop existing video track FIRST to release hardware sensor lock on Android
+        const oldVideo = this.localStream?.getVideoTracks()[0];
+        if (oldVideo) {
+          try {
+            oldVideo.stop();
+            if (this.localStream) {
+              this.localStream.removeTrack(oldVideo);
+            }
+          } catch (stopErr) {
+            console.warn('[WebRTC] Stopping old video track notice:', stopErr);
+          }
+        }
+
         const newStream = await navigator.mediaDevices.getUserMedia({
           video: {
-            facingMode: this.isFrontCamera ? 'user' : 'environment',
+            facingMode: { ideal: targetFacingMode },
             width: { ideal: 640 },
             height: { ideal: 480 }
           },
@@ -1227,27 +1285,50 @@ export class WebRtcService {
 
         const newVideoTrack = newStream.getVideoTracks()[0];
         if (newVideoTrack) {
-          // Replace track in localStream without stopping or touching audio tracks
+          this.isFrontCamera = !this.isFrontCamera;
           if (this.localStream) {
-            const oldVideo = this.localStream.getVideoTracks()[0];
-            if (oldVideo) {
-              this.localStream.removeTrack(oldVideo);
-              oldVideo.stop();
-            }
             this.localStream.addTrack(newVideoTrack);
           }
 
-          // Swap track on WebRTC sender
-          const videoSender = this.peerConnection.getSenders().find(s => s.track?.kind === 'video');
-          if (videoSender) {
-            await videoSender.replaceTrack(newVideoTrack);
+          // Swap track on WebRTC sender if active
+          if (this.peerConnection) {
+            const videoSender = this.peerConnection.getSenders().find(s => s.track?.kind === 'video');
+            if (videoSender) {
+              await videoSender.replaceTrack(newVideoTrack);
+            }
           }
           this.notifyStreams();
+          return this.isFrontCamera;
         }
       }
     } catch (err) {
-      console.warn('Switch camera notice:', err);
+      console.warn('[WebRTC] Switch camera notice, attempting recovery:', err);
+      // Fallback/recovery: restore front/previous camera if environment camera unavailable
+      try {
+        const recoveryStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: this.isFrontCamera ? 'user' : 'environment' },
+            width: { ideal: 640 },
+            height: { ideal: 480 }
+          },
+          audio: false
+        });
+        const recTrack = recoveryStream.getVideoTracks()[0];
+        if (recTrack && this.localStream) {
+          this.localStream.addTrack(recTrack);
+          if (this.peerConnection) {
+            const videoSender = this.peerConnection.getSenders().find(s => s.track?.kind === 'video');
+            if (videoSender) {
+              await videoSender.replaceTrack(recTrack);
+            }
+          }
+          this.notifyStreams();
+        }
+      } catch (recErr) {
+        console.error('[WebRTC] Camera recovery failed:', recErr);
+      }
     }
+    return this.isFrontCamera;
   }
 
   private sendSignal(payload: CallSignalPayload) {
@@ -1346,7 +1427,9 @@ export class WebRtcService {
     }
 
     if (this.localStream) {
-      this.localStream.getTracks().forEach(t => t.stop());
+      if (typeof this.localStream.getTracks === 'function') {
+        this.localStream.getTracks().forEach(t => t.stop());
+      }
       this.localStream = null;
     }
 

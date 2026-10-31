@@ -25,6 +25,7 @@ export const ActiveCallModal: React.FC<ActiveCallModalProps> = ({
   const [isSpeakerOn, setIsSpeakerOn] = useState<boolean>(callType === 'video');
   const [pipPosition, setPipPosition] = useState<'top-right' | 'top-left' | 'bottom-right'>('top-right');
   const [isRemoteVideoActive, setIsRemoteVideoActive] = useState<boolean>(false);
+  const [isPartnerMuted, setIsPartnerMuted] = useState<boolean>(false);
 
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -69,10 +70,13 @@ export const ActiveCallModal: React.FC<ActiveCallModalProps> = ({
       attachStreams(localStream, remoteStream);
     });
 
-    // Listen for partner real-time camera toggle (Bug #3)
+    // Listen for partner real-time camera toggle (Bug #3) and audio mute notifications
     const unsubState = webRtcService.subscribe((_state, data) => {
       if (typeof data?.partnerVideoEnabled === 'boolean') {
         setIsRemoteVideoActive(data.partnerVideoEnabled);
+      }
+      if (typeof data?.partnerMuted === 'boolean') {
+        setIsPartnerMuted(data.partnerMuted);
       }
     });
 
@@ -81,6 +85,14 @@ export const ActiveCallModal: React.FC<ActiveCallModalProps> = ({
       unsubState();
     };
   }, [isOpen, callState]);
+
+  // Reset states on open/close
+  useEffect(() => {
+    if (!isOpen) {
+      setIsPartnerMuted(false);
+      setIsFrontCam(true);
+    }
+  }, [isOpen]);
 
   // Duration counter when connected
   useEffect(() => {
@@ -114,10 +126,13 @@ export const ActiveCallModal: React.FC<ActiveCallModalProps> = ({
     setIsVideoOn(nextVideo);
   };
 
-  const handleSwitchCamera = async (e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    setIsFrontCam(prev => !prev);
-    await webRtcService.switchCamera();
+  const handleSwitchCamera = async (e?: React.SyntheticEvent) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault?.();
+    }
+    const newIsFront = await webRtcService.switchCamera();
+    setIsFrontCam(newIsFront);
     const curLocal = webRtcService.getLocalStream();
     if (localVideoRef.current && curLocal) localVideoRef.current.srcObject = curLocal;
     if (outgoingPreviewVideoRef.current && curLocal) outgoingPreviewVideoRef.current.srcObject = curLocal;
@@ -354,6 +369,15 @@ export const ActiveCallModal: React.FC<ActiveCallModalProps> = ({
                 <span>Opus 48kHz HD Audio Active</span>
               </div>
             )}
+
+            {isPartnerMuted && isConnected && (
+              <div className="pt-1 flex justify-center animate-fade-in">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/25 border border-amber-400/50 text-amber-200 text-[11px] backdrop-blur-md shadow-lg">
+                  <MicOff className="w-3.5 h-3.5 text-amber-300" />
+                  <span>Partner has muted their microphone</span>
+                </span>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -386,17 +410,28 @@ export const ActiveCallModal: React.FC<ActiveCallModalProps> = ({
             </div>
           )}
 
-          {/* Quick Flip Camera Button right on PiP */}
+          {/* Quick Flip Camera Button right on PiP with touch isolation */}
           <button
             type="button"
-            onClick={handleSwitchCamera}
-            className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 hover:bg-black/90 text-white flex items-center justify-center backdrop-blur-md border border-white/20 transition-transform active:rotate-180"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleSwitchCamera(e);
+            }}
+            onTouchStart={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => {
+              e.stopPropagation();
+              handleSwitchCamera(e);
+            }}
+            disabled={!isVideoOn}
+            className={`absolute top-2 right-2 w-8 h-8 rounded-full bg-black/75 hover:bg-black/95 active:scale-90 text-white flex items-center justify-center backdrop-blur-md border border-white/30 transition-all cursor-pointer shadow-md z-40 ${
+              !isVideoOn ? 'opacity-30 cursor-not-allowed' : ''
+            }`}
             title="Flip Camera"
           >
-            <RefreshCw className="w-3 h-3" />
+            <RefreshCw className="w-3.5 h-3.5" />
           </button>
 
-          <div className="absolute bottom-1.5 left-2 px-1.5 py-0.5 rounded-md bg-black/70 text-[9px] text-white font-semibold backdrop-blur-xs flex items-center gap-1 border border-white/10">
+          <div className="absolute bottom-1.5 left-2 px-1.5 py-0.5 rounded-md bg-black/70 text-[9px] text-white font-semibold backdrop-blur-xs flex items-center gap-1 border border-white/10 pointer-events-none">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
             <span>You</span>
           </div>
@@ -460,8 +495,13 @@ export const ActiveCallModal: React.FC<ActiveCallModalProps> = ({
               type="button"
               data-testid="switch-cam-btn"
               onClick={handleSwitchCamera}
-              className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 active:scale-90 text-white border border-white/15 flex items-center justify-center transition-all cursor-pointer"
-              title={isFrontCam ? 'Switch to Rear Camera' : 'Switch to Front Camera'}
+              disabled={!isVideoOn}
+              className={`w-12 h-12 rounded-full border flex items-center justify-center transition-all cursor-pointer ${
+                isVideoOn
+                  ? 'bg-white/10 hover:bg-white/20 active:scale-90 text-white border-white/15'
+                  : 'bg-white/5 text-slate-500 border-white/10 opacity-30 cursor-not-allowed'
+              }`}
+              title={!isVideoOn ? 'Enable camera first' : isFrontCam ? 'Switch to Rear Camera' : 'Switch to Front Camera'}
             >
               <RefreshCw className="w-5 h-5" />
             </button>

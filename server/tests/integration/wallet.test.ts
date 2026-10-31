@@ -620,6 +620,115 @@ describe('Wallet, In-App Purchases & Rewarded Ads API Integration Tests', () => 
     ).bind('usr_test_debounce_user').first();
     expect(walletRow.likes_used_today).toBe(1);
   });
+
+  it('24. Idempotency: Multiple /purchase-google-play calls for same active subscription do NOT duplicate Direct Salams balance', async () => {
+    // 1. Initial wallet setup (Default 2 Salams)
+    const initRes = await app.request('/api/wallet/usr_test_wallet_1', { method: 'GET' }, env);
+    const initData: any = await initRes.json();
+    expect(initData.wallet.directSalams).toBe(2);
+
+    const subscriptionPayload = {
+      userId: 'usr_test_wallet_1',
+      productId: 'qurb_barakah_monthly',
+      orderId: 'GPA.1111-2222-3333-44440',
+      purchaseToken: 'gp_token_idempotent_test_xyz',
+      amountCents: 299,
+      currency: 'USD'
+    };
+
+    // 2. First purchase call: Should credit 20 Direct Salams
+    const res1 = await app.request('/api/wallet/purchase-google-play', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(subscriptionPayload)
+    }, env);
+    expect(res1.status).toBe(200);
+    const data1: any = await res1.json();
+    expect(data1.success).toBe(true);
+    expect(data1.alreadyCredited).toBe(false);
+
+    let walletCheck = await app.request('/api/wallet/usr_test_wallet_1', { method: 'GET' }, env);
+    let walletData: any = await walletCheck.json();
+    expect(walletData.wallet.directSalams).toBe(22); // 2 default + 20 credited
+
+    // 3. Second call with SAME orderId (simulating App.tsx Android launch auto-restore):
+    // MUST NOT ADD 20 MORE SALAMS!
+    const res2 = await app.request('/api/wallet/purchase-google-play', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(subscriptionPayload)
+    }, env);
+    expect(res2.status).toBe(200);
+    const data2: any = await res2.json();
+    expect(data2.success).toBe(true);
+    expect(data2.alreadyCredited).toBe(true);
+    expect(data2.directSalamsCredited).toBe(0);
+
+    walletCheck = await app.request('/api/wallet/usr_test_wallet_1', { method: 'GET' }, env);
+    walletData = await walletCheck.json();
+    expect(walletData.wallet.directSalams).toBe(22); // Must remain 22, NOT 42!
+    expect(walletData.wallet.isVip).toBe(true);
+
+    // 4. Third call (orderId omitted, but SAME purchaseToken):
+    const res3 = await app.request('/api/wallet/purchase-google-play', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: 'usr_test_wallet_1',
+        productId: 'qurb_barakah_monthly',
+        purchaseToken: 'gp_token_idempotent_test_xyz'
+      })
+    }, env);
+    expect(res3.status).toBe(200);
+    const data3: any = await res3.json();
+    expect(data3.alreadyCredited).toBe(true);
+    expect(data3.directSalamsCredited).toBe(0);
+
+    walletCheck = await app.request('/api/wallet/usr_test_wallet_1', { method: 'GET' }, env);
+    walletData = await walletCheck.json();
+    expect(walletData.wallet.directSalams).toBe(22); // Must remain 22, NOT 62!
+  });
+
+  it('25. Idempotency: Duplicate consumable pass purchase with same orderId does NOT credit duplicate passes', async () => {
+    // 1. Initial wallet setup
+    await app.request('/api/wallet/usr_test_wallet_2', { method: 'GET' }, env);
+
+    const consumablePayload = {
+      userId: 'usr_test_wallet_2',
+      productId: 'qurb_direct_salam_20',
+      orderId: 'GPA.5555-6666-7777-88880',
+      purchaseToken: 'gp_consumable_token_123',
+      amountCents: 199,
+      currency: 'USD'
+    };
+
+    // 1st call: Initial credit
+    const res1 = await app.request('/api/wallet/purchase-google-play', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(consumablePayload)
+    }, env);
+    expect(res1.status).toBe(200);
+
+    let walletCheck = await app.request('/api/wallet/usr_test_wallet_2', { method: 'GET' }, env);
+    let walletData: any = await walletCheck.json();
+    expect(walletData.wallet.directSalams).toBe(22); // 2 default + 20
+
+    // 2nd call: Re-transmission of same orderId (e.g. mobile network retry)
+    const res2 = await app.request('/api/wallet/purchase-google-play', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(consumablePayload)
+    }, env);
+    expect(res2.status).toBe(200);
+    const data2: any = await res2.json();
+    expect(data2.alreadyCredited).toBe(true);
+    expect(data2.directSalamsCredited).toBe(0);
+
+    walletCheck = await app.request('/api/wallet/usr_test_wallet_2', { method: 'GET' }, env);
+    walletData = await walletCheck.json();
+    expect(walletData.wallet.directSalams).toBe(22); // Must stay 22, NOT 42!
+  });
 });
 
 

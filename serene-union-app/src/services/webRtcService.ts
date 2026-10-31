@@ -315,6 +315,9 @@ export class WebRtcService {
       }
     }
 
+    if (currentUserInfo?.id) {
+      this.currentUserId = currentUserInfo.id;
+    }
     this.currentPartnerId = partnerId;
     this.currentPartnerInfo = partnerInfo;
     this.currentCallType = callType;
@@ -325,6 +328,7 @@ export class WebRtcService {
     this.activeCallerInfo = currentUserInfo;
     this.callConnectedTime = null;
     this.hasLoggedCall = false;
+    this.processedSignals.clear();
 
     // WhatsApp-Style: Immediately open camera preview before & during ringing!
     if (callType === 'video') {
@@ -376,6 +380,7 @@ export class WebRtcService {
 
   // --- Step 2: Handle Incoming Signals from Partner ---
   public async handleIncomingSignal(payload: CallSignalPayload) {
+    if (!payload || !payload.signal) return;
     if (!this.currentUserId && payload.targetUserId) {
       this.currentUserId = payload.targetUserId;
     }
@@ -384,8 +389,24 @@ export class WebRtcService {
 
     switch (payload.signal) {
       case 'initiate': {
-        // If already in a call, send busy signal
-        if (this.currentCallState !== 'idle') {
+        // 1. If caller is self, ignore!
+        if (payload.senderId === this.currentUserId) return;
+
+        // 2. If already ringing or connected with THIS specific partner, ignore duplicate initiate signal
+        if (
+          (this.currentCallState === 'incoming_ringing' || this.currentCallState === 'connected') &&
+          this.currentPartnerId === payload.senderId
+        ) {
+          console.log('[WebRTC] Duplicate initiate signal from current caller, safely ignoring.');
+          return;
+        }
+
+        // 3. Only send busy/reject if we are ACTUALLY already on another call with someone ELSE!
+        if (
+          this.currentCallState === 'connected' ||
+          (this.currentCallState === 'incoming_ringing' && this.currentPartnerId !== payload.senderId)
+        ) {
+          console.warn('[WebRTC] Genuinely busy with another call, sending reject to:', payload.senderId);
           this.sendSignal({
             type: 'call_signal',
             signal: 'reject',
@@ -395,6 +416,31 @@ export class WebRtcService {
             payload: { reason: 'busy' }
           });
           return;
+        }
+
+        // 4. If currentCallState was 'outgoing_calling':
+        if (this.currentCallState === 'outgoing_calling') {
+          if (this.currentPartnerId === payload.senderId) {
+            // Simultaneous call tie-break: lower ID yields
+            if ((this.currentUserId || '') > payload.senderId) {
+              console.log('[WebRTC] Simultaneous call tie-break: yielding to caller.');
+              this.cleanup('simultaneous_call');
+            } else {
+              console.log('[WebRTC] Simultaneous call tie-break: caller keeps outgoing call.');
+              return;
+            }
+          } else {
+            // Already calling someone else
+            this.sendSignal({
+              type: 'call_signal',
+              signal: 'reject',
+              senderId: this.currentUserId,
+              targetUserId: payload.senderId,
+              callType: payload.callType,
+              payload: { reason: 'busy' }
+            });
+            return;
+          }
         }
 
         this.currentPartnerId = payload.senderId;
@@ -429,13 +475,17 @@ export class WebRtcService {
 
       case 'ringing': {
         // Caller gets ringing confirmation
-        if (this.currentCallState === 'outgoing_calling') {
+        if (this.currentCallState === 'outgoing_calling' && (!this.currentPartnerId || this.currentPartnerId === payload.senderId)) {
           this.notifyState('outgoing_calling', { status: 'ringing' });
         }
         break;
       }
 
       case 'accept': {
+        // Only accept if currently waiting for this partner to answer
+        if (this.currentCallState !== 'outgoing_calling') return;
+        if (this.currentPartnerId && payload.senderId !== this.currentPartnerId) return;
+
         // Receiver accepted the call! Caller proceeds to create WebRTC Offer
         this.stopRingtone();
         if (this.callTimeoutTimer) clearTimeout(this.callTimeoutTimer);
@@ -457,6 +507,13 @@ export class WebRtcService {
       }
 
       case 'reject': {
+        if (this.currentCallState === 'idle') return;
+        // Ignore reject signals from strangers / other sessions
+        if (this.currentPartnerId && payload.senderId !== this.currentPartnerId) {
+          console.warn('[WebRTC] Ignored reject signal from non-partner:', payload.senderId);
+          return;
+        }
+
         this.stopRingtone();
         if (this.callTimeoutTimer) clearTimeout(this.callTimeoutTimer);
         this.playTone(400, 200, 0.4); // Descending reject tone
@@ -480,6 +537,7 @@ export class WebRtcService {
       }
 
       case 'sdp_offer': {
+        if (this.currentPartnerId && payload.senderId !== this.currentPartnerId) return;
         // Receiver receives SDP offer from Caller
         if (payload.payload?.sdp) {
           await this.handleRemoteOffer(payload.payload.sdp);
@@ -488,6 +546,7 @@ export class WebRtcService {
       }
 
       case 'sdp_answer': {
+        if (this.currentPartnerId && payload.senderId !== this.currentPartnerId) return;
         // Caller receives SDP answer from Receiver
         if (this.peerConnection && payload.payload?.sdp) {
           await this.peerConnection.setRemoteDescription(new RTCSessionDescription(payload.payload.sdp));
@@ -497,6 +556,7 @@ export class WebRtcService {
       }
 
       case 'ice_candidate': {
+        if (this.currentPartnerId && payload.senderId !== this.currentPartnerId) return;
         const candidate = payload.payload?.candidate;
         if (candidate) {
           if (this.peerConnection && this.peerConnection.remoteDescription && this.peerConnection.remoteDescription.type) {
@@ -515,6 +575,12 @@ export class WebRtcService {
       }
 
       case 'end': {
+        if (this.currentCallState === 'idle') return;
+        if (this.currentPartnerId && payload.senderId !== this.currentPartnerId) {
+          console.warn('[WebRTC] Ignored end signal from non-partner:', payload.senderId);
+          return;
+        }
+
         this.stopRingtone();
         if (this.callTimeoutTimer) clearTimeout(this.callTimeoutTimer);
         this.playTone(500, 250, 0.3);

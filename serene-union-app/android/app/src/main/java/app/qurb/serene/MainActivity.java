@@ -158,17 +158,14 @@ public class MainActivity extends BridgeActivity {
 
             String js = "window.dispatchEvent(new CustomEvent('qurb_incoming_call_push', { detail: " + jsonPayload + " }));";
             if (getBridge() != null && getBridge().getWebView() != null) {
-                // Multi-stage dispatch to ensure WebView catches incoming call whether already warm or cold-starting
                 getBridge().getWebView().postDelayed(() -> {
                     getBridge().getWebView().evaluateJavascript(js, null);
-                }, 600);
-                getBridge().getWebView().postDelayed(() -> {
-                    getBridge().getWebView().evaluateJavascript(js, null);
-                }, 1500);
-                getBridge().getWebView().postDelayed(() -> {
-                    getBridge().getWebView().evaluateJavascript(js, null);
-                }, 2600);
+                }, 400);
             }
+            try {
+                intent.removeExtra("type");
+                intent.removeExtra("call_action");
+            } catch (Exception ignored) {}
         } else {
             // Handle chat notification or general notification redirection (Cold boot and Background resume)
             String convId = getExtraStringSafe(intent, "conversationId");

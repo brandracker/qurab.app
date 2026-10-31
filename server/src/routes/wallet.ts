@@ -351,12 +351,28 @@ walletRouter.post('/purchase-google-play', async (c) => {
       ? orderId.trim()
       : `gp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
+    // 1. Idempotency Check: Prevent duplicate crediting of Salams / benefits on app re-open or restore
+    const cleanOrderId = (orderId && typeof orderId === 'string' && orderId.trim().length > 0) ? orderId.trim() : null;
+    const cleanToken = (purchaseToken && typeof purchaseToken === 'string' && !purchaseToken.startsWith('sim_token_')) ? purchaseToken.trim() : null;
+
+    let existingPurchase: any = null;
+    if (cleanOrderId) {
+      existingPurchase = await c.env.DB.prepare(
+        'SELECT id, user_id, product_id, status FROM in_app_purchases WHERE id = ?'
+      ).bind(cleanOrderId).first();
+    }
+    if (!existingPurchase && cleanToken) {
+      existingPurchase = await c.env.DB.prepare(
+        'SELECT id, user_id, product_id, status FROM in_app_purchases WHERE purchase_token = ? LIMIT 1'
+      ).bind(cleanToken).first();
+    }
+
     // Re-bind token to the active user to smoothly handle testing and account switching on device
-    if (purchaseToken && !purchaseToken.startsWith('sim_token_')) {
+    if (cleanToken) {
       try {
         await c.env.DB.prepare(
           'UPDATE in_app_purchases SET user_id = ? WHERE purchase_token = ?'
-        ).bind(userId, purchaseToken).run();
+        ).bind(userId, cleanToken).run();
       } catch {}
     }
 
@@ -365,6 +381,49 @@ walletRouter.post('/purchase-google-play', async (c) => {
     const isFreeTrial = isSubscription && (isTrial === true || durationDays === 7 || durationDays === '7' || !durationDays);
     const resolvedDays = isFreeTrial ? 7 : (durationDays ? Number(durationDays) : 30);
     const resolvedAmountCents = isFreeTrial ? 0 : (amountCents !== undefined ? Number(amountCents) : (isSubscription ? 299 : 99));
+
+    // If purchase was already completed, verify status/VIP but PREVENT duplicate salams or benefits
+    if (existingPurchase && existingPurchase.status === 'completed') {
+      if (isSubscription) {
+        await c.env.DB.prepare(`
+          UPDATE users SET is_vip = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+        `).bind(userId).run();
+
+        await c.env.DB.prepare(`
+          INSERT INTO user_wallets (user_id, subscription_tier, direct_salams_balance, daily_messages_quota)
+          VALUES (?, 'barakah_vip', 20, 9999)
+          ON CONFLICT(user_id) DO UPDATE SET 
+            subscription_tier = 'barakah_vip', 
+            daily_messages_quota = 9999
+        `).bind(userId).run();
+
+        const currentWallet: any = await c.env.DB.prepare(
+          'SELECT subscription_expiry FROM user_wallets WHERE user_id = ?'
+        ).bind(userId).first();
+
+        return c.json({
+          success: true,
+          message: 'Google Play subscription verified & active (duplicate benefits avoided).',
+          purchaseId: existingPurchase.id,
+          productId,
+          isTrial: isFreeTrial,
+          daysGranted: resolvedDays,
+          subscriptionExpiry: currentWallet?.subscription_expiry,
+          alreadyCredited: true,
+          directSalamsCredited: 0
+        });
+      }
+
+      // Consumables (e.g. 20 Salams or 24h Spotlight) already fulfilled
+      return c.json({
+        success: true,
+        message: 'Purchase already processed & credited.',
+        purchaseId: existingPurchase.id,
+        productId,
+        alreadyCredited: true,
+        directSalamsCredited: 0
+      });
+    }
 
     await c.env.DB.prepare(`
       INSERT INTO in_app_purchases (id, user_id, platform, product_id, purchase_token, amount_cents, currency, status)
@@ -416,7 +475,9 @@ walletRouter.post('/purchase-google-play', async (c) => {
       productId,
       isTrial: isFreeTrial,
       daysGranted: resolvedDays,
-      subscriptionExpiry: expiryIso
+      subscriptionExpiry: expiryIso,
+      alreadyCredited: false,
+      directSalamsCredited: isSubscription || productId.includes('direct_salam') ? 20 : 0
     });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
@@ -615,6 +676,22 @@ walletRouter.post('/stripe/verify-session', async (c) => {
 
     if (isPaid && userId && productId) {
       const purchaseId = `stripe_${session.id}`;
+
+      // Idempotency check: verify if this Stripe checkout session was already fulfilled
+      const existingStripePurchase: any = await c.env.DB.prepare(
+        'SELECT id, status FROM in_app_purchases WHERE id = ?'
+      ).bind(purchaseId).first();
+
+      if (existingStripePurchase && existingStripePurchase.status === 'completed') {
+        return c.json({
+          success: true,
+          fulfilled: true,
+          alreadyCredited: true,
+          userId,
+          productId,
+          message: 'Stripe purchase already fulfilled (duplicate credits avoided).'
+        });
+      }
 
       await c.env.DB.prepare(`
         INSERT INTO in_app_purchases (id, user_id, platform, product_id, purchase_token, amount_cents, currency, status)

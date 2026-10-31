@@ -173,8 +173,9 @@ export class ChatRoomDO {
       this.recentCallSignals = [{ ...sig, timestamp: sig.timestamp || now }];
       return;
     }
+    // Keep recent signals for at most 15 seconds to prevent ghost rejects on subsequent call attempts
     this.recentCallSignals = this.recentCallSignals
-      .filter(s => now - s.timestamp < 35000)
+      .filter(s => now - s.timestamp < 15000)
       .concat({ ...sig, timestamp: sig.timestamp || now });
     if (this.recentCallSignals.length > 20) {
       this.recentCallSignals = this.recentCallSignals.slice(-20);

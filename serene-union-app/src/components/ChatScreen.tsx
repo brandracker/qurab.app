@@ -810,7 +810,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
       if (isCleanedUp) return;
       try {
         if (typeof window !== 'undefined' && typeof WebSocket !== 'undefined') {
-          const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+          const wsProtocol = API_BASE.startsWith('https:') ? 'wss:' : (window.location.protocol === 'https:' ? 'wss:' : 'ws:');
           const wsBase = API_BASE.replace(/^https?:/, wsProtocol);
           const wsUrl = `${wsBase}/conversations/${targetRoomId}/ws?userId=${currentUser.id}`;
 

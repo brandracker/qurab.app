@@ -51,17 +51,20 @@ const ICE_SERVERS: RTCIceServer[] = [
   // OpenRelay Public STUN & TURN (Metered WebRTC Project for Symmetric NAT / 4G Mobile Data)
   { urls: 'stun:stun.relay.metered.ca:80' },
   {
-    urls: 'turn:standard.relay.metered.ca:80',
+    urls: [
+      'turn:standard.relay.metered.ca:80',
+      'turn:standard.relay.metered.ca:80?transport=tcp',
+      'turn:standard.relay.metered.ca:443',
+      'turn:standard.relay.metered.ca:443?transport=tcp'
+    ],
     username: 'openrelayproject',
     credential: 'openrelayproject'
   },
   {
-    urls: 'turn:standard.relay.metered.ca:443',
-    username: 'openrelayproject',
-    credential: 'openrelayproject'
-  },
-  {
-    urls: 'turn:standard.relay.metered.ca:443?transport=tcp',
+    urls: [
+      'turns:standard.relay.metered.ca:443?transport=tcp',
+      'turns:standard.relay.metered.ca:5349'
+    ],
     username: 'openrelayproject',
     credential: 'openrelayproject'
   }
@@ -316,7 +319,7 @@ export class WebRtcService {
     if (typeof window === 'undefined' || typeof WebSocket === 'undefined') return;
 
     try {
-      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsProtocol = API_BASE.startsWith('https:') ? 'wss:' : (window.location.protocol === 'https:' ? 'wss:' : 'ws:');
       const wsBase = API_BASE.replace(/^https?:/, wsProtocol);
       const wsUrl = `${wsBase}/conversations/${encodeURIComponent(conversationId)}/ws?userId=${encodeURIComponent(this.currentUserId || 'caller')}`;
 
@@ -925,7 +928,7 @@ export class WebRtcService {
         console.log('[WebRTC] Connection fallback timer triggered, activating connected state.');
         this.transitionToConnected();
       }
-    }, 2800);
+    }, 6000);
   }
 
   private transitionToConnected() {
@@ -1358,6 +1361,10 @@ export class WebRtcService {
     const partnerId = payload.targetUserId || this.currentPartnerId;
     const currentId = payload.senderId || this.currentUserId;
     if (currentId && partnerId) {
+      // If ICE candidate was already sent via live WebSocket, avoid duplicate HTTP relay flood
+      if (payload.signal === 'ice_candidate' && sentViaWs) {
+        return;
+      }
       const convId = `conv_${[currentId, partnerId].sort().join('_')}`;
       try {
         fetch(`${API_BASE}/conversations/call/signal`, {

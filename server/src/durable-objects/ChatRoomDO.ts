@@ -75,7 +75,7 @@ export class ChatRoomDO {
               payload: data.payload || null,
               timestamp: Date.now()
             };
-            this.recordCallSignal(sigObj);
+            this.recordCallSignal(sigObj).catch(() => {});
             // Forward WebRTC Calling signals (initiate, ringing, accept, reject, ice, end)
             this.broadcast(server, JSON.stringify(sigObj));
           }
@@ -104,7 +104,7 @@ export class ChatRoomDO {
       try {
         const payload: any = await request.json();
         if (payload?.type === 'call_signal' || payload?.signal) {
-          this.recordCallSignal(payload);
+          await this.recordCallSignal(payload);
         }
         const payloadStr = JSON.stringify(payload);
         this.broadcastAll(payloadStr);
@@ -122,7 +122,15 @@ export class ChatRoomDO {
     // 3. Call Signals Lookup (for fast HTTP polling fallback when socket connecting)
     if (url.pathname === '/call-signals') {
       const now = Date.now();
-      const active = this.recentCallSignals.filter(s => now - s.timestamp < 35000);
+      if (this.recentCallSignals.length === 0 && this.state?.storage) {
+        try {
+          const saved: any = await this.state.storage.get('recent_signals');
+          if (Array.isArray(saved)) {
+            this.recentCallSignals = saved.filter(s => now - s.timestamp < 45000);
+          }
+        } catch {}
+      }
+      const active = this.recentCallSignals.filter(s => now - s.timestamp < 45000);
       return new Response(JSON.stringify({
         success: true,
         signals: active
@@ -166,19 +174,45 @@ export class ChatRoomDO {
     }
   }
 
-  recordCallSignal(sig: any) {
+  async recordCallSignal(sig: any) {
     if (!sig) return;
     const now = Date.now();
+
+    // Hydrate from storage if in-memory list is empty
+    if (this.recentCallSignals.length === 0 && this.state?.storage) {
+      try {
+        const saved: any = await this.state.storage.get('recent_signals');
+        if (Array.isArray(saved)) {
+          this.recentCallSignals = saved.filter(s => now - s.timestamp < 45000);
+        }
+      } catch {}
+    }
+
     if (sig.signal === 'initiate') {
       this.recentCallSignals = [{ ...sig, timestamp: sig.timestamp || now }];
-      return;
+    } else {
+      // Keep recent signals for 45s so slow network handshakes aren't lost
+      const active = this.recentCallSignals.filter(s => now - s.timestamp < 45000);
+      const newEntry = { ...sig, timestamp: sig.timestamp || now };
+
+      // Critical signals: initiate, accept, sdp_offer, sdp_answer, partner_audio_toggle, video_toggle, end
+      // NEVER let a burst of ICE candidates evict critical SDP handshake signals!
+      const critical = active.filter(s => s.signal !== 'ice_candidate');
+      const candidates = active.filter(s => s.signal === 'ice_candidate').slice(-50);
+
+      if (sig.signal === 'ice_candidate') {
+        candidates.push(newEntry);
+      } else {
+        critical.push(newEntry);
+      }
+
+      this.recentCallSignals = [...critical, ...candidates.slice(-50)];
     }
-    // Keep recent signals for at most 15 seconds to prevent ghost rejects on subsequent call attempts
-    this.recentCallSignals = this.recentCallSignals
-      .filter(s => now - s.timestamp < 15000)
-      .concat({ ...sig, timestamp: sig.timestamp || now });
-    if (this.recentCallSignals.length > 20) {
-      this.recentCallSignals = this.recentCallSignals.slice(-20);
+
+    if (this.state?.storage) {
+      try {
+        await this.state.storage.put('recent_signals', this.recentCallSignals);
+      } catch {}
     }
   }
 }

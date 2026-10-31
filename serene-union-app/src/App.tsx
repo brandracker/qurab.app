@@ -269,7 +269,7 @@ export const App: React.FC = () => {
     const connectUserWs = () => {
       if (isDisposed) return;
       try {
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsProtocol = API_BASE.startsWith('https:') ? 'wss:' : (window.location.protocol === 'https:' ? 'wss:' : 'ws:');
         const wsBase = API_BASE.replace(/^https?:/, wsProtocol);
         const wsUrl = `${wsBase}/conversations/user_${encodeURIComponent(currentUser.id)}/ws?userId=${encodeURIComponent(currentUser.id)}`;
 
@@ -532,7 +532,7 @@ export const App: React.FC = () => {
       if (isCleanedUp) return;
       try {
         if (typeof window !== 'undefined' && typeof WebSocket !== 'undefined') {
-          const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+          const wsProtocol = API_BASE.startsWith('https:') ? 'wss:' : (window.location.protocol === 'https:' ? 'wss:' : 'ws:');
           const wsBase = API_BASE.replace(/^https?:/, wsProtocol);
           const wsUrl = `${wsBase}/conversations/user_${currentUser.id}/ws?userId=${currentUser.id}`;
 

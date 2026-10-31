@@ -245,7 +245,7 @@ export const App: React.FC = () => {
       } else if (state === 'outgoing_calling' && data?.partner) {
         setActiveCallPartner(data.partner);
         setActiveCallType(data.callType || 'audio');
-      } else if (state === 'connected' && data?.partner) {
+      } else if ((state === 'connecting' || state === 'connected') && data?.partner) {
         setActiveCallPartner(data.partner);
         setActiveCallType(data.callType || 'audio');
       } else if (state === 'ended' || state === 'idle') {
@@ -255,6 +255,75 @@ export const App: React.FC = () => {
     });
 
     return () => { unsub(); };
+  }, [currentUser?.id]);
+
+  // Real-Time Personal User Room WebSocket (Instant incoming call delivery across all tabs - Bug #2)
+  useEffect(() => {
+    if (!currentUser?.id || currentUser.id === 'usr_guest') return;
+
+    let userWs: WebSocket | null = null;
+    let isDisposed = false;
+    let retryTimer: any = null;
+    let pingInterval: any = null;
+
+    const connectUserWs = () => {
+      if (isDisposed) return;
+      try {
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsBase = API_BASE.replace(/^https?:/, wsProtocol);
+        const wsUrl = `${wsBase}/conversations/user_${encodeURIComponent(currentUser.id)}/ws?userId=${encodeURIComponent(currentUser.id)}`;
+
+        userWs = new WebSocket(wsUrl);
+
+        userWs.onopen = () => {
+          try { userWs?.send(JSON.stringify({ type: 'ping' })); } catch {}
+          if (pingInterval) clearInterval(pingInterval);
+          pingInterval = setInterval(() => {
+            if (userWs && userWs.readyState === WebSocket.OPEN) {
+              try { userWs.send(JSON.stringify({ type: 'ping' })); } catch {}
+            }
+          }, 25000);
+        };
+
+        userWs.onmessage = (event) => {
+          try {
+            const raw = typeof event.data === 'string' ? event.data : new TextDecoder().decode(event.data);
+            const data = JSON.parse(raw);
+            if (data.type === 'incoming_call' && data.callerId) {
+              window.dispatchEvent(
+                new CustomEvent('qurb_incoming_call_push', { detail: data })
+              );
+            }
+          } catch {}
+        };
+
+        userWs.onclose = () => {
+          userWs = null;
+          if (pingInterval) clearInterval(pingInterval);
+          if (!isDisposed) {
+            retryTimer = setTimeout(connectUserWs, 3000);
+          }
+        };
+      } catch (err) {
+        if (!isDisposed) {
+          retryTimer = setTimeout(connectUserWs, 5000);
+        }
+      }
+    };
+
+    connectUserWs();
+
+    return () => {
+      isDisposed = true;
+      if (retryTimer) clearTimeout(retryTimer);
+      if (pingInterval) clearInterval(pingInterval);
+      if (userWs) {
+        try {
+          userWs.onclose = null;
+          userWs.close();
+        } catch {}
+      }
+    };
   }, [currentUser?.id]);
 
   // 7-Day Free Trial Promo Placeholder (Start of App / Post-Login)
@@ -1397,7 +1466,7 @@ export const App: React.FC = () => {
         />
 
         <ActiveCallModal
-          isOpen={callState === 'outgoing_calling' || callState === 'connected' || callState === 'ended'}
+          isOpen={callState === 'outgoing_calling' || callState === 'connecting' || callState === 'connected' || callState === 'ended'}
           callState={callState}
           callType={activeCallType}
           partner={activeCallPartner}

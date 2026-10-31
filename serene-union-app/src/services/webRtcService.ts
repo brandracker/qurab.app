@@ -15,7 +15,7 @@ declare global {
   }
 }
 
-export type CallState = 'idle' | 'outgoing_calling' | 'incoming_ringing' | 'connected' | 'ended';
+export type CallState = 'idle' | 'outgoing_calling' | 'incoming_ringing' | 'connecting' | 'connected' | 'ended';
 export type CallType = 'audio' | 'video';
 
 export interface CallerInfo {
@@ -86,6 +86,11 @@ export class WebRtcService {
   private listeners: Set<(state: CallState, data?: any) => void> = new Set();
   private streamListeners: Set<(localStream: MediaStream | null, remoteStream: MediaStream | null) => void> = new Set();
 
+  private callWs: WebSocket | null = null;
+  private callWsRetryTimer: any = null;
+  private connectionFallbackTimer: any = null;
+  private activeConversationId: string | null = null;
+
   private audioCtx: AudioContext | null = null;
   private ringToneInterval: any = null;
   private callTimeoutTimer: any = null;
@@ -99,7 +104,7 @@ export class WebRtcService {
   private hasLoggedCall: boolean = false;
 
   constructor() {
-    // Network Switch ICE Restart Listener (WiFi <-> 4G Data)
+    // Network Switch ICE Restart Listener (WiFi <-> 4G Data) - Bug #4
     if (typeof window !== 'undefined') {
       window.addEventListener('online', () => {
         if (this.peerConnection && this.currentCallState === 'connected') {
@@ -107,6 +112,27 @@ export class WebRtcService {
           try {
             if (typeof this.peerConnection.restartIce === 'function') {
               this.peerConnection.restartIce();
+              if (this.isInitiator && this.peerConnection.signalingState === 'stable') {
+                this.peerConnection.createOffer({
+                  iceRestart: true,
+                  offerToReceiveAudio: true,
+                  offerToReceiveVideo: this.currentCallType === 'video'
+                }).then(async (offer) => {
+                  if (this.peerConnection) {
+                    await this.peerConnection.setLocalDescription(offer);
+                    this.sendSignal({
+                      type: 'call_signal',
+                      signal: 'sdp_offer',
+                      senderId: this.currentUserId || '',
+                      targetUserId: this.currentPartnerId || '',
+                      callType: this.currentCallType,
+                      payload: { sdp: offer, isIceRestart: true }
+                    });
+                  }
+                }).catch(e => {
+                  console.warn('[WebRTC] restartIce on online offer error:', e);
+                });
+              }
             }
           } catch (e) {
             console.warn('[WebRTC] restartIce on online failed:', e);
@@ -185,6 +211,10 @@ export class WebRtcService {
 
   public getCallType(): CallType {
     return this.currentCallType;
+  }
+
+  public getActiveConversationId(): string | null {
+    return this.activeConversationId;
   }
 
   public getPartnerInfo(): CallerInfo | null {
@@ -279,6 +309,76 @@ export class WebRtcService {
     } catch {}
   }
 
+  // --- Dedicated Call WebSocket Channel (Direct P2P Relay across all tabs - Bug #2) ---
+  private connectCallWebSocket(conversationId: string) {
+    this.closeCallWebSocket();
+    if (typeof window === 'undefined' || typeof WebSocket === 'undefined') return;
+
+    try {
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsBase = API_BASE.replace(/^https?:/, wsProtocol);
+      const wsUrl = `${wsBase}/conversations/${encodeURIComponent(conversationId)}/ws?userId=${encodeURIComponent(this.currentUserId || 'caller')}`;
+
+      const ws = new WebSocket(wsUrl);
+      this.callWs = ws;
+
+      ws.onopen = () => {
+        console.log('[WebRTC Socket] Connected to call room:', conversationId);
+        try { ws.send(JSON.stringify({ type: 'ping' })); } catch {}
+      };
+
+      ws.onmessage = async (event) => {
+        try {
+          const raw = typeof event.data === 'string' ? event.data : new TextDecoder().decode(event.data);
+          const data = JSON.parse(raw);
+          if (data.type === 'call_signal' && data.signal) {
+            await this.handleIncomingSignal(data);
+          }
+        } catch {}
+      };
+
+      ws.onerror = (e) => {
+        console.warn('[WebRTC Socket] Error notice:', e);
+      };
+
+      ws.onclose = () => {
+        this.callWs = null;
+        // Auto-reconnect if call is still active/connecting (Bug #7)
+        if (
+          this.currentCallState === 'connected' ||
+          this.currentCallState === 'connecting' ||
+          this.currentCallState === 'outgoing_calling' ||
+          this.currentCallState === 'incoming_ringing'
+        ) {
+          if (!this.callWsRetryTimer) {
+            this.callWsRetryTimer = setTimeout(() => {
+              this.callWsRetryTimer = null;
+              if (this.currentCallState !== 'idle' && this.currentCallState !== 'ended') {
+                this.connectCallWebSocket(conversationId);
+              }
+            }, 1200);
+          }
+        }
+      };
+    } catch (e) {
+      console.warn('[WebRTC Socket] Init error:', e);
+    }
+  }
+
+  private closeCallWebSocket() {
+    if (this.callWsRetryTimer) {
+      clearTimeout(this.callWsRetryTimer);
+      this.callWsRetryTimer = null;
+    }
+    if (this.callWs) {
+      try {
+        this.callWs.onclose = null;
+        this.callWs.close();
+      } catch {}
+      this.callWs = null;
+    }
+  }
+
   // --- Dedicated HTTP Calling Signal Polling Engine ---
   private startSignalingPoll(conversationId: string) {
     this.stopSignalingPoll();
@@ -293,6 +393,12 @@ export class WebRtcService {
         const res = await fetch(`${API_BASE}/conversations/call/signal?conversationId=${encodeURIComponent(conversationId)}`);
         const data = await res.json();
         if (data.success && Array.isArray(data.signals)) {
+          // Prune processed signals cache if it grows too large (Bug #6)
+          if (this.processedSignals.size > 200) {
+            const arr = Array.from(this.processedSignals);
+            this.processedSignals = new Set(arr.slice(-100));
+          }
+
           for (const sig of data.signals) {
             const candPart = sig.payload?.candidate?.candidate || sig.payload?.sdp?.type || sig.payload?.reason || '';
             const sigKey = `${sig.signal}_${sig.senderId}_${sig.timestamp || ''}_${candPart}`;
@@ -317,7 +423,7 @@ export class WebRtcService {
       clearInterval(this.signalingPollInterval);
       this.signalingPollInterval = null;
     }
-    this.processedSignals.clear();
+    // Bug #6 Fix: Do NOT clear processedSignals here to prevent re-processing old signals
   }
 
   // --- Step 1: Start an Outgoing Call (Initiator / Caller) ---
@@ -353,6 +459,8 @@ export class WebRtcService {
     }
 
     const conversationId = `conv_${[this.currentUserId || currentUserInfo.id, partnerId].sort().join('_')}`;
+    this.activeConversationId = conversationId;
+    this.connectCallWebSocket(conversationId);
     this.startSignalingPoll(conversationId);
 
     this.notifyState('outgoing_calling', { partner: partnerInfo, callType });
@@ -472,6 +580,8 @@ export class WebRtcService {
         this.hasLoggedCall = false;
 
         const conversationId = `conv_${[this.currentUserId, payload.senderId].sort().join('_')}`;
+        this.activeConversationId = conversationId;
+        this.connectCallWebSocket(conversationId);
         this.startSignalingPoll(conversationId);
 
         this.notifyState('incoming_ringing', { caller: this.currentPartnerInfo, callType: payload.callType });
@@ -504,7 +614,9 @@ export class WebRtcService {
         // Receiver accepted the call! Caller proceeds to create WebRTC Offer
         this.stopRingtone();
         if (this.callTimeoutTimer) clearTimeout(this.callTimeoutTimer);
-        this.playTone(523, 784, 0.25); // Happy connect tone
+
+        // Bug #1 & #9 Fix: Transition to 'connecting', NOT premature 'connected'!
+        this.notifyState('connecting', { partner: this.currentPartnerInfo, callType: this.currentCallType });
 
         const acceptedWithVideo = Boolean(payload.payload?.withVideo);
         if (!acceptedWithVideo) {
@@ -564,9 +676,26 @@ export class WebRtcService {
         if (this.currentPartnerId && payload.senderId !== this.currentPartnerId) return;
         // Caller receives SDP answer from Receiver
         if (this.peerConnection && payload.payload?.sdp) {
-          await this.peerConnection.setRemoteDescription(new RTCSessionDescription(payload.payload.sdp));
-          await this.processPendingIceCandidates();
+          try {
+            await this.peerConnection.setRemoteDescription(new RTCSessionDescription(payload.payload.sdp));
+            await this.processPendingIceCandidates();
+            this.armConnectionFallbackTimer();
+          } catch (err) {
+            console.error('Error handling remote SDP answer:', err);
+          }
         }
+        break;
+      }
+
+      case 'video_toggle': {
+        // Bug #3 Fix: Handle partner camera toggle in real-time
+        if (this.currentPartnerId && payload.senderId !== this.currentPartnerId) return;
+        const isPartnerVideoOn = Boolean(payload.payload?.isVideoEnabled);
+        this.notifyState(this.currentCallState, {
+          partner: this.currentPartnerInfo,
+          callType: this.currentCallType,
+          partnerVideoEnabled: isPartnerVideoOn
+        });
         break;
       }
 
@@ -631,11 +760,13 @@ export class WebRtcService {
 
     if (this.currentPartnerId) {
       const convId = `conv_${[this.currentUserId || '', this.currentPartnerId].sort().join('_')}`;
+      this.activeConversationId = convId;
+      this.connectCallWebSocket(convId);
       this.startSignalingPoll(convId);
     }
 
-    this.notifyState('connected', { partner: this.currentPartnerInfo, callType: this.currentCallType });
-    this.playTone(523, 784, 0.25);
+    // Bug #1 Fix: Transition to 'connecting', NOT premature 'connected'!
+    this.notifyState('connecting', { partner: this.currentPartnerInfo, callType: this.currentCallType });
 
     // 1. Acquire local mic / camera FIRST so tracks are 100% active before caller creates SDP offer!
     await this.setupLocalMedia(withVideo);
@@ -760,6 +891,27 @@ export class WebRtcService {
 
 
 
+  private armConnectionFallbackTimer() {
+    if (this.connectionFallbackTimer) clearTimeout(this.connectionFallbackTimer);
+    this.connectionFallbackTimer = setTimeout(() => {
+      this.connectionFallbackTimer = null;
+      if (this.currentCallState === 'connecting' || this.currentCallState === 'outgoing_calling') {
+        console.log('[WebRTC] Connection fallback timer triggered, activating connected state.');
+        this.transitionToConnected();
+      }
+    }, 2800);
+  }
+
+  private transitionToConnected() {
+    if (this.connectionFallbackTimer) {
+      clearTimeout(this.connectionFallbackTimer);
+      this.connectionFallbackTimer = null;
+    }
+    if (this.currentCallState === 'connected') return;
+    this.playTone(523, 784, 0.25);
+    this.notifyState('connected', { partner: this.currentPartnerInfo, callType: this.currentCallType });
+  }
+
   private async createPeerConnectionAndOffer() {
     this.initPeerConnection();
     if (!this.peerConnection) return;
@@ -780,7 +932,8 @@ export class WebRtcService {
         payload: { sdp: offer }
       });
 
-      this.notifyState('connected', { partner: this.currentPartnerInfo, callType: this.currentCallType });
+      // Bug #1 & #9: State remains 'connecting' until peer connection actually establishes
+      this.notifyState('connecting', { partner: this.currentPartnerInfo, callType: this.currentCallType });
     } catch (err) {
       console.error('Error creating SDP offer:', err);
     }
@@ -792,7 +945,24 @@ export class WebRtcService {
       await this.setupLocalMedia(this.currentCallType === 'video');
     }
 
-    this.initPeerConnection();
+    // SDP Glare Handling (Bug #10):
+    if (this.peerConnection) {
+      if (this.peerConnection.signalingState === 'have-local-offer') {
+        if (!this.isInitiator) {
+          try {
+            await this.peerConnection.setLocalDescription({ type: 'rollback' });
+          } catch (rbErr) {
+            console.warn('[WebRTC] Rollback error during glare resolution:', rbErr);
+          }
+        } else {
+          console.log('[WebRTC] Impolite peer ignoring conflicting offer to avoid glare.');
+          return;
+        }
+      }
+    } else {
+      this.initPeerConnection();
+    }
+
     if (!this.peerConnection) return;
 
     try {
@@ -811,7 +981,9 @@ export class WebRtcService {
         payload: { sdp: answer }
       });
 
-      this.notifyState('connected', { partner: this.currentPartnerInfo, callType: this.currentCallType });
+      // Bug #1 & #9: State remains 'connecting', start safety fallback timer
+      this.notifyState('connecting', { partner: this.currentPartnerInfo, callType: this.currentCallType });
+      this.armConnectionFallbackTimer();
     } catch (err) {
       console.error('Error handling remote offer / creating answer:', err);
     }
@@ -856,6 +1028,13 @@ export class WebRtcService {
         this.remoteStream?.addTrack(event.track);
       }
       this.notifyStreams();
+      if (
+        this.currentCallState === 'connecting' ||
+        this.currentCallState === 'outgoing_calling' ||
+        this.currentCallState === 'incoming_ringing'
+      ) {
+        this.transitionToConnected();
+      }
     };
 
     // Handle local ICE candidates
@@ -874,12 +1053,42 @@ export class WebRtcService {
 
     this.peerConnection.oniceconnectionstatechange = () => {
       const state = this.peerConnection?.iceConnectionState;
+      if (state === 'connected' || state === 'completed') {
+        if (
+          this.currentCallState === 'connecting' ||
+          this.currentCallState === 'outgoing_calling' ||
+          this.currentCallState === 'incoming_ringing'
+        ) {
+          this.transitionToConnected();
+        }
+      }
       if (state === 'disconnected') {
-        // Attempt immediate ICE restart on network transition (WiFi <-> 4G)
+        // Attempt immediate ICE restart on network transition (WiFi <-> 4G) - Bug #4
         console.warn('[WebRTC] ICE state disconnected, attempting ICE restart...');
         try {
           if (this.peerConnection && typeof this.peerConnection.restartIce === 'function') {
             this.peerConnection.restartIce();
+            if (this.isInitiator && this.currentCallState === 'connected' && this.peerConnection.signalingState === 'stable') {
+              this.peerConnection.createOffer({
+                iceRestart: true,
+                offerToReceiveAudio: true,
+                offerToReceiveVideo: this.currentCallType === 'video'
+              }).then(async (offer) => {
+                if (this.peerConnection) {
+                  await this.peerConnection.setLocalDescription(offer);
+                  this.sendSignal({
+                    type: 'call_signal',
+                    signal: 'sdp_offer',
+                    senderId: this.currentUserId || '',
+                    targetUserId: this.currentPartnerId || '',
+                    callType: this.currentCallType,
+                    payload: { sdp: offer, isIceRestart: true }
+                  });
+                }
+              }).catch(e => {
+                console.warn('[WebRTC] restartIce offer error:', e);
+              });
+            }
           }
         } catch (e) {
           console.warn('[WebRTC] restartIce error:', e);
@@ -905,7 +1114,15 @@ export class WebRtcService {
 
     this.peerConnection.onconnectionstatechange = () => {
       const state = this.peerConnection?.connectionState;
-      if (state === 'failed' || state === 'closed') {
+      if (state === 'connected') {
+        if (
+          this.currentCallState === 'connecting' ||
+          this.currentCallState === 'outgoing_calling' ||
+          this.currentCallState === 'incoming_ringing'
+        ) {
+          this.transitionToConnected();
+        }
+      } else if (state === 'failed' || state === 'closed') {
         this.endCall('connection_lost');
       }
     };
@@ -947,8 +1164,8 @@ export class WebRtcService {
             this.localStream.addTrack(newTrack);
             if (this.peerConnection) {
               this.peerConnection.addTrack(newTrack, this.localStream);
-              // Perfect renegotiation offer for dynamic audio->video upgrade
-              if (this.currentPartnerId && this.currentCallState === 'connected') {
+              // Perfect renegotiation offer for dynamic audio->video upgrade (Bug #10 Glare Guard)
+              if (this.currentPartnerId && this.currentCallState === 'connected' && this.peerConnection.signalingState === 'stable') {
                 try {
                   this.currentCallType = 'video';
                   const offer = await this.peerConnection.createOffer({
@@ -1034,15 +1251,29 @@ export class WebRtcService {
   }
 
   private sendSignal(payload: CallSignalPayload) {
-    if (this.signalSender) {
+    let sentViaWs = false;
+
+    // 1. Direct real-time WebSocket delivery over dedicated call room (Bug #2)
+    if (this.callWs && this.callWs.readyState === WebSocket.OPEN) {
+      try {
+        this.callWs.send(JSON.stringify(payload));
+        sentViaWs = true;
+      } catch (err) {
+        console.warn('Failed to send call signal via dedicated callWs:', err);
+      }
+    }
+
+    // 2. Supplementary delivery via external signalSender if provided
+    if (!sentViaWs && this.signalSender) {
       try {
         this.signalSender(payload);
+        sentViaWs = true;
       } catch (err) {
         console.error('Failed to send call signal via socket:', err);
       }
     }
 
-    // Secondary HTTP relay through Cloudflare Durable Object broadcast
+    // 3. Guaranteed secondary HTTP relay through Cloudflare Durable Object broadcast
     const partnerId = payload.targetUserId || this.currentPartnerId;
     const currentId = payload.senderId || this.currentUserId;
     if (currentId && partnerId) {
@@ -1097,6 +1328,12 @@ export class WebRtcService {
 
   private cleanup(reason: string = 'ended') {
     this.stopSignalingPoll();
+    this.closeCallWebSocket();
+    if (this.connectionFallbackTimer) {
+      clearTimeout(this.connectionFallbackTimer);
+      this.connectionFallbackTimer = null;
+    }
+    this.processedSignals.clear();
     if (this.iceDisconnectTimer) {
       clearTimeout(this.iceDisconnectTimer);
       this.iceDisconnectTimer = null;
@@ -1127,7 +1364,7 @@ export class WebRtcService {
     this.setCallMode(false);
     this.notifyStreams();
     this.callConnectedTime = null;
-    this.hasLoggedCall = false;
+    // Bug #5 Fix: Do NOT reset hasLoggedCall to false here! It is only reset on new calls.
   }
 }
 

@@ -59,6 +59,19 @@ class PushNotificationService {
         console.warn('[Push] Call channel creation notice:', err);
       });
 
+      // Backward compatibility channel for existing client installations
+      await PushNotifications.createChannel({
+        id: 'qurb_calls',
+        name: 'Incoming Calls Legacy',
+        description: 'Full-screen incoming audio and video calls',
+        importance: 5,
+        visibility: 1,
+        sound: 'default',
+        vibration: true,
+        lights: true,
+        lightColor: '#10B981'
+      }).catch(() => {});
+
       // 2. Request Notification Permissions (Android 13+ POST_NOTIFICATIONS)
       let permStatus = await PushNotifications.checkPermissions();
       if (permStatus.receive === 'prompt' || permStatus.receive === 'prompt-with-rationale') {
@@ -104,7 +117,7 @@ class PushNotificationService {
                 id: 999999,
                 title: notification.title || `Incoming ${data.callType === 'video' ? 'Video' : 'Audio'} Call 📞`,
                 body: notification.body || `${data.callerName || 'Match'} is calling you on Qurb...`,
-                channelId: 'qurb_calls',
+                channelId: 'qurb_calls_v2',
                 extra: data,
                 sound: 'default'
               }

@@ -791,28 +791,31 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
     let isCleanedUp = false;
     let partnerTypingTimer: any = null;
     let pingInterval: any = null;
+    let reconnectTimer: any = null;
 
-    try {
-      // Register WebRTC signal sender immediately so calling signals can be dispatched as soon as WS is ready
-      webRtcService.init(currentUser.id, (payload) => {
-        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-          try {
-            wsRef.current.send(JSON.stringify(payload));
-          } catch (e) {
-            console.error('Failed to send call signal:', e);
-          }
-        } else {
-          console.warn('WebSocket not open yet when sending call signal:', payload.signal);
+    // Register WebRTC signal sender immediately so calling signals can be dispatched as soon as WS is ready
+    webRtcService.init(currentUser.id, (payload) => {
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        try {
+          wsRef.current.send(JSON.stringify(payload));
+        } catch (e) {
+          console.error('Failed to send call signal:', e);
         }
-      });
+      } else {
+        console.warn('WebSocket not open yet when sending call signal:', payload.signal);
+      }
+    });
 
-      if (typeof window !== 'undefined' && typeof WebSocket !== 'undefined') {
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsBase = API_BASE.replace(/^https?:/, wsProtocol);
-        const wsUrl = `${wsBase}/conversations/${targetRoomId}/ws?userId=${currentUser.id}`;
+    const connectWs = () => {
+      if (isCleanedUp) return;
+      try {
+        if (typeof window !== 'undefined' && typeof WebSocket !== 'undefined') {
+          const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+          const wsBase = API_BASE.replace(/^https?:/, wsProtocol);
+          const wsUrl = `${wsBase}/conversations/${targetRoomId}/ws?userId=${currentUser.id}`;
 
-        ws = new WebSocket(wsUrl);
-        wsRef.current = ws;
+          ws = new WebSocket(wsUrl);
+          wsRef.current = ws;
 
         ws.onopen = () => {
           try { ws?.send(JSON.stringify({ type: 'ping' })); } catch {}
@@ -867,16 +870,40 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
 
         ws.onclose = () => {
           wsRef.current = null;
+          if (pingInterval) clearInterval(pingInterval);
+          // Bug #7 Fix: Auto-reconnect chat room WebSocket if still inside this screen
+          if (!isCleanedUp && !reconnectTimer) {
+            reconnectTimer = setTimeout(() => {
+              reconnectTimer = null;
+              if (!isCleanedUp && targetRoomId) {
+                connectWs();
+              }
+            }, 3000);
+          }
         };
       }
-    } catch {}
+    } catch (err) {
+        if (!isCleanedUp && !reconnectTimer) {
+          reconnectTimer = setTimeout(() => {
+            reconnectTimer = null;
+            if (!isCleanedUp && targetRoomId) connectWs();
+          }, 4000);
+        }
+      }
+    };
+
+    connectWs();
 
     return () => {
       isCleanedUp = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
       if (partnerTypingTimer) clearTimeout(partnerTypingTimer);
       if (pingInterval) clearInterval(pingInterval);
-      if (ws) {
-        try { ws.close(); } catch {}
+      if (wsRef.current) {
+        try {
+          wsRef.current.onclose = null;
+          wsRef.current.close();
+        } catch {}
       }
       wsRef.current = null;
       setIsPartnerTyping(false);

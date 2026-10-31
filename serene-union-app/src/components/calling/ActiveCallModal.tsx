@@ -69,8 +69,16 @@ export const ActiveCallModal: React.FC<ActiveCallModalProps> = ({
       attachStreams(localStream, remoteStream);
     });
 
+    // Listen for partner real-time camera toggle (Bug #3)
+    const unsubState = webRtcService.subscribe((_state, data) => {
+      if (typeof data?.partnerVideoEnabled === 'boolean') {
+        setIsRemoteVideoActive(data.partnerVideoEnabled);
+      }
+    });
+
     return () => {
       unsubStreams();
+      unsubState();
     };
   }, [isOpen, callState]);
 
@@ -128,6 +136,7 @@ export const ActiveCallModal: React.FC<ActiveCallModalProps> = ({
   };
 
   const isOutgoingRinging = callState === 'outgoing_calling';
+  const isConnecting = callState === 'connecting';
   const isConnected = callState === 'connected';
 
   return (
@@ -196,8 +205,10 @@ export const ActiveCallModal: React.FC<ActiveCallModalProps> = ({
                   {partner.fullName}
                 </h3>
                 <div className="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 backdrop-blur-xl shadow-lg text-xs">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                  <span className="text-emerald-300 font-semibold tracking-wide">Optimizing encrypted HD video stream...</span>
+                  <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-amber-400' : 'bg-emerald-400 animate-ping'}`} />
+                  <span className="text-emerald-300 font-semibold tracking-wide">
+                    {isConnected ? 'Partner has paused their camera' : 'Optimizing encrypted HD video stream...'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -249,6 +260,11 @@ export const ActiveCallModal: React.FC<ActiveCallModalProps> = ({
               <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
               <span className="text-amber-300 font-sans text-xs font-semibold">Ringing...</span>
             </>
+          ) : isConnecting ? (
+            <>
+              <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping" />
+              <span className="text-sky-300 font-sans text-xs font-semibold">Connecting...</span>
+            </>
           ) : (
             <>
               <span className="relative flex h-2 w-2">
@@ -263,7 +279,7 @@ export const ActiveCallModal: React.FC<ActiveCallModalProps> = ({
       </div>
 
       {/* ----------------- CENTER HUD: AUDIO CALL OR OUTGOING RINGING HUD ----------------- */}
-      {(callType === 'audio' || (callType === 'video' && isOutgoingRinging)) && (
+      {(callType === 'audio' || (callType === 'video' && (isOutgoingRinging || isConnecting))) && (
         <div className="relative z-20 flex flex-col items-center justify-center my-auto space-y-6">
           <div className="relative">
             {/* Concentric Sonic Rings */}
@@ -325,6 +341,8 @@ export const ActiveCallModal: React.FC<ActiveCallModalProps> = ({
                 <span>
                   {isOutgoingRinging 
                     ? 'Connecting peer-to-peer call...' 
+                    : isConnecting
+                    ? 'Establishing secure P2P media channel...'
                     : 'Encrypted Halal Matrimony Call'}
                 </span>
               </span>

@@ -15,8 +15,8 @@ export interface VersionPolicy {
 }
 
 // Current client build constants (synchronized with android/app/build.gradle)
-export const CURRENT_CLIENT_VERSION_CODE = 50;
-export const CURRENT_CLIENT_VERSION_NAME = '1.0.49';
+export const CURRENT_CLIENT_VERSION_CODE = 52;
+export const CURRENT_CLIENT_VERSION_NAME = '1.0.51';
 
 class VersionCheckService {
   private cachedPolicy: VersionPolicy | null = null;

@@ -172,7 +172,7 @@ async function saveUserProfileRecord(c: any, data: any) {
   ).run();
 
   // User Photos (only if array provided)
-  if (Array.isArray(photos) && photos.length > 0) {
+  if (Array.isArray(photos)) {
     await c.env.DB.prepare(`DELETE FROM user_photos WHERE user_id = ?`).bind(targetUserId).run();
     for (let i = 0; i < photos.length; i++) {
       if (!photos[i]) continue;

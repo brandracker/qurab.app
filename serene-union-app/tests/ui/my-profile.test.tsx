@@ -236,5 +236,57 @@ describe('UI & Button Interactions: My Profile Screen', () => {
     expect(screen.queryByText(/Edit Matrimonial Biodata/i)).toBeNull();
     expect(clickSpy).toHaveBeenCalledTimes(1);
   });
+
+  it('11. Delete photo from top banner removes it from profile', async () => {
+    const multiPhotoUser: UserProfile = {
+      ...mockUser,
+      photos: [
+        'https://example.com/hamza_photo_1.jpg',
+        'https://example.com/hamza_photo_2.jpg'
+      ]
+    };
+
+    render(<MyProfileScreen user={multiPhotoUser} />);
+
+    // Initially 2 photos
+    expect(screen.getByText('1 / 2')).toBeDefined();
+
+    // Click Delete photo on the top banner
+    const deleteBtn = screen.getByRole('button', { name: /Delete this photo/i });
+    expect(deleteBtn).toBeDefined();
+
+    fireEvent.click(deleteBtn);
+
+    // After deletion, only 1 photo remains
+    expect(screen.queryByText('1 / 2')).toBeNull();
+  });
+
+  it('12. Manage mode allows deleting photo via thumbnail delete button', async () => {
+    const multiPhotoUser: UserProfile = {
+      ...mockUser,
+      photos: [
+        'https://example.com/hamza_photo_1.jpg',
+        'https://example.com/hamza_photo_2.jpg',
+        'https://example.com/hamza_photo_3.jpg'
+      ]
+    };
+
+    render(<MyProfileScreen user={multiPhotoUser} />);
+
+    // Click "Manage" button in photo gallery header
+    const manageBtn = screen.getByRole('button', { name: /Manage photos/i });
+    expect(manageBtn).toBeDefined();
+    fireEvent.click(manageBtn);
+
+    // Now delete buttons appear for all thumbnails
+    const deleteThumbBtn = screen.getByRole('button', { name: /Delete photo 2/i });
+    expect(deleteThumbBtn).toBeDefined();
+
+    fireEvent.click(deleteThumbBtn);
+
+    // Photo 2 is deleted, total count drops to 2
+    expect(screen.getByText('1 / 2')).toBeDefined();
+  });
 });
+
 

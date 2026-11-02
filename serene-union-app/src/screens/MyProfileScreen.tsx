@@ -39,7 +39,8 @@ import {
   ChevronRight,
   Camera,
   Sun,
-  Moon
+  Moon,
+  Star
 } from 'lucide-react';
 import type { UserProfile } from '../types';
 import { dbService } from '../services/dbService';
@@ -74,6 +75,7 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
   // ─── Photo Upload (Add Photo button / Upload Photos button) ───────────────
   const photoFileInputRef = useRef<HTMLInputElement>(null);
   const [isAddingPhoto, setIsAddingPhoto] = useState<boolean>(false);
+  const [isManagingPhotos, setIsManagingPhotos] = useState<boolean>(false);
   const [photoUploadToast, setPhotoUploadToast] = useState<string | null>(null);
 
   const handleAddPhotoClick = useCallback(() => {
@@ -143,6 +145,60 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
     } finally {
       setIsAddingPhoto(false);
       setTimeout(() => setPhotoUploadToast(null), 3000);
+    }
+  }, [user, onProfileUpdated]);
+
+  const handleDeletePhoto = useCallback(async (indexToDelete: number) => {
+    const currentPhotos = (user.photos || []).filter(
+      (p): p is string => typeof p === 'string' && p.trim().length > 0
+    );
+    if (indexToDelete < 0 || indexToDelete >= currentPhotos.length) return;
+
+    if (currentPhotos.length === 1) {
+      const confirmed = window.confirm('This is your only profile photo. Are you sure you want to delete it?');
+      if (!confirmed) return;
+    }
+
+    const newPhotos = currentPhotos.filter((_, idx) => idx !== indexToDelete);
+
+    // Optimistic UI update immediately
+    const updatedUser = { ...user, photos: newPhotos };
+    setCurrentUserProfile(updatedUser);
+    dbService.setCurrentUser(updatedUser);
+    setSelectedPhotoIdx(prev => (prev >= newPhotos.length ? Math.max(0, newPhotos.length - 1) : prev));
+    setPhotoUploadToast('✓ Photo deleted');
+    setTimeout(() => setPhotoUploadToast(null), 3000);
+
+    // Sync to backend Cloudflare D1
+    try {
+      await dbService.updateUserProfileLive(user.id, { photos: newPhotos });
+      if (onProfileUpdated) onProfileUpdated(updatedUser);
+    } catch (err) {
+      console.warn('[MyProfile] Delete photo sync warning:', err);
+    }
+  }, [user, onProfileUpdated]);
+
+  const handleSetMainPhoto = useCallback(async (indexToMain: number) => {
+    const currentPhotos = (user.photos || []).filter(
+      (p): p is string => typeof p === 'string' && p.trim().length > 0
+    );
+    if (indexToMain <= 0 || indexToMain >= currentPhotos.length) return;
+
+    const targetPhoto = currentPhotos[indexToMain];
+    const newPhotos = [targetPhoto, ...currentPhotos.filter((_, idx) => idx !== indexToMain)];
+
+    const updatedUser = { ...user, photos: newPhotos };
+    setCurrentUserProfile(updatedUser);
+    dbService.setCurrentUser(updatedUser);
+    setSelectedPhotoIdx(0);
+    setPhotoUploadToast('✓ Main photo updated!');
+    setTimeout(() => setPhotoUploadToast(null), 3000);
+
+    try {
+      await dbService.updateUserProfileLive(user.id, { photos: newPhotos });
+      if (onProfileUpdated) onProfileUpdated(updatedUser);
+    } catch (err) {
+      console.warn('[MyProfile] Set main photo sync warning:', err);
     }
   }, [user, onProfileUpdated]);
   // ─────────────────────────────────────────────────────────────────────────
@@ -683,6 +739,40 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
               </div>
             )}
             
+            {/* Photo Action Controls (Bottom-Left: Delete Photo & Make Main) */}
+            {profilePhotos.length > 0 && (
+              <div className="absolute bottom-3 left-3 flex items-center gap-1.5 z-20">
+                {activePhotoIdx !== 0 && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSetMainPhoto(activePhotoIdx);
+                    }}
+                    className="bg-black/65 hover:bg-black/85 backdrop-blur-sm text-white px-2.5 py-1 rounded-full text-[11px] font-bold flex items-center gap-1 shadow-xs transition-all active:scale-95 cursor-pointer border border-white/20"
+                    title="Make this your primary photo"
+                    aria-label="Make this your primary photo"
+                  >
+                    <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
+                    <span>Make Main</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeletePhoto(activePhotoIdx);
+                  }}
+                  className="bg-black/65 hover:bg-rose-700/90 backdrop-blur-sm text-white px-2.5 py-1 rounded-full text-[11px] font-bold flex items-center gap-1 shadow-xs transition-all active:scale-95 cursor-pointer border border-white/20"
+                  title="Delete this photo"
+                  aria-label="Delete this photo"
+                >
+                  <Trash2 className="w-3 h-3 text-rose-300" />
+                  <span>Delete Photo</span>
+                </button>
+              </div>
+            )}
+
             {/* Photo Counter Badge (Bottom-Right, only when multiple photos exist) */}
             {profilePhotos.length > 1 && (
               <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-full text-white text-xs font-semibold flex items-center gap-1 z-20 shadow-xs">
@@ -762,40 +852,80 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
                   </h3>
                   <button
                     type="button"
-                    onClick={handleOpenEditProfile}
-                    className="text-primary hover:text-primary-dark text-xs font-bold flex items-center gap-1 active:scale-95 transition-all"
+                    onClick={() => setIsManagingPhotos(prev => !prev)}
+                    className="text-primary hover:text-primary-dark text-xs font-bold flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
+                    aria-label={isManagingPhotos ? "Done managing photos" : "Manage photos"}
                   >
-                    <Edit3 className="w-3 h-3" />
-                    <span>Manage</span>
+                    {isManagingPhotos ? (
+                      <>
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span className="text-emerald-600">Done</span>
+                      </>
+                    ) : (
+                      <>
+                        <Edit3 className="w-3 h-3" />
+                        <span>Manage</span>
+                      </>
+                    )}
                   </button>
                 </div>
+
+                {isManagingPhotos && (
+                  <p className="text-[11px] text-secondary mb-2 animate-fade-in flex items-center gap-1">
+                    <span>Tap the</span>
+                    <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-rose-600 text-white text-[9px] shadow-2xs"><Trash2 className="w-2.5 h-2.5" /></span>
+                    <span>icon to delete any photo from your profile.</span>
+                  </p>
+                )}
+
                 <div className="grid grid-cols-3 gap-2">
                   {profilePhotos.map((p, idx) => {
                     const isSelected = idx === activePhotoIdx;
                     return (
-                      <button
+                      <div
                         key={idx}
-                        type="button"
-                        onClick={() => setSelectedPhotoIdx(idx)}
                         className={`aspect-square rounded-2xl overflow-hidden border relative shadow-subtle transition-all cursor-pointer group text-left ${
                           isSelected
                             ? 'ring-2 ring-primary ring-offset-2 border-primary scale-[1.02] shadow-md'
                             : 'border-outline hover:border-primary/50 opacity-90 hover:opacity-100'
                         }`}
-                        aria-label={`View photo ${idx + 1}`}
+                        onClick={() => setSelectedPhotoIdx(idx)}
                       >
-                        <img src={p} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
+                        <button
+                          type="button"
+                          className="w-full h-full text-left"
+                          aria-label={`View photo ${idx + 1}`}
+                        >
+                          <img src={p} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
+                        </button>
+
                         {idx === 0 && (
-                          <span className="absolute bottom-1 left-1 bg-primary text-white text-[8px] font-bold px-1.5 py-0.2 rounded z-10 shadow-xs">
+                          <span className="absolute bottom-1 left-1 bg-primary text-white text-[8px] font-bold px-1.5 py-0.2 rounded z-10 shadow-xs pointer-events-none">
                             Main
                           </span>
                         )}
                         {isSelected && idx !== 0 && (
-                          <span className="absolute bottom-1 left-1 bg-black/70 backdrop-blur-xs text-white text-[8px] font-bold px-1.5 py-0.2 rounded z-10">
+                          <span className="absolute bottom-1 left-1 bg-black/70 backdrop-blur-xs text-white text-[8px] font-bold px-1.5 py-0.2 rounded z-10 pointer-events-none">
                             Viewing
                           </span>
                         )}
-                      </button>
+
+                        {/* Direct Delete Button on Thumbnail (Visible in Manage mode or on Viewing photo) */}
+                        {(isManagingPhotos || isSelected) && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeletePhoto(idx);
+                            }}
+                            className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center shadow-md active:scale-90 transition-all z-20 cursor-pointer"
+                            aria-label={`Delete photo ${idx + 1}`}
+                            title="Delete this photo"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
                     );
                   })}
                   {profilePhotos.length < 6 && (
@@ -803,7 +933,7 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
                       type="button"
                       onClick={handleAddPhotoClick}
                       disabled={isAddingPhoto}
-                      className="aspect-square rounded-2xl border-2 border-dashed border-outline hover:border-primary/60 bg-surface-variant/40 hover:bg-pastel-rose/20 flex flex-col items-center justify-center gap-1 text-secondary hover:text-primary transition-all active:scale-95 disabled:opacity-60"
+                      className="aspect-square rounded-2xl border-2 border-dashed border-outline hover:border-primary/60 bg-surface-variant/40 hover:bg-pastel-rose/20 flex flex-col items-center justify-center gap-1 text-secondary hover:text-primary transition-all active:scale-95 disabled:opacity-60 cursor-pointer"
                       aria-label="Add more photos"
                     >
                       {isAddingPhoto

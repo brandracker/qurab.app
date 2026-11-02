@@ -208,22 +208,24 @@ chatRouter.get('/', async (c) => {
         rp1.madhhab as p1_madhhab, rp2.madhhab as p2_madhhab,
         rp1.practice_level as p1_practice, rp2.practice_level as p2_practice,
         rp1.prayer_frequency as p1_prayer, rp2.prayer_frequency as p2_prayer
-      FROM conversations c
+      FROM (
+        SELECT * FROM conversations WHERE participant_one = ? AND participant_one != 'usr' AND participant_two != 'usr'
+        UNION ALL
+        SELECT * FROM conversations WHERE participant_two = ? AND participant_one != ? AND participant_one != 'usr' AND participant_two != 'usr'
+      ) c
       LEFT JOIN users u1 ON c.participant_one = u1.id
       LEFT JOIN users u2 ON c.participant_two = u2.id
       LEFT JOIN wali_details w1 ON u1.id = w1.user_id
       LEFT JOIN wali_details w2 ON u2.id = w2.user_id
       LEFT JOIN religious_profiles rp1 ON u1.id = rp1.user_id
       LEFT JOIN religious_profiles rp2 ON u2.id = rp2.user_id
-      WHERE (c.participant_one = ? OR c.participant_two = ?)
-        AND c.participant_one != 'usr' AND c.participant_two != 'usr'
-        AND NOT EXISTS (
-          SELECT 1 FROM blocked_users b
-          WHERE (b.blocker_id = c.participant_one AND b.blocked_id = c.participant_two)
-             OR (b.blocker_id = c.participant_two AND b.blocked_id = c.participant_one)
-        )
+      WHERE NOT EXISTS (
+        SELECT 1 FROM blocked_users b
+        WHERE (b.blocker_id = c.participant_one AND b.blocked_id = c.participant_two)
+           OR (b.blocker_id = c.participant_two AND b.blocked_id = c.participant_one)
+      )
       ORDER BY c.last_message_time DESC
-    `).bind(userId, userId).all();
+    `).bind(userId, userId, userId).all();
 
     // Fetch primary photos for all conversation partners in bulk (chunked by 25 to respect D1 variable limits)
     const partnerIds: string[] = [];
@@ -295,14 +297,17 @@ chatRouter.get('/', async (c) => {
         try {
           const placeholders = chunk.map(() => '?').join(',');
           const { results: recentMsgs } = await c.env.DB.prepare(`
-            SELECT id, conversation_id, sender_id as senderId, sender_name as senderName, text,
-                   media_url as mediaUrl, media_type as mediaType, media_duration as mediaDuration,
-                   file_name as fileName, file_size as fileSize,
-                   is_view_once as isViewOnce, is_opened as isOpened, opened_at as openedAt,
-                   created_at as timestamp
-            FROM chat_messages
-            WHERE conversation_id IN (${placeholders})
-            ORDER BY created_at ASC
+            SELECT * FROM (
+              SELECT id, conversation_id, sender_id as senderId, sender_name as senderName, text,
+                     media_url as mediaUrl, media_type as mediaType, media_duration as mediaDuration,
+                     file_name as fileName, file_size as fileSize,
+                     is_view_once as isViewOnce, is_opened as isOpened, opened_at as openedAt,
+                     created_at as timestamp,
+                     ROW_NUMBER() OVER (PARTITION BY conversation_id ORDER BY created_at DESC) as rn
+              FROM chat_messages
+              WHERE conversation_id IN (${placeholders})
+            ) WHERE rn <= 20
+            ORDER BY timestamp ASC
           `).bind(...chunk).all();
 
           (recentMsgs || []).forEach((m: any) => {

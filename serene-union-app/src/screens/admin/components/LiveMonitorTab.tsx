@@ -36,7 +36,7 @@ export const LiveMonitorTab: React.FC<LiveMonitorTabProps> = ({
   const [activeSubTab, setActiveSubTab] = useState<'conversations' | 'users' | 'messages'>('conversations');
   const [searchQuery, setSearchQuery] = useState('');
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [secondsUntilRefresh, setSecondsUntilRefresh] = useState(10);
+  const [secondsUntilRefresh, setSecondsUntilRefresh] = useState(25);
 
   // Filters for subtabs
   const [userOnlineFilter, setUserOnlineFilter] = useState<'all' | 'online'>('all');
@@ -112,7 +112,7 @@ export const LiveMonitorTab: React.FC<LiveMonitorTabProps> = ({
           if (activeSubTab === 'messages') {
             fetchRecentMessages();
           }
-          return 10;
+          return 25;
         }
         return prev - 1;
       });
@@ -235,7 +235,7 @@ export const LiveMonitorTab: React.FC<LiveMonitorTabProps> = ({
 
           <button
             onClick={() => {
-              setSecondsUntilRefresh(10);
+              setSecondsUntilRefresh(25);
               fetchLiveActivity();
               if (activeSubTab === 'messages') {
                 fetchRecentMessages();

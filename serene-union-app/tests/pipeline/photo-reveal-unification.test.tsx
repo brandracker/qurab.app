@@ -114,4 +114,41 @@ describe('ISS-011, ISS-012, ISS-016: Service Layer & Photo Reveal Unification', 
     expect(img.className).not.toContain('blur-xl');
     expect(img.className).toContain('scale-100');
   });
+
+  it('3. ProfileDetailModal automatically hydrates full photos array when opened with 1 snippet photo', async () => {
+    const singlePhotoCandidate: UserProfile = {
+      ...mockCandidate,
+      photos: ['https://example.com/photo1.jpg']
+    };
+
+    const multiPhotoResult: UserProfile = {
+      ...mockCandidate,
+      photos: [
+        'https://example.com/photo1.jpg',
+        'https://example.com/photo2.jpg',
+        'https://example.com/photo3.jpg'
+      ]
+    };
+
+    const fetchSpy = vi.spyOn(dbService, 'fetchUserProfile').mockResolvedValue(multiPhotoResult);
+
+    render(
+      <ProfileDetailModal
+        profile={singlePhotoCandidate}
+        isOpen={true}
+        onClose={() => {}}
+      />
+    );
+
+    // Initial render shows the single photo
+    expect(fetchSpy).toHaveBeenCalledWith(singlePhotoCandidate.id);
+
+    // Wait for the hydration to complete and multi-photo controls to appear
+    const { waitFor } = await import('@testing-library/react');
+    await waitFor(() => {
+      // Thumbnails or Next/Previous buttons should appear once > 1 photos are present
+      expect(screen.getByRole('button', { name: /Next Photo/i })).toBeDefined();
+      expect(screen.getByAltText('Thumb 2')).toBeDefined();
+    });
+  });
 });

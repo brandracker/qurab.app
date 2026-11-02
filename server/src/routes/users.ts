@@ -839,7 +839,7 @@ profilesRouter.get('/discover', async (c) => {
     const actionedFilter = (currentUserId && excludeActioned)
       ? `AND u.id NOT IN (SELECT receiver_id FROM matches_and_likes WHERE sender_id = ?)`
       : '';
-    const genderFilter = targetGender ? `AND LOWER(u.gender) = ?` : '';
+    const genderFilter = targetGender ? `AND u.gender = ?` : '';
     const geoFilter = box ? `AND u.latitude BETWEEN ? AND ? AND u.longitude BETWEEN ? AND ?` : '';
 
     // Task 04: Filters End-to-End (Sects, Practice Levels, City, Age Range)
@@ -922,7 +922,9 @@ profilesRouter.get('/discover', async (c) => {
       LEFT JOIN user_wallets uw ON u.id = uw.user_id
       WHERE u.id != ? 
         AND (u.is_banned = 0 OR u.is_banned IS NULL)
-        AND (u.account_status != 'banned' OR u.account_status IS NULL)
+        AND (u.account_status != 'banned' AND u.account_status != 'deactivated' OR u.account_status IS NULL)
+        AND (u.profile_visibility != 'hidden' OR u.profile_visibility IS NULL)
+        AND (u.is_profile_completed != 0 OR u.is_profile_completed IS NULL)
         ${seedFilter}
         ${blockFilter}
         ${actionedFilter}

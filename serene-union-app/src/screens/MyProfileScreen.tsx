@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   LogOut, 
   Crown, 
@@ -51,6 +51,8 @@ import { EditProfileModal } from '../components/EditProfileModal';
 import { ReferralHubModal } from '../components/ReferralHubModal';
 import { calculateProfileCompleteness } from '../utils/profileCompleteness';
 import { themeService } from '../services/themeService';
+import { optimizeImage } from '../utils/imageOptimizer';
+import { API_BASE } from '../services/dbService';
 
 interface Props {
   user: UserProfile;
@@ -68,6 +70,82 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
   const user = (currentUserProfile?.id && currentUserProfile.id !== 'usr_guest') ? currentUserProfile : propUser;
 
   const [selectedPhotoIdx, setSelectedPhotoIdx] = useState<number>(0);
+
+  // ─── Photo Upload (Add Photo button / Upload Photos button) ───────────────
+  const photoFileInputRef = useRef<HTMLInputElement>(null);
+  const [isAddingPhoto, setIsAddingPhoto] = useState<boolean>(false);
+  const [photoUploadToast, setPhotoUploadToast] = useState<string | null>(null);
+
+  const handleAddPhotoClick = useCallback(() => {
+    photoFileInputRef.current?.click();
+  }, []);
+
+  const handlePhotoFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (photoFileInputRef.current) photoFileInputRef.current.value = '';
+
+    setIsAddingPhoto(true);
+    setPhotoUploadToast(null);
+    try {
+      // Compress to max 1200px / ~150 KB (same settings as CreateProfileScreen)
+      const optimized = await optimizeImage(file, { maxWidth: 1200, maxHeight: 1200, quality: 0.82 });
+      if (!optimized) {
+        setPhotoUploadToast('Photo could not be processed. Please try again.');
+        setTimeout(() => setPhotoUploadToast(null), 3000);
+        return;
+      }
+
+      const currentPhotos = (user.photos || []).filter(Boolean);
+      const isPrimary = currentPhotos.length === 0;
+
+      // Optimistic UI update immediately
+      const optimisticPhotos = [...currentPhotos, optimized];
+      const optimisticUser = { ...user, photos: optimisticPhotos };
+      setCurrentUserProfile(optimisticUser);
+      dbService.setCurrentUser(optimisticUser);
+      setPhotoUploadToast('Uploading photo…');
+
+      // Background upload to Cloudflare R2 via existing /photos/upload endpoint
+      try {
+        const res = await fetch(`${API_BASE}/photos/upload`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.id,
+            photoBase64: optimized,
+            isPrimary,
+            blurByDefault: user.blurPhotosByDefault ?? false
+          })
+        });
+        const data = await res.json();
+        if (data?.success && data?.photoUrl) {
+          // Replace optimistic base64 with permanent R2 URL
+          const finalPhotos = [...currentPhotos, data.photoUrl];
+          const updatedUser = { ...user, photos: finalPhotos };
+          setCurrentUserProfile(updatedUser);
+          dbService.setCurrentUser(updatedUser);
+          if (onProfileUpdated) onProfileUpdated(updatedUser);
+          setPhotoUploadToast('✓ Photo uploaded successfully!');
+        } else {
+          // Keep optimistic (base64 stays in profile for this session)
+          if (onProfileUpdated) onProfileUpdated(optimisticUser);
+          setPhotoUploadToast('✓ Photo added to profile!');
+        }
+      } catch {
+        // Network offline — keep optimistic base64 in profile
+        if (onProfileUpdated) onProfileUpdated(optimisticUser);
+        setPhotoUploadToast('✓ Photo saved locally!');
+      }
+    } catch (err) {
+      console.error('[MyProfile] Photo upload error:', err);
+      setPhotoUploadToast('Failed to add photo. Please try again.');
+    } finally {
+      setIsAddingPhoto(false);
+      setTimeout(() => setPhotoUploadToast(null), 3000);
+    }
+  }, [user, onProfileUpdated]);
+  // ─────────────────────────────────────────────────────────────────────────
 
   const profilePhotos = (user.photos || []).filter(
     (p): p is string => typeof p === 'string' && p.trim().length > 0
@@ -405,6 +483,23 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
 
   return (
     <div className="w-full h-full flex flex-col bg-background font-sans overflow-y-auto pb-24 select-none text-on-surface">
+      {/* Hidden File Input for Add Photo */}
+      <input
+        ref={photoFileInputRef}
+        type="file"
+        accept="image/*"
+        aria-label="Upload profile photo"
+        className="hidden"
+        onChange={handlePhotoFileChange}
+      />
+
+      {/* Photo Upload Toast */}
+      {photoUploadToast && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[200] bg-on-surface text-white text-xs font-semibold px-4 py-2 rounded-full shadow-lg flex items-center gap-2 animate-fade-in">
+          {isAddingPhoto && <Loader2 className="w-3 h-3 animate-spin" />}
+          <span>{photoUploadToast}</span>
+        </div>
+      )}
       {/* Top Header */}
       <header className="sticky top-0 bg-white px-4 py-3 border-b border-outline flex items-center justify-between z-20 shadow-subtle">
         <div>
@@ -519,11 +614,12 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
                 </div>
                 <button
                   type="button"
-                  onClick={handleOpenEditProfile}
-                  className="mt-1 px-3.5 py-1.5 rounded-full bg-primary hover:bg-primary-dark text-white text-xs font-bold shadow-brand flex items-center gap-1.5 active:scale-95 transition-all"
+                  onClick={handleAddPhotoClick}
+                  disabled={isAddingPhoto}
+                  className="mt-1 px-3.5 py-1.5 rounded-full bg-primary hover:bg-primary-dark text-white text-xs font-bold shadow-brand flex items-center gap-1.5 active:scale-95 transition-all disabled:opacity-70"
                 >
-                  <PlusCircle className="w-3.5 h-3.5" />
-                  <span>Upload Photos</span>
+                  {isAddingPhoto ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <PlusCircle className="w-3.5 h-3.5" />}
+                  <span>{isAddingPhoto ? 'Uploading…' : 'Upload Photos'}</span>
                 </button>
               </div>
             )}
@@ -705,12 +801,16 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
                   {profilePhotos.length < 6 && (
                     <button
                       type="button"
-                      onClick={handleOpenEditProfile}
-                      className="aspect-square rounded-2xl border-2 border-dashed border-outline hover:border-primary/60 bg-surface-variant/40 hover:bg-pastel-rose/20 flex flex-col items-center justify-center gap-1 text-secondary hover:text-primary transition-all active:scale-95"
+                      onClick={handleAddPhotoClick}
+                      disabled={isAddingPhoto}
+                      className="aspect-square rounded-2xl border-2 border-dashed border-outline hover:border-primary/60 bg-surface-variant/40 hover:bg-pastel-rose/20 flex flex-col items-center justify-center gap-1 text-secondary hover:text-primary transition-all active:scale-95 disabled:opacity-60"
                       aria-label="Add more photos"
                     >
-                      <PlusCircle className="w-5 h-5" />
-                      <span className="text-[10px] font-bold">Add Photo</span>
+                      {isAddingPhoto
+                        ? <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                        : <PlusCircle className="w-5 h-5" />
+                      }
+                      <span className="text-[10px] font-bold">{isAddingPhoto ? 'Uploading…' : 'Add Photo'}</span>
                     </button>
                   )}
                 </div>

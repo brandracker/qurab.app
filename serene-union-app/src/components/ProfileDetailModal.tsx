@@ -53,7 +53,7 @@ interface Props {
 }
 
 export const ProfileDetailModal: React.FC<Props> = ({ 
-  profile, 
+  profile: propProfile, 
   isOpen, 
   onClose, 
   onLike, 
@@ -62,6 +62,34 @@ export const ProfileDetailModal: React.FC<Props> = ({
   forceBlurPhotos,
   onOpenSubscription
 }) => {
+  const [profile, setProfile] = useState<UserProfile>(propProfile);
+
+  useEffect(() => {
+    setProfile(propProfile);
+    setSelectedPhotoIdx(0);
+  }, [propProfile]);
+
+  // Live profile & multi-photo hydration if profile snippet only contains 1 preview photo
+  useEffect(() => {
+    if (!isOpen || !propProfile?.id || propProfile.id === 'usr_guest' || propProfile.id === 'usr_qurb_official' || propProfile.isOfficial) return;
+
+    const currentPhotos = (propProfile.photos || []).filter(
+      (p: string) => typeof p === 'string' && p.trim().length > 0 && !p.includes('photo-1534528741775-53994a69daeb')
+    );
+
+    if (currentPhotos.length <= 1) {
+      dbService.fetchUserProfile(propProfile.id).then(live => {
+        if (live && Array.isArray(live.photos)) {
+          const livePhotos = live.photos.filter(
+            (p: string) => typeof p === 'string' && p.trim().length > 0 && !p.includes('photo-1534528741775-53994a69daeb')
+          );
+          if (livePhotos.length > currentPhotos.length) {
+            setProfile(prev => (prev?.id === live.id ? { ...prev, ...live, photos: livePhotos } : prev));
+          }
+        }
+      }).catch(() => {});
+    }
+  }, [isOpen, propProfile?.id]);
 
   const [selectedPhotoIdx, setSelectedPhotoIdx] = useState<number>(0);
   const [isPlayingVoice, setIsPlayingVoice] = useState<boolean>(false);

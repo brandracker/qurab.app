@@ -176,10 +176,11 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
     window.addEventListener('serene_block_updated', handleSync);
     window.addEventListener('serene_vip_updated', handleVipUpdate);
 
-    // Live background silent polling (25s interval)
+    // Live background silent polling (60s interval)
     const pollInterval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
       loadAllData(false);
-    }, 25000);
+    }, 60000);
 
     return () => {
       clearInterval(pollInterval);

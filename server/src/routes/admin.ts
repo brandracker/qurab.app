@@ -297,13 +297,16 @@ adminRouter.get('/dashboard/stats', async (c) => {
         WHERE date(created_at) = ? AND (is_seed = 0 OR is_seed IS NULL)
       `).bind(targetDate).first();
 
+      const startOfDay = `${targetDate} 00:00:00`;
+      const endOfDay = `${targetDate} 23:59:59`;
+
       const selMatchRes = await c.env.DB.prepare(`
-        SELECT COUNT(*) as c FROM matches_and_likes WHERE date(created_at) = ?
-      `).bind(targetDate).first();
+        SELECT COUNT(*) as c FROM matches_and_likes WHERE created_at >= ? AND created_at <= ?
+      `).bind(startOfDay, endOfDay).first();
 
       const selMsgRes = await c.env.DB.prepare(`
-        SELECT COUNT(*) as c FROM chat_messages WHERE date(created_at) = ?
-      `).bind(targetDate).first();
+        SELECT COUNT(*) as c FROM chat_messages WHERE created_at >= ? AND created_at <= ?
+      `).bind(startOfDay, endOfDay).first();
 
       selectedDateStats = {
         date: targetDate,
@@ -446,7 +449,7 @@ adminRouter.get('/live-activity', async (c) => {
         const msgRes = await c.env.DB.prepare('SELECT COUNT(*) as c FROM chat_messages').first();
         totalMessagesCount = Number(msgRes?.c || 0);
 
-        const msgTodayRes = await c.env.DB.prepare("SELECT COUNT(*) as c FROM chat_messages WHERE date(created_at) = date('now')").first();
+        const msgTodayRes = await c.env.DB.prepare("SELECT COUNT(*) as c FROM chat_messages WHERE created_at >= datetime('now', 'start of day')").first();
         messagesTodayCount = Number(msgTodayRes?.c || 0);
 
         cachedLiveSummary = {
@@ -1819,6 +1822,8 @@ adminRouter.get('/daily-activity', async (c) => {
 
     const todayStr = new Date().toISOString().split('T')[0];
     const targetDate = c.req.query('date') || todayStr;
+    const startOfDay = `${targetDate} 00:00:00`;
+    const endOfDay = `${targetDate} 23:59:59`;
 
     // 1. Fetch total distinct active users count without arbitrary limit
     let totalActiveUsersCount = 0;
@@ -1832,12 +1837,12 @@ adminRouter.get('/daily-activity', async (c) => {
             uda.activity_date = ? 
             OR date(COALESCE(u.last_active_at, u.created_at)) = ?
             OR u.id IN (
-              SELECT sender_id FROM matches_and_likes WHERE date(created_at) = ?
+              SELECT sender_id FROM matches_and_likes WHERE created_at >= ? AND created_at <= ?
               UNION
-              SELECT sender_id FROM chat_messages WHERE date(created_at) = ?
+              SELECT sender_id FROM chat_messages WHERE created_at >= ? AND created_at <= ?
             )
           )
-      `).bind(targetDate, targetDate, targetDate, targetDate, targetDate).first();
+      `).bind(targetDate, targetDate, targetDate, startOfDay, endOfDay, startOfDay, endOfDay).first();
       totalActiveUsersCount = Number(totalActiveRes?.total_active || 0);
     } catch (e) {
       console.warn('Failed to count total active users:', e);
@@ -1868,14 +1873,14 @@ adminRouter.get('/daily-activity', async (c) => {
           uda.activity_date = ? 
           OR date(COALESCE(u.last_active_at, u.created_at)) = ?
           OR u.id IN (
-            SELECT sender_id FROM matches_and_likes WHERE date(created_at) = ?
+            SELECT sender_id FROM matches_and_likes WHERE created_at >= ? AND created_at <= ?
             UNION
-            SELECT sender_id FROM chat_messages WHERE date(created_at) = ?
+            SELECT sender_id FROM chat_messages WHERE created_at >= ? AND created_at <= ?
           )
         )
       ORDER BY COALESCE(uda.last_active_at, u.last_active_at, u.created_at) DESC
       LIMIT 250
-    `).bind(targetDate, targetDate, targetDate, targetDate, targetDate).all();
+    `).bind(targetDate, targetDate, targetDate, startOfDay, endOfDay, startOfDay, endOfDay).all();
 
     const userList = rawRows || [];
     const userIds = userList.map((r: any) => r.id);
@@ -1917,29 +1922,29 @@ adminRouter.get('/daily-activity', async (c) => {
         try {
           const { results: likesRows } = await c.env.DB.prepare(`
             SELECT sender_id, COUNT(*) as c FROM matches_and_likes 
-            WHERE action IN ('liked', 'direct_salam') AND date(created_at) = ? AND sender_id IN (${placeholders})
+            WHERE action IN ('liked', 'direct_salam') AND created_at >= ? AND created_at <= ? AND sender_id IN (${placeholders})
             GROUP BY sender_id
-          `).bind(targetDate, ...chunk).all();
+          `).bind(startOfDay, endOfDay, ...chunk).all();
           (likesRows || []).forEach((r: any) => { userLikesMap[r.sender_id] = Number(r.c || 0); });
         } catch {}
 
         try {
           const { results: matchRows } = await c.env.DB.prepare(`
             SELECT u_id, COUNT(*) as c FROM (
-              SELECT sender_id as u_id FROM matches_and_likes WHERE action = 'mutual_match' AND date(created_at) = ? AND sender_id IN (${placeholders})
+              SELECT sender_id as u_id FROM matches_and_likes WHERE action = 'mutual_match' AND created_at >= ? AND created_at <= ? AND sender_id IN (${placeholders})
               UNION ALL
-              SELECT receiver_id as u_id FROM matches_and_likes WHERE action = 'mutual_match' AND date(created_at) = ? AND receiver_id IN (${placeholders})
+              SELECT receiver_id as u_id FROM matches_and_likes WHERE action = 'mutual_match' AND created_at >= ? AND created_at <= ? AND receiver_id IN (${placeholders})
             ) GROUP BY u_id
-          `).bind(targetDate, ...chunk, targetDate, ...chunk).all();
+          `).bind(startOfDay, endOfDay, ...chunk, startOfDay, endOfDay, ...chunk).all();
           (matchRows || []).forEach((r: any) => { userMatchesMap[r.u_id] = Number(r.c || 0); });
         } catch {}
 
         try {
           const { results: msgRows } = await c.env.DB.prepare(`
             SELECT sender_id, COUNT(*) as c FROM chat_messages 
-            WHERE date(created_at) = ? AND sender_id IN (${placeholders})
+            WHERE created_at >= ? AND created_at <= ? AND sender_id IN (${placeholders})
             GROUP BY sender_id
-          `).bind(targetDate, ...chunk).all();
+          `).bind(startOfDay, endOfDay, ...chunk).all();
           (msgRows || []).forEach((r: any) => { userMessagesMap[r.sender_id] = Number(r.c || 0); });
         } catch {}
       }
@@ -1954,20 +1959,20 @@ adminRouter.get('/daily-activity', async (c) => {
     try {
       const matchRes = await c.env.DB.prepare(`
         SELECT COUNT(*) as c FROM matches_and_likes 
-        WHERE action = 'mutual_match' AND date(created_at) = ?
-      `).bind(targetDate).first();
+        WHERE action = 'mutual_match' AND created_at >= ? AND created_at <= ?
+      `).bind(startOfDay, endOfDay).first();
       matchesCountToday = Number(matchRes?.c || 0);
 
       const likeRes = await c.env.DB.prepare(`
         SELECT COUNT(*) as c FROM matches_and_likes 
-        WHERE action IN ('liked', 'direct_salam') AND date(created_at) = ?
-      `).bind(targetDate).first();
+        WHERE action IN ('liked', 'direct_salam') AND created_at >= ? AND created_at <= ?
+      `).bind(startOfDay, endOfDay).first();
       likesCountToday = Number(likeRes?.c || 0);
 
       const msgRes = await c.env.DB.prepare(`
         SELECT COUNT(*) as c FROM chat_messages 
-        WHERE date(created_at) = ?
-      `).bind(targetDate).first();
+        WHERE created_at >= ? AND created_at <= ?
+      `).bind(startOfDay, endOfDay).first();
       messagesCountToday = Number(msgRes?.c || 0);
 
       const timeRes = await c.env.DB.prepare(`
@@ -2088,6 +2093,8 @@ adminRouter.get('/daily-activity/user-details', async (c) => {
     const userId = c.req.query('userId');
     const todayStr = new Date().toISOString().split('T')[0];
     const targetDate = c.req.query('date') || todayStr;
+    const startOfDay = `${targetDate} 00:00:00`;
+    const endOfDay = `${targetDate} 23:59:59`;
 
     if (!userId) {
       return c.json({ success: false, error: 'userId is required' }, 400);
@@ -2130,10 +2137,10 @@ adminRouter.get('/daily-activity/user-details', async (c) => {
       FROM matches_and_likes m
       WHERE (m.sender_id = ? OR m.receiver_id = ?)
         AND (m.action = 'match' OR m.action = 'direct_salam')
-        AND date(m.created_at) = ?
+        AND m.created_at >= ? AND m.created_at <= ?
       ORDER BY m.created_at DESC
       LIMIT 20
-    `).bind(userId, userId, userId, targetDate).all();
+    `).bind(userId, userId, startOfDay, endOfDay).all();
 
     const matchesList = [];
     for (const m of (matchesRaw || [])) {
@@ -2167,10 +2174,10 @@ adminRouter.get('/daily-activity/user-details', async (c) => {
       FROM matches_and_likes m
       WHERE m.sender_id = ?
         AND (m.action = 'like' OR m.action = 'direct_salam')
-        AND date(m.created_at) = ?
+        AND m.created_at >= ? AND m.created_at <= ?
       ORDER BY m.created_at DESC
       LIMIT 20
-    `).bind(userId, targetDate).all();
+    `).bind(userId, startOfDay, endOfDay).all();
 
     const likesList = [];
     for (const l of (likesRaw || [])) {
@@ -2201,11 +2208,14 @@ adminRouter.get('/daily-activity/user-details', async (c) => {
       SELECT 
         c.id as conversationId, c.last_message_text, c.last_message_time,
         CASE WHEN c.participant_one = ? THEN c.participant_two ELSE c.participant_one END as partnerId
-      FROM conversations c
-      WHERE c.participant_one = ? OR c.participant_two = ?
+      FROM (
+        SELECT * FROM conversations WHERE participant_one = ?
+        UNION ALL
+        SELECT * FROM conversations WHERE participant_two = ? AND participant_one != ?
+      ) c
       ORDER BY c.last_message_time DESC
       LIMIT 10
-    `).bind(userId, userId, userId).all();
+    `).bind(userId, userId, userId, userId).all();
 
     const conversationsList = [];
     for (const cv of (convsRaw || [])) {

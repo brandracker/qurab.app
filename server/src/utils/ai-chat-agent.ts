@@ -546,9 +546,12 @@ export async function getPendingCatchupCount(db: any): Promise<number> {
   try {
     const { results } = await db.prepare(`
       SELECT COUNT(*) as count
-      FROM conversations c
-      WHERE (c.participant_one LIKE 'usr_seed_%' OR c.participant_two LIKE 'usr_seed_%')
-        AND (SELECT COUNT(*) FROM chat_messages WHERE conversation_id = c.id AND sender_id LIKE 'usr_seed_%') < 3
+      FROM (
+        SELECT * FROM conversations WHERE participant_one >= 'usr_seed_' AND participant_one <= 'usr_seed_\uffff'
+        UNION ALL
+        SELECT * FROM conversations WHERE participant_two >= 'usr_seed_' AND participant_two <= 'usr_seed_\uffff' AND NOT (participant_one >= 'usr_seed_' AND participant_one <= 'usr_seed_\uffff')
+      ) c
+      WHERE (SELECT COUNT(*) FROM chat_messages WHERE conversation_id = c.id AND sender_id LIKE 'usr_seed_%') < 3
         AND (
           (SELECT sender_id FROM chat_messages WHERE conversation_id = c.id AND sender_id != 'system' ORDER BY created_at DESC LIMIT 1) NOT LIKE 'usr_seed_%'
           OR (SELECT sender_id FROM chat_messages WHERE conversation_id = c.id AND sender_id != 'system' ORDER BY created_at DESC LIMIT 1) IS NULL
@@ -590,9 +593,12 @@ export async function processCatchupReplies(
         (SELECT sender_id FROM chat_messages WHERE conversation_id = c.id AND sender_id != 'system' ORDER BY created_at DESC LIMIT 1) as last_human_sender,
         (SELECT text FROM chat_messages WHERE conversation_id = c.id AND sender_id != 'system' ORDER BY created_at DESC LIMIT 1) as last_human_text,
         (SELECT COUNT(*) FROM chat_messages WHERE conversation_id = c.id AND sender_id LIKE 'usr_seed_%') as seed_replies
-      FROM conversations c
-      WHERE (c.participant_one LIKE 'usr_seed_%' OR c.participant_two LIKE 'usr_seed_%')
-        AND (SELECT COUNT(*) FROM chat_messages WHERE conversation_id = c.id AND sender_id LIKE 'usr_seed_%') < 3
+      FROM (
+        SELECT * FROM conversations WHERE participant_one >= 'usr_seed_' AND participant_one <= 'usr_seed_\uffff'
+        UNION ALL
+        SELECT * FROM conversations WHERE participant_two >= 'usr_seed_' AND participant_two <= 'usr_seed_\uffff' AND NOT (participant_one >= 'usr_seed_' AND participant_one <= 'usr_seed_\uffff')
+      ) c
+      WHERE (SELECT COUNT(*) FROM chat_messages WHERE conversation_id = c.id AND sender_id LIKE 'usr_seed_%') < 3
         AND (
           (SELECT sender_id FROM chat_messages WHERE conversation_id = c.id AND sender_id != 'system' ORDER BY created_at DESC LIMIT 1) NOT LIKE 'usr_seed_%'
           OR (SELECT sender_id FROM chat_messages WHERE conversation_id = c.id AND sender_id != 'system' ORDER BY created_at DESC LIMIT 1) IS NULL

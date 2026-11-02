@@ -395,14 +395,14 @@ export const App: React.FC = () => {
       // Pause background D1 queries when app is minimized or tab is in background
       if (typeof document !== 'undefined' && document.hidden) return;
       syncLiveChats();
-    }, 20000);
+    }, 45000);
 
     // Real-time Presence Heartbeat
     dbService.sendHeartbeat(currentUser.id);
     const heartbeatInterval = setInterval(() => {
       if (typeof document !== 'undefined' && document.hidden) return;
       dbService.sendHeartbeat(currentUser.id);
-    }, 60000);
+    }, 90000);
 
     const handleConcurrentSession = (e: any) => {
       const msg = e.detail?.message || 'This account was opened on another device. Only 1 active device is permitted at a time.';

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import React from 'react';
 import { MyProfileScreen } from '../../src/screens/MyProfileScreen';
 import type { UserProfile } from '../../src/types';
@@ -185,6 +185,56 @@ describe('UI & Button Interactions: My Profile Screen', () => {
 
     expect(screen.getByAltText(/Hamza Farooq photo 2/i)).toBeDefined();
     expect(screen.getByText('2 / 3')).toBeDefined();
+  });
+
+  it('9. "Add Photo" button triggers hidden file input, NOT the Edit Profile modal', async () => {
+    const multiPhotoUser: UserProfile = {
+      ...mockUser,
+      photos: [
+        'https://example.com/hamza_photo_1.jpg',
+        'https://example.com/hamza_photo_2.jpg',
+      ]
+    };
+
+    render(<MyProfileScreen user={multiPhotoUser} />);
+
+    // The hidden file input should be present in the DOM
+    const fileInput = document.querySelector('input[type="file"][accept="image/*"]') as HTMLInputElement;
+    expect(fileInput).toBeDefined();
+    expect(fileInput).not.toBeNull();
+
+    // "Add Photo" button must exist
+    const addPhotoBtn = screen.getByRole('button', { name: /Add more photos/i });
+    expect(addPhotoBtn).toBeDefined();
+
+    // Clicking "Add Photo" should NOT open the Edit Profile modal
+    const clickSpy = vi.spyOn(fileInput, 'click').mockImplementation(() => {});
+    fireEvent.click(addPhotoBtn);
+
+    // Edit Profile modal must NOT appear — file picker is triggered instead
+    expect(screen.queryByText(/Edit Matrimonial Biodata/i)).toBeNull();
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('10. "Upload Photos" button (no-photo state) triggers file picker, NOT Edit Profile modal', () => {
+    const noPhotoUser: UserProfile = { ...mockUser, photos: [] };
+    render(<MyProfileScreen user={noPhotoUser} />);
+
+    // No-photo empty state should show
+    expect(screen.getByText(/No profile photo uploaded/i)).toBeDefined();
+
+    // The hidden file input must exist
+    const fileInput = document.querySelector('input[type="file"][accept="image/*"]') as HTMLInputElement;
+    expect(fileInput).toBeDefined();
+    expect(fileInput).not.toBeNull();
+
+    const clickSpy = vi.spyOn(fileInput, 'click').mockImplementation(() => {});
+    const uploadBtn = screen.getByRole('button', { name: /Upload Photos/i });
+    fireEvent.click(uploadBtn);
+
+    // Must NOT open Edit Profile modal
+    expect(screen.queryByText(/Edit Matrimonial Biodata/i)).toBeNull();
+    expect(clickSpy).toHaveBeenCalledTimes(1);
   });
 });
 

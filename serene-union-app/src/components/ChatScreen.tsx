@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   ArrowLeft, CheckCheck, Send, Heart, MessageCircle, FileText, Ban, 
   MoreVertical, Eye, EyeOff, ShieldCheck, Paperclip, Mic, Play, Pause, 
@@ -196,6 +196,36 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
   const [isBlocking, setIsBlocking] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [selectedProfile, setSelectedProfile] = useState<UserProfile | null>(null);
+
+  // Seamless Profile Opener with Full Photos Hydration
+  const handleOpenProfile = useCallback((partnerUser: UserProfile | undefined | null) => {
+    if (!partnerUser || partnerUser.id === 'usr_qurb_official') return;
+    setSelectedProfile(partnerUser);
+
+    if (partnerUser.id && partnerUser.id !== 'usr_guest') {
+      const currentPhotos = (partnerUser.photos || []).filter(
+        (p: string) => typeof p === 'string' && p.trim().length > 0 && !p.includes('photo-1534528741775-53994a69daeb')
+      );
+      if (currentPhotos.length <= 1) {
+        dbService.fetchUserProfile(partnerUser.id).then(full => {
+          if (full && Array.isArray(full.photos)) {
+            const livePhotos = full.photos.filter(
+              (p: string) => typeof p === 'string' && p.trim().length > 0 && !p.includes('photo-1534528741775-53994a69daeb')
+            );
+            if (livePhotos.length > currentPhotos.length) {
+              setSelectedProfile(prev => (prev?.id === partnerUser.id ? { ...prev, ...full, photos: livePhotos } : prev));
+              setConversations(prev => prev.map(c => {
+                if (c.otherUser?.id === partnerUser.id) {
+                  return { ...c, otherUser: { ...c.otherUser, ...full, photos: livePhotos } };
+                }
+                return c;
+              }));
+            }
+          }
+        }).catch(() => {});
+      }
+    }
+  }, []);
   const [roomMessages, setRoomMessages] = useState<ChatMessage[]>(() => {
     if (!initialConvId) return [];
     return dbService.getCachedRoomMessages(initialConvId);
@@ -426,7 +456,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
       } catch {}
     };
 
-    const interval = setInterval(pollConversations, 8000);
+    const interval = setInterval(pollConversations, 15000);
     return () => {
       isMounted = false;
       clearInterval(interval);
@@ -1872,7 +1902,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                         if (isConvOfficial) {
                           setActiveConvId(conv.id);
                         } else if (partner && partner.id !== 'usr_qurb_official') {
-                          setSelectedProfile(partner);
+                          handleOpenProfile(partner);
                         } else {
                           setActiveConvId(conv.id);
                         }
@@ -1930,7 +1960,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                             if (isConvOfficial) {
                               setActiveConvId(conv.id);
                             } else if (partner && partner.id !== 'usr_qurb_official') {
-                              setSelectedProfile(partner);
+                              handleOpenProfile(partner);
                             } else {
                               setActiveConvId(conv.id);
                             }
@@ -2052,7 +2082,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
           {/* Clickable Avatar to View Full Biodata */}
           <div 
             onClick={() => {
-              if (!isOfficialChannel && activeConv?.otherUser) setSelectedProfile(activeConv.otherUser);
+              if (!isOfficialChannel && activeConv?.otherUser) handleOpenProfile(activeConv.otherUser);
             }}
             className={`relative shrink-0 ${!isOfficialChannel ? 'cursor-pointer group/avatar' : ''}`}
             title={isOfficialChannel ? "Qurb Official Channel" : "Click to view full biodata"}
@@ -2114,7 +2144,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
           {/* Clickable Name & Biodata Summary */}
           <div 
             onClick={() => {
-              if (!isOfficialChannel && activeConv?.otherUser) setSelectedProfile(activeConv.otherUser);
+              if (!isOfficialChannel && activeConv?.otherUser) handleOpenProfile(activeConv.otherUser);
             }}
             className={`flex flex-col min-w-0 flex-1 ${!isOfficialChannel ? 'cursor-pointer group' : ''}`}
             title={isOfficialChannel ? "Qurb Official Channel" : "Click to view full biodata"}
@@ -2196,7 +2226,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
               <button
                 type="button"
                 onClick={() => {
-                  if (activeConv?.otherUser) setSelectedProfile(activeConv.otherUser);
+                  if (activeConv?.otherUser) handleOpenProfile(activeConv.otherUser);
                 }}
                 className="w-8 h-8 rounded-full bg-pastel-rose dark:bg-rose-950/40 hover:bg-pastel-rose/80 dark:hover:bg-rose-900/50 text-primary dark:text-rose-400 border border-pastel-rose-border dark:border-rose-900/40 flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-2xs"
                 title="View Full Biodata"
@@ -2226,7 +2256,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                 type="button"
                 onClick={() => {
                   setShowMoreMenu(false);
-                  if (activeConv?.otherUser) setSelectedProfile(activeConv.otherUser);
+                  if (activeConv?.otherUser) handleOpenProfile(activeConv.otherUser);
                 }}
                 className="w-full px-3.5 py-2.5 text-xs text-on-surface dark:text-slate-200 hover:text-primary dark:hover:text-rose-400 hover:bg-surface-variant dark:hover:bg-[#232330] flex items-center gap-2.5 transition-colors font-medium text-left"
               >

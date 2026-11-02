@@ -503,6 +503,9 @@ export const AnnouncementsTab: React.FC<AnnouncementsTabProps> = ({
                         src={ann.imageUrl}
                         alt={ann.title}
                         className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
                       />
                     </div>
                   ) : (

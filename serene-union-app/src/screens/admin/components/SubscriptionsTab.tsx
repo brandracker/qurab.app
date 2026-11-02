@@ -3,7 +3,6 @@ import {
   Crown, 
   ShoppingBag, 
   Calendar, 
-  Clock, 
   Search, 
   RefreshCw, 
   CheckCircle2, 
@@ -11,7 +10,15 @@ import {
   Check, 
   Eye, 
   Sliders, 
-  TrendingUp
+  TrendingUp,
+  Send,
+  Layers,
+  Users,
+  Coins,
+  PieChart,
+  MapPin,
+  Filter,
+  ArrowRight
 } from 'lucide-react';
 import type { CandidateUser } from '../types';
 import { API_BASE } from '../../../services/dbService';
@@ -57,6 +64,172 @@ interface RawPurchaseRow {
   user_phone?: string;
 }
 
+export interface ProductStatRow {
+  product_id: string;
+  order_count: number;
+  buyer_count: number;
+  revenue_cents: number;
+  last_purchased_at?: string;
+}
+
+export interface WalletInsights {
+  totalSalamsInWallets: number;
+  usersWithSalams: number;
+  activeSpotlights: number;
+  totalAdsWatched: number;
+  totalLikesUsedToday: number;
+}
+
+export interface Demographics {
+  topCities: { city: string; order_count: number; revenue_cents: number }[];
+  byGender: { gender: string; order_count: number; revenue_cents: number }[];
+}
+
+export interface ProductMeta {
+  name: string;
+  badge: string;
+  category: 'subscription' | 'salams' | 'spotlight' | 'other';
+  priceLabel: string;
+  priceUsd: number;
+  pkrEst: number;
+  description: string;
+  features: string[];
+}
+
+const KNOWN_PRODUCTS: Record<string, ProductMeta> = {
+  'qurb_barakah_monthly': {
+    name: 'Qurb Barakah VIP Club',
+    badge: 'Monthly Subscription',
+    category: 'subscription',
+    priceLabel: '$2.99 / mo',
+    priceUsd: 2.99,
+    pkrEst: 830,
+    description: 'Premier matrimonial tier with 7-day free trial, unlimited likes, rewinds, and secret admirers reveal.',
+    features: ['Unlimited Likes & Rewind', '20 Direct Salams / mo', 'See Who Liked You', '0 In-App Ads', 'City Feed Top Priority']
+  },
+  'serene_barakah_monthly': {
+    name: 'Serene Barakah VIP Club (Legacy)',
+    badge: 'Monthly Subscription',
+    category: 'subscription',
+    priceLabel: '$2.99 / mo',
+    priceUsd: 2.99,
+    pkrEst: 830,
+    description: 'Legacy VIP Club subscription SKU.',
+    features: ['VIP Matchmaking Access', 'Direct Salams', 'Ad-Free Experience']
+  },
+  'qurb_direct_salam_20': {
+    name: '20 Direct Salam Passes',
+    badge: 'Instant Connect Pack',
+    category: 'salams',
+    priceLabel: '$1.99',
+    priceUsd: 1.99,
+    pkrEst: 550,
+    description: 'Send direct intro messages to candidate profiles immediately without waiting for a mutual match.',
+    features: ['20 Direct Introductions', 'Bypasses Mutual Match Gate', 'Permanent until used', 'Direct In-Chat Message']
+  },
+  'serene_direct_salam_20': {
+    name: '20 Direct Salam Passes (Legacy)',
+    badge: 'Instant Connect Pack',
+    category: 'salams',
+    priceLabel: '$1.99',
+    priceUsd: 1.99,
+    pkrEst: 550,
+    description: 'Legacy 20 Direct Salams pack SKU.',
+    features: ['20 Direct Introductions', 'Legacy Pack']
+  },
+  'qurb_direct_salam_5': {
+    name: '5 Direct Salam Passes',
+    badge: 'Starter Pack',
+    category: 'salams',
+    priceLabel: '$0.99',
+    priceUsd: 0.99,
+    pkrEst: 275,
+    description: 'Affordable starter pack to reach out to high-compatibility profiles instantly.',
+    features: ['5 Direct Introductions', 'Instant Reachout', 'No Match Required']
+  },
+  'serene_direct_salam_5': {
+    name: '5 Direct Salam Passes (Legacy)',
+    badge: 'Starter Pack',
+    category: 'salams',
+    priceLabel: '$0.99',
+    priceUsd: 0.99,
+    pkrEst: 275,
+    description: 'Legacy 5 Direct Salams pack SKU.',
+    features: ['5 Direct Introductions']
+  },
+  'qurb_spotlight_boost_24h': {
+    name: '24-Hour City Spotlight Boost',
+    badge: '10x City Visibility',
+    category: 'spotlight',
+    priceLabel: '$0.99',
+    priceUsd: 0.99,
+    pkrEst: 275,
+    description: 'Pins profile at the #1 top spot in the user’s local city Discover feed for a full 24 hours.',
+    features: ['#1 Pinned in City Feed', '10x Profile Views', 'Glow Ring & Spotlight Badge', 'Lasts 24 Hours']
+  },
+  'serene_spotlight_boost_24h': {
+    name: '24-Hour City Spotlight Boost (Legacy)',
+    badge: '10x City Visibility',
+    category: 'spotlight',
+    priceLabel: '$0.99',
+    priceUsd: 0.99,
+    pkrEst: 275,
+    description: 'Legacy 24h Spotlight Boost SKU.',
+    features: ['City Feed Boost', '24 Hours Duration']
+  }
+};
+
+const getKnownProductMeta = (productId: string): ProductMeta => {
+  if (KNOWN_PRODUCTS[productId]) return KNOWN_PRODUCTS[productId];
+  
+  if (productId.includes('salam')) {
+    return {
+      name: `${productId.replace(/_/g, ' ')}`,
+      badge: 'Direct Salams',
+      category: 'salams',
+      priceLabel: '$1.99',
+      priceUsd: 1.99,
+      pkrEst: 550,
+      description: 'Direct message introductions pack.',
+      features: ['Direct Reachout']
+    };
+  }
+  if (productId.includes('spotlight') || productId.includes('boost')) {
+    return {
+      name: `${productId.replace(/_/g, ' ')}`,
+      badge: 'Profile Boost',
+      category: 'spotlight',
+      priceLabel: '$0.99',
+      priceUsd: 0.99,
+      pkrEst: 275,
+      description: 'City Discover feed priority spotlight.',
+      features: ['10x Views', 'City Spotlight']
+    };
+  }
+  if (productId.includes('vip') || productId.includes('barakah') || productId.includes('monthly')) {
+    return {
+      name: `${productId.replace(/_/g, ' ')}`,
+      badge: 'Subscription',
+      category: 'subscription',
+      priceLabel: '$2.99 / mo',
+      priceUsd: 2.99,
+      pkrEst: 830,
+      description: 'VIP Matrimonial membership.',
+      features: ['VIP Access']
+    };
+  }
+  return {
+    name: productId,
+    badge: 'In-App Product',
+    category: 'other',
+    priceLabel: 'In-App',
+    priceUsd: 1.0,
+    pkrEst: 280,
+    description: 'In-app digital product purchase.',
+    features: ['Digital Product']
+  };
+};
+
 export const SubscriptionsTab: React.FC<SubscriptionsTabProps> = ({
   adminToken,
   onManageSubscription,
@@ -65,6 +238,18 @@ export const SubscriptionsTab: React.FC<SubscriptionsTabProps> = ({
 }) => {
   const [subscribers, setSubscribers] = useState<SubscriberRow[]>([]);
   const [purchases, setPurchases] = useState<RawPurchaseRow[]>([]);
+  const [productStats, setProductStats] = useState<ProductStatRow[]>([]);
+  const [walletInsights, setWalletInsights] = useState<WalletInsights>({
+    totalSalamsInWallets: 0,
+    usersWithSalams: 0,
+    activeSpotlights: 0,
+    totalAdsWatched: 0,
+    totalLikesUsedToday: 0
+  });
+  const [demographics, setDemographics] = useState<Demographics>({
+    topCities: [],
+    byGender: []
+  });
   const [stats, setStats] = useState<{ totalVip: number; totalOrders: number; totalRevenueCents: number }>({
     totalVip: 0,
     totalOrders: 0,
@@ -73,7 +258,9 @@ export const SubscriptionsTab: React.FC<SubscriptionsTabProps> = ({
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'trial' | 'expired'>('all');
-  const [activeSubTab, setActiveSubTab] = useState<'subscribers' | 'ledger'>('subscribers');
+  const [productCategoryFilter, setProductCategoryFilter] = useState<'all' | 'subscription' | 'salams' | 'spotlight'>('all');
+  const [ledgerProductFilter, setLedgerProductFilter] = useState<string>('all');
+  const [activeSubTab, setActiveSubTab] = useState<'subscribers' | 'products' | 'ledger'>('subscribers');
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
@@ -89,9 +276,10 @@ export const SubscriptionsTab: React.FC<SubscriptionsTabProps> = ({
       if (data.success) {
         setSubscribers(data.subscribers || []);
         setPurchases(data.purchases || []);
-        if (data.stats) {
-          setStats(data.stats);
-        }
+        if (data.stats) setStats(data.stats);
+        if (data.productBreakdown) setProductStats(data.productBreakdown);
+        if (data.walletInsights) setWalletInsights(data.walletInsights);
+        if (data.demographics) setDemographics(data.demographics);
       } else {
         if (onShowToast) onShowToast(data.error || 'Failed to fetch subscription data');
       }
@@ -110,7 +298,7 @@ export const SubscriptionsTab: React.FC<SubscriptionsTabProps> = ({
   const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
     setCopiedToken(id);
-    if (onShowToast) onShowToast('Order/Token reference copied to clipboard');
+    if (onShowToast) onShowToast('Copied to clipboard');
     setTimeout(() => setCopiedToken(null), 2500);
   };
 
@@ -181,6 +369,46 @@ export const SubscriptionsTab: React.FC<SubscriptionsTabProps> = ({
     };
   };
 
+  // Aggregated Product Catalog & Category Insights
+  const productInsights = useMemo(() => {
+    const allKnownIds = Object.keys(KNOWN_PRODUCTS);
+    const purchasedIds = productStats.map(p => p.product_id);
+    const combinedIds = Array.from(new Set([...allKnownIds, ...purchasedIds]));
+
+    const catalogList = combinedIds.map(id => {
+      const meta = getKnownProductMeta(id);
+      const stat = productStats.find(p => p.product_id === id);
+      return {
+        id,
+        ...meta,
+        orderCount: stat?.order_count || 0,
+        buyerCount: stat?.buyer_count || 0,
+        revenueCents: stat?.revenue_cents || 0,
+        lastPurchasedAt: stat?.last_purchased_at
+      };
+    });
+
+    const subRevenue = catalogList.filter(p => p.category === 'subscription').reduce((sum, p) => sum + p.revenueCents, 0);
+    const subOrders = catalogList.filter(p => p.category === 'subscription').reduce((sum, p) => sum + p.orderCount, 0);
+
+    const salamsRevenue = catalogList.filter(p => p.category === 'salams').reduce((sum, p) => sum + p.revenueCents, 0);
+    const salamsOrders = catalogList.filter(p => p.category === 'salams').reduce((sum, p) => sum + p.orderCount, 0);
+
+    const spotlightRevenue = catalogList.filter(p => p.category === 'spotlight').reduce((sum, p) => sum + p.revenueCents, 0);
+    const spotlightOrders = catalogList.filter(p => p.category === 'spotlight').reduce((sum, p) => sum + p.orderCount, 0);
+
+    const totalRev = Math.max(1, subRevenue + salamsRevenue + spotlightRevenue);
+
+    return {
+      catalogList,
+      categories: {
+        subscriptions: { revenue: subRevenue, orders: subOrders, sharePct: Math.round((subRevenue / totalRev) * 100) },
+        salams: { revenue: salamsRevenue, orders: salamsOrders, sharePct: Math.round((salamsRevenue / totalRev) * 100) },
+        spotlights: { revenue: spotlightRevenue, orders: spotlightOrders, sharePct: Math.round((spotlightRevenue / totalRev) * 100) }
+      }
+    };
+  }, [productStats]);
+
   // Filtered subscribers list
   const filteredSubscribers = useMemo(() => {
     return subscribers.filter((sub) => {
@@ -209,19 +437,49 @@ export const SubscriptionsTab: React.FC<SubscriptionsTabProps> = ({
     });
   }, [subscribers, searchTerm, statusFilter]);
 
-  // Filtered purchases list
+  // Filtered product catalog list for "Products" tab
+  const filteredProducts = useMemo(() => {
+    return productInsights.catalogList.filter((prod) => {
+      const q = searchTerm.toLowerCase().trim();
+      const matchesSearch = !q || 
+        prod.name.toLowerCase().includes(q) ||
+        prod.id.toLowerCase().includes(q) ||
+        prod.description.toLowerCase().includes(q) ||
+        prod.badge.toLowerCase().includes(q);
+
+      if (!matchesSearch) return false;
+
+      if (productCategoryFilter !== 'all' && prod.category !== productCategoryFilter) {
+        return false;
+      }
+      return true;
+    });
+  }, [productInsights.catalogList, searchTerm, productCategoryFilter]);
+
+  // Filtered purchases list for "Ledger" tab
   const filteredPurchases = useMemo(() => {
     return purchases.filter((p) => {
       const q = searchTerm.toLowerCase().trim();
-      return !q ||
+      const matchesSearch = !q ||
         p.id?.toLowerCase().includes(q) ||
         p.product_id?.toLowerCase().includes(q) ||
         p.purchase_token?.toLowerCase().includes(q) ||
         p.user_name?.toLowerCase().includes(q) ||
         p.user_email?.toLowerCase().includes(q) ||
         p.user_phone?.toLowerCase().includes(q);
+
+      if (!matchesSearch) return false;
+
+      if (ledgerProductFilter !== 'all') {
+        if (ledgerProductFilter === 'subscription' && !p.product_id?.includes('monthly') && !p.product_id?.includes('vip')) return false;
+        if (ledgerProductFilter === 'salams' && !p.product_id?.includes('salam')) return false;
+        if (ledgerProductFilter === 'spotlight' && !p.product_id?.includes('spotlight') && !p.product_id?.includes('boost')) return false;
+        if (ledgerProductFilter.startsWith('exact:') && p.product_id !== ledgerProductFilter.replace('exact:', '')) return false;
+      }
+
+      return true;
     });
-  }, [purchases, searchTerm]);
+  }, [purchases, searchTerm, ledgerProductFilter]);
 
   // Active trial count
   const activeTrialCount = useMemo(() => {
@@ -250,6 +508,12 @@ export const SubscriptionsTab: React.FC<SubscriptionsTabProps> = ({
     onManageSubscription(candidate);
   };
 
+  const handleFilterByProductInLedger = (productId: string) => {
+    setLedgerProductFilter(`exact:${productId}`);
+    setActiveSubTab('ledger');
+    if (onShowToast) onShowToast(`Filtered ledger to ${productId}`);
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Title Header */}
@@ -261,10 +525,10 @@ export const SubscriptionsTab: React.FC<SubscriptionsTabProps> = ({
             </div>
             <div>
               <h2 className="text-xl md:text-2xl font-bold text-white font-serif">
-                Subscriptions & In-App Purchases Hub
+                Products, Subscriptions & In-App Purchases Hub
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                Google Play Billing records, 7-day trials, expiry dates, and real-time subscriber control
+                Multi-product monetization metrics, Direct Salams, City Spotlights, VIP memberships & Google Play Ledger
               </p>
             </div>
           </div>
@@ -282,63 +546,83 @@ export const SubscriptionsTab: React.FC<SubscriptionsTabProps> = ({
         </div>
       </div>
 
-      {/* 4 Stat Overview Cards */}
+      {/* 4 Multi-Product KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total VIP Subscribers */}
+        {/* 1. Barakah VIP Subscriptions */}
         <div className="bg-[#0F172A] border border-white/10 rounded-3xl p-5 shadow-xl relative overflow-hidden group">
           <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">VIP Subscribers</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">VIP Subscriptions</span>
             <div className="p-2 rounded-xl bg-amber-500/15 text-amber-400 border border-amber-500/25">
               <Crown className="w-4 h-4" />
             </div>
           </div>
           <div className="text-3xl font-extrabold text-white font-serif">{stats.totalVip}</div>
-          <div className="text-[11px] text-amber-400/90 mt-2 flex items-center space-x-1.5 font-medium">
-            <span>★ Barakah VIP Accounts</span>
+          <div className="mt-2 flex items-center justify-between text-[11px]">
+            <span className="text-sky-400 font-medium">{activeTrialCount} Active Trials</span>
+            <span className="text-amber-400 font-semibold">{productInsights.categories.subscriptions.sharePct}% Sales Share</span>
+          </div>
+          <div className="text-[10px] text-slate-400 mt-1">
+            PKR {((productInsights.categories.subscriptions.revenue || 0) / 100).toLocaleString()} Volume
           </div>
         </div>
 
-        {/* Active 7-Day Trials */}
+        {/* 2. Direct Salam Passes (Consumable) */}
         <div className="bg-[#0F172A] border border-white/10 rounded-3xl p-5 shadow-xl relative overflow-hidden group">
           <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">7-Day Free Trials</span>
-            <div className="p-2 rounded-xl bg-sky-500/15 text-sky-400 border border-sky-500/25">
-              <Clock className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-3xl font-extrabold text-white font-serif">{activeTrialCount}</div>
-          <div className="text-[11px] text-sky-400/90 mt-2 flex items-center space-x-1.5 font-medium">
-            <span>● Currently in introductory trial</span>
-          </div>
-        </div>
-
-        {/* Google Play Store Orders */}
-        <div className="bg-[#0F172A] border border-white/10 rounded-3xl p-5 shadow-xl relative overflow-hidden group">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">Google Play Orders</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">Direct Salam Passes</span>
             <div className="p-2 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
-              <ShoppingBag className="w-4 h-4" />
+              <Send className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-3xl font-extrabold text-white font-serif">{stats.totalOrders}</div>
-          <div className="text-[11px] text-emerald-400/90 mt-2 flex items-center space-x-1.5 font-medium">
-            <span>✓ Verified in-app transactions</span>
+          <div className="text-3xl font-extrabold text-white font-serif">
+            {walletInsights.totalSalamsInWallets.toLocaleString()}
+          </div>
+          <div className="mt-2 flex items-center justify-between text-[11px]">
+            <span className="text-emerald-400 font-medium">{walletInsights.usersWithSalams} Wallets Funded</span>
+            <span className="text-emerald-300 font-semibold">{productInsights.categories.salams.orders} Packs Sold</span>
+          </div>
+          <div className="text-[10px] text-slate-400 mt-1">
+            {walletInsights.totalAdsWatched} Free Salams via Rewarded Ads
           </div>
         </div>
 
-        {/* Gross Estimated Revenue */}
+        {/* 3. 24h City Spotlight Boosts (Consumable) */}
+        <div className="bg-[#0F172A] border border-white/10 rounded-3xl p-5 shadow-xl relative overflow-hidden group">
+          <div className="flex items-center justify-between text-slate-400 mb-2">
+            <span className="text-xs font-semibold uppercase tracking-wider">Spotlight City Boosts</span>
+            <div className="p-2 rounded-xl bg-purple-500/15 text-purple-400 border border-purple-500/25">
+              <TrendingUp className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-3xl font-extrabold text-white font-serif">
+            {walletInsights.activeSpotlights}
+          </div>
+          <div className="mt-2 flex items-center justify-between text-[11px]">
+            <span className="text-purple-300 font-medium">Active #1 City Pins</span>
+            <span className="text-purple-400 font-semibold">{productInsights.categories.spotlights.orders} Total Boosts</span>
+          </div>
+          <div className="text-[10px] text-slate-400 mt-1">
+            PKR {((productInsights.categories.spotlights.revenue || 0) / 100).toLocaleString()} Boost Revenue
+          </div>
+        </div>
+
+        {/* 4. Total In-App Gross Revenue & Orders */}
         <div className="bg-[#0F172A] border border-white/10 rounded-3xl p-5 shadow-xl relative overflow-hidden group">
           <div className="flex items-center justify-between text-slate-400 mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider">Total Store Revenue</span>
             <div className="p-2 rounded-xl bg-indigo-500/15 text-indigo-400 border border-indigo-500/25">
-              <TrendingUp className="w-4 h-4" />
+              <ShoppingBag className="w-4 h-4" />
             </div>
           </div>
           <div className="text-3xl font-extrabold text-white font-serif">
             PKR {((stats.totalRevenueCents || 0) / 100).toLocaleString()}
           </div>
-          <div className="text-[11px] text-indigo-400/90 mt-2 flex items-center space-x-1.5 font-medium">
-            <span>Gross In-App Purchase Volume</span>
+          <div className="mt-2 flex items-center justify-between text-[11px]">
+            <span className="text-indigo-300 font-medium">${((stats.totalRevenueCents || 0) / 100 / 278).toFixed(1)} USD</span>
+            <span className="text-emerald-400 font-semibold">{stats.totalOrders} Orders</span>
+          </div>
+          <div className="text-[10px] text-slate-400 mt-1">
+            Across Subscriptions & Consumables
           </div>
         </div>
       </div>
@@ -346,7 +630,8 @@ export const SubscriptionsTab: React.FC<SubscriptionsTabProps> = ({
       {/* Sub-tab Pill Switcher & Filters */}
       <div className="bg-[#0F172A] border border-white/10 rounded-3xl p-4 shadow-xl space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center space-x-2 bg-slate-900/60 p-1 rounded-2xl border border-white/5 w-fit">
+          <div className="flex items-center space-x-2 bg-slate-900/60 p-1 rounded-2xl border border-white/5 w-fit flex-wrap">
+            {/* Tab 1: Subscribers */}
             <button
               onClick={() => setActiveSubTab('subscribers')}
               className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center space-x-2 ${
@@ -362,6 +647,23 @@ export const SubscriptionsTab: React.FC<SubscriptionsTabProps> = ({
               </span>
             </button>
 
+            {/* Tab 2: Products & Consumables Catalog */}
+            <button
+              onClick={() => setActiveSubTab('products')}
+              className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center space-x-2 ${
+                activeSubTab === 'products'
+                  ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md shadow-purple-500/20'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>All Products & Insights</span>
+              <span className="ml-1 text-[10px] px-2 py-0.5 rounded-full bg-black/30 font-mono">
+                {productInsights.catalogList.length}
+              </span>
+            </button>
+
+            {/* Tab 3: Purchase Ledger */}
             <button
               onClick={() => setActiveSubTab('ledger')}
               className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center space-x-2 ${
@@ -385,13 +687,19 @@ export const SubscriptionsTab: React.FC<SubscriptionsTabProps> = ({
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by name, email, phone, city, or order ID..."
+              placeholder={
+                activeSubTab === 'subscribers' 
+                  ? "Search by name, email, phone, city, or order ID..."
+                  : activeSubTab === 'products'
+                    ? "Search products by name, SKU, price, or features..."
+                    : "Search transactions by user, token, order ID, or product..."
+              }
               className="w-full bg-slate-900 border border-white/10 rounded-2xl pl-10 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/50"
             />
           </div>
         </div>
 
-        {/* Filter chips (only for subscribers tab) */}
+        {/* Filter chips (Subscribers Tab) */}
         {activeSubTab === 'subscribers' && (
           <div className="flex items-center space-x-2 pt-2 border-t border-white/5 overflow-x-auto">
             <span className="text-[11px] text-slate-400 font-medium mr-1">Status:</span>
@@ -410,20 +718,80 @@ export const SubscriptionsTab: React.FC<SubscriptionsTabProps> = ({
             ))}
           </div>
         )}
+
+        {/* Filter chips (Products Tab) */}
+        {activeSubTab === 'products' && (
+          <div className="flex items-center space-x-2 pt-2 border-t border-white/5 overflow-x-auto">
+            <span className="text-[11px] text-slate-400 font-medium mr-1">Category:</span>
+            {[
+              { id: 'all', label: 'All Products' },
+              { id: 'subscription', label: '👑 Subscriptions' },
+              { id: 'salams', label: '💌 Direct Salam Passes' },
+              { id: 'spotlight', label: '🚀 Spotlight Boosts' }
+            ].map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setProductCategoryFilter(cat.id as any)}
+                className={`text-xs px-3 py-1 rounded-xl font-medium transition-all cursor-pointer ${
+                  productCategoryFilter === cat.id
+                    ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30 font-semibold'
+                    : 'bg-white/5 text-slate-400 hover:text-white border border-transparent'
+                }`}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Product Filter Dropdown (Ledger Tab) */}
+        {activeSubTab === 'ledger' && (
+          <div className="flex items-center space-x-2 pt-2 border-t border-white/5 overflow-x-auto">
+            <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+            <span className="text-[11px] text-slate-400 font-medium mr-1">Product Filter:</span>
+            <select
+              value={ledgerProductFilter}
+              onChange={(e) => setLedgerProductFilter(e.target.value)}
+              className="bg-slate-900 border border-white/10 rounded-xl px-3 py-1 text-xs text-white focus:outline-none focus:border-emerald-500/50"
+            >
+              <option value="all">All Products (All Transactions)</option>
+              <option value="subscription">👑 All VIP Subscriptions</option>
+              <option value="salams">💌 All Direct Salam Passes</option>
+              <option value="spotlight">🚀 All City Spotlight Boosts</option>
+              <option disabled>────────── Specific SKUs ──────────</option>
+              <option value="exact:qurb_barakah_monthly">Qurb Barakah VIP Monthly ($2.99)</option>
+              <option value="exact:qurb_direct_salam_20">20 Direct Salam Passes ($1.99)</option>
+              <option value="exact:qurb_direct_salam_5">5 Direct Salam Passes ($0.99)</option>
+              <option value="exact:qurb_spotlight_boost_24h">24-Hour City Spotlight Boost ($0.99)</option>
+              <option value="exact:serene_barakah_monthly">Serene Barakah VIP (Legacy)</option>
+            </select>
+
+            {ledgerProductFilter !== 'all' && (
+              <button
+                onClick={() => setLedgerProductFilter('all')}
+                className="text-[11px] text-rose-400 hover:text-rose-300 px-2 py-0.5 rounded-lg bg-rose-500/10 cursor-pointer"
+              >
+                Clear Filter
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Main Content Area */}
-      {activeSubTab === 'subscribers' ? (
+      {/* ─────────────────────────────────────────────────────────────
+          TAB 1: SUBSCRIBERS & MEMBERSHIPS TABLE
+      ───────────────────────────────────────────────────────────── */}
+      {activeSubTab === 'subscribers' && (
         <div className="bg-[#0F172A] border border-white/10 rounded-3xl overflow-hidden shadow-xl">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm text-slate-300">
               <thead className="bg-[#0B101E] text-[11px] uppercase tracking-wider text-slate-400 border-b border-white/10 font-medium">
                 <tr>
-                  <th className="px-6 py-4">Candidate / User</th>
-                  <th className="px-6 py-4">Account Created</th>
-                  <th className="px-6 py-4">VIP Started Date</th>
-                  <th className="px-6 py-4">Current Expiry & Status</th>
-                  <th className="px-6 py-4">Google Play IAP Details</th>
+                  <th className="px-6 py-4">User Details</th>
+                  <th className="px-6 py-4">Tier & Quotas</th>
+                  <th className="px-6 py-4">Activation Date</th>
+                  <th className="px-6 py-4">Subscription Status</th>
+                  <th className="px-6 py-4">Last IAP Transaction</th>
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
               </thead>
@@ -433,68 +801,62 @@ export const SubscriptionsTab: React.FC<SubscriptionsTabProps> = ({
                     <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
                       <div className="flex items-center justify-center space-x-2">
                         <RefreshCw className="w-4 h-4 animate-spin text-amber-400" />
-                        <span>Loading subscribers from database...</span>
+                        <span>Loading subscribers from Cloudflare D1...</span>
                       </div>
                     </td>
                   </tr>
                 ) : filteredSubscribers.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
-                      No subscribers match the current filter or search criteria.
+                      No subscribers found matching the selected filter.
                     </td>
                   </tr>
                 ) : (
                   filteredSubscribers.map((sub) => {
-                    const isVip = Boolean(sub.is_vip);
-                    const expiry = getExpiryDetails(sub.subscription_expiry, isVip);
-
+                    const expiry = getExpiryDetails(sub.subscription_expiry, sub.is_vip);
                     return (
                       <tr key={sub.id} className="hover:bg-white/[0.02] transition-colors">
-                        {/* Candidate User Info */}
+                        {/* User Details */}
                         <td className="px-6 py-4">
-                          <div className="flex items-center space-x-3.5">
-                            <div className="relative w-10 h-10 rounded-2xl bg-slate-800 flex items-center justify-center text-amber-400 font-bold border border-white/10 flex-shrink-0">
-                              {sub.full_name?.slice(0, 1) || 'U'}
-                              {isVip && (
-                                <div className="absolute -top-1 -right-1 bg-amber-500 p-0.5 rounded-full">
-                                  <Crown className="w-2.5 h-2.5 text-black" />
-                                </div>
-                              )}
+                          <div className="flex items-center space-x-3">
+                            <div className="w-9 h-9 rounded-2xl bg-amber-500/15 border border-amber-500/25 flex items-center justify-center text-amber-300 font-bold font-serif shadow-xs">
+                              {sub.full_name ? sub.full_name[0].toUpperCase() : 'U'}
                             </div>
                             <div>
-                              <div className="font-semibold text-white flex items-center space-x-1.5">
+                              <div className="font-semibold text-white text-xs flex items-center space-x-1.5">
                                 <span>{sub.full_name}</span>
-                                {isVip && (
-                                  <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-amber-500/20 text-amber-300 font-bold">
+                                {sub.is_vip ? (
+                                  <span className="px-1.5 py-0.2 bg-amber-500/20 text-amber-300 rounded text-[9px] font-bold border border-amber-500/30">
                                     VIP
                                   </span>
-                                )}
+                                ) : null}
                               </div>
-                              <div className="text-xs text-slate-400 font-mono mt-0.5">
-                                {sub.email || sub.phone}
+                              <div className="text-[11px] text-slate-400 font-mono mt-0.5">
+                                {sub.phone || sub.email}
                               </div>
-                              <div className="text-[10px] text-slate-500 flex items-center space-x-2 mt-0.5">
-                                <span className="capitalize">{sub.gender}</span>
-                                <span>•</span>
-                                <span>{sub.city || 'Global'}</span>
+                              <div className="text-[10px] text-slate-500">
+                                {sub.city || 'Pakistan'} • <span className="capitalize">{sub.gender}</span>
                               </div>
                             </div>
                           </div>
                         </td>
 
-                        {/* Account Created Date */}
-                        <td className="px-6 py-4 text-xs">
-                          <div className="flex items-center space-x-1.5 text-slate-300">
-                            <Calendar className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
-                            <span>{formatDate(sub.account_created_at)}</span>
+                        {/* Tier & Quotas */}
+                        <td className="px-6 py-4">
+                          <div className="inline-flex items-center space-x-1.5 text-xs font-semibold px-2.5 py-1 rounded-xl bg-purple-500/15 text-purple-300 border border-purple-500/25">
+                            <Crown className="w-3.5 h-3.5 text-amber-400" />
+                            <span className="capitalize">{sub.subscription_tier ? sub.subscription_tier.replace('_', ' ') : 'Barakah VIP'}</span>
                           </div>
-                          <div className="text-[10px] text-slate-500 mt-0.5">Registered Member</div>
+                          <div className="text-[11px] text-emerald-400 mt-1 font-medium flex items-center space-x-1">
+                            <Send className="w-3 h-3 text-emerald-400" />
+                            <span>{sub.direct_salams_balance ?? 20} Direct Salams</span>
+                          </div>
                         </td>
 
-                        {/* VIP Started Date */}
-                        <td className="px-6 py-4 text-xs">
-                          <div className="flex items-center space-x-1.5 text-amber-300">
-                            <Crown className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                        {/* Activation Date */}
+                        <td className="px-6 py-4 text-xs text-slate-300">
+                          <div className="flex items-center space-x-1 font-mono">
+                            <Calendar className="w-3.5 h-3.5 text-slate-500" />
                             <span>{formatDate(sub.first_purchased_at || sub.account_created_at)}</span>
                           </div>
                           <div className="text-[10px] text-slate-500 mt-0.5">Initial Activation</div>
@@ -572,8 +934,300 @@ export const SubscriptionsTab: React.FC<SubscriptionsTabProps> = ({
             </table>
           </div>
         </div>
-      ) : (
-        /* Google Play Raw Transactions Ledger */
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          TAB 2: ALL PRODUCTS CATALOG & DEEP MONETIZATION INSIGHTS
+      ───────────────────────────────────────────────────────────── */}
+      {activeSubTab === 'products' && (
+        <div className="space-y-6">
+          {/* Executive Product Insights & Economics Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* 1. Category Share Breakdown */}
+            <div className="bg-[#0F172A] border border-white/10 rounded-3xl p-5 shadow-xl space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <PieChart className="w-4 h-4 text-amber-400" />
+                  <h3 className="font-bold text-white text-xs font-serif uppercase tracking-wider">
+                    Revenue By Product Line
+                  </h3>
+                </div>
+                <span className="text-[10px] text-slate-400 font-mono">Gross Volume</span>
+              </div>
+
+              <div className="space-y-3">
+                {/* VIP Subscriptions */}
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-amber-300 font-medium flex items-center gap-1.5">
+                      <Crown className="w-3 h-3 text-amber-400" />
+                      VIP Subscriptions
+                    </span>
+                    <span className="text-white font-mono font-bold">
+                      PKR {((productInsights.categories.subscriptions.revenue || 0) / 100).toLocaleString()} ({productInsights.categories.subscriptions.sharePct}%)
+                    </span>
+                  </div>
+                  <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-amber-500 to-amber-400 rounded-full" 
+                      style={{ width: `${Math.min(100, Math.max(5, productInsights.categories.subscriptions.sharePct))}%` }} 
+                    />
+                  </div>
+                </div>
+
+                {/* Direct Salam Packs */}
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-emerald-300 font-medium flex items-center gap-1.5">
+                      <Send className="w-3 h-3 text-emerald-400" />
+                      Direct Salam Passes
+                    </span>
+                    <span className="text-white font-mono font-bold">
+                      PKR {((productInsights.categories.salams.revenue || 0) / 100).toLocaleString()} ({productInsights.categories.salams.sharePct}%)
+                    </span>
+                  </div>
+                  <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full" 
+                      style={{ width: `${Math.min(100, Math.max(5, productInsights.categories.salams.sharePct))}%` }} 
+                    />
+                  </div>
+                </div>
+
+                {/* City Spotlight Boosts */}
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-purple-300 font-medium flex items-center gap-1.5">
+                      <TrendingUp className="w-3 h-3 text-purple-400" />
+                      Spotlight City Boosts
+                    </span>
+                    <span className="text-white font-mono font-bold">
+                      PKR {((productInsights.categories.spotlights.revenue || 0) / 100).toLocaleString()} ({productInsights.categories.spotlights.sharePct}%)
+                    </span>
+                  </div>
+                  <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-purple-500 to-indigo-400 rounded-full" 
+                      style={{ width: `${Math.min(100, Math.max(5, productInsights.categories.spotlights.sharePct))}%` }} 
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Top Purchasing Cities Demographics */}
+            <div className="bg-[#0F172A] border border-white/10 rounded-3xl p-5 shadow-xl space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <MapPin className="w-4 h-4 text-sky-400" />
+                  <h3 className="font-bold text-white text-xs font-serif uppercase tracking-wider">
+                    Top Paying Cities
+                  </h3>
+                </div>
+                <span className="text-[10px] text-slate-400 font-mono">Geographic Demand</span>
+              </div>
+
+              {demographics.topCities.length === 0 ? (
+                <div className="py-6 text-center text-xs text-slate-500">
+                  Transaction city telemetry will appear here as orders process.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {demographics.topCities.slice(0, 4).map((city, cIdx) => (
+                    <div key={city.city || cIdx} className="flex items-center justify-between text-xs bg-slate-900/60 px-3 py-2 rounded-xl border border-white/5">
+                      <div className="flex items-center space-x-2">
+                        <span className="w-5 h-5 rounded-full bg-sky-500/20 text-sky-300 font-bold text-[10px] flex items-center justify-center">
+                          #{cIdx + 1}
+                        </span>
+                        <span className="font-semibold text-white">{city.city}</span>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-mono text-emerald-400 font-semibold text-[11px]">
+                          PKR {((city.revenue_cents || 0) / 100).toLocaleString()}
+                        </div>
+                        <div className="text-[10px] text-slate-500">
+                          {city.order_count} {city.order_count === 1 ? 'order' : 'orders'}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 3. Gender Buyer Breakdown & Consumables Circulation */}
+            <div className="bg-[#0F172A] border border-white/10 rounded-3xl p-5 shadow-xl space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Users className="w-4 h-4 text-indigo-400" />
+                  <h3 className="font-bold text-white text-xs font-serif uppercase tracking-wider">
+                    Buyer Gender Split
+                  </h3>
+                </div>
+                <span className="text-[10px] text-slate-400 font-mono">Demographics</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                {/* Male Buyers */}
+                <div className="bg-slate-900/60 p-3 rounded-2xl border border-sky-500/20 text-center">
+                  <div className="text-[11px] text-sky-400 font-bold uppercase tracking-wider">Brothers (Male)</div>
+                  <div className="text-xl font-extrabold text-white mt-1">
+                    {demographics.byGender.find(g => g.gender === 'male')?.order_count || 0}
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-0.5">
+                    PKR {(((demographics.byGender.find(g => g.gender === 'male')?.revenue_cents || 0)) / 100).toLocaleString()}
+                  </div>
+                </div>
+
+                {/* Female Buyers */}
+                <div className="bg-slate-900/60 p-3 rounded-2xl border border-pink-500/20 text-center">
+                  <div className="text-[11px] text-pink-400 font-bold uppercase tracking-wider">Sisters (Female)</div>
+                  <div className="text-xl font-extrabold text-white mt-1">
+                    {demographics.byGender.find(g => g.gender === 'female')?.order_count || 0}
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-0.5">
+                    PKR {(((demographics.byGender.find(g => g.gender === 'female')?.revenue_cents || 0)) / 100).toLocaleString()}
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-between text-[11px] text-slate-300">
+                <div className="flex items-center space-x-1.5">
+                  <Coins className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Wallet Salams in Circulation</span>
+                </div>
+                <span className="font-mono font-bold text-emerald-400">
+                  {walletInsights.totalSalamsInWallets.toLocaleString()} Salams
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Product Cards Catalog Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredProducts.map((prod) => {
+              const IconComponent = prod.category === 'subscription' 
+                ? Crown 
+                : prod.category === 'salams' 
+                  ? Send 
+                  : prod.category === 'spotlight' 
+                    ? TrendingUp 
+                    : ShoppingBag;
+
+              const badgeColor = prod.category === 'subscription'
+                ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                : prod.category === 'salams'
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                  : 'bg-purple-500/20 text-purple-300 border-purple-500/30';
+
+              return (
+                <div 
+                  key={prod.id} 
+                  className="bg-[#0F172A] border border-white/10 hover:border-white/20 rounded-3xl p-5 shadow-xl transition-all flex flex-col justify-between group"
+                >
+                  <div className="space-y-3">
+                    {/* Header: Icon, Name & Category Badge */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center space-x-3">
+                        <div className={`p-2.5 rounded-2xl border shadow-sm ${
+                          prod.category === 'subscription'
+                            ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                            : prod.category === 'salams'
+                              ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                              : 'bg-purple-500/15 text-purple-400 border-purple-500/30'
+                        }`}>
+                          <IconComponent className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-white text-sm font-serif">{prod.name}</h4>
+                          <span className={`inline-block text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border mt-1 ${badgeColor}`}>
+                            {prod.badge}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Pricing Tag */}
+                      <div className="text-right shrink-0">
+                        <div className="text-sm font-black text-white font-mono">{prod.priceLabel}</div>
+                        <div className="text-[10px] text-slate-400">~PKR {prod.pkrEst}</div>
+                      </div>
+                    </div>
+
+                    {/* SKU ID with 1-click copy */}
+                    <div className="flex items-center justify-between bg-slate-900/80 px-3 py-1.5 rounded-xl border border-white/5 text-[11px] font-mono text-slate-400">
+                      <span className="truncate mr-2">SKU: {prod.id}</span>
+                      <button
+                        onClick={() => copyToClipboard(prod.id, prod.id)}
+                        className="hover:text-white p-0.5 transition-colors cursor-pointer shrink-0"
+                        title="Copy SKU ID"
+                      >
+                        {copiedToken === prod.id ? (
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        ) : (
+                          <Copy className="w-3.5 h-3.5 text-slate-500" />
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Description */}
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      {prod.description}
+                    </p>
+
+                    {/* Sales Performance Metrics */}
+                    <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/5 text-center">
+                      <div className="bg-slate-900/50 p-2 rounded-xl">
+                        <div className="text-[10px] text-slate-400 uppercase font-medium">Orders</div>
+                        <div className="text-sm font-bold text-white font-mono mt-0.5">{prod.orderCount}</div>
+                      </div>
+                      <div className="bg-slate-900/50 p-2 rounded-xl">
+                        <div className="text-[10px] text-slate-400 uppercase font-medium">Buyers</div>
+                        <div className="text-sm font-bold text-white font-mono mt-0.5">{prod.buyerCount}</div>
+                      </div>
+                      <div className="bg-slate-900/50 p-2 rounded-xl">
+                        <div className="text-[10px] text-slate-400 uppercase font-medium">Volume</div>
+                        <div className="text-xs font-bold text-emerald-400 font-mono mt-0.5">
+                          PKR {((prod.revenueCents || 0) / 100).toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Features List */}
+                    <div className="space-y-1 pt-1">
+                      {prod.features.map((feat, fIdx) => (
+                        <div key={fIdx} className="flex items-center space-x-1.5 text-[11px] text-slate-400">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
+                          <span>{feat}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Card Footer Actions */}
+                  <div className="pt-4 border-t border-white/5 mt-4 flex items-center justify-between">
+                    <span className="text-[10px] text-slate-500 font-mono">
+                      Last: {formatDate(prod.lastPurchasedAt)}
+                    </span>
+
+                    <button
+                      onClick={() => handleFilterByProductInLedger(prod.id)}
+                      className="inline-flex items-center space-x-1 text-xs px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 transition-all cursor-pointer font-medium"
+                    >
+                      <span>View in Ledger</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          TAB 3: GOOGLE PLAY PURCHASE LEDGER
+      ───────────────────────────────────────────────────────────── */}
+      {activeSubTab === 'ledger' && (
         <div className="bg-[#0F172A] border border-white/10 rounded-3xl overflow-hidden shadow-xl">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm text-slate-300">
@@ -581,7 +1235,7 @@ export const SubscriptionsTab: React.FC<SubscriptionsTabProps> = ({
                 <tr>
                   <th className="px-6 py-4">Transaction / Order ID</th>
                   <th className="px-6 py-4">Customer</th>
-                  <th className="px-6 py-4">Product ID</th>
+                  <th className="px-6 py-4">Product Name & SKU</th>
                   <th className="px-6 py-4">Platform</th>
                   <th className="px-6 py-4">Amount</th>
                   <th className="px-6 py-4">Purchase Date</th>
@@ -602,11 +1256,12 @@ export const SubscriptionsTab: React.FC<SubscriptionsTabProps> = ({
                 ) : filteredPurchases.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="px-6 py-12 text-center text-slate-500">
-                      No Google Play in-app purchase records found.
+                      No Google Play in-app purchase records found for this filter.
                     </td>
                   </tr>
                 ) : (
                   filteredPurchases.map((p) => {
+                    const prodMeta = getKnownProductMeta(p.product_id);
                     return (
                       <tr key={p.id} className="hover:bg-white/[0.02] transition-colors">
                         <td className="px-6 py-4">
@@ -637,7 +1292,8 @@ export const SubscriptionsTab: React.FC<SubscriptionsTabProps> = ({
                         </td>
 
                         <td className="px-6 py-4">
-                          <span className="font-mono text-xs px-2.5 py-1 rounded-xl bg-slate-800 text-amber-300 border border-white/10 font-semibold">
+                          <div className="font-medium text-white text-xs">{prodMeta.name}</div>
+                          <span className="font-mono text-[10px] px-2 py-0.5 rounded-lg bg-slate-800 text-amber-300 border border-white/10 font-semibold inline-block mt-0.5">
                             {p.product_id}
                           </span>
                         </td>

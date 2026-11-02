@@ -751,5 +751,98 @@ describe('Admin Portal UI & Isolation Tests', () => {
       expect(deletePermanent).toBe(false);
     });
   });
+
+  it('18. AdminPortal Subscriptions & IAP displays Multi-Product Insights, Catalog and Consumable Metrics', async () => {
+    sessionStorage.setItem('qurb_admin_token', 'adm_tok_adm_root.mock.123');
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url: any) => {
+      const urlStr = String(url);
+      if (urlStr.includes('/admin/subscriptions')) {
+        return {
+          ok: true,
+          json: async () => ({
+            success: true,
+            subscribers: [
+              {
+                id: 'usr_sub_1',
+                full_name: 'Sister Fatima',
+                email: 'fatima@test.com',
+                gender: 'female',
+                city: 'Lahore',
+                is_vip: 1,
+                subscription_tier: 'barakah_vip',
+                direct_salams_balance: 20
+              }
+            ],
+            purchases: [
+              {
+                id: 'ord_123',
+                user_id: 'usr_sub_1',
+                product_id: 'qurb_direct_salam_20',
+                platform: 'google_play',
+                amount_cents: 199,
+                currency: 'USD',
+                status: 'completed',
+                created_at: new Date().toISOString()
+              }
+            ],
+            productBreakdown: [
+              { product_id: 'qurb_barakah_monthly', order_count: 10, buyer_count: 8, revenue_cents: 2990 },
+              { product_id: 'qurb_direct_salam_20', order_count: 15, buyer_count: 12, revenue_cents: 2985 },
+              { product_id: 'qurb_spotlight_boost_24h', order_count: 5, buyer_count: 5, revenue_cents: 495 }
+            ],
+            walletInsights: {
+              totalSalamsInWallets: 340,
+              usersWithSalams: 18,
+              activeSpotlights: 4,
+              totalAdsWatched: 45,
+              totalLikesUsedToday: 820
+            },
+            demographics: {
+              topCities: [
+                { city: 'Lahore', order_count: 15, revenue_cents: 3200 },
+                { city: 'Karachi', order_count: 10, revenue_cents: 2100 }
+              ],
+              byGender: [
+                { gender: 'male', order_count: 22, revenue_cents: 4500 },
+                { gender: 'female', order_count: 8, revenue_cents: 1970 }
+              ]
+            },
+            stats: {
+              totalVip: 10,
+              totalOrders: 30,
+              totalRevenueCents: 6470
+            }
+          })
+        } as any;
+      }
+      return { ok: true, json: async () => ({ success: true, stats: {}, cities: [] }) } as any;
+    });
+
+    render(<AdminPortal />);
+    const subTabBtn = screen.getByRole('button', { name: /Subscriptions & IAP/i });
+    fireEvent.click(subTabBtn);
+
+    // Header & KPIs render
+    await waitFor(() => {
+      expect(screen.getByText(/Products, Subscriptions & In-App Purchases Hub/i)).toBeDefined();
+      expect(screen.getByText(/Direct Salam Passes/i)).toBeDefined();
+      expect(screen.getByText(/Spotlight City Boosts/i)).toBeDefined();
+    });
+
+    // Switch to "All Products & Insights" catalog tab
+    const productsSubTab = screen.getByRole('button', { name: /All Products & Insights/i });
+    fireEvent.click(productsSubTab);
+
+    // Products catalog and insights render
+    await waitFor(() => {
+      expect(screen.getByText(/Revenue By Product Line/i)).toBeDefined();
+      expect(screen.getByText(/Top Paying Cities/i)).toBeDefined();
+      expect(screen.getByText(/Buyer Gender Split/i)).toBeDefined();
+      expect(screen.getAllByText(/20 Direct Salam Passes/i).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/24-Hour City Spotlight Boost/i).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/Qurb Barakah VIP Club/i).length).toBeGreaterThanOrEqual(1);
+    });
+  });
 });
 

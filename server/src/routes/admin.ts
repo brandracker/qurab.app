@@ -857,6 +857,80 @@ adminRouter.get('/subscriptions', async (c) => {
       totalRevenueCents = Number(statsRes?.total_cents || 0);
     } catch {}
 
+    // 4. Product-level breakdown (All Products: Subscriptions, Direct Salams, Spotlight Boosts)
+    let productBreakdown: any[] = [];
+    try {
+      const pbRes: any = await c.env.DB.prepare(`
+        SELECT 
+          product_id,
+          COUNT(*) as order_count,
+          COUNT(DISTINCT user_id) as buyer_count,
+          SUM(amount_cents) as revenue_cents,
+          MAX(created_at) as last_purchased_at
+        FROM in_app_purchases
+        GROUP BY product_id
+        ORDER BY revenue_cents DESC, order_count DESC
+      `).all();
+      productBreakdown = pbRes?.results || [];
+    } catch (pbErr) {
+      console.warn('Product breakdown query notice:', pbErr);
+    }
+
+    // 5. Wallet & Consumables Ecosystem Insights
+    let walletInsights: any = {
+      totalSalamsInWallets: 0,
+      usersWithSalams: 0,
+      activeSpotlights: 0,
+      totalAdsWatched: 0,
+      totalLikesUsedToday: 0
+    };
+    try {
+      const wRes: any = await c.env.DB.prepare(`
+        SELECT 
+          COALESCE(SUM(direct_salams_balance), 0) as totalSalamsInWallets,
+          COUNT(CASE WHEN direct_salams_balance > 0 THEN 1 END) as usersWithSalams,
+          COUNT(CASE WHEN is_spotlight_active = 1 AND (spotlight_expires_at IS NULL OR spotlight_expires_at > datetime('now')) THEN 1 END) as activeSpotlights,
+          COALESCE(SUM(ads_watched_for_salam), 0) as totalAdsWatched,
+          COALESCE(SUM(likes_used_today), 0) as totalLikesUsedToday
+        FROM user_wallets
+      `).first();
+      if (wRes) {
+        walletInsights = {
+          totalSalamsInWallets: Number(wRes.totalSalamsInWallets || 0),
+          usersWithSalams: Number(wRes.usersWithSalams || 0),
+          activeSpotlights: Number(wRes.activeSpotlights || 0),
+          totalAdsWatched: Number(wRes.totalAdsWatched || 0),
+          totalLikesUsedToday: Number(wRes.totalLikesUsedToday || 0)
+        };
+      }
+    } catch (wErr) {
+      console.warn('Wallet insights query notice:', wErr);
+    }
+
+    // 6. Top Buyer Demographics (Top cities & Genders)
+    let topBuyerCities: any[] = [];
+    let buyerGenders: any[] = [];
+    try {
+      const cityRes: any = await c.env.DB.prepare(`
+        SELECT u.city, COUNT(p.id) as order_count, SUM(p.amount_cents) as revenue_cents
+        FROM in_app_purchases p
+        JOIN users u ON p.user_id = u.id
+        WHERE u.city IS NOT NULL AND u.city != ''
+        GROUP BY u.city
+        ORDER BY revenue_cents DESC, order_count DESC
+        LIMIT 5
+      `).all();
+      topBuyerCities = cityRes?.results || [];
+
+      const genderRes: any = await c.env.DB.prepare(`
+        SELECT u.gender, COUNT(p.id) as order_count, SUM(p.amount_cents) as revenue_cents
+        FROM in_app_purchases p
+        JOIN users u ON p.user_id = u.id
+        GROUP BY u.gender
+      `).all();
+      buyerGenders = genderRes?.results || [];
+    } catch {}
+
     const sanitizedSubscribers = (vipUsersRes?.results || []).map((sub: any) => {
       let isVip = Boolean(sub.is_vip);
       const expiry = sub.subscription_expiry;
@@ -880,6 +954,12 @@ adminRouter.get('/subscriptions', async (c) => {
         totalVip: Number(totalVipCount),
         totalOrders,
         totalRevenueCents
+      },
+      productBreakdown,
+      walletInsights,
+      demographics: {
+        topCities: topBuyerCities,
+        byGender: buyerGenders
       }
     });
   } catch (err: any) {

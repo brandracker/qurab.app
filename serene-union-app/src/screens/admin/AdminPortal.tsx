@@ -12,6 +12,7 @@ import { PhotoModerationTab } from './components/PhotoModerationTab';
 import { SeedProfilesTab } from './components/SeedProfilesTab';
 import { ReferralsTab } from './components/ReferralsTab';
 import { AnnouncementsTab } from './components/AnnouncementsTab';
+import { DailyNotificationsTab } from './components/DailyNotificationsTab';
 import { SubscriptionsTab } from './components/SubscriptionsTab';
 import { UserInspectModal } from './components/UserInspectModal';
 import { BroadcastModal } from './components/BroadcastModal';
@@ -639,6 +640,10 @@ export const AdminPortal: React.FC = () => {
 
           {activeTab === 'announcements' && adminToken && (
             <AnnouncementsTab adminToken={adminToken} onShowToast={showToast} />
+          )}
+
+          {activeTab === 'notifications' && adminToken && (
+            <DailyNotificationsTab adminToken={adminToken} onShowToast={showToast} />
           )}
         </main>
       </div>

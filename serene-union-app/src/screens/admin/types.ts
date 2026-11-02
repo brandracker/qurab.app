@@ -1,4 +1,44 @@
-export type AdminTab = 'overview' | 'live' | 'daily' | 'subscriptions' | 'users' | 'photos' | 'seeds' | 'referrals' | 'announcements';
+export type AdminTab = 'overview' | 'live' | 'daily' | 'subscriptions' | 'users' | 'photos' | 'seeds' | 'referrals' | 'announcements' | 'notifications';
+
+export interface NotificationMetricSummary {
+  totalCampaigns: number;
+  totalSent: number;
+  totalClicks: number;
+  overallCtr: number;
+  totalRegisteredDevices: number;
+}
+
+export interface NotificationClickItem {
+  clickId: string;
+  campaignId?: string;
+  notificationId?: string;
+  userId: string;
+  targetScreen: string;
+  clickedAt: string;
+  fullName: string;
+  gender: string;
+  city: string;
+  phone: string;
+  email: string;
+  isVip: boolean;
+  photoUrl: string;
+  campaignTitle: string;
+  campaignCategory: string;
+}
+
+export interface NotificationCampaignItem {
+  id: string;
+  title: string;
+  message: string;
+  category: string;
+  targetType: string;
+  sentCount: number;
+  clickedCount: number;
+  ctr: number;
+  triggerType: 'manual' | 'cron';
+  targetScreen: string;
+  createdAt: string;
+}
 
 export interface OfficialAnnouncement {
   id: string;

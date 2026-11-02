@@ -2,7 +2,7 @@ import { dbService, API_BASE } from './dbService';
 
 export interface LiveNotification {
   id: string;
-  type: 'like' | 'match' | 'salam' | 'wali' | 'message' | 'system' | 'system_broadcast';
+  type: 'like' | 'match' | 'salam' | 'wali' | 'message' | 'system' | 'system_broadcast' | 'daily_engagement';
   title: string;
   message: string;
   time: string;

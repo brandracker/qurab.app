@@ -61,11 +61,31 @@ export const NotificationsScreen: React.FC<Props> = ({
     notificationService.markAsRead(item.id);
     setNotifications(notificationService.getNotifications());
 
+    // Telemetry: Track notification click
+    try {
+      const user = JSON.parse(localStorage.getItem('qurb_user_id') || '""') || localStorage.getItem('qurb_user_id');
+      if (user) {
+        fetch(`${notificationService ? (window as any).__QURB_API_BASE__ || '' : ''}/api/notifications/track-click`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user,
+            notificationId: item.id,
+            targetScreen: item.targetId || 'matches'
+          })
+        }).catch(() => {});
+      }
+    } catch {}
+
     if (item.type === 'like' || item.type === 'salam') {
       if (onNavigateToMatches) onNavigateToMatches();
       onBack();
     } else if (item.type === 'match' || item.type === 'message') {
       if (onNavigateToChat) onNavigateToChat(item.targetId);
+      onBack();
+    } else if (item.type === 'daily_engagement') {
+      const dest = item.targetId || 'matches';
+      window.dispatchEvent(new CustomEvent('qurb_navigate_tab', { detail: { tab: dest } }));
       onBack();
     }
   };

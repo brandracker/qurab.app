@@ -4,6 +4,7 @@ import { hashPassword } from '../utils/crypto';
 import { ensureSeedProfiles, SEED_PASSWORD } from '../utils/seedData';
 import { getPendingCatchupCount, processCatchupReplies } from '../utils/ai-chat-agent';
 import { calculateSubscriptionExpiry, syncAndValidateSubscription } from '../utils/subscription';
+import { ensureNotificationTables, triggerDailyNotifications } from '../utils/daily-notifications';
 
 export const adminRouter = new Hono<AppContext>();
 
@@ -80,6 +81,12 @@ async function ensureAdminTableAndSeed(db: any) {
         INSERT OR IGNORE INTO system_settings (key, value) VALUES ('ai_agent_enabled', '1')
       `).run();
     } catch {}
+
+    try {
+      await ensureNotificationTables(db);
+    } catch (e) {
+      console.warn('ensureNotificationTables notice:', e);
+    }
 
     try {
       const seedCheck = await db.prepare("SELECT COUNT(*) as count FROM users WHERE is_seed = 1").first();
@@ -2549,6 +2556,143 @@ adminRouter.post('/app-version', async (c) => {
       forceUpdateEnabled: Boolean(forceUpdateEnabled)
     });
   } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// 22. Daily Notification Campaigns & Push Automation Metrics
+adminRouter.post('/notifications/daily/trigger', async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const result = await triggerDailyNotifications(c.env, {
+      triggerType: 'manual',
+      category: body.category || 'smart_psych',
+      customTitle: body.customTitle,
+      customMessage: body.customMessage,
+      targetType: body.targetType || 'all'
+    });
+    return c.json(result);
+  } catch (error: any) {
+    console.error('[AdminDailyTrigger] Error:', error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+adminRouter.get('/notifications/metrics', async (c) => {
+  try {
+    await ensureNotificationTables(c.env.DB);
+
+    // 1. Summary Metrics
+    const campRow: any = await c.env.DB.prepare(`
+      SELECT 
+        COUNT(*) as totalCampaigns,
+        COALESCE(SUM(sent_count), 0) as totalSent,
+        COALESCE(SUM(clicked_count), 0) as totalClicks
+      FROM notification_campaigns
+    `).first();
+
+    const registeredDevicesRow: any = await c.env.DB.prepare(`
+      SELECT COUNT(*) as count FROM users 
+      WHERE fcm_token IS NOT NULL AND TRIM(fcm_token) != ''
+    `).first();
+
+    const totalClicksReal: any = await c.env.DB.prepare(`
+      SELECT COUNT(*) as count FROM notification_clicks
+    `).first();
+
+    const totalCampaigns = Number(campRow?.totalCampaigns || 0);
+    const totalSent = Number(campRow?.totalSent || 0);
+    const totalClicks = Math.max(Number(campRow?.totalClicks || 0), Number(totalClicksReal?.count || 0));
+    const overallCtr = totalSent > 0 ? Number(((totalClicks / totalSent) * 100).toFixed(1)) : 0;
+    const totalRegisteredDevices = Number(registeredDevicesRow?.count || 0);
+
+    // 2. Recent Clicks ("kis ny click kiya aur kab kiya")
+    const { results: rawClicks } = await c.env.DB.prepare(`
+      SELECT 
+        c.id as clickId,
+        c.campaign_id as campaignId,
+        c.notification_id as notificationId,
+        c.user_id as userId,
+        c.target_screen as targetScreen,
+        c.clicked_at as clickedAt,
+        u.full_name as fullName,
+        u.gender,
+        u.city,
+        u.phone,
+        u.email,
+        u.is_vip as isVip,
+        (SELECT photo_url FROM user_photos WHERE user_id = u.id AND is_primary = 1 LIMIT 1) as photoUrl,
+        camp.title as campaignTitle,
+        camp.category as campaignCategory
+      FROM notification_clicks c
+      LEFT JOIN users u ON c.user_id = u.id
+      LEFT JOIN notification_campaigns camp ON c.campaign_id = camp.id
+      ORDER BY c.clicked_at DESC
+      LIMIT 100
+    `).all();
+
+    // 3. Campaign History
+    const { results: rawCampaigns } = await c.env.DB.prepare(`
+      SELECT 
+        id,
+        title,
+        message,
+        category,
+        target_type as targetType,
+        sent_count as sentCount,
+        clicked_count as clickedCount,
+        trigger_type as triggerType,
+        target_screen as targetScreen,
+        created_at as createdAt
+      FROM notification_campaigns
+      ORDER BY created_at DESC
+      LIMIT 50
+    `).all();
+
+    return c.json({
+      success: true,
+      metrics: {
+        summary: {
+          totalCampaigns,
+          totalSent,
+          totalClicks,
+          overallCtr,
+          totalRegisteredDevices
+        },
+        recentClicks: (rawClicks || []).map((clk: any) => ({
+          clickId: clk.clickId,
+          campaignId: clk.campaignId,
+          notificationId: clk.notificationId,
+          userId: clk.userId,
+          targetScreen: clk.targetScreen || 'matches',
+          clickedAt: clk.clickedAt,
+          fullName: clk.fullName || 'Member',
+          gender: clk.gender || 'unknown',
+          city: clk.city || 'Pakistan',
+          phone: clk.phone || '',
+          email: clk.email || '',
+          isVip: Boolean(clk.isVip),
+          photoUrl: clk.photoUrl || '',
+          campaignTitle: clk.campaignTitle || 'Daily Notification',
+          campaignCategory: clk.campaignCategory || 'daily_curated'
+        })),
+        campaigns: (rawCampaigns || []).map((camp: any) => ({
+          id: camp.id,
+          title: camp.title,
+          message: camp.message,
+          category: camp.category,
+          targetType: camp.targetType,
+          sentCount: Number(camp.sentCount || 0),
+          clickedCount: Number(camp.clickedCount || 0),
+          ctr: Number(camp.sentCount) > 0 ? Number(((Number(camp.clickedCount) / Number(camp.sentCount)) * 100).toFixed(1)) : 0,
+          triggerType: camp.triggerType,
+          targetScreen: camp.targetScreen,
+          createdAt: camp.createdAt
+        }))
+      }
+    });
+  } catch (error: any) {
+    console.error('[AdminNotificationMetrics] Error:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });

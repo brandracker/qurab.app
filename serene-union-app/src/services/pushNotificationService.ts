@@ -145,6 +145,24 @@ class PushNotificationService {
       PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
         console.log('[Push] Action performed on notification:', notification);
         const data = notification.notification.data || {};
+
+        // Track click telemetry to Cloudflare D1
+        try {
+          const rawUserId = localStorage.getItem('qurb_user_id') || '';
+          if (rawUserId && (data.campaignId || data.notificationId || data.type === 'daily_engagement')) {
+            fetch(`${API_BASE}/notifications/track-click`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userId: rawUserId,
+                campaignId: data.campaignId,
+                notificationId: data.notificationId,
+                targetScreen: data.targetTab || 'matches'
+              })
+            }).catch(e => console.warn('[Push] Click tracking notice:', e));
+          }
+        } catch {}
+
         if (data.type === 'incoming_call') {
           window.dispatchEvent(
             new CustomEvent('qurb_incoming_call_push', { detail: data })
@@ -167,6 +185,23 @@ class PushNotificationService {
       // 7. Handle Tap on Local Notification
       LocalNotifications.addListener('localNotificationActionPerformed', (notification) => {
         const extra = notification.notification.extra || {};
+
+        // Track click telemetry to Cloudflare D1
+        try {
+          const rawUserId = localStorage.getItem('qurb_user_id') || '';
+          if (rawUserId && (extra.campaignId || extra.notificationId || extra.type === 'daily_engagement')) {
+            fetch(`${API_BASE}/notifications/track-click`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userId: rawUserId,
+                campaignId: extra.campaignId,
+                notificationId: extra.notificationId,
+                targetScreen: extra.targetTab || 'matches'
+              })
+            }).catch(e => console.warn('[Push] Click tracking notice:', e));
+          }
+        } catch {}
         if (extra.type === 'incoming_call') {
           window.dispatchEvent(
             new CustomEvent('qurb_incoming_call_push', { detail: extra })

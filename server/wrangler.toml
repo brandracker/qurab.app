@@ -23,3 +23,7 @@ new_sqlite_classes = ["ChatRoomDO"]
 
 [vars]
 ENVIRONMENT = "production"
+
+[triggers]
+crons = ["30 16 * * *"] # Daily at 16:30 UTC (9:30 PM PKT / Pakistan Standard Time)
+

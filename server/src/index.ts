@@ -13,6 +13,7 @@ import { notificationsRouter } from './routes/notifications';
 import { adminRouter } from './routes/admin';
 import { referralsRouter } from './routes/referrals';
 import { versionRouter } from './routes/version';
+import { triggerDailyNotifications } from './utils/daily-notifications';
 
 const app = new Hono<AppContext>();
 
@@ -85,6 +86,16 @@ app.onError((err, c) => {
   console.error('Unhandled API Error:', err);
   return c.json({ success: false, error: err.message || 'Internal Server Error' }, 500);
 });
+
+// Scheduled Handler for Cloudflare Workers Cron Triggers (Daily 9:30 PM PKT)
+(app as any).scheduled = async (event: any, env: any, ctx: any) => {
+  console.log('[Cron] Daily Engagement Push Trigger fired at:', new Date().toISOString());
+  if (ctx?.waitUntil) {
+    ctx.waitUntil(triggerDailyNotifications(env, { triggerType: 'cron', category: 'smart_psych' }));
+  } else {
+    await triggerDailyNotifications(env, { triggerType: 'cron', category: 'smart_psych' });
+  }
+};
 
 export { ChatRoomDO } from './durable-objects/ChatRoomDO';
 

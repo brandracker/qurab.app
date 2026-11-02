@@ -107,3 +107,74 @@ notificationsRouter.post('/create', async (c) => {
     return c.json({ success: false, error: error.message }, 500);
   }
 });
+
+// 4. Track Notification Click / Open
+notificationsRouter.post('/track-click', async (c) => {
+  try {
+    const { userId, campaignId, notificationId, targetScreen } = await c.req.json();
+    if (!userId || userId === 'usr_guest') {
+      return c.json({ success: true, tracked: false, reason: 'Guest or missing userId' });
+    }
+
+    const clickId = `clk_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const userAgent = c.req.header('user-agent') || 'Mobile App Client';
+
+    // Auto-ensure click tracking table
+    await c.env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS notification_clicks (
+        id TEXT PRIMARY KEY,
+        campaign_id TEXT,
+        notification_id TEXT,
+        user_id TEXT NOT NULL,
+        target_screen TEXT,
+        user_agent TEXT,
+        clicked_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+
+    await c.env.DB.prepare(`
+      INSERT INTO notification_clicks (id, campaign_id, notification_id, user_id, target_screen, user_agent, clicked_at)
+      VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+    `).bind(
+      clickId,
+      campaignId || null,
+      notificationId || null,
+      userId,
+      targetScreen || 'matches',
+      userAgent
+    ).run();
+
+    // If linked to a campaign, increment clicked_count
+    if (campaignId) {
+      try {
+        await c.env.DB.prepare(`
+          UPDATE notification_campaigns
+          SET clicked_count = clicked_count + 1
+          WHERE id = ?
+        `).bind(campaignId).run();
+      } catch (err) {
+        console.warn('[TrackClick] Campaign count update notice:', err);
+      }
+    }
+
+    // If linked to a notification, mark read
+    if (notificationId) {
+      try {
+        await c.env.DB.prepare(`
+          UPDATE notifications SET is_read = 1 WHERE id = ?
+        `).bind(notificationId).run();
+      } catch (err) {
+        console.warn('[TrackClick] Mark read notice:', err);
+      }
+    }
+
+    return c.json({
+      success: true,
+      clickId,
+      message: 'Notification click recorded'
+    });
+  } catch (error: any) {
+    console.error('[TrackClick] Error recording click:', error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});

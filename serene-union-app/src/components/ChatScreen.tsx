@@ -2391,10 +2391,11 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                     ? 'https://play.google.com/store/apps/details?id=app.qurb.serene&pcampaignid=web_share' 
                     : extractedUrl || (isOfficialChannel ? 'https://play.google.com/store/apps/details?id=app.qurb.serene&pcampaignid=web_share' : undefined));
 
-                const ctaText = msg.actionLabel || 
+                const rawCta = msg.actionLabel || 
                   (isPlayStoreIntent || destinationUrl?.includes('play.google.com')
-                    ? '⚡ Update on Google Play Store ↗' 
+                    ? 'Update on Google Play Store ↗' 
                     : (destinationUrl?.includes('qurb.app') ? 'Visit Official Website ↗' : 'View Update Details ↗'));
+                const ctaText = rawCta.replace(/⚡\s*/g, '');
 
                 return (
                   <div key={msg.id || idx} className="w-full flex justify-center py-2.5 px-1 animate-fade-in">

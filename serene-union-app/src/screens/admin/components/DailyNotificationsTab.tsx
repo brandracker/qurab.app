@@ -231,7 +231,6 @@ export const DailyNotificationsTab: React.FC<DailyNotificationsTabProps> = ({
             onClick={() => setShowTriggerModal(true)}
             className="flex items-center space-x-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-sm font-bold shadow-lg shadow-purple-600/30 transition transform active:scale-95 cursor-pointer"
           >
-            <Zap className="w-4 h-4 text-amber-300" />
             <span>Manual Trigger Push</span>
           </button>
         </div>

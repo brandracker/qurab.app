@@ -34,7 +34,7 @@ export const AnnouncementsTab: React.FC<AnnouncementsTabProps> = ({
   );
   const [imageUrl, setImageUrl] = useState('https://qurb.app/announcement_v1037_banner.jpg');
   const [actionUrl, setActionUrl] = useState('https://play.google.com/store/apps/details?id=app.qurb.serene&pcampaignid=web_share');
-  const [actionLabel, setActionLabel] = useState('⚡ Update on Google Play Store ↗');
+  const [actionLabel, setActionLabel] = useState('Update on Google Play Store ↗');
 
   // History & API State
   const [announcements, setAnnouncements] = useState<OfficialAnnouncement[]>([]);
@@ -76,7 +76,7 @@ export const AnnouncementsTab: React.FC<AnnouncementsTabProps> = ({
     setTitle('🚀 Qurb v1.0.37 - Crystal-Clear Voice & Video Calling');
     setImageUrl('https://qurb.app/announcement_v1037_banner.jpg');
     setActionUrl('https://play.google.com/store/apps/details?id=app.qurb.serene&pcampaignid=web_share');
-    setActionLabel('⚡ Update on Google Play Store ↗');
+    setActionLabel('Update on Google Play Store ↗');
     setMessage(
       '🚀 Update Alert: Qurb v1.0.37 is now available on Google Play Store!\n\n✨ New in this version:\n• Crystal-clear HD Voice & Video Calling\n• Zero connection drops with auto-reconnect\n• Enhanced profile security & instant push notifications\n• Smooth chat and media sharing\n\nUpdate now on Google Play Store for the best halal matchmaking experience!'
     );
@@ -323,7 +323,7 @@ export const AnnouncementsTab: React.FC<AnnouncementsTabProps> = ({
                   type="text"
                   value={actionLabel}
                   onChange={(e) => setActionLabel(e.target.value)}
-                  placeholder="⚡ Update on Google Play Store ↗"
+                  placeholder="Update on Google Play Store ↗"
                   className="w-full px-3 py-2 bg-[#162038] border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/50"
                 />
               </div>
@@ -448,7 +448,7 @@ export const AnnouncementsTab: React.FC<AnnouncementsTabProps> = ({
                       <div className="pt-2">
                         <div className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 text-white font-bold text-[11px] shadow-sm flex items-center justify-center gap-1.5 text-center">
                           <Play className="w-3 h-3 fill-current" />
-                          <span>{actionLabel || 'Update on Google Play Store ↗'}</span>
+                          <span>{(actionLabel || 'Update on Google Play Store ↗').replace(/⚡\s*/g, '')}</span>
                         </div>
                       </div>
                     )}
@@ -531,7 +531,7 @@ export const AnnouncementsTab: React.FC<AnnouncementsTabProps> = ({
                     {ann.actionUrl && (
                       <div className="text-[10px] text-emerald-400 truncate flex items-center gap-1 font-mono">
                         <ExternalLink className="w-3 h-3 shrink-0" />
-                        <span className="truncate">{ann.actionLabel || ann.actionUrl}</span>
+                        <span className="truncate">{(ann.actionLabel || ann.actionUrl).replace(/⚡\s*/g, '')}</span>
                       </div>
                     )}
                   </div>

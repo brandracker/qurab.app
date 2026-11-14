@@ -69,7 +69,7 @@ authRouter.post('/login', async (c) => {
       FROM users u
       LEFT JOIN religious_profiles rp ON u.id = rp.user_id
       LEFT JOIN wali_details w ON u.id = w.user_id
-      WHERE (LOWER(u.email) = ? OR u.phone = ? OR u.phone = ?) AND (u.password_hash = ? OR u.password_hash IS NULL)
+      WHERE (LOWER(u.email) = ? OR u.phone = ? OR u.phone = ?) AND u.password_hash IS NOT NULL AND u.password_hash = ?
     `).bind(cleanEmail, cleanEmail, email.trim(), passwordHash).first();
 
     if (!user) {
@@ -166,7 +166,7 @@ authRouter.post('/send-phone-otp', async (c) => {
     return c.json({
       success: true,
       message: `Verification code generated successfully for ${cleanPhone}`,
-      otpPreview: otpCode
+      ...(c.env?.ENVIRONMENT !== 'production' ? { otpPreview: otpCode } : {})
     });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
@@ -183,12 +183,16 @@ authRouter.post('/verify-phone-otp', async (c) => {
 
     const cleanPhone = phone.trim().replace(/[\s\-\(\)]/g, '');
     const record: any = await c.env.DB.prepare(`
-      SELECT * FROM phone_otps WHERE phone = ? AND otp_code = ?
+      SELECT * FROM phone_otps
+      WHERE phone = ? AND otp_code = ?
+        AND (expires_at IS NULL OR datetime(expires_at) >= datetime('now'))
     `).bind(cleanPhone, otpCode.trim()).first();
 
     if (!record) {
-      return c.json({ success: false, error: 'Invalid verification code. Please try again.' }, 400);
+      return c.json({ success: false, error: 'Invalid or expired verification code. Please try again.' }, 400);
     }
+
+    await c.env.DB.prepare('DELETE FROM phone_otps WHERE phone = ?').bind(cleanPhone).run();
 
     let user: any = await c.env.DB.prepare(`SELECT * FROM users WHERE phone = ?`).bind(cleanPhone).first();
     let isNewUser = false;
@@ -309,6 +313,12 @@ authRouter.post('/google-login', async (c) => {
         isNewUser: true,
         is_profile_completed: 0
       };
+    } else if (user.account_status === 'banned' || user.is_banned === 1) {
+      return c.json({
+        success: false,
+        error: 'Your account has been suspended by administration. If you believe this is a mistake, please contact support.',
+        isBanned: true
+      }, 403);
     }
 
     const { results: photos } = await c.env.DB.prepare(`
@@ -400,6 +410,12 @@ authRouter.post('/email-sync', async (c) => {
         isNewUser: true,
         is_profile_completed: 0
       };
+    } else if (user.account_status === 'banned' || user.is_banned === 1) {
+      return c.json({
+        success: false,
+        error: 'Your account has been suspended by administration. If you believe this is a mistake, please contact support.',
+        isBanned: true
+      }, 403);
     }
 
     // Direct Profile Picture auto-save from Facebook/Google

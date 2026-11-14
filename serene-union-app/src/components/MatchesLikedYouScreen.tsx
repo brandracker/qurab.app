@@ -601,7 +601,18 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
                     </div>
 
                     <div className="p-2.5 flex-1 flex flex-col justify-between gap-1.5">
-                      <div onClick={() => setSelectedProfile(candidate)} className="cursor-pointer">
+                      <div
+                        onClick={() => {
+                          if (!isVip) {
+                            if (onOpenSubscription) onOpenSubscription();
+                            else setShowUpgradeModal(true);
+                            setToastMessage('Upgrade to Barakah VIP to unblur photos and view full biodata.');
+                            return;
+                          }
+                          setSelectedProfile(candidate);
+                        }}
+                        className="cursor-pointer"
+                      >
                         <h3 className="font-serif font-bold text-xs text-slate-800 dark:text-white truncate hover:text-primary transition-colors flex items-center gap-1">
                           <span className="truncate">{formatDisplayName(candidate.fullName || 'Member')}</span>
                           {!isVip && (
@@ -724,6 +735,7 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
                               }
                             }}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            style={(item.blurPhotosByDefault || matchedProf?.blurPhotosByDefault) ? { filter: 'blur(12px)', transform: 'scale(1.1)' } : undefined}
                           />
                         ) : null}
                         <div

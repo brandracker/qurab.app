@@ -1,5 +1,7 @@
 import { Hono } from 'hono';
 import type { AppContext } from '../types';
+import { calculateSubscriptionExpiry } from '../utils/subscription';
+import { verifyAdminToken } from '../utils/crypto';
 
 export const referralsRouter = new Hono<AppContext>();
 
@@ -104,15 +106,21 @@ export async function checkAndFulfillReferralReward(db: any, referrerId: string,
           UPDATE users SET is_vip = 1 WHERE id = ?
         `).bind(referrerId).run();
 
-        // 4. Update user_wallets: subscription_tier = 'barakah_vip', add 20 direct salams, 9999 daily messages
+        // 4. Update user_wallets: subscription_tier = 'barakah_vip' with 30-day expiry, add 20 direct salams, 9999 daily messages
+        const expiryIso = calculateSubscriptionExpiry(30);
         await db.prepare(`
-          INSERT INTO user_wallets (user_id, subscription_tier, direct_salams_balance, daily_messages_quota)
-          VALUES (?, 'barakah_vip', 22, 9999)
+          INSERT INTO user_wallets (user_id, subscription_tier, direct_salams_balance, daily_messages_quota, subscription_expiry)
+          VALUES (?, 'barakah_vip', 22, 9999, ?)
           ON CONFLICT(user_id) DO UPDATE SET 
             subscription_tier = 'barakah_vip',
             direct_salams_balance = direct_salams_balance + 20,
-            daily_messages_quota = 9999
-        `).bind(referrerId).run();
+            daily_messages_quota = 9999,
+            subscription_expiry = CASE
+              WHEN user_wallets.subscription_expiry IS NOT NULL AND user_wallets.subscription_expiry > excluded.subscription_expiry
+              THEN user_wallets.subscription_expiry
+              ELSE excluded.subscription_expiry
+            END
+        `).bind(referrerId, expiryIso).run();
 
         // 5. In-app notification for the user
         const notifId = `notif_ref_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
@@ -423,6 +431,29 @@ referralsRouter.post('/evaluate/:refereeId', async (c) => {
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   }
+});
+
+// 4. Admin Overview & Management Middleware
+referralsRouter.use('/admin/*', async (c, next) => {
+  const customHeader = c.req.header('x-admin-token') || '';
+  const authHeader = c.req.header('Authorization') || '';
+  let token = customHeader;
+  if (!token && authHeader.startsWith('Bearer ')) {
+    token = authHeader.substring(7).trim();
+  }
+
+  const isProd = c.env?.ENVIRONMENT === 'production';
+  if (isProd || token) {
+    const verified = await verifyAdminToken(
+      token,
+      (c.env as any)?.ADMIN_SECRET,
+      c.env?.ENVIRONMENT === 'test'
+    );
+    if (!verified.valid) {
+      return c.json({ success: false, error: 'Unauthorized: Valid admin token required' }, 401);
+    }
+  }
+  return next();
 });
 
 // 4. Admin Overview & Management

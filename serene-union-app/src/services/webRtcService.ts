@@ -931,6 +931,10 @@ export class WebRtcService {
     if (this.connectionFallbackTimer) clearTimeout(this.connectionFallbackTimer);
     this.connectionFallbackTimer = setTimeout(() => {
       this.connectionFallbackTimer = null;
+      const iceState = this.peerConnection?.iceConnectionState;
+      if (iceState === 'failed' || iceState === 'disconnected' || iceState === 'closed') {
+        return;
+      }
       if (this.currentCallState === 'connecting' || this.currentCallState === 'outgoing_calling') {
         console.log('[WebRTC] Connection fallback timer triggered, activating connected state.');
         this.transitionToConnected();

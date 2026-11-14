@@ -615,13 +615,13 @@ class DBService {
     const today = new Date().toISOString().slice(0, 10);
     const localKey = `serene_likes_left_${userId}_${today}`;
     let fallbackCount = 50;
-    const persistentVal = localStorage.getItem(legacyKey);
-    if (persistentVal !== null) {
-      fallbackCount = parseInt(persistentVal, 10);
+    const todayVal = localStorage.getItem(localKey);
+    if (todayVal !== null) {
+      fallbackCount = parseInt(todayVal, 10);
     } else {
-      const todayVal = localStorage.getItem(localKey);
-      if (todayVal !== null) {
-        fallbackCount = parseInt(todayVal, 10);
+      const persistentVal = localStorage.getItem(legacyKey);
+      if (persistentVal !== null) {
+        fallbackCount = parseInt(persistentVal, 10);
       }
     }
     const fallbackVip = Boolean(localStorage.getItem(`serene_vip_${userId}`) === 'true');

@@ -53,25 +53,9 @@ type OnboardingStep =
 
 type MainTab = 'discover' | 'matches' | 'chat' | 'my_profile' | 'settings';
 
-export const App: React.FC = () => {
+const MainUserApp: React.FC = () => {
   const isNative = Capacitor.isNativePlatform();
   const isLocal = isLocalEnvironment();
-
-  // STRICT ZERO-BREAKAGE GUARANTEE: Web-Only Admin Portal
-  const isAdminPortal = !isNative && (() => {
-    try {
-      const path = window.location.pathname.toLowerCase();
-      const params = new URLSearchParams(window.location.search);
-      const hash = window.location.hash.toLowerCase();
-      return path.startsWith('/admin') || hash.startsWith('#/admin') || hash.startsWith('#admin') || params.get('portal') === 'admin';
-    } catch {
-      return false;
-    }
-  })();
-
-  if (isAdminPortal) {
-    return <AdminPortal />;
-  }
 
   const [showLanding, setShowLanding] = useState<boolean>(() => {
     // STRICT ZERO-BREAKAGE GUARANTEE:
@@ -293,6 +277,10 @@ export const App: React.FC = () => {
               window.dispatchEvent(
                 new CustomEvent('qurb_incoming_call_push', { detail: data })
               );
+            } else if (data.type === 'call_ended') {
+              if (webRtcService.getState() === 'incoming_ringing') {
+                webRtcService.endCall(data.reason || 'caller_cancelled');
+              }
             }
           } catch {}
         };
@@ -441,11 +429,11 @@ export const App: React.FC = () => {
 
     const handleNavigateTabEvent = (e: any) => {
       const tab = e.detail?.tab;
-      if (tab && ['discover', 'matches', 'chat', 'profile'].includes(tab)) {
+      if (tab && ['discover', 'matches', 'chat', 'profile', 'my_profile', 'settings'].includes(tab)) {
         if (currentUser?.id && currentUser.id !== 'usr_guest') {
           setCurrentStep('main_app');
         }
-        setActiveTab(tab as any);
+        setActiveTab((tab === 'profile' ? 'my_profile' : tab) as MainTab);
         setShowNotifications(false);
       }
     };
@@ -520,77 +508,6 @@ export const App: React.FC = () => {
     };
   }, [currentUser.id]);
 
-  // Global Real-time User WebSocket (Zero-latency In-App Calls & Direct Signal Broadcast)
-  useEffect(() => {
-    if (!currentUser.id || currentUser.id === 'usr_guest') return;
-
-    let ws: WebSocket | null = null;
-    let pingInterval: any = null;
-    let isCleanedUp = false;
-
-    const connectGlobalUserSocket = () => {
-      if (isCleanedUp) return;
-      try {
-        if (typeof window !== 'undefined' && typeof WebSocket !== 'undefined') {
-          const wsProtocol = API_BASE.startsWith('https:') ? 'wss:' : (window.location.protocol === 'https:' ? 'wss:' : 'ws:');
-          const wsBase = API_BASE.replace(/^https?:/, wsProtocol);
-          const wsUrl = `${wsBase}/conversations/user_${currentUser.id}/ws?userId=${currentUser.id}`;
-
-          ws = new WebSocket(wsUrl);
-
-          ws.onopen = () => {
-            try { ws?.send(JSON.stringify({ type: 'ping' })); } catch {}
-            if (pingInterval) clearInterval(pingInterval);
-            pingInterval = setInterval(() => {
-              if (ws && ws.readyState === WebSocket.OPEN) {
-                try { ws.send(JSON.stringify({ type: 'ping' })); } catch {}
-              }
-            }, 25000);
-          };
-
-          ws.onmessage = (event) => {
-            try {
-              const data = JSON.parse(event.data);
-              if (data.type === 'incoming_call') {
-                console.log('[GlobalWS] In-app incoming call received:', data);
-                window.dispatchEvent(
-                  new CustomEvent('qurb_incoming_call_push', { detail: data })
-                );
-              } else if (data.type === 'call_ended') {
-                console.log('[GlobalWS] Remote call ended/cancelled:', data);
-                if (webRtcService.getState() === 'incoming_ringing') {
-                  webRtcService.endCall(data.reason || 'caller_cancelled');
-                }
-              }
-            } catch {}
-          };
-
-          ws.onclose = () => {
-            if (!isCleanedUp) {
-              setTimeout(connectGlobalUserSocket, 3500);
-            }
-          };
-
-          ws.onerror = () => {
-            try { ws?.close(); } catch {}
-          };
-        }
-      } catch (err) {
-        console.warn('Global user socket notice:', err);
-      }
-    };
-
-    connectGlobalUserSocket();
-
-    return () => {
-      isCleanedUp = true;
-      if (pingInterval) clearInterval(pingInterval);
-      if (ws) {
-        try { ws.close(); } catch {}
-      }
-    };
-  }, [currentUser.id]);
-
   useEffect(() => {
     if (currentUser?.id && currentUser.id !== 'usr_guest') {
       const token = localStorage.getItem('qurb_fcm_token');
@@ -637,11 +554,7 @@ export const App: React.FC = () => {
                   userId: currentUser.id,
                   productId: restored.productId || 'qurb_barakah_monthly',
                   purchaseToken: restored.purchaseToken,
-                  orderId: restored.orderId,
-                  amountCents: 0,
-                  currency: 'USD',
-                  isTrial: true,
-                  durationDays: 7
+                  orderId: restored.orderId
                 })
               });
               await dbService.fetchLikesRemaining(currentUser.id);
@@ -745,12 +658,19 @@ export const App: React.FC = () => {
       }
     };
 
-    let listenerHandle: any = null;
+    let isCancelled = false;
+    let listenerHandle: { remove: () => Promise<void> } | null = null;
     if (Capacitor.isNativePlatform()) {
       import('@capacitor/app').then(({ App: CapApp }) => {
-        listenerHandle = CapApp.addListener('backButton', () => {
+        CapApp.addListener('backButton', () => {
           handleHardwareBack();
-        });
+        }).then((handle) => {
+          if (isCancelled) {
+            handle.remove().catch(() => {});
+          } else {
+            listenerHandle = handle;
+          }
+        }).catch(() => {});
       }).catch(err => {
         console.warn('[BackNav] Native backButton listener init notice:', err);
       });
@@ -762,9 +682,10 @@ export const App: React.FC = () => {
     window.addEventListener('popstate', handlePopState);
 
     return () => {
+      isCancelled = true;
       window.removeEventListener('popstate', handlePopState);
       if (listenerHandle?.remove) {
-        listenerHandle.remove();
+        listenerHandle.remove().catch(() => {});
       }
     };
   }, [showNotifications, activeConvId, currentStep, activeTab]);
@@ -971,14 +892,26 @@ export const App: React.FC = () => {
   const handleFinishOnboarding = async (photoData: { blurPhotos: boolean; photos: string[] }) => {
     const isEditingExisting = Boolean(onboardingData._isEditingExisting || (currentUser?.id && currentUser.id !== 'usr_guest' && currentUser.isProfileCompleted));
     const finalUserId = onboardingData.userId || (currentUser.id !== 'usr_guest' ? currentUser.id : null) || ('usr_' + Date.now());
+    const dobStr = onboardingData.dob || currentUser.dob || '1998-01-01';
+    const computedAge = (() => {
+      const parsed = new Date(dobStr);
+      if (isNaN(parsed.getTime())) return currentUser.age || 28;
+      const today = new Date();
+      let years = today.getFullYear() - parsed.getFullYear();
+      const monthDiff = today.getMonth() - parsed.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < parsed.getDate())) {
+        years--;
+      }
+      return Math.max(18, years);
+    })();
 
     const merged: UserProfile = {
       id: finalUserId,
-      phone: onboardingData.email || currentUser.email || '',
+      phone: onboardingData.phone || currentUser.phone || '',
       email: onboardingData.email || currentUser.email || 'user@sereneunion.com',
       fullName: onboardingData.fullName || currentUser.fullName || 'Member',
-      dob: onboardingData.dob || currentUser.dob || '1998-01-01',
-      age: onboardingData.dob ? (new Date().getFullYear() - new Date(onboardingData.dob).getFullYear()) : (currentUser.age || 28),
+      dob: dobStr,
+      age: computedAge,
       gender: onboardingData.gender || currentUser.gender || 'male',
       location: onboardingData.location || currentUser.location || 'London, UK',
       city: onboardingData.city || currentUser.city,
@@ -1017,7 +950,9 @@ export const App: React.FC = () => {
       },
       blurPhotosByDefault: photoData.blurPhotos,
       profileVisibility: currentUser.profileVisibility || 'all_users',
-      photos: (photoData.photos && photoData.photos.length > 0) ? photoData.photos : (currentUser.photos || []),
+      photos: isEditingExisting
+        ? photoData.photos
+        : ((photoData.photos && photoData.photos.length > 0) ? photoData.photos : (currentUser.photos || [])),
       voiceGreetingUrl: currentUser.voiceGreetingUrl,
       voiceGreetingDuration: currentUser.voiceGreetingDuration,
       religiousProfile: {
@@ -1064,6 +999,7 @@ export const App: React.FC = () => {
     localStorage.removeItem('serene_onboarding_draft_v1');
     localStorage.removeItem('serene_current_user_v1');
     localStorage.removeItem('serene_auth_token');
+    localStorage.removeItem('serene_auth_token_v1');
     setCurrentUser(dbService.getGuestUser());
     setCurrentStep('welcome');
     setActiveTab('discover');
@@ -1492,4 +1428,25 @@ export const App: React.FC = () => {
     </div>
   );
 };
+
+export const App: React.FC = () => {
+  const isNative = Capacitor.isNativePlatform();
+  const isAdminPortal = !isNative && (() => {
+    try {
+      const path = window.location.pathname.toLowerCase();
+      const params = new URLSearchParams(window.location.search);
+      const hash = window.location.hash.toLowerCase();
+      return path.startsWith('/admin') || hash.startsWith('#/admin') || hash.startsWith('#admin') || params.get('portal') === 'admin';
+    } catch {
+      return false;
+    }
+  })();
+
+  if (isAdminPortal) {
+    return <AdminPortal />;
+  }
+
+  return <MainUserApp />;
+};
+
 export default App;

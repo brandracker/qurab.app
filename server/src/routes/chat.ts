@@ -977,18 +977,21 @@ chatRouter.post('/:id/messages', async (c) => {
         ).bind(recipientId).first();
 
         if (recipientUser?.fcm_token) {
-          c.executionCtx.waitUntil(
-            sendFcmNotification(c.env, {
-              token: recipientUser.fcm_token,
-              title: `New Message from ${senderFirstName} 💬`,
-              body: preview,
-              data: {
-                conversationId: targetConvId,
-                senderId: senderId,
-                type: 'chat_message'
-              }
-            })
-          );
+          const pushPromise = sendFcmNotification(c.env, {
+            token: recipientUser.fcm_token,
+            title: `New Message from ${senderFirstName} 💬`,
+            body: preview,
+            data: {
+              conversationId: targetConvId,
+              senderId: senderId,
+              type: 'chat_message'
+            }
+          });
+          try {
+            if (c.executionCtx && typeof c.executionCtx.waitUntil === 'function') {
+              c.executionCtx.waitUntil(pushPromise);
+            }
+          } catch {}
         }
       } catch (pushErr) {
         console.warn('[PushNotification] FCM dispatch notice:', pushErr);
@@ -1212,27 +1215,30 @@ chatRouter.post('/call/initiate', async (c) => {
       const callTypeName = callType === 'video' ? 'Video Call 📹' : 'Audio Call 📞';
 
       // High-priority FCM push notification
-      c.executionCtx.waitUntil(
-        sendFcmNotification(c.env, {
-          token: recipientUser.fcm_token,
-          title: `Incoming ${callTypeName}`,
-          body: `${callerFirstName} is calling you on Qurb...`,
-          channelId: 'qurb_calls_v2',
-          isCall: true,
-          data: {
-            type: 'incoming_call',
-            callType: callType || 'audio',
-            callerId: callerId,
-            callerName: callerInfo?.fullName || 'Match Candidate',
-            callerCity: callerInfo?.city || 'Pakistan',
-            callerPhoto: callerInfo?.photoUrl || '',
-            callerGender: callerInfo?.gender || '',
-            callerVip: callerInfo?.isVip ? 'true' : 'false',
-            conversationId: convId,
-            timestamp: String(Date.now())
-          }
-        })
-      );
+      const callPushPromise = sendFcmNotification(c.env, {
+        token: recipientUser.fcm_token,
+        title: `Incoming ${callTypeName}`,
+        body: `${callerFirstName} is calling you on Qurb...`,
+        channelId: 'qurb_calls_v2',
+        isCall: true,
+        data: {
+          type: 'incoming_call',
+          callType: callType || 'audio',
+          callerId: callerId,
+          callerName: callerInfo?.fullName || 'Match Candidate',
+          callerCity: callerInfo?.city || 'Pakistan',
+          callerPhoto: callerInfo?.photoUrl || '',
+          callerGender: callerInfo?.gender || '',
+          callerVip: callerInfo?.isVip ? 'true' : 'false',
+          conversationId: convId,
+          timestamp: String(Date.now())
+        }
+      });
+      try {
+        if (c.executionCtx && typeof c.executionCtx.waitUntil === 'function') {
+          c.executionCtx.waitUntil(callPushPromise);
+        }
+      } catch {}
     }
 
     return c.json({

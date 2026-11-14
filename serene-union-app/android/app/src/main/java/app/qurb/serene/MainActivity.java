@@ -29,6 +29,18 @@ public class MainActivity extends BridgeActivity {
             com.facebook.appevents.AppEventsLogger.activateApp(getApplication());
         } catch (Exception ignored) {}
 
+        handleDeepLink(getIntent());
+        setupWebRtcMediaPermissions();
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleDeepLink(intent);
+    }
+
+    private void enableIncomingCallLockScreenFlags() {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true);
             setTurnScreenOn(true);
@@ -47,28 +59,16 @@ public class MainActivity extends BridgeActivity {
             android.view.WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED |
             android.view.WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
         );
-
-        handleDeepLink(getIntent());
-        setupWebRtcMediaPermissions();
     }
 
-    @Override
-    protected void onNewIntent(Intent intent) {
-        super.onNewIntent(intent);
-        setIntent(intent);
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O_MR1) {
-            setShowWhenLocked(true);
-            setTurnScreenOn(true);
-        }
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            try {
-                android.app.KeyguardManager km = (android.app.KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
-                if (km != null) {
-                    km.requestDismissKeyguard(this, null);
-                }
-            } catch (Exception ignored) {}
-        }
-        handleDeepLink(intent);
+    private String escapeJsString(String val) {
+        if (val == null) return "";
+        return val
+            .replace("\\", "\\\\")
+            .replace("'", "\\'")
+            .replace("\"", "\\\"")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r");
     }
 
     @Override
@@ -91,8 +91,14 @@ public class MainActivity extends BridgeActivity {
                 @Override
                 public void onPermissionRequest(final PermissionRequest request) {
                     runOnUiThread(() -> {
-                        String[] resources = request.getResources();
-                        request.grant(resources);
+                        Uri origin = request.getOrigin();
+                        String host = (origin != null && origin.getHost() != null) ? origin.getHost().toLowerCase() : "";
+                        if ("localhost".equals(host) || "qurb.app".equals(host) || host.endsWith(".qurb.app")) {
+                            String[] resources = request.getResources();
+                            request.grant(resources);
+                        } else {
+                            request.deny();
+                        }
                     });
                 }
             });
@@ -193,6 +199,7 @@ public class MainActivity extends BridgeActivity {
         // Handle incoming call action or extras
         String callTypeExtra = getExtraStringSafe(intent, "type");
         if ("incoming_call".equals(callTypeExtra) || "app.qurb.serene.ACTION_INCOMING_CALL".equals(intent.getAction())) {
+            enableIncomingCallLockScreenFlags();
             String callerId = getExtraStringSafe(intent, "callerId");
             String callerName = getExtraStringSafe(intent, "callerName");
             String callType = getExtraStringSafe(intent, "callType");
@@ -200,21 +207,21 @@ public class MainActivity extends BridgeActivity {
             String conversationId = getExtraStringSafe(intent, "conversationId");
             String callAction = getExtraStringSafe(intent, "call_action");
 
-            String safeName = callerName != null ? callerName.replace("'", "\\'") : "Match Candidate";
-            String safeId = callerId != null ? callerId : "";
-            String safeType = callType != null ? callType : "audio";
-            String safePhoto = callerPhoto != null ? callerPhoto : "";
-            String safeConv = conversationId != null ? conversationId : "";
-            String safeAction = callAction != null ? callAction : "view";
+            String safeName = escapeJsString(callerName != null ? callerName : "Match Candidate");
+            String safeId = escapeJsString(callerId);
+            String safeType = escapeJsString(callType != null ? callType : "audio");
+            String safePhoto = escapeJsString(callerPhoto);
+            String safeConv = escapeJsString(conversationId);
+            String safeAction = escapeJsString(callAction != null ? callAction : "view");
 
             String jsonPayload = "{" +
                 "\"type\":\"incoming_call\"," +
-                "\"callerId\":\"" + safeId.replace("\"", "\\\"") + "\"," +
-                "\"callerName\":\"" + safeName.replace("\"", "\\\"") + "\"," +
-                "\"callType\":\"" + safeType.replace("\"", "\\\"") + "\"," +
-                "\"callerPhoto\":\"" + safePhoto.replace("\"", "\\\"") + "\"," +
-                "\"conversationId\":\"" + safeConv.replace("\"", "\\\"") + "\"," +
-                "\"callAction\":\"" + safeAction.replace("\"", "\\\"") + "\"" +
+                "\"callerId\":\"" + safeId + "\"," +
+                "\"callerName\":\"" + safeName + "\"," +
+                "\"callType\":\"" + safeType + "\"," +
+                "\"callerPhoto\":\"" + safePhoto + "\"," +
+                "\"conversationId\":\"" + safeConv + "\"," +
+                "\"callAction\":\"" + safeAction + "\"" +
                 "}";
             sPendingIncomingCallPayload = jsonPayload;
 
@@ -238,7 +245,7 @@ public class MainActivity extends BridgeActivity {
             String targetTab = getExtraStringSafe(intent, "targetTab");
 
             if (convId != null && !convId.trim().isEmpty()) {
-                String safeConv = convId.replace("'", "\\'");
+                String safeConv = escapeJsString(convId);
                 String js = "window.dispatchEvent(new CustomEvent('qurb_open_chat', { detail: { conversationId: '" + safeConv + "' } }));";
                 if (getBridge() != null && getBridge().getWebView() != null) {
                     getBridge().getWebView().postDelayed(() -> {
@@ -268,8 +275,9 @@ public class MainActivity extends BridgeActivity {
             String stripeStatus = data.getQueryParameter("stripe_status");
             String sessionId = data.getQueryParameter("session_id");
             if (stripeStatus != null) {
-                String safeSessionId = sessionId != null ? sessionId : "";
-                String js = "window.dispatchEvent(new CustomEvent('app_stripe_callback', { detail: { stripe_status: '" + stripeStatus + "', session_id: '" + safeSessionId + "' } }));";
+                String safeStatus = escapeJsString(stripeStatus);
+                String safeSessionId = escapeJsString(sessionId);
+                String js = "window.dispatchEvent(new CustomEvent('app_stripe_callback', { detail: { stripe_status: '" + safeStatus + "', session_id: '" + safeSessionId + "' } }));";
                 if (getBridge() != null && getBridge().getWebView() != null) {
                     getBridge().getWebView().postDelayed(() -> {
                         getBridge().getWebView().evaluateJavascript(js, null);

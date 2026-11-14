@@ -37,7 +37,7 @@ describe('Calling Modals & WebRTC Control Suite', () => {
       expect(screen.getByText('Islamabad')).toBeTruthy();
       expect(screen.getByText('VIP')).toBeTruthy();
       expect(screen.getByText(/Incoming HD Voice Call/i)).toBeTruthy();
-      expect(screen.getByText(/Wali & Modesty Protected Connection/i)).toBeTruthy();
+      expect(screen.getByText(/Privacy & Modesty Protected Connection/i)).toBeTruthy();
     });
 
     it('2. Clicking Decline button triggers rejectCall with declined reason', () => {

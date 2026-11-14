@@ -109,8 +109,9 @@ photosRouter.post('/upload-voice', async (c) => {
     // Save to Cloudflare D1
     try {
       await c.env.DB.prepare(`
-        INSERT OR IGNORE INTO users (id, created_at) VALUES (?, CURRENT_TIMESTAMP)
-      `).bind(userId).run();
+        INSERT OR IGNORE INTO users (id, phone, full_name, dob, gender, location, is_profile_completed, created_at)
+        VALUES (?, ?, 'Member', '1998-01-01', 'male', 'Global', 0, CURRENT_TIMESTAMP)
+      `).bind(userId, `ph_${userId}`).run();
 
       await c.env.DB.prepare(`
         UPDATE users 

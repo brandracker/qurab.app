@@ -148,7 +148,16 @@ class PushNotificationService {
 
         // Track click telemetry to Cloudflare D1
         try {
-          const rawUserId = localStorage.getItem('qurb_user_id') || '';
+          const rawUserId = (() => {
+            try {
+              const saved = localStorage.getItem('serene_current_user_v1');
+              if (saved) {
+                const parsed = JSON.parse(saved);
+                if (parsed?.id) return String(parsed.id);
+              }
+            } catch {}
+            return localStorage.getItem('qurb_user_id') || '';
+          })();
           if (rawUserId && (data.campaignId || data.notificationId || data.type === 'daily_engagement')) {
             fetch(`${API_BASE}/notifications/track-click`, {
               method: 'POST',
@@ -188,7 +197,16 @@ class PushNotificationService {
 
         // Track click telemetry to Cloudflare D1
         try {
-          const rawUserId = localStorage.getItem('qurb_user_id') || '';
+          const rawUserId = (() => {
+            try {
+              const saved = localStorage.getItem('serene_current_user_v1');
+              if (saved) {
+                const parsed = JSON.parse(saved);
+                if (parsed?.id) return String(parsed.id);
+              }
+            } catch {}
+            return localStorage.getItem('qurb_user_id') || '';
+          })();
           if (rawUserId && (extra.campaignId || extra.notificationId || extra.type === 'daily_engagement')) {
             fetch(`${API_BASE}/notifications/track-click`, {
               method: 'POST',

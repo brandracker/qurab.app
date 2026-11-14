@@ -59,31 +59,35 @@ export const CreateProfileScreen: React.FC<Props> = ({
       newPhotos[activeSlot] = photoPayload;
       setPhotos(newPhotos);
 
-      // Fast background sync to Cloudflare R2 if userId exists
+      // Await upload sync to Cloudflare R2 before releasing upload state
       if (userId) {
-        fetch(`${API_BASE}/photos/upload`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId,
-            photoBase64: photoPayload,
-            isPrimary: activeSlot === 0,
-            blurByDefault: blurPhotos
-          })
-        })
-          .then(res => res.json())
-          .then(data => {
-            if (data?.success && data?.photoUrl) {
-              setPhotos(prev => {
-                const copy = [...prev];
-                copy[activeSlot] = data.photoUrl;
-                return copy;
-              });
-            }
-          })
-          .catch(err => {
-            console.warn('Background photo upload warning:', err);
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 12000);
+        try {
+          const res = await fetch(`${API_BASE}/photos/upload`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId,
+              photoBase64: photoPayload,
+              isPrimary: activeSlot === 0,
+              blurByDefault: blurPhotos
+            }),
+            signal: controller.signal
           });
+          const data = await res.json();
+          if (data?.success && data?.photoUrl) {
+            setPhotos(prev => {
+              const copy = [...prev];
+              copy[activeSlot] = data.photoUrl;
+              return copy;
+            });
+          }
+        } catch (err) {
+          console.warn('Background photo upload warning:', err);
+        } finally {
+          clearTimeout(timer);
+        }
       }
     } catch (err) {
       console.error('Photo optimization error:', err);

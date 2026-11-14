@@ -100,8 +100,19 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
     if (m < 0 || (m === 0 && today.getDate() < birthDay)) {
       age--;
     }
-    return Math.max(18, age);
+    return Math.max(0, age);
   }, [birthYear, birthMonth, birthDay]);
+
+  const maxDaysInSelectedMonth = useMemo(
+    () => new Date(birthYear, birthMonth, 0).getDate(),
+    [birthYear, birthMonth]
+  );
+
+  useEffect(() => {
+    if (birthDay > maxDaysInSelectedMonth) {
+      setBirthDay(maxDaysInSelectedMonth);
+    }
+  }, [birthDay, maxDaysInSelectedMonth]);
 
   // --- Height System (Dual-Unit: Feet & Inches + Centimeters with live sync) ---
   const parseInitialCm = (hStr?: string): number => {
@@ -799,7 +810,7 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
                   onChange={(e) => setBirthDay(Number(e.target.value))}
                   className="w-full bg-surface-variant border border-outline rounded-xl px-2.5 py-2 text-xs font-semibold text-on-surface outline-none focus:border-primary appearance-none pr-6"
                 >
-                  {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                  {Array.from({ length: maxDaysInSelectedMonth }, (_, i) => i + 1).map(d => (
                     <option key={d} value={d}>Day {d}</option>
                   ))}
                 </select>
@@ -827,7 +838,7 @@ export const BasicInfoScreen: React.FC<Props> = ({ data, onBack, onContinue }) =
                   onChange={(e) => setBirthYear(Number(e.target.value))}
                   className="w-full bg-surface-variant border border-outline rounded-xl px-2.5 py-2 text-xs font-semibold text-on-surface outline-none focus:border-primary appearance-none pr-6"
                 >
-                  {Array.from({ length: 50 }, (_, i) => 2007 - i).map(y => (
+                  {Array.from({ length: 50 }, (_, i) => (new Date().getFullYear() - 18) - i).map(y => (
                     <option key={y} value={y}>{y}</option>
                   ))}
                 </select>

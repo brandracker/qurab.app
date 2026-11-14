@@ -840,7 +840,7 @@ profilesRouter.get('/discover', async (c) => {
       ? `AND u.id NOT IN (SELECT receiver_id FROM matches_and_likes WHERE sender_id = ?)`
       : '';
     const genderFilter = targetGender ? `AND u.gender = ?` : '';
-    const geoFilter = box ? `AND u.latitude BETWEEN ? AND ? AND u.longitude BETWEEN ? AND ?` : '';
+    const geoFilter = box ? `AND (u.latitude IS NULL OR u.longitude IS NULL OR (u.latitude BETWEEN ? AND ? AND u.longitude BETWEEN ? AND ?))` : '';
 
     // Task 04: Filters End-to-End (Sects, Practice Levels, City, Age Range)
     const sectsParam = c.req.query('sects') || c.req.query('sect');
@@ -1021,8 +1021,6 @@ profilesRouter.get('/discover', async (c) => {
 
       return {
         id: row.id,
-        phone: row.phone,
-        email: row.email,
         fullName: row.fullName,
         age: age || 26,
         gender: row.gender,
@@ -1085,7 +1083,7 @@ profilesRouter.get('/discover', async (c) => {
         wali: row.waliName ? {
           name: row.waliName,
           relationship: row.waliRelationship,
-          phone: row.waliPhone,
+          phone: '',
           isVerified: Boolean(row.waliVerified)
         } : null,
       };

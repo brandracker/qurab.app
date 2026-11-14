@@ -13,6 +13,8 @@ waliRouter.post('/invite', async (c) => {
 
     const waliId = `wali_${Date.now()}`;
 
+    await c.env.DB.prepare('DELETE FROM wali_details WHERE user_id = ?').bind(userId).run();
+
     await c.env.DB.prepare(`
       INSERT OR REPLACE INTO wali_details (id, user_id, wali_name, wali_phone, wali_relationship, is_verified, chat_observer_active)
       VALUES (?, ?, ?, ?, ?, 1, 1)

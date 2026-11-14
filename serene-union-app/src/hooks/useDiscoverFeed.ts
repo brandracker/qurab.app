@@ -27,16 +27,16 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
   }, [currentUser.id]);
 
   const [likesRemaining, setLikesRemaining] = useState<number>(() => {
-    const key = `serene_likes_left_${currentUser.id}`;
-    const saved = localStorage.getItem(key);
-    if (saved !== null) {
-      const parsed = parseInt(saved, 10);
-      if (!isNaN(parsed)) return parsed;
-    }
     const today = new Date().toISOString().slice(0, 10);
     const dateSaved = localStorage.getItem(`serene_likes_left_${currentUser.id}_${today}`);
     if (dateSaved !== null) {
       const parsed = parseInt(dateSaved, 10);
+      if (!isNaN(parsed)) return parsed;
+    }
+    const key = `serene_likes_left_${currentUser.id}`;
+    const saved = localStorage.getItem(key);
+    if (saved !== null) {
+      const parsed = parseInt(saved, 10);
       if (!isNaN(parsed)) return parsed;
     }
     return 50;

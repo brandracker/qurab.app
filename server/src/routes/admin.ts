@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import type { AppContext } from '../types';
-import { hashPassword } from '../utils/crypto';
+import { hashPassword, signAdminToken, verifyAdminToken } from '../utils/crypto';
 import { ensureSeedProfiles, SEED_PASSWORD } from '../utils/seedData';
 import { getPendingCatchupCount, processCatchupReplies } from '../utils/ai-chat-agent';
 import { calculateSubscriptionExpiry, syncAndValidateSubscription } from '../utils/subscription';
@@ -8,7 +8,7 @@ import { ensureNotificationTables, triggerDailyNotifications } from '../utils/da
 
 export const adminRouter = new Hono<AppContext>();
 
-// Default Superadmin seed hash for 'QurbAdmin2026!Secure'
+// Default Superadmin seed password hash
 const DEFAULT_ADMIN_HASH = 'e510d5bb3f30257c52849f4f7fdd2b2417b6c11f2803924fad888dcbf39de858';
 
 // Helper to auto-ensure admins table exists in D1 and seed initial admin if empty
@@ -78,6 +78,13 @@ async function ensureAdminTableAndSeed(db: any) {
         )
       `).run();
       await db.prepare(`
+        CREATE TABLE IF NOT EXISTS app_settings (
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `).run();
+      await db.prepare(`
         INSERT OR IGNORE INTO system_settings (key, value) VALUES ('ai_agent_enabled', '1')
       `).run();
     } catch {}
@@ -122,7 +129,7 @@ adminRouter.post('/auth/login', async (c) => {
       return c.json({ success: false, error: 'Invalid admin credentials' }, 401);
     }
 
-    const token = `adm_tok_${admin.id}.${Math.random().toString(36).substring(2, 12)}.${Date.now()}`;
+    const token = await signAdminToken(String(admin.id), (c.env as any)?.ADMIN_SECRET);
 
     return c.json({
       success: true,
@@ -159,12 +166,15 @@ adminRouter.use('*', async (c, next) => {
     return c.json({ success: false, error: 'Forbidden: Admin authorization required' }, 403);
   }
 
-  const tokenBody = token.slice('adm_tok_'.length);
-  const [adminId] = tokenBody.split('.');
-
-  if (!adminId) {
-    return c.json({ success: false, error: 'Unauthorized: Malformed admin token' }, 401);
+  const verified = await verifyAdminToken(
+    token,
+    (c.env as any)?.ADMIN_SECRET,
+    c.env?.ENVIRONMENT === 'test'
+  );
+  if (!verified.valid || !verified.adminId) {
+    return c.json({ success: false, error: 'Unauthorized: Invalid or unsigned admin token' }, 401);
   }
+  const adminId = verified.adminId;
 
   await ensureAdminTableAndSeed(c.env.DB);
   const adminExists = await c.env.DB.prepare('SELECT id, name, role FROM admins WHERE id = ?').bind(adminId).first();
@@ -2109,7 +2119,7 @@ adminRouter.get('/daily-activity', async (c) => {
       let age = 24;
       if (u.dob) {
         const birthYear = parseInt(String(u.dob).split('-')[0], 10);
-        if (!isNaN(birthYear)) age = 2026 - birthYear;
+        if (!isNaN(birthYear)) age = new Date().getFullYear() - birthYear;
       }
 
       return {
@@ -2216,11 +2226,11 @@ adminRouter.get('/daily-activity/user-details', async (c) => {
         CASE WHEN m.sender_id = ? THEN m.receiver_id ELSE m.sender_id END as partnerId
       FROM matches_and_likes m
       WHERE (m.sender_id = ? OR m.receiver_id = ?)
-        AND (m.action = 'match' OR m.action = 'direct_salam')
+        AND m.action IN ('match', 'mutual_match', 'direct_salam')
         AND m.created_at >= ? AND m.created_at <= ?
       ORDER BY m.created_at DESC
       LIMIT 20
-    `).bind(userId, userId, startOfDay, endOfDay).all();
+    `).bind(userId, userId, userId, startOfDay, endOfDay).all();
 
     const matchesList = [];
     for (const m of (matchesRaw || [])) {
@@ -2253,7 +2263,7 @@ adminRouter.get('/daily-activity/user-details', async (c) => {
         m.id as likeId, m.created_at as likedAt, m.receiver_id as recipientId
       FROM matches_and_likes m
       WHERE m.sender_id = ?
-        AND (m.action = 'like' OR m.action = 'direct_salam')
+        AND m.action IN ('like', 'liked', 'direct_salam')
         AND m.created_at >= ? AND m.created_at <= ?
       ORDER BY m.created_at DESC
       LIMIT 20
@@ -2309,7 +2319,7 @@ adminRouter.get('/daily-activity/user-details', async (c) => {
 
       // Messages in this conversation on this date (or latest 25 messages)
       const { results: msgs } = await c.env.DB.prepare(`
-        SELECT id, sender_id, sender_name, text, created_at, wali_notified
+        SELECT id, sender_id, sender_name, text, created_at
         FROM chat_messages
         WHERE conversation_id = ?
         ORDER BY created_at ASC
@@ -2335,19 +2345,19 @@ adminRouter.get('/daily-activity/user-details', async (c) => {
           text: m.text,
           createdAt: m.created_at,
           isFromCurrentUser: m.sender_id === userId,
-          waliNotified: Boolean(m.wali_notified)
+          waliNotified: false
         }))
       });
     }
 
     // F. Telemetry payload
-    const totalActiveSeconds = Number(dailyMetric?.total_active_seconds || 2400);
+    const totalActiveSeconds = Number(dailyMetric?.total_active_seconds || 0);
     const telemetry = {
-      ip: dailyMetric?.last_ip || user.last_ip || '111.119.187.42',
-      city: dailyMetric?.last_city || user.last_ip_city || user.city || 'Islamabad',
-      country: dailyMetric?.last_country || user.last_ip_country || user.country || 'PK',
-      isp: dailyMetric?.last_isp || user.last_ip_isp || 'PTCL Fiber / Edge Network',
-      userAgent: dailyMetric?.user_agent || 'Mozilla/5.0 (iPhone; CPU iOS 17_4) Mobile/15E148 Safari/604.1',
+      ip: dailyMetric?.last_ip || user.last_ip || 'Not recorded',
+      city: dailyMetric?.last_city || user.last_ip_city || user.city || 'Not recorded',
+      country: dailyMetric?.last_country || user.last_ip_country || user.country || 'Not recorded',
+      isp: dailyMetric?.last_isp || user.last_ip_isp || 'Standard Network',
+      userAgent: dailyMetric?.user_agent || 'Qurb Mobile / Web Client',
       totalActiveSeconds,
       activeDurationFormatted: formatDuration(totalActiveSeconds),
       firstActiveAt: dailyMetric?.first_active_at || user.last_active_at || user.created_at,
@@ -2388,6 +2398,7 @@ adminRouter.get('/daily-activity/user-details', async (c) => {
 
 // Helper formatting seconds to "Xh Ym" or "Ym"
 function formatDuration(sec: number): string {
+  if (sec <= 0) return '0m';
   const m = Math.floor(sec / 60);
   const h = Math.floor(m / 60);
   const remM = m % 60;

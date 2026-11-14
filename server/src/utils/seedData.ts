@@ -2951,7 +2951,7 @@ export async function ensureSeedProfiles(db: any): Promise<number> {
 
     for (const p of allSeeds) {
       await db.prepare(`
-        INSERT OR REPLACE INTO users (
+        INSERT INTO users (
           id, phone, email, password_hash, full_name, dob, gender, location, city, country,
           latitude, longitude, height, bio, profession, education, university,
           ethnicity, family_structure, living_preference, siblings_count,
@@ -2971,6 +2971,27 @@ export async function ensureSeedProfiles(db: any): Promise<number> {
           1, 1, 0, 1,
           1, 1, ?, 'active', 0
         )
+        ON CONFLICT(id) DO UPDATE SET
+          phone = excluded.phone,
+          email = excluded.email,
+          password_hash = excluded.password_hash,
+          full_name = excluded.full_name,
+          dob = excluded.dob,
+          gender = excluded.gender,
+          location = excluded.location,
+          city = excluded.city,
+          country = excluded.country,
+          latitude = excluded.latitude,
+          longitude = excluded.longitude,
+          height = excluded.height,
+          bio = excluded.bio,
+          profession = excluded.profession,
+          education = excluded.education,
+          university = excluded.university,
+          ethnicity = excluded.ethnicity,
+          is_seed = 1,
+          seed_password = excluded.seed_password,
+          updated_at = CURRENT_TIMESTAMP
       `).bind(
         p.id, p.phone, p.email, SEED_PASSWORD_HASH,
         p.name, p.dob, p.gender, p.location, p.city,

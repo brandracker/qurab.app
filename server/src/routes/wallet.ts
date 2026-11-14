@@ -293,8 +293,11 @@ walletRouter.post('/use-direct-salam', async (c) => {
       wallet = { direct_salams_balance: 2 };
     }
 
-    const currentBalance = wallet?.direct_salams_balance ?? 0;
-    if (currentBalance <= 0) {
+    const updateRes = await c.env.DB.prepare(
+      'UPDATE user_wallets SET direct_salams_balance = MAX(0, direct_salams_balance - 1) WHERE user_id = ? AND direct_salams_balance > 0'
+    ).bind(userId).run();
+
+    if (!updateRes.meta || updateRes.meta.changes === 0) {
       return c.json({
         success: false,
         error: 'Insufficient Direct Salam passes',
@@ -302,10 +305,10 @@ walletRouter.post('/use-direct-salam', async (c) => {
       }, 403);
     }
 
-    const nextBalance = Math.max(0, currentBalance - 1);
-    await c.env.DB.prepare(`
-      UPDATE user_wallets SET direct_salams_balance = ? WHERE user_id = ?
-    `).bind(nextBalance, userId).run();
+    const updatedWallet: any = await c.env.DB.prepare(
+      'SELECT direct_salams_balance FROM user_wallets WHERE user_id = ?'
+    ).bind(userId).first();
+    const nextBalance = Number(updatedWallet?.direct_salams_balance ?? 0);
 
     return c.json({
       success: true,
@@ -379,18 +382,24 @@ walletRouter.post('/purchase-google-play', async (c) => {
       ).bind(cleanToken).first();
     }
 
-    // Re-bind token to the active user to smoothly handle testing and account switching on device
-    if (cleanToken) {
+    // Only fill missing purchase_token if the record already belongs to this user
+    if (cleanToken && existingPurchase && existingPurchase.user_id === userId) {
       try {
         await c.env.DB.prepare(
-          'UPDATE in_app_purchases SET user_id = ? WHERE purchase_token = ?'
-        ).bind(userId, cleanToken).run();
+          'UPDATE in_app_purchases SET purchase_token = ? WHERE id = ? AND user_id = ? AND purchase_token IS NULL'
+        ).bind(cleanToken, existingPurchase.id, userId).run();
       } catch {}
     }
 
     const isSubscription = (productId === 'qurb_barakah_monthly' || productId === 'serene_barakah_monthly');
-    // If not explicitly set as paid 30 days, any initial monthly subscription purchase is the active 7-Day Free Trial
-    const isFreeTrial = isSubscription && (isTrial === true || durationDays === 7 || durationDays === '7' || !durationDays);
+    // Treat as 7-Day Free Trial if explicitly flagged as trial/7d, OR if durationDays and amountCents are omitted (initial trial grant).
+    // Paid purchases with amountCents > 0 or isTrial === false default to 30 days.
+    const isFreeTrial = isSubscription && isTrial !== false && (
+      isTrial === true ||
+      durationDays === 7 ||
+      durationDays === '7' ||
+      (!durationDays && !(Number(amountCents) > 0))
+    );
     const resolvedDays = isFreeTrial ? 7 : (durationDays ? Number(durationDays) : 30);
     const resolvedAmountCents = isFreeTrial ? 0 : (amountCents !== undefined ? Number(amountCents) : (isSubscription ? 299 : 99));
 
@@ -486,7 +495,11 @@ walletRouter.post('/purchase-google-play', async (c) => {
         ON CONFLICT(user_id) DO UPDATE SET 
           subscription_tier = 'barakah_vip', 
           daily_messages_quota = 9999, 
-          subscription_expiry = excluded.subscription_expiry,
+          subscription_expiry = CASE
+            WHEN user_wallets.subscription_expiry IS NOT NULL AND user_wallets.subscription_expiry > excluded.subscription_expiry
+            THEN user_wallets.subscription_expiry
+            ELSE excluded.subscription_expiry
+          END,
           direct_salams_balance = CASE 
             WHEN user_wallets.subscription_tier = 'barakah_vip' AND (user_wallets.subscription_expiry IS NULL OR user_wallets.subscription_expiry > datetime('now')) THEN user_wallets.direct_salams_balance
             ELSE user_wallets.direct_salams_balance + 20
@@ -696,7 +709,8 @@ walletRouter.post('/stripe/verify-session', async (c) => {
       return c.json({ success: false, error: session?.error?.message || 'Failed to verify Stripe session' }, 400);
     }
 
-    const isPaid = session.payment_status === 'paid' || session.status === 'complete';
+    await ensureInAppPurchasesTable(c.env.DB);
+    const isPaid = session.payment_status === 'paid';
     const userId = session.metadata?.userId || session.client_reference_id;
     const productId = session.metadata?.productId;
 

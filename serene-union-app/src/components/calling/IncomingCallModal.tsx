@@ -52,7 +52,7 @@ export const IncomingCallModal: React.FC<IncomingCallModalProps> = ({
         {/* Islamic & Modesty Verified Tag */}
         <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-[11px] font-medium backdrop-blur-md">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-          <span>Wali & Modesty Protected Connection</span>
+          <span>Privacy & Modesty Protected Connection</span>
           <Lock className="w-2.5 h-2.5 text-emerald-400/80 ml-0.5" />
         </div>
       </div>

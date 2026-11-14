@@ -40,8 +40,18 @@ function base64UrlEncode(str: string): string {
     .replace(/=+$/, '');
 }
 
+let cachedFcmToken: { token: string; expiresAt: number; clientEmail: string } | null = null;
+
 async function getGoogleAccessToken(serviceAccount: { client_email: string; private_key: string }): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
+  if (
+    cachedFcmToken &&
+    cachedFcmToken.clientEmail === serviceAccount.client_email &&
+    now + 300 < cachedFcmToken.expiresAt
+  ) {
+    return cachedFcmToken.token;
+  }
+
   const header = { alg: 'RS256', typ: 'JWT' };
   const claimSet = {
     iss: serviceAccount.client_email,
@@ -84,6 +94,11 @@ async function getGoogleAccessToken(serviceAccount: { client_email: string; priv
   }
 
   const tokenData: any = await tokenRes.json();
+  cachedFcmToken = {
+    token: tokenData.access_token,
+    expiresAt: now + Number(tokenData.expires_in || 3600),
+    clientEmail: serviceAccount.client_email
+  };
   return tokenData.access_token;
 }
 

@@ -172,7 +172,7 @@ export const walletService = {
     }
 
     try {
-      const res = await fetch(`${API_BASE}/wallet/use-salam`, {
+      const res = await fetch(`${API_BASE}/wallet/use-direct-salam`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId })

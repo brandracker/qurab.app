@@ -274,7 +274,6 @@ matchesRouter.get('/hub', async (c) => {
       c.env.DB.prepare(`
         SELECT 
           COALESCE(u.id, m.sender_id) as id,
-          u.phone, u.email,
           COALESCE(u.full_name, 'Member') as fullName,
           COALESCE(u.dob, '1998-01-01') as dob,
           COALESCE(u.gender, 'other') as gender,
@@ -304,7 +303,6 @@ matchesRouter.get('/hub', async (c) => {
       c.env.DB.prepare(`
         SELECT 
           COALESCE(u.id, CASE WHEN m.sender_id = ? THEN m.receiver_id ELSE m.sender_id END) as id,
-          u.phone, u.email,
           COALESCE(u.full_name, 'Match') as fullName,
           COALESCE(u.dob, '1998-01-01') as dob,
           COALESCE(u.gender, 'other') as gender,
@@ -337,6 +335,7 @@ matchesRouter.get('/hub', async (c) => {
           COALESCE(u.location, 'Global') as location,
           COALESCE(u.profession, 'Professional') as profession,
           COALESCE(u.marriage_timeline, 'within_1_year') as marriageTimeline,
+          COALESCE(u.blur_photos_by_default, 0) as blurPhotosByDefault,
           m.action, m.created_at as actionTime
         FROM matches_and_likes m
         LEFT JOIN users u ON m.receiver_id = u.id
@@ -534,8 +533,6 @@ matchesRouter.get('/received', async (c) => {
 
       return {
         id: row.id,
-        phone: row.phone,
-        email: row.email,
         fullName: row.fullName,
         age: age || 26,
         gender: row.gender,
@@ -575,7 +572,7 @@ matchesRouter.get('/received', async (c) => {
         wali: row.waliName ? {
           name: row.waliName,
           relationship: row.waliRelationship,
-          phone: row.waliPhone,
+          phone: '',
           isVerified: Boolean(row.waliVerified)
         } : null,
         likedAt: row.likedAt
@@ -684,8 +681,6 @@ matchesRouter.get('/mutual', async (c) => {
 
       return {
         id: row.id,
-        phone: row.phone,
-        email: row.email,
         fullName: row.fullName,
         age: age || 26,
         gender: row.gender,
@@ -724,7 +719,7 @@ matchesRouter.get('/mutual', async (c) => {
         wali: row.waliName ? {
           name: row.waliName,
           relationship: row.waliRelationship,
-          phone: row.waliPhone,
+          phone: '',
           isVerified: Boolean(row.waliVerified)
         } : null,
         isOnline: Boolean(row.lastActiveAt && !isNaN(new Date(row.lastActiveAt).getTime()) && (Date.now() - new Date(row.lastActiveAt).getTime()) < 15 * 60 * 1000),

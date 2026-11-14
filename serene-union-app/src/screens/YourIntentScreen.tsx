@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { backNavigationService } from '../services/backNavigationService';
 import { 
   ArrowLeft, 
   ArrowRight, 
@@ -101,6 +102,14 @@ const EmojiBadge: React.FC<{
 
 export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) => {
   const [currentStepIndex, setCurrentStepIndex] = useState<number>(1);
+
+  useEffect(() => {
+    if (currentStepIndex <= 1) return;
+    return backNavigationService.register(() => {
+      setCurrentStepIndex(prev => Math.max(1, prev - 1));
+      return true;
+    });
+  }, [currentStepIndex]);
 
   // --- Step 1: Career & Education State ---
   const [education, setEducation] = useState<string>(data?.education || 'Bachelors Degree');
@@ -669,7 +678,7 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
               <div className="grid grid-cols-2 gap-2.5">
                 {[
                   { id: 'sunnah_modest', label: 'Sunnah Modest Mahr', desc: 'Simple, unburdensome Mahr upon Sunnah', emoji: '⚖️', bg: 'bg-emerald-50', border: 'border-emerald-100' },
-                  { id: 'mutual_agreement', label: 'Mutual Agreement', desc: 'Discussed & agreed respectfully with Wali', emoji: '🤝', bg: 'bg-sky-50', border: 'border-sky-100' }
+                  { id: 'mutual_agreement', label: 'Mutual Agreement', desc: 'Discussed & agreed respectfully between families', emoji: '🤝', bg: 'bg-sky-50', border: 'border-sky-100' }
                 ].map(opt => {
                   const isSelected = mahrPhilosophy === opt.id;
                   return (
@@ -1157,7 +1166,7 @@ export const YourIntentScreen: React.FC<Props> = ({ data, onBack, onContinue }) 
                 { id: 'non_smoker', label: 'Non-Smoker Only', desc: 'Must strictly not smoke cigarettes or vape', emoji: '🚭', bg: 'bg-rose-50', border: 'border-rose-100' },
                 { id: 'daily_salah', label: '5x Daily Salah', desc: 'Regular in obligatory five daily prayers', emoji: '🕌', bg: 'bg-emerald-50', border: 'border-emerald-100' },
                 { id: 'halal_diet', label: 'Strictly Halal Diet', desc: 'Strict commitment to halal food only', emoji: '🍽️', bg: 'bg-teal-50', border: 'border-teal-100' },
-                { id: 'family_involvement', label: 'Early Wali Involvement', desc: 'Respectful guardian involvement from start', emoji: '🛡️', bg: 'bg-indigo-50', border: 'border-indigo-100' }
+                { id: 'family_involvement', label: 'Early Family Involvement', desc: 'Respectful guardian involvement from start', emoji: '🛡️', bg: 'bg-indigo-50', border: 'border-indigo-100' }
               ].map(item => {
                 const isChecked = dealbreakers.includes(item.id);
                 return (

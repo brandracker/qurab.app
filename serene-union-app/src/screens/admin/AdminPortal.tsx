@@ -18,20 +18,16 @@ import { UserInspectModal } from './components/UserInspectModal';
 import { BroadcastModal } from './components/BroadcastModal';
 import { SubscriptionModal } from './components/SubscriptionModal';
 import { AppVersionModal } from './components/AppVersionModal';
-import type { 
-  AdminTab, 
-  DashboardStats, 
-  AdminProfile, 
-  CityStat, 
-  CandidateUser, 
-  CandidatePhoto 
+import type {
+  AdminTab,
+  DashboardStats,
+  AdminProfile,
+  CityStat,
+  CandidateUser,
+  CandidatePhoto
 } from './types';
 
 export const AdminPortal: React.FC = () => {
-  if (Capacitor.isNativePlatform()) {
-    return null;
-  }
-
   const [adminToken, setAdminToken] = useState<string | null>(() => {
     return sessionStorage.getItem('qurb_admin_token');
   });
@@ -112,7 +108,7 @@ export const AdminPortal: React.FC = () => {
     if (!adminToken) return;
     try {
       const res = await fetch(`${API_BASE}/admin/dashboard/stats?t=${Date.now()}`, {
-        headers: { 
+        headers: {
           'Authorization': `Bearer ${adminToken}`
         },
         cache: 'no-store'
@@ -491,6 +487,10 @@ export const AdminPortal: React.FC = () => {
       setIsBroadcasting(false);
     }
   };
+
+  if (Capacitor.isNativePlatform()) {
+    return null;
+  }
 
   if (!adminToken) {
     return (

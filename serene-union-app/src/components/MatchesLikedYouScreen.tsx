@@ -368,70 +368,58 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
       </div>
 
       {/* Sub-Tabs Selector based on Main Section */}
-      <div className="flex items-center gap-2 mb-3.5 relative z-10">
+      <div className={`mb-3.5 relative z-10 ${mainSection === 'activity' ? 'grid grid-cols-3 p-1 rounded-2xl bg-slate-100/90 dark:bg-[#14141b] border border-slate-200/80 dark:border-[#272733] gap-1' : 'flex items-center gap-2'}`}>
         {mainSection === 'activity' ? (
           <>
             {/* 1. You Liked */}
             <button
               onClick={() => setActiveTab('sent')}
-              className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border cursor-pointer ${
+              className={`py-2 px-2 rounded-xl flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer ${
                 activeTab === 'sent'
-                  ? 'bg-gradient-to-r from-primary to-primary-dark text-white border-transparent shadow-brand'
-                  : 'bg-white dark:bg-[#16161c] text-slate-600 dark:text-slate-300 border-slate-200/80 dark:border-[#272733] hover:bg-slate-50 dark:hover:bg-[#1f1f28] shadow-2xs'
+                  ? 'bg-gradient-to-r from-primary to-primary-dark text-white shadow-brand'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-white/70 dark:hover:bg-[#1f1f28]'
               }`}
             >
-              <span>You Liked</span>
-              {sentLikes.length > 0 && (
-                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                  activeTab === 'sent'
-                    ? 'bg-white/25 text-white'
-                    : 'bg-rose-50 dark:bg-rose-950/50 text-primary dark:text-rose-300'
-                }`}>
-                  {sentLikes.length}
-                </span>
-              )}
+              <span className={`text-xs font-black leading-none tabular-nums ${
+                activeTab === 'sent' ? 'text-white' : 'text-primary dark:text-rose-300'
+              }`}>
+                {sentLikes.length}
+              </span>
+              <span className="text-[11px] font-bold leading-tight truncate">You Liked</span>
             </button>
 
             {/* 2. Mutual */}
             <button
               onClick={() => setActiveTab('mutual')}
-              className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border cursor-pointer ${
+              className={`py-2 px-2 rounded-xl flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer ${
                 activeTab === 'mutual'
-                  ? 'bg-gradient-to-r from-primary to-primary-dark text-white border-transparent shadow-brand'
-                  : 'bg-white dark:bg-[#16161c] text-slate-600 dark:text-slate-300 border-slate-200/80 dark:border-[#272733] hover:bg-slate-50 dark:hover:bg-[#1f1f28] shadow-2xs'
+                  ? 'bg-gradient-to-r from-primary to-primary-dark text-white shadow-brand'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-white/70 dark:hover:bg-[#1f1f28]'
               }`}
             >
-              <span>Mutual</span>
-              {mutualMatches.length > 0 && (
-                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                  activeTab === 'mutual'
-                    ? 'bg-white/25 text-white'
-                    : 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300'
-                }`}>
-                  {mutualMatches.length}
-                </span>
-              )}
+              <span className={`text-xs font-black leading-none tabular-nums ${
+                activeTab === 'mutual' ? 'text-white' : 'text-emerald-600 dark:text-emerald-300'
+              }`}>
+                {mutualMatches.length}
+              </span>
+              <span className="text-[11px] font-bold leading-tight truncate">Mutual</span>
             </button>
 
             {/* 3. Liked You */}
             <button
               onClick={() => setActiveTab('received')}
-              className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border cursor-pointer ${
+              className={`py-2 px-2 rounded-xl flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer ${
                 activeTab === 'received'
-                  ? 'bg-gradient-to-r from-primary to-primary-dark text-white border-transparent shadow-brand'
-                  : 'bg-white dark:bg-[#16161c] text-slate-600 dark:text-slate-300 border-slate-200/80 dark:border-[#272733] hover:bg-slate-50 dark:hover:bg-[#1f1f28] shadow-2xs'
+                  ? 'bg-gradient-to-r from-primary to-primary-dark text-white shadow-brand'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-white/70 dark:hover:bg-[#1f1f28]'
               }`}
             >
-              <span>Liked You</span>
-              {interestedProfiles.length > 0 && (
-                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                  activeTab === 'received'
-                    ? 'bg-white/25 text-white'
-                    : 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300'
-                }`}>
-                  {interestedProfiles.length}
-                </span>
-              )}
+              <span className={`text-xs font-black leading-none tabular-nums ${
+                activeTab === 'received' ? 'text-white' : 'text-amber-600 dark:text-amber-300'
+              }`}>
+                {interestedProfiles.length}
+              </span>
+              <span className="text-[11px] font-bold leading-tight truncate">Liked You</span>
             </button>
           </>
         ) : (

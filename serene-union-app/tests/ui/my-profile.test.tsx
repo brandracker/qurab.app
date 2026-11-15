@@ -36,8 +36,8 @@ describe('UI & Button Interactions: My Profile Screen', () => {
     render(<MyProfileScreen user={mockUser} />);
 
     // Verify Main Header
-    expect(screen.getByText(/My Matrimonial Biodata/i)).toBeDefined();
-    expect(screen.getByText(/Manage profile, modesty settings/i)).toBeDefined();
+    expect(screen.getByText(/My Biodata/i)).toBeDefined();
+    expect(screen.getByText(/Profile, modesty & VIP/i)).toBeDefined();
 
     // Verify User details
     expect(screen.getByText(/Hamza Farooq/i)).toBeDefined();

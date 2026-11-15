@@ -574,9 +574,9 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
       <header className="sticky top-0 bg-white/95 dark:bg-[#121218]/95 backdrop-blur-md px-4 py-3 border-b border-slate-200/80 dark:border-[#272733] flex items-center justify-between z-20 shadow-[0_1px_8px_rgba(0,0,0,0.03)]">
         <div>
           <h1 className="font-serif text-xl font-bold text-on-surface">
-            My Matrimonial Biodata
+            My Biodata
           </h1>
-          <p className="text-[11px] text-secondary mt-0.5">Manage profile, modesty settings & VIP membership</p>
+          <p className="text-[11px] text-secondary mt-0.5">Profile, modesty & VIP</p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -628,29 +628,81 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
                 </div>
 
                 <div className="text-right">
-                  <span className={`text-base font-black font-mono ${
-                    isHigh ? 'text-emerald-600' : (isMid ? 'text-amber-600' : 'text-rose-600')
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-black font-mono border ${
+                    isHigh
+                      ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30'
+                      : isMid
+                        ? 'bg-amber-500/15 text-amber-500 border-amber-500/30'
+                        : 'bg-rose-500/15 text-rose-500 border-rose-500/30'
                   }`}>
                     {comp.score}%
                   </span>
                 </div>
               </div>
 
-              {/* Progress Bar */}
-              <div className="w-full bg-slate-100 dark:bg-white/10 rounded-full h-2 overflow-hidden border border-slate-200/70 dark:border-white/10 mb-2.5">
-                <div 
-                  className={`h-full rounded-full transition-all duration-700 ${
-                    isHigh ? 'shadow-[0_0_10px_rgba(16,185,129,0.4)]' : ''
-                  }`}
-                  style={{
-                    width: `${comp.score}%`,
-                    background: isHigh
-                      ? 'linear-gradient(90deg, #059669 0%, #34d399 100%)'
-                      : isMid
-                        ? 'linear-gradient(90deg, #d97706 0%, #fbbf24 100%)'
-                        : 'linear-gradient(90deg, #e11d48 0%, #fb7185 100%)'
-                  }}
-                />
+              {/* 5-Segment Color-Rich Milestone Progress Bar */}
+              <div className="space-y-1.5 mb-2.5">
+                <div className="grid grid-cols-5 gap-1.5">
+                  {[
+                    {
+                      threshold: 20,
+                      label: 'Basic',
+                      gradient: 'linear-gradient(90deg, #e11d48 0%, #fb7185 100%)',
+                      glow: '0 0 8px rgba(244,63,94,0.35)',
+                      textClass: 'text-rose-500 dark:text-rose-400'
+                    },
+                    {
+                      threshold: 40,
+                      label: 'Photos',
+                      gradient: 'linear-gradient(90deg, #d97706 0%, #fbbf24 100%)',
+                      glow: '0 0 8px rgba(245,158,11,0.35)',
+                      textClass: 'text-amber-500 dark:text-amber-400'
+                    },
+                    {
+                      threshold: 60,
+                      label: 'Deen',
+                      gradient: 'linear-gradient(90deg, #059669 0%, #34d399 100%)',
+                      glow: '0 0 8px rgba(16,185,129,0.35)',
+                      textClass: 'text-emerald-500 dark:text-emerald-400'
+                    },
+                    {
+                      threshold: 80,
+                      label: 'Family',
+                      gradient: 'linear-gradient(90deg, #0284c7 0%, #38bdf8 100%)',
+                      glow: '0 0 8px rgba(14,165,233,0.35)',
+                      textClass: 'text-sky-500 dark:text-sky-400'
+                    },
+                    {
+                      threshold: 100,
+                      label: 'Bio',
+                      gradient: 'linear-gradient(90deg, #7c3aed 0%, #a78bfa 100%)',
+                      glow: '0 0 8px rgba(139,92,246,0.35)',
+                      textClass: 'text-violet-500 dark:text-violet-400'
+                    }
+                  ].map((step) => {
+                    const filled = comp.score >= step.threshold;
+                    const partial = !filled && comp.score > step.threshold - 20;
+                    return (
+                      <div key={step.label} className="space-y-1">
+                        <div className="h-2 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden border border-slate-200/60 dark:border-white/10">
+                          <div
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{
+                              width: filled ? '100%' : partial ? '50%' : '0%',
+                              background: step.gradient,
+                              boxShadow: filled ? step.glow : 'none'
+                            }}
+                          />
+                        </div>
+                        <p className={`text-[9px] text-center font-semibold tracking-tight ${
+                          filled ? step.textClass : 'text-slate-400 dark:text-slate-500'
+                        }`}>
+                          {step.label}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
               {comp.missingFields.length > 0 && (

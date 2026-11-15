@@ -281,17 +281,9 @@ export const SettingsPrivacy: React.FC<Props> = ({
             onClick={handleToggleTheme}
             aria-label="Toggle Theme"
             title={isDarkMode ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
-            className="p-1.5 rounded-full border border-slate-200/80 dark:border-[#272733] bg-white dark:bg-[#16161c] hover:bg-slate-50 dark:hover:bg-[#1e1e2a] text-on-surface transition-all shadow-2xs cursor-pointer"
+            className="p-2 rounded-full border border-slate-200/80 dark:border-[#272733] bg-white dark:bg-[#16161c] hover:bg-slate-50 dark:hover:bg-[#1e1e2a] text-on-surface transition-all shadow-2xs cursor-pointer"
           >
             {isDarkMode ? <Moon className="w-4 h-4 text-amber-400" /> : <Sun className="w-4 h-4 text-amber-500" />}
-          </button>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-1 text-xs text-error font-semibold hover:bg-rose-50 dark:hover:bg-rose-950/30 px-3 py-1.5 rounded-full border border-error/20 transition-all shadow-2xs"
-            title="Log Out"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>Log Out</span>
           </button>
         </div>
       </header>
@@ -828,6 +820,17 @@ export const SettingsPrivacy: React.FC<Props> = ({
               <span>Delete</span>
             </button>
           </div>
+
+          {/* Sign Out / Log Out Action */}
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="w-full py-2.5 px-4 rounded-xl bg-rose-50/70 dark:bg-rose-950/20 hover:bg-rose-100/80 dark:hover:bg-rose-950/40 text-error border border-rose-200/70 dark:border-rose-900/40 text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.99] cursor-pointer"
+            title="Log Out"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Log Out of Qurb</span>
+          </button>
 
           {/* Legal & Compliance Policies */}
           <div className="p-3.5 rounded-2xl bg-slate-50/80 dark:bg-[#1c1c26] border border-slate-200/70 dark:border-[#2a2a38] space-y-2">

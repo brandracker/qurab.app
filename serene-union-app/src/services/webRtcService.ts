@@ -11,6 +11,7 @@ declare global {
       setSpeakerphoneOn: (on: boolean) => void;
       isSpeakerphoneOn: () => boolean;
       requestCallPermissions?: (withVideo: boolean) => void;
+      hasCallPermissions?: (withVideo: boolean) => boolean;
       getPendingIncomingCall?: () => string | null;
       dismissCallNotification?: () => void;
     };
@@ -167,7 +168,9 @@ export class WebRtcService {
 
   private notifyState(state: CallState, data?: any) {
     this.currentCallState = state;
-    if (state === 'connected') {
+    if (state === 'connecting') {
+      this.setCallMode(true);
+    } else if (state === 'connected') {
       this.stopRingtone();
       if (!this.callConnectedTime) {
         this.callConnectedTime = Date.now();
@@ -875,10 +878,30 @@ export class WebRtcService {
   // --- Media Setup & WebRTC Negotiation ---
   private async setupLocalMedia(video: boolean): Promise<MediaStream | null> {
     try {
-      // Just-In-Time native calling permissions request
+      // Just-In-Time native calling permissions request (await OS dialog before getUserMedia)
       if (typeof window !== 'undefined' && window.AndroidAudioBridge?.requestCallPermissions) {
         try {
-          window.AndroidAudioBridge.requestCallPermissions(video);
+          const alreadyGranted = typeof window.AndroidAudioBridge.hasCallPermissions === 'function'
+            ? window.AndroidAudioBridge.hasCallPermissions(video)
+            : true;
+          if (!alreadyGranted) {
+            await new Promise<void>((resolve) => {
+              let settled = false;
+              const finish = () => {
+                if (settled) return;
+                settled = true;
+                window.removeEventListener('qurb_native_permissions_result', onResult);
+                clearTimeout(timer);
+                resolve();
+              };
+              const onResult = () => finish();
+              const timer = setTimeout(finish, 10000);
+              window.addEventListener('qurb_native_permissions_result', onResult, { once: true });
+              window.AndroidAudioBridge?.requestCallPermissions?.(video);
+            });
+          } else {
+            window.AndroidAudioBridge.requestCallPermissions(video);
+          }
         } catch (bridgeErr) {
           console.warn('[WebRTC] Native audio bridge permission request notice:', bridgeErr);
         }
@@ -1178,7 +1201,9 @@ export class WebRtcService {
 
     this.peerConnection.onconnectionstatechange = () => {
       const state = this.peerConnection?.connectionState;
-      if (state === 'connected') {
+      if (state === 'connecting') {
+      this.setCallMode(true);
+    } else if (state === 'connected') {
         if (
           this.currentCallState === 'connecting' ||
           this.currentCallState === 'outgoing_calling' ||

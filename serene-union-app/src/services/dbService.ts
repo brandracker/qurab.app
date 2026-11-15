@@ -1211,10 +1211,48 @@ class DBService {
     }
   }
 
+  private getDeletedConversationIds(): Set<string> {
+    try {
+      const userId = this.getCurrentUser()?.id || 'guest';
+      const raw = localStorage.getItem(`serene_deleted_convs_${userId}`);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return new Set(Array.isArray(parsed) ? parsed : []);
+    } catch {
+      return new Set();
+    }
+  }
+
   deleteConversations(conversationIds: string[]): void {
-    const toDelete = new Set(conversationIds);
-    const conversations = this.getConversations().filter(c => !toDelete.has(c.id));
+    const safeIds = conversationIds.filter(id => id && !id.includes('qurb_official'));
+    if (safeIds.length === 0) return;
+
+    const toDelete = new Set(safeIds);
+    const conversations = this.getConversations().filter(c => {
+      if (c.isOfficial || c.otherUser?.id === 'usr_qurb_official' || c.id.includes('qurb_official')) {
+        return true;
+      }
+      return !toDelete.has(c.id);
+    });
     localStorage.setItem(this.conversationsKey, JSON.stringify(conversations));
+
+    // Persist deleted IDs locally so background polls never resurrect deleted chats
+    try {
+      const userId = this.getCurrentUser()?.id || 'guest';
+      const existing = this.getDeletedConversationIds();
+      safeIds.forEach(id => existing.add(id));
+      localStorage.setItem(`serene_deleted_convs_${userId}`, JSON.stringify(Array.from(existing)));
+    } catch {}
+
+    // Persist deletion on Cloudflare D1 backend
+    const userId = this.getCurrentUser()?.id;
+    if (userId && userId !== 'usr_guest') {
+      authFetch(`${API_BASE}/conversations/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, conversationIds: safeIds })
+      }).catch(() => {});
+    }
+
     window.dispatchEvent(new CustomEvent('serene_conversations_updated'));
   }
 
@@ -2065,6 +2103,7 @@ class DBService {
 
       if (data.success && Array.isArray(data.conversations)) {
         const localConvs = this.getConversations();
+        const deletedIds = this.getDeletedConversationIds();
         const convMap = new Map<string, Conversation>();
         const cachedVipMap = new Map<string, boolean>();
         this.getAllProfiles().forEach((p: any) => {
@@ -2084,6 +2123,8 @@ class DBService {
         data.conversations
           .filter((rc: any) => {
             if (!rc || !rc.id || rc.id.includes('conv_usr_usr')) return false;
+            const isOfficialRc = Boolean(rc.isOfficial || rc.id.includes('qurb_official') || rc.otherUser?.id === 'usr_qurb_official');
+            if (!isOfficialRc && deletedIds.has(rc.id)) return false;
             if (rc.participantOne === 'usr' || rc.participantTwo === 'usr' || rc.otherUser?.id === 'usr') return false;
             const isParticipant = rc.participantOne === user.id || rc.participantTwo === user.id;
             const otherId = rc.participantOne === user.id ? rc.participantTwo : rc.participantOne;

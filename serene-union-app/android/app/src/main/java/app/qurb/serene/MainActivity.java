@@ -13,6 +13,7 @@ import com.getcapacitor.BridgeWebChromeClient;
 
 public class MainActivity extends BridgeActivity {
     public static volatile String sPendingIncomingCallPayload = null;
+    private PermissionRequest pendingWebRtcPermissionRequest = null;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -95,6 +96,26 @@ public class MainActivity extends BridgeActivity {
                         String host = (origin != null && origin.getHost() != null) ? origin.getHost().toLowerCase() : "";
                         if ("localhost".equals(host) || "qurb.app".equals(host) || host.endsWith(".qurb.app")) {
                             String[] resources = request.getResources();
+                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                                java.util.List<String> missingPerms = new java.util.ArrayList<>();
+                                for (String res : resources) {
+                                    if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(res) &&
+                                        checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                                        missingPerms.add(android.Manifest.permission.RECORD_AUDIO);
+                                    } else if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(res) &&
+                                        checkSelfPermission(android.Manifest.permission.CAMERA) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                                        missingPerms.add(android.Manifest.permission.CAMERA);
+                                    }
+                                }
+                                if (!missingPerms.isEmpty()) {
+                                    if (pendingWebRtcPermissionRequest != null) {
+                                        try { pendingWebRtcPermissionRequest.deny(); } catch (Exception ignored) {}
+                                    }
+                                    pendingWebRtcPermissionRequest = request;
+                                    requestPermissions(missingPerms.toArray(new String[0]), 1003);
+                                    return;
+                                }
+                            }
                             request.grant(resources);
                         } else {
                             request.deny();
@@ -102,6 +123,58 @@ public class MainActivity extends BridgeActivity {
                     });
                 }
             });
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        boolean allGranted = grantResults != null && grantResults.length > 0;
+        if (allGranted) {
+            for (int res : grantResults) {
+                if (res != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    allGranted = false;
+                    break;
+                }
+            }
+        }
+
+        if (requestCode == 1003 && pendingWebRtcPermissionRequest != null) {
+            final PermissionRequest req = pendingWebRtcPermissionRequest;
+            pendingWebRtcPermissionRequest = null;
+            runOnUiThread(() -> {
+                try {
+                    boolean audioOk = android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.M ||
+                        checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED;
+                    boolean camOk = android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.M ||
+                        checkSelfPermission(android.Manifest.permission.CAMERA) == android.content.pm.PackageManager.PERMISSION_GRANTED;
+                    java.util.List<String> grantedResources = new java.util.ArrayList<>();
+                    for (String r : req.getResources()) {
+                        if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(r) && audioOk) {
+                            grantedResources.add(r);
+                        } else if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(r) && camOk) {
+                            grantedResources.add(r);
+                        }
+                    }
+                    if (!grantedResources.isEmpty()) {
+                        req.grant(grantedResources.toArray(new String[0]));
+                    } else {
+                        req.deny();
+                    }
+                } catch (Exception ignored) {}
+            });
+        }
+
+        if (requestCode == 1002 || requestCode == 1003) {
+            final boolean grantedFlag = allGranted;
+            if (getBridge() != null && getBridge().getWebView() != null) {
+                getBridge().getWebView().post(() -> {
+                    getBridge().getWebView().evaluateJavascript(
+                        "window.dispatchEvent(new CustomEvent('qurb_native_permissions_result', { detail: { granted: " + grantedFlag + " } }));",
+                        null
+                    );
+                });
+            }
         }
     }
 
@@ -233,6 +306,11 @@ public class MainActivity extends BridgeActivity {
                 getBridge().getWebView().postDelayed(() -> {
                     getBridge().getWebView().evaluateJavascript(js, null);
                 }, 1200);
+                getBridge().getWebView().postDelayed(() -> {
+                    if (sPendingIncomingCallPayload != null) {
+                        getBridge().getWebView().evaluateJavascript(js, null);
+                    }
+                }, 2500);
             }
             try {
                 intent.removeExtra("type");
@@ -290,6 +368,7 @@ public class MainActivity extends BridgeActivity {
     public static class AndroidAudioBridge {
         private final BridgeActivity activity;
         private final AudioManager audioManager;
+        private android.media.AudioFocusRequest activeAudioFocusRequest = null;
 
         public AndroidAudioBridge(BridgeActivity activity, AudioManager audioManager) {
             this.activity = activity;
@@ -304,7 +383,19 @@ public class MainActivity extends BridgeActivity {
                         try {
                             if (inCall) {
                                 audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
-                                audioManager.requestAudioFocus(null, AudioManager.STREAM_VOICE_CALL, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                                    android.media.AudioAttributes attrs = new android.media.AudioAttributes.Builder()
+                                        .setUsage(android.media.AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                                        .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH)
+                                        .build();
+                                    activeAudioFocusRequest = new android.media.AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+                                        .setAudioAttributes(attrs)
+                                        .setOnAudioFocusChangeListener(focusChange -> {})
+                                        .build();
+                                    audioManager.requestAudioFocus(activeAudioFocusRequest);
+                                } else {
+                                    audioManager.requestAudioFocus(null, AudioManager.STREAM_VOICE_CALL, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
+                                }
                                 try {
                                     android.app.NotificationManager nm = (android.app.NotificationManager) activity.getSystemService(Context.NOTIFICATION_SERVICE);
                                     if (nm != null) {
@@ -312,7 +403,12 @@ public class MainActivity extends BridgeActivity {
                                     }
                                 } catch (Exception ignored) {}
                             } else {
-                                audioManager.abandonAudioFocus(null);
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O && activeAudioFocusRequest != null) {
+                                    audioManager.abandonAudioFocusRequest(activeAudioFocusRequest);
+                                    activeAudioFocusRequest = null;
+                                } else {
+                                    audioManager.abandonAudioFocus(null);
+                                }
                                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
                                     audioManager.clearCommunicationDevice();
                                 }
@@ -363,7 +459,18 @@ public class MainActivity extends BridgeActivity {
                                         audioManager.setSpeakerphoneOn(true);
                                     }
                                 } else {
-                                    audioManager.clearCommunicationDevice();
+                                    java.util.List<android.media.AudioDeviceInfo> devices = audioManager.getAvailableCommunicationDevices();
+                                    boolean earpieceSet = false;
+                                    for (android.media.AudioDeviceInfo device : devices) {
+                                        if (device.getType() == android.media.AudioDeviceInfo.TYPE_BUILTIN_EARPIECE) {
+                                            audioManager.setCommunicationDevice(device);
+                                            earpieceSet = true;
+                                            break;
+                                        }
+                                    }
+                                    if (!earpieceSet) {
+                                        audioManager.clearCommunicationDevice();
+                                    }
                                     audioManager.setSpeakerphoneOn(false);
                                 }
                             } else {
@@ -389,6 +496,17 @@ public class MainActivity extends BridgeActivity {
                 } catch (Exception ignored) {}
             }
             return false;
+        }
+
+        @JavascriptInterface
+        public boolean hasCallPermissions(boolean withVideo) {
+            if (activity == null || android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.M) {
+                return true;
+            }
+            boolean hasAudio = activity.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED;
+            if (!withVideo) return hasAudio;
+            boolean hasCam = activity.checkSelfPermission(android.Manifest.permission.CAMERA) == android.content.pm.PackageManager.PERMISSION_GRANTED;
+            return hasAudio && hasCam;
         }
 
         @JavascriptInterface

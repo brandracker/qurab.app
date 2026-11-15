@@ -582,6 +582,42 @@ chatRouter.post('/upload-media', async (c) => {
   }
 });
 
+// 2.5 Bulk Delete User Conversations (never deletes official Qurb Team channel)
+chatRouter.post('/delete', async (c) => {
+  try {
+    const { userId, conversationIds } = await c.req.json();
+    if (!userId || !Array.isArray(conversationIds) || conversationIds.length === 0) {
+      return c.json({ success: false, error: 'userId and conversationIds required' }, 400);
+    }
+
+    const safeIds = conversationIds
+      .filter((id: any) => typeof id === 'string' && id.trim() !== '' && !id.includes('qurb_official'))
+      .slice(0, 100);
+
+    if (safeIds.length === 0) {
+      return c.json({ success: true, deleted: 0 });
+    }
+
+    let deletedCount = 0;
+    for (const convId of safeIds) {
+      try {
+        const res = await c.env.DB.prepare(
+          `DELETE FROM conversations WHERE id = ? AND (participant_one = ? OR participant_two = ?)`
+        ).bind(convId, userId, userId).run();
+        if (res?.meta?.changes) {
+          deletedCount += res.meta.changes;
+          await c.env.DB.prepare(`DELETE FROM chat_messages WHERE conversation_id = ?`).bind(convId).run().catch(() => {});
+          await c.env.DB.prepare(`DELETE FROM messages WHERE conversation_id = ?`).bind(convId).run().catch(() => {});
+        }
+      } catch {}
+    }
+
+    return c.json({ success: true, deleted: deletedCount });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
 // 3. Get Messages for a Conversation (Normalized with bidirectional lookup)
 chatRouter.get('/:id/messages', async (c) => {
   try {

@@ -5,13 +5,12 @@ import {
   Trash2, X, Download, File, Loader2, Volume2, VolumeX, Maximize2,
   Phone, Video, PhoneCall, PhoneOff, Search, CheckSquare, Square,
   ExternalLink, Megaphone, Pin, Lock, Hand, Check, Clock,
-  Sun, Moon, Crown
+  Crown
 } from 'lucide-react';
 import { VerifiedBlueTick } from './VerifiedBlueTick';
 import type { Conversation, ChatMessage, UserProfile } from '../types';
 
 import { dbService, API_BASE, withAuthWsUrl } from '../services/dbService';
-import { themeService } from '../services/themeService';
 import { ProfileDetailModal } from './ProfileDetailModal';
 import { 
   VoiceRecorder, 
@@ -234,10 +233,10 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
   const [chatFilter, setChatFilter] = useState<'all' | 'unread' | 'salam'>('all');
   const [isSelectMode, setIsSelectMode] = useState<boolean>(false);
   const [selectedConvIds, setSelectedConvIds] = useState<Set<string>>(new Set());
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState<boolean>(false);
   const [showListMenuDropdown, setShowListMenuDropdown] = useState<boolean>(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const currentUser = dbService.getCurrentUser();
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => themeService.isDark());
   const [messageReactions, setMessageReactions] = useState<Record<string, string>>(() => {
     try {
       const saved = localStorage.getItem('serene_msg_reactions_v1');
@@ -262,12 +261,6 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
       return next;
     });
     setActiveReactionPickerMsgId(null);
-  }, []);
-
-  useEffect(() => {
-    return themeService.subscribe((theme) => {
-      setIsDarkMode(theme === 'dark');
-    });
   }, []);
 
   // Modern Horizontal Match Stories Strip
@@ -1656,16 +1649,31 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
       );
     });
 
+    const isOfficialConv = (c: Conversation) => Boolean(
+      c.isOfficial ||
+      c.otherUser?.id === 'usr_qurb_official' ||
+      c.id.includes('qurb_official')
+    );
+
+    const selectableConversations = filteredConversations.filter(c => !isOfficialConv(c));
+
     const handleDeleteSelected = () => {
-      if (selectedConvIds.size === 0) return;
-      if (window.confirm(`Delete ${selectedConvIds.size} selected conversation${selectedConvIds.size > 1 ? 's' : ''}?`)) {
-        dbService.deleteConversations(Array.from(selectedConvIds));
-        setConversations(prev => prev.filter(c => !selectedConvIds.has(c.id)));
-        setSelectedConvIds(new Set());
-        setIsSelectMode(false);
-        setToastMessage('Selected conversations removed.');
-        setTimeout(() => setToastMessage(null), 3000);
+      const deletableIds = Array.from(selectedConvIds).filter(id => {
+        const conv = conversations.find(c => c.id === id);
+        return conv ? !isOfficialConv(conv) : !id.includes('qurb_official');
+      });
+      if (deletableIds.length === 0) {
+        setShowBulkDeleteConfirm(false);
+        return;
       }
+      dbService.deleteConversations(deletableIds);
+      const delSet = new Set(deletableIds);
+      setConversations(prev => prev.filter(c => !delSet.has(c.id)));
+      setSelectedConvIds(new Set());
+      setShowBulkDeleteConfirm(false);
+      setIsSelectMode(false);
+      setToastMessage(`${deletableIds.length} conversation${deletableIds.length > 1 ? 's' : ''} deleted.`);
+      setTimeout(() => setToastMessage(null), 3000);
     };
 
     return (
@@ -1692,18 +1700,8 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
               <p className="text-[11px] text-secondary mt-0.5">Respectful & Intentional Matrimonial Discussions</p>
             </div>
 
-            {/* Quick Theme Toggle & 3-Dots Management Menu */}
+            {/* 3-Dots Management Menu */}
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => themeService.toggleTheme()}
-                aria-label="Toggle Theme"
-                title={isDarkMode ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
-                className="w-9 h-9 rounded-full bg-surface-variant hover:bg-outline flex items-center justify-center text-secondary hover:text-on-surface transition-all shadow-subtle cursor-pointer"
-              >
-                {isDarkMode ? <Moon className="w-4 h-4 text-amber-400" /> : <Sun className="w-4 h-4 text-amber-500" />}
-              </button>
-
               <div className="relative">
                 <button
                   type="button"
@@ -1817,45 +1815,72 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
 
           {/* Multi-Select Action Banner */}
           {isSelectMode && (
-            <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-outline text-xs">
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-primary">{selectedConvIds.size} selected</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (selectedConvIds.size === filteredConversations.length) {
+            <div className="mt-2.5 pt-2 border-t border-outline text-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-primary">{selectedConvIds.size} selected</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (selectableConversations.length > 0 && selectedConvIds.size === selectableConversations.length) {
+                        setSelectedConvIds(new Set());
+                      } else {
+                        setSelectedConvIds(new Set(selectableConversations.map(c => c.id)));
+                      }
+                    }}
+                    className="text-[11px] text-secondary hover:text-primary underline ml-1 cursor-pointer"
+                  >
+                    {selectableConversations.length > 0 && selectedConvIds.size === selectableConversations.length ? 'Deselect All' : 'Select All'}
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSelectMode(false);
+                      setShowBulkDeleteConfirm(false);
                       setSelectedConvIds(new Set());
-                    } else {
-                      setSelectedConvIds(new Set(filteredConversations.map(c => c.id)));
-                    }
-                  }}
-                  className="text-[11px] text-secondary hover:text-primary underline ml-1"
-                >
-                  {selectedConvIds.size === filteredConversations.length ? 'Deselect All' : 'Select All'}
-                </button>
+                    }}
+                    className="px-2.5 py-1 text-[11px] rounded-lg border border-outline hover:bg-surface-variant cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={selectedConvIds.size === 0}
+                    onClick={() => setShowBulkDeleteConfirm(true)}
+                    className="px-3 py-1 text-[11px] font-bold rounded-lg bg-error text-white disabled:opacity-40 flex items-center gap-1 shadow-subtle cursor-pointer"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    <span>Delete ({selectedConvIds.size})</span>
+                  </button>
+                </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsSelectMode(false);
-                    setSelectedConvIds(new Set());
-                  }}
-                  className="px-2.5 py-1 text-[11px] rounded-lg border border-outline hover:bg-surface-variant"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  disabled={selectedConvIds.size === 0}
-                  onClick={handleDeleteSelected}
-                  className="px-3 py-1 text-[11px] font-bold rounded-lg bg-error text-white disabled:opacity-40 flex items-center gap-1 shadow-subtle"
-                >
-                  <Trash2 className="w-3 h-3" />
-                  <span>Delete ({selectedConvIds.size})</span>
-                </button>
-              </div>
+              {showBulkDeleteConfirm && selectedConvIds.size > 0 && (
+                <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50">
+                  <span className="text-[11px] font-semibold text-error">
+                    Delete {selectedConvIds.size} selected chat{selectedConvIds.size > 1 ? 's' : ''}?
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setShowBulkDeleteConfirm(false)}
+                      className="px-2.5 py-1 text-[11px] rounded-lg border border-outline bg-white dark:bg-[#16161c] text-secondary cursor-pointer"
+                    >
+                      No
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDeleteSelected}
+                      className="px-3 py-1 text-[11px] font-bold rounded-lg bg-error text-white cursor-pointer"
+                    >
+                      Confirm Delete
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </header>
@@ -1960,6 +1985,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                     key={conv.id}
                     onClick={() => {
                       if (isSelectMode) {
+                        if (isConvOfficial) return;
                         setSelectedConvIds(prev => {
                           const next = new Set(prev);
                           if (next.has(conv.id)) next.delete(conv.id);
@@ -1983,8 +2009,8 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                             : 'hover:bg-slate-50/90 dark:hover:bg-[#1c1c26]'
                     }`}
                   >
-                    {/* Multi-Select Checkbox */}
-                    {isSelectMode && (
+                    {/* Multi-Select Checkbox (Official Qurb Team is protected and cannot be selected/deleted) */}
+                    {isSelectMode && !isConvOfficial && (
                       <div className="shrink-0 text-primary">
                         {isSelected ? (
                           <CheckSquare className="w-5 h-5 fill-primary text-white" />
@@ -2306,19 +2332,8 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
           </div>
         </div>
 
-        {/* Action Controls: Theme Toggle, Call Buttons, Biodata Button & 3-Dots Kebab Menu */}
+        {/* Action Controls: Call Buttons, Biodata Button & 3-Dots Kebab Menu */}
         <div className="flex items-center gap-1.5 shrink-0 relative">
-          {/* Quick Toggle Theme */}
-          <button
-            type="button"
-            onClick={() => themeService.toggleTheme()}
-            aria-label="Toggle Theme"
-            title={isDarkMode ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
-            className="w-8 h-8 rounded-full bg-slate-100 dark:bg-[#1c1c24] hover:bg-slate-200 dark:hover:bg-[#252532] border border-slate-200/80 dark:border-[#272733] flex items-center justify-center text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
-          >
-            {isDarkMode ? <Moon className="w-3.5 h-3.5 text-amber-400" /> : <Sun className="w-3.5 h-3.5 text-amber-500" />}
-          </button>
-
           {isOfficialChannel ? null : (
             <>
               {/* Audio Call Button */}

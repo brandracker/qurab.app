@@ -1,5 +1,6 @@
 import type { UserProfile } from '../types';
-import { WORKER_API_BASE, API_BASE } from './apiConfig';
+import { WORKER_API_BASE, API_BASE, authFetch } from './apiConfig';
+const fetch = authFetch;
 
 export const USER_KEY = 'serene_current_user_v1';
 export const PROFILES_KEY = 'serene_real_profiles_v3';
@@ -289,6 +290,12 @@ export const profileService = {
         body: JSON.stringify({ userId, activeSeconds: 45, token })
       });
       const data = await res.json().catch(() => ({}));
+      if (data?.token && !token) {
+        try {
+          localStorage.setItem('serene_auth_token_v1', data.token);
+          localStorage.setItem('serene_auth_token', data.token);
+        } catch {}
+      }
       if (res.status === 401 && data.code === 'SESSION_TERMINATED_CONCURRENT_LOGIN') {
         window.dispatchEvent(new CustomEvent('serene_concurrent_session_terminated', {
           detail: { message: data.error || 'This account was opened on another device. Only 1 active device is permitted.' }

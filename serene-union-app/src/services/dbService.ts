@@ -2,8 +2,9 @@ import type { UserProfile, Conversation, ChatMessage, FilterState } from '../typ
 import { getCanonicalConversationId, extractPartnerIdFromConvId } from '../utils/conversation';
 export { getCanonicalConversationId, extractPartnerIdFromConvId };
 
-import { API_BASE, WORKER_API_BASE, LOCAL_API_BASE } from './apiConfig';
-export { API_BASE, WORKER_API_BASE, LOCAL_API_BASE };
+import { API_BASE, WORKER_API_BASE, LOCAL_API_BASE, authFetch, withAuthWsUrl } from './apiConfig';
+export { API_BASE, WORKER_API_BASE, LOCAL_API_BASE, authFetch, withAuthWsUrl };
+const fetch = authFetch;
 
 import { profileService } from './profileService';
 export { profileService };

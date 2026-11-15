@@ -10,7 +10,7 @@ import {
 import { VerifiedBlueTick } from './VerifiedBlueTick';
 import type { Conversation, ChatMessage, UserProfile } from '../types';
 
-import { dbService, API_BASE } from '../services/dbService';
+import { dbService, API_BASE, withAuthWsUrl } from '../services/dbService';
 import { themeService } from '../services/themeService';
 import { ProfileDetailModal } from './ProfileDetailModal';
 import { 
@@ -868,7 +868,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
         if (typeof window !== 'undefined' && typeof WebSocket !== 'undefined') {
           const wsProtocol = API_BASE.startsWith('https:') ? 'wss:' : (window.location.protocol === 'https:' ? 'wss:' : 'ws:');
           const wsBase = API_BASE.replace(/^https?:/, wsProtocol);
-          const wsUrl = `${wsBase}/conversations/${targetRoomId}/ws?userId=${currentUser.id}`;
+          const wsUrl = withAuthWsUrl(`${wsBase}/conversations/${targetRoomId}/ws?userId=${currentUser.id}`);
 
           ws = new WebSocket(wsUrl);
           wsRef.current = ws;

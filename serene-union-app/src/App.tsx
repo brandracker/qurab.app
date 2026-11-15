@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Compass, Heart, MessageCircle, User, Settings, CheckCircle2, X, Sun, Moon } from 'lucide-react';
 import type { UserProfile } from './types';
 
@@ -18,7 +18,7 @@ import { ResetPasswordScreen } from './screens/ResetPasswordScreen';
 import { PrivacyPolicyScreen } from './screens/PrivacyPolicyScreen';
 import { TermsScreen } from './screens/TermsScreen';
 import { NotificationsScreen } from './screens/NotificationsScreen';
-import { dbService, API_BASE } from './services/dbService';
+import { dbService, API_BASE, withAuthWsUrl } from './services/dbService';
 import { notificationService } from './services/notificationService';
 import { facebookEventsService } from './services/facebookEventsService';
 import { referralService } from './services/referralService';
@@ -283,7 +283,7 @@ const MainUserApp: React.FC = () => {
       try {
         const wsProtocol = API_BASE.startsWith('https:') ? 'wss:' : (window.location.protocol === 'https:' ? 'wss:' : 'ws:');
         const wsBase = API_BASE.replace(/^https?:/, wsProtocol);
-        const wsUrl = `${wsBase}/conversations/user_${encodeURIComponent(currentUser.id)}/ws?userId=${encodeURIComponent(currentUser.id)}`;
+        const wsUrl = withAuthWsUrl(`${wsBase}/conversations/user_${encodeURIComponent(currentUser.id)}/ws?userId=${encodeURIComponent(currentUser.id)}`);
 
         userWs = new WebSocket(wsUrl);
 
@@ -356,6 +356,11 @@ const MainUserApp: React.FC = () => {
   }, [currentStep, currentUser?.id, currentUser?.isVip]);
 
   // Global Real-time Chat Background Sync & Unread Tracking
+  const activeConvIdRef = useRef<string | null>(activeConvId);
+  useEffect(() => {
+    activeConvIdRef.current = activeConvId;
+  }, [activeConvId]);
+
   useEffect(() => {
     if (!currentUser.id || currentUser.id === 'usr_guest') return;
 
@@ -376,7 +381,7 @@ const MainUserApp: React.FC = () => {
 
           // Trigger local notification when a new message arrives while outside that conversation
           for (const conv of liveConvs) {
-            if ((conv.unreadCount || 0) > 0 && activeConvId !== conv.id) {
+            if ((conv.unreadCount || 0) > 0 && activeConvIdRef.current !== conv.id) {
               const msgTime = conv.lastMessageTime ? new Date(conv.lastMessageTime).getTime() : 0;
               if (msgTime > lastNotifiedMsgTime) {
                 lastNotifiedMsgTime = msgTime;
@@ -440,7 +445,7 @@ const MainUserApp: React.FC = () => {
       window.removeEventListener('focus', syncLiveChats);
       window.removeEventListener('serene_concurrent_session_terminated', handleConcurrentSession);
     };
-  }, [currentUser.id, activeConvId]);
+  }, [currentUser.id]);
 
   // Native Push Notifications, FCM Startup & Incoming Call Wiring
   useEffect(() => {
@@ -1028,6 +1033,8 @@ const MainUserApp: React.FC = () => {
     localStorage.removeItem('serene_current_user_v1');
     localStorage.removeItem('serene_auth_token');
     localStorage.removeItem('serene_auth_token_v1');
+    localStorage.removeItem('serene_real_conversations_v3');
+    localStorage.removeItem('serene_cached_discover_v2');
     setCurrentUser(dbService.getGuestUser());
     setCurrentStep('welcome');
     setActiveTab('discover');

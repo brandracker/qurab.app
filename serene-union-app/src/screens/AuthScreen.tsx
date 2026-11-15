@@ -85,12 +85,15 @@ export const AuthScreen: React.FC<Props> = ({
 
     try {
       let fbUid = '';
+      let fbIdToken = '';
       if (tab === 'signup') {
         const creds = await signUpWithEmail(email.trim(), password, fullName.trim());
         fbUid = creds.user.uid;
+        fbIdToken = (await (creds.user as any)?.getIdToken?.().catch(() => '')) || '';
       } else {
         const creds = await signInWithEmail(email.trim(), password);
         fbUid = creds.user.uid;
+        fbIdToken = (await (creds.user as any)?.getIdToken?.().catch(() => '')) || '';
       }
 
       // Synchronize with Cloudflare D1 Backend
@@ -102,7 +105,8 @@ export const AuthScreen: React.FC<Props> = ({
           fullName: fullName.trim(),
           gender,
           firebaseUid: fbUid,
-          isSignUp: tab === 'signup'
+          isSignUp: tab === 'signup',
+          ...(fbIdToken ? { idToken: fbIdToken } : {})
         })
       });
 
@@ -226,7 +230,8 @@ export const AuthScreen: React.FC<Props> = ({
           email: emailToSync,
           fullName: profile?.name || 'Google Member',
           photoUrl: profile?.picture || '',
-          googleUid: profile?.sub || fbUid || `g_${Date.now()}`
+          googleUid: profile?.sub || fbUid || `g_${Date.now()}`,
+          idToken
         })
       });
 
@@ -370,6 +375,7 @@ export const AuthScreen: React.FC<Props> = ({
     try {
       const creds = await signInWithGoogle();
       const fbUser = creds.user;
+      const fbIdToken = (await (fbUser as any)?.getIdToken?.().catch(() => '')) || '';
       let photoUrl = fbUser.photoURL || '';
       if (photoUrl && photoUrl.includes('googleusercontent.com') && photoUrl.includes('=s96-c')) {
         photoUrl = photoUrl.replace('=s96-c', '=s720-c');
@@ -384,7 +390,8 @@ export const AuthScreen: React.FC<Props> = ({
           photoUrl,
           gender,
           firebaseUid: fbUser.uid,
-          isSignUp: false
+          isSignUp: false,
+          ...(fbIdToken ? { idToken: fbIdToken } : {})
         })
       });
 
@@ -416,6 +423,7 @@ export const AuthScreen: React.FC<Props> = ({
     try {
       const creds = await signInWithFacebook();
       const fbUser = creds.user;
+      const fbIdToken = (await (fbUser as any)?.getIdToken?.().catch(() => '')) || '';
       let photoUrl = fbUser.photoURL || '';
       if (photoUrl && photoUrl.includes('graph.facebook.com') && !photoUrl.includes('width=')) {
         photoUrl += (photoUrl.includes('?') ? '&' : '?') + 'width=720&height=720';
@@ -430,7 +438,8 @@ export const AuthScreen: React.FC<Props> = ({
           photoUrl,
           gender,
           firebaseUid: fbUser.uid,
-          isSignUp: false
+          isSignUp: false,
+          ...(fbIdToken ? { idToken: fbIdToken } : {})
         })
       });
 

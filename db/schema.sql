@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS religious_profiles (
 -- 3. WALI / GUARDIAN CHAPERONE
 CREATE TABLE IF NOT EXISTS wali_details (
     id TEXT PRIMARY KEY,
-    user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+    user_id TEXT UNIQUE REFERENCES users(id) ON DELETE CASCADE,
     wali_name TEXT NOT NULL,
     wali_phone TEXT NOT NULL,
     wali_relationship TEXT CHECK(wali_relationship IN ('Father', 'Brother', 'Uncle', 'Guardian')) NOT NULL,

@@ -1,5 +1,6 @@
 import type { Conversation, ChatMessage, UserProfile } from '../types';
-import { API_BASE } from './apiConfig';
+import { API_BASE, authFetch } from './apiConfig';
+const fetch = authFetch;
 import { profileService } from './profileService';
 import { getCanonicalConversationId } from '../utils/conversation';
 

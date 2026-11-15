@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import type { AppContext } from '../types';
 import { calculateDistanceKm, getBoundingBox, getCityCentroid } from '../utils/geo';
 import { syncAndValidateSubscription } from '../utils/subscription';
+import { generateSessionToken } from '../utils/crypto';
 
 export const usersRouter = new Hono<AppContext>();
 
@@ -210,14 +211,15 @@ usersRouter.post('/heartbeat', async (c) => {
     const authHeader = c.req.header('Authorization') || '';
     const clientToken = body.token || authHeader.replace(/^Bearer\s+/i, '').trim();
 
+    let resolvedToken = clientToken;
     if (userId) {
-      // Check Single Active Device session token
-      if (clientToken) {
-        try {
-          const userSession: any = await c.env.DB.prepare(`
-            SELECT current_session_token FROM users WHERE id = ?
-          `).bind(userId).first();
+      // Check Single Active Device session token & backfill missing session token for older clients
+      try {
+        const userSession: any = await c.env.DB.prepare(`
+          SELECT current_session_token FROM users WHERE id = ?
+        `).bind(userId).first();
 
+        if (clientToken) {
           if (userSession?.current_session_token && userSession.current_session_token !== clientToken) {
             return c.json({
               success: false,
@@ -225,9 +227,18 @@ usersRouter.post('/heartbeat', async (c) => {
               error: 'This account was opened on another device. For your security, you have been logged out of this session.'
             }, 401);
           }
-        } catch (sessionErr) {
-          console.warn('Session verification notice:', sessionErr);
+        } else if (userSession) {
+          if (userSession.current_session_token) {
+            resolvedToken = userSession.current_session_token;
+          } else {
+            resolvedToken = generateSessionToken(userId);
+            await c.env.DB.prepare(`
+              UPDATE users SET current_session_token = ? WHERE id = ?
+            `).bind(resolvedToken, userId).run();
+          }
         }
+      } catch (sessionErr) {
+        console.warn('Session verification notice:', sessionErr);
       }
 
       const rawCf = (c.req.raw as any)?.cf || {};
@@ -278,7 +289,7 @@ usersRouter.post('/heartbeat', async (c) => {
         console.warn('user_daily_activity upsert warning:', actErr);
       }
     }
-    return c.json({ success: true, timestamp: new Date().toISOString() });
+    return c.json({ success: true, ...(resolvedToken ? { token: resolvedToken } : {}), timestamp: new Date().toISOString() });
   } catch (err: any) {
     return c.json({ success: false, error: err.message }, 500);
   }
@@ -882,7 +893,15 @@ profilesRouter.get('/discover', async (c) => {
 
     let seedProfilesEnabled = true;
     try {
-      const setting: any = await c.env.DB.prepare("SELECT value FROM app_settings WHERE key = 'seed_profiles_enabled'").first();
+      let setting: any = null;
+      try {
+        setting = await c.env.DB.prepare("SELECT value FROM system_settings WHERE key = 'seed_profiles_enabled'").first();
+      } catch {}
+      if (!setting) {
+        try {
+          setting = await c.env.DB.prepare("SELECT value FROM app_settings WHERE key = 'seed_profiles_enabled'").first();
+        } catch {}
+      }
       if (setting && (setting.value === '0' || setting.value === 0)) {
         seedProfilesEnabled = false;
       }

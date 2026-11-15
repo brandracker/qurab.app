@@ -1,4 +1,5 @@
-import { API_BASE } from './apiConfig';
+import { API_BASE, authFetch } from './apiConfig';
+const fetch = authFetch;
 import { profileService } from './profileService';
 
 export const walletService = {

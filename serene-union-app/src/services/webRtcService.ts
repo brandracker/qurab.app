@@ -1,7 +1,7 @@
 // Qurb (Serene Union) — Production WebRTC Calling Engine
 // Handles P2P Audio/Video negotiation, ICE traversal, media tracks, and acoustic feedback.
 
-import { API_BASE } from './apiConfig';
+import { API_BASE, withAuthWsUrl } from './apiConfig';
 import { dbService } from './dbService';
 
 declare global {
@@ -328,7 +328,7 @@ export class WebRtcService {
     try {
       const wsProtocol = API_BASE.startsWith('https:') ? 'wss:' : (window.location.protocol === 'https:' ? 'wss:' : 'ws:');
       const wsBase = API_BASE.replace(/^https?:/, wsProtocol);
-      const wsUrl = `${wsBase}/conversations/${encodeURIComponent(conversationId)}/ws?userId=${encodeURIComponent(this.currentUserId || 'caller')}`;
+      const wsUrl = withAuthWsUrl(`${wsBase}/conversations/${encodeURIComponent(conversationId)}/ws?userId=${encodeURIComponent(this.currentUserId || 'caller')}`);
 
       const ws = new WebSocket(wsUrl);
       this.callWs = ws;

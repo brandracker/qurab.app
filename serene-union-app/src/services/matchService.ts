@@ -1,5 +1,6 @@
 import type { UserProfile } from '../types';
-import { API_BASE } from './apiConfig';
+import { API_BASE, authFetch } from './apiConfig';
+const fetch = authFetch;
 import { profileService, PROFILES_KEY } from './profileService';
 
 export const matchService = {

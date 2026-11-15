@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import type { AppContext } from '../types';
 import { processAiSeedResponse } from '../utils/ai-chat-agent';
 import { getCanonicalConversationId } from '../utils/conversation';
+import { sendFcmNotification } from '../utils/fcm';
 
 export const matchesRouter = new Hono<AppContext>();
 
@@ -102,17 +103,34 @@ matchesRouter.post('/action', async (c) => {
         `).bind(senderId).first();
 
         const notifId = `notif_salam_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+        const salamTitle = `Direct Salam from ${senderUser?.fullName?.split(' ')[0] || 'A Suitor'} ✨`;
+        const salamBody = `${senderUser?.fullName || 'Someone'} sent you a blessed Direct Salam: "${introMessage.length > 55 ? introMessage.substring(0, 55) + '...' : introMessage}"`;
         await c.env.DB.prepare(`
           INSERT INTO notifications (id, user_id, type, title, message, target_id, avatar_url, action_label, is_read)
           VALUES (?, ?, 'salam', ?, ?, ?, ?, 'Open Conversation', 0)
         `).bind(
           notifId,
           receiverId,
-          `Direct Salam from ${senderUser?.fullName?.split(' ')[0] || 'A Suitor'} ✨`,
-          `${senderUser?.fullName || 'Someone'} sent you a blessed Direct Salam: "${introMessage.length > 55 ? introMessage.substring(0, 55) + '...' : introMessage}"`,
+          salamTitle,
+          salamBody,
           convId,
           senderUser?.photoUrl || null
         ).run();
+
+        try {
+          const recUser: any = await c.env.DB.prepare('SELECT fcm_token FROM users WHERE id = ?').bind(receiverId).first();
+          if (recUser?.fcm_token) {
+            const pushPromise = sendFcmNotification(c.env, {
+              token: recUser.fcm_token,
+              title: salamTitle,
+              body: salamBody,
+              data: { type: 'salam', conversationId: convId, senderId, targetTab: 'chat' }
+            });
+            if (c.executionCtx && typeof c.executionCtx.waitUntil === 'function') {
+              c.executionCtx.waitUntil(pushPromise);
+            }
+          }
+        } catch {}
       } catch {}
 
       return c.json({
@@ -160,15 +178,47 @@ matchesRouter.post('/action', async (c) => {
           const notifOne = `notif_m_${Date.now()}_1`;
           const notifTwo = `notif_m_${Date.now()}_2`;
 
-          await c.env.DB.prepare(`
-            INSERT INTO notifications (id, user_id, type, title, message, target_id, avatar_url, action_label, is_read)
-            VALUES (?, ?, 'match', ?, ?, ?, ?, 'Start Chat', 0)
-          `).bind(notifOne, senderId, `Connected with ${receiverUser?.fullName?.split(' ')[0] || 'Match'} 🎉`, `You and ${receiverUser?.fullName || 'a member'} both expressed mutual interest. Chat is unlocked!`, convId, receiverUser?.photoUrl || null).run();
+          const matchTitleForSender = `Connected with ${receiverUser?.fullName?.split(' ')[0] || 'Match'} 🎉`;
+          const matchBodyForSender = `You and ${receiverUser?.fullName || 'a member'} both expressed mutual interest. Chat is unlocked!`;
+          const matchTitleForReceiver = `Connected with ${senderUser?.fullName?.split(' ')[0] || 'Match'} 🎉`;
+          const matchBodyForReceiver = `You and ${senderUser?.fullName || 'a member'} both expressed mutual interest. Chat is unlocked!`;
 
           await c.env.DB.prepare(`
             INSERT INTO notifications (id, user_id, type, title, message, target_id, avatar_url, action_label, is_read)
             VALUES (?, ?, 'match', ?, ?, ?, ?, 'Start Chat', 0)
-          `).bind(notifTwo, receiverId, `Connected with ${senderUser?.fullName?.split(' ')[0] || 'Match'} 🎉`, `You and ${senderUser?.fullName || 'a member'} both expressed mutual interest. Chat is unlocked!`, convId, senderUser?.photoUrl || null).run();
+          `).bind(notifOne, senderId, matchTitleForSender, matchBodyForSender, convId, receiverUser?.photoUrl || null).run();
+
+          await c.env.DB.prepare(`
+            INSERT INTO notifications (id, user_id, type, title, message, target_id, avatar_url, action_label, is_read)
+            VALUES (?, ?, 'match', ?, ?, ?, ?, 'Start Chat', 0)
+          `).bind(notifTwo, receiverId, matchTitleForReceiver, matchBodyForReceiver, convId, senderUser?.photoUrl || null).run();
+
+          try {
+            const recTokenRow: any = await c.env.DB.prepare('SELECT fcm_token FROM users WHERE id = ?').bind(receiverId).first();
+            if (recTokenRow?.fcm_token) {
+              const pRec = sendFcmNotification(c.env, {
+                token: recTokenRow.fcm_token,
+                title: matchTitleForReceiver,
+                body: matchBodyForReceiver,
+                data: { type: 'match', conversationId: convId, senderId, targetTab: 'matches' }
+              });
+              if (c.executionCtx && typeof c.executionCtx.waitUntil === 'function') {
+                c.executionCtx.waitUntil(pRec);
+              }
+            }
+            const senderTokenRow: any = await c.env.DB.prepare('SELECT fcm_token FROM users WHERE id = ?').bind(senderId).first();
+            if (senderTokenRow?.fcm_token) {
+              const pSender = sendFcmNotification(c.env, {
+                token: senderTokenRow.fcm_token,
+                title: matchTitleForSender,
+                body: matchBodyForSender,
+                data: { type: 'match', conversationId: convId, senderId: receiverId, targetTab: 'matches' }
+              });
+              if (c.executionCtx && typeof c.executionCtx.waitUntil === 'function') {
+                c.executionCtx.waitUntil(pSender);
+              }
+            }
+          } catch {}
         } catch {}
 
         return c.json({
@@ -189,17 +239,34 @@ matchesRouter.post('/action', async (c) => {
       try {
         const senderUser: any = await c.env.DB.prepare(`SELECT full_name as fullName, (SELECT photo_url FROM user_photos WHERE user_id = id ORDER BY is_primary DESC LIMIT 1) as photoUrl FROM users WHERE id = ?`).bind(senderId).first();
         const notifId = `notif_like_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+        const likeTitle = `Interest Expressed by ${senderUser?.fullName?.split(' ')[0] || 'A Member'}`;
+        const likeBody = `${senderUser?.fullName || 'Someone'} expressed matrimonial interest in your biodata.`;
         await c.env.DB.prepare(`
           INSERT INTO notifications (id, user_id, type, title, message, target_id, avatar_url, action_label, is_read)
           VALUES (?, ?, 'like', ?, ?, ?, ?, 'View in Matches', 0)
         `).bind(
           notifId,
           receiverId,
-          `Interest Expressed by ${senderUser?.fullName?.split(' ')[0] || 'A Member'}`,
-          `${senderUser?.fullName || 'Someone'} expressed matrimonial interest in your biodata.`,
+          likeTitle,
+          likeBody,
           senderId,
           senderUser?.photoUrl || null
         ).run();
+
+        try {
+          const recTokenRow: any = await c.env.DB.prepare('SELECT fcm_token FROM users WHERE id = ?').bind(receiverId).first();
+          if (recTokenRow?.fcm_token) {
+            const pLike = sendFcmNotification(c.env, {
+              token: recTokenRow.fcm_token,
+              title: likeTitle,
+              body: likeBody,
+              data: { type: 'like', senderId, targetTab: 'matches' }
+            });
+            if (c.executionCtx && typeof c.executionCtx.waitUntil === 'function') {
+              c.executionCtx.waitUntil(pLike);
+            }
+          }
+        } catch {}
       } catch {}
 
       return c.json({

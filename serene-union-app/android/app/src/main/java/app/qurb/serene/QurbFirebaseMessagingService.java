@@ -145,6 +145,7 @@ public class QurbFirebaseMessagingService extends MessagingService {
         declineIntent.setAction("app.qurb.serene.ACTION_DECLINE_CALL");
         declineIntent.putExtra("notificationId", CALL_NOTIFICATION_ID);
         declineIntent.putExtra("callerId", callerId);
+        declineIntent.putExtra("conversationId", conversationId);
 
         PendingIntent declinePendingIntent = PendingIntent.getBroadcast(
             this,

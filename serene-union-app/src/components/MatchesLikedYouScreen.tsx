@@ -535,11 +535,8 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
                   candidate.photos[0] && 
                   !candidate.photos[0].includes('photo-1534528741775-53994a69daeb')
                 );
-                const fallbackSeed = candidate.gender === 'female'
-                  ? `/seeds/seed_female_${((Math.abs(String(candidate.id || '').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)) % 40) + 1)}.jpg`
-                  : `/seeds/seed_male_${((Math.abs(String(candidate.id || '').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)) % 15) + 1)}.jpg`;
-                const photoUrl = hasCandidatePhoto ? candidate.photos![0] : fallbackSeed;
-                const photo = getThumbnailUrl(photoUrl);
+                const photoUrl = hasCandidatePhoto ? candidate.photos![0] : '';
+                const photo = photoUrl ? getThumbnailUrl(photoUrl) : '';
                 const initial = (candidate.fullName || 'M').charAt(0).toUpperCase();
 
                 return (

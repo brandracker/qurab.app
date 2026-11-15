@@ -102,6 +102,7 @@ export class WebRtcService {
   private signalingPollInterval: any = null;
   private processedSignals: Set<string> = new Set();
   private iceDisconnectTimer: any = null;
+  private localMediaPromise: Promise<MediaStream | null> | null = null;
 
   private isInitiator: boolean = false;
   private activeCallerInfo: CallerInfo | null = null;
@@ -462,12 +463,10 @@ export class WebRtcService {
     this.hasLoggedCall = false;
     this.processedSignals.clear();
 
-    // WhatsApp-Style: Immediately open camera preview before & during ringing!
-    if (callType === 'video') {
-      await this.setupLocalMedia(true);
-    } else {
-      await this.setupLocalMedia(false);
-    }
+    // WhatsApp-Style: Start camera/mic preview immediately without blocking call signaling/ringing
+    this.localMediaPromise = this.setupLocalMedia(callType === 'video').finally(() => {
+      this.localMediaPromise = null;
+    });
 
     const conversationId = `conv_${[this.currentUserId || currentUserInfo.id, partnerId].sort().join('_')}`;
     this.activeConversationId = conversationId;
@@ -929,17 +928,35 @@ export class WebRtcService {
 
   private armConnectionFallbackTimer() {
     if (this.connectionFallbackTimer) clearTimeout(this.connectionFallbackTimer);
+    // Wait up to 15s for real ICE/DTLS establishment; never fake 'connected' without media/ICE
     this.connectionFallbackTimer = setTimeout(() => {
       this.connectionFallbackTimer = null;
       const iceState = this.peerConnection?.iceConnectionState;
-      if (iceState === 'failed' || iceState === 'disconnected' || iceState === 'closed') {
+      const connState = this.peerConnection?.connectionState;
+      if (iceState === 'connected' || iceState === 'completed' || connState === 'connected') {
+        this.transitionToConnected();
         return;
       }
-      if (this.currentCallState === 'connecting' || this.currentCallState === 'outgoing_calling') {
-        console.log('[WebRTC] Connection fallback timer triggered, activating connected state.');
-        this.transitionToConnected();
+      if (this.currentCallState === 'connecting') {
+        console.warn('[WebRTC] ICE connection timed out in state:', iceState, connState);
+        if (this.isInitiator && this.peerConnection && typeof this.peerConnection.restartIce === 'function') {
+          try {
+            this.peerConnection.restartIce();
+          } catch {}
+        }
+        // Final grace check after 5s; if still not connected, end with connection_failed
+        this.connectionFallbackTimer = setTimeout(() => {
+          this.connectionFallbackTimer = null;
+          const finalIce = this.peerConnection?.iceConnectionState;
+          const finalConn = this.peerConnection?.connectionState;
+          if (finalIce === 'connected' || finalIce === 'completed' || finalConn === 'connected') {
+            this.transitionToConnected();
+          } else if (this.currentCallState === 'connecting') {
+            this.endCall('connection_failed');
+          }
+        }, 5000);
       }
-    }, 6000);
+    }, 15000);
   }
 
   private transitionToConnected() {
@@ -954,6 +971,9 @@ export class WebRtcService {
   }
 
   private async createPeerConnectionAndOffer() {
+    if (this.localMediaPromise) {
+      await this.localMediaPromise;
+    }
     this.initPeerConnection();
     if (!this.peerConnection) return;
 
@@ -982,6 +1002,9 @@ export class WebRtcService {
 
   private async handleRemoteOffer(sdp: RTCSessionDescriptionInit) {
     // Safety check: ensure localStream is acquired before initPeerConnection attaches tracks
+    if (this.localMediaPromise) {
+      await this.localMediaPromise;
+    }
     if (!this.localStream) {
       await this.setupLocalMedia(this.currentCallType === 'video');
     }
@@ -1373,8 +1396,8 @@ export class WebRtcService {
     const partnerId = payload.targetUserId || this.currentPartnerId;
     const currentId = payload.senderId || this.currentUserId;
     if (currentId && partnerId) {
-      // If ICE candidate was already sent via live WebSocket, avoid duplicate HTTP relay flood
-      if (payload.signal === 'ice_candidate' && sentViaWs) {
+      // Only skip HTTP relay for ICE candidates once media is already connected and WS is open
+      if (payload.signal === 'ice_candidate' && sentViaWs && this.currentCallState === 'connected') {
         return;
       }
       const convId = `conv_${[currentId, partnerId].sort().join('_')}`;

@@ -103,7 +103,7 @@ export class ChatRoomDO {
     if (url.pathname === '/broadcast' && request.method === 'POST') {
       try {
         const payload: any = await request.json();
-        if (payload?.type === 'call_signal' || payload?.signal) {
+        if (payload?.type === 'call_signal' || payload?.type === 'incoming_call' || payload?.type === 'call_ended' || payload?.signal) {
           await this.recordCallSignal(payload);
         }
         const payloadStr = JSON.stringify(payload);
@@ -188,8 +188,15 @@ export class ChatRoomDO {
       } catch {}
     }
 
-    if (sig.signal === 'initiate') {
+    if (sig.signal === 'initiate' || sig.type === 'incoming_call') {
       this.recentCallSignals = [{ ...sig, timestamp: sig.timestamp || now }];
+    } else if (sig.type === 'call_ended' || sig.signal === 'end' || sig.signal === 'reject') {
+      // Clear any active incoming_call / initiate entries so /call/active never returns an ended call
+      const active = this.recentCallSignals.filter(
+        s => (now - s.timestamp < 45000) && s.type !== 'incoming_call' && s.signal !== 'initiate'
+      );
+      active.push({ ...sig, timestamp: sig.timestamp || now });
+      this.recentCallSignals = active;
     } else {
       // Keep recent signals for 45s so slow network handshakes aren't lost
       const active = this.recentCallSignals.filter(s => now - s.timestamp < 45000);

@@ -4,3 +4,7 @@ google.com, pub-5486823026870276, DIRECT, f08c47fec0942fa0
 # Unity Ads authorized seller specification
 unityads.unity3d.com, 18968494911978, DIRECT, f518e1081682705a
 
+# Meta Audience Network authorized seller specification
+facebook.com, 2973874489677809, DIRECT, c3e20eee3f780d68
+
+

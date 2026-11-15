@@ -4,8 +4,8 @@ import {
   MoreVertical, Eye, EyeOff, ShieldCheck, Paperclip, Mic, Play, Pause, 
   Trash2, X, Download, File, Loader2, Volume2, VolumeX, Maximize2,
   Phone, Video, PhoneCall, PhoneOff, Search, CheckSquare, Square,
-  ExternalLink, Megaphone, Pin, Lock, Hand, Sparkles, Check, Clock,
-  Sun, Moon
+  ExternalLink, Megaphone, Pin, Lock, Hand, Check, Clock,
+  Sun, Moon, Crown
 } from 'lucide-react';
 import { VerifiedBlueTick } from './VerifiedBlueTick';
 import type { Conversation, ChatMessage, UserProfile } from '../types';
@@ -231,12 +231,38 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
     return dbService.getCachedRoomMessages(initialConvId);
   });
   const [chatSearchQuery, setChatSearchQuery] = useState<string>('');
+  const [chatFilter, setChatFilter] = useState<'all' | 'unread' | 'salam'>('all');
   const [isSelectMode, setIsSelectMode] = useState<boolean>(false);
   const [selectedConvIds, setSelectedConvIds] = useState<Set<string>>(new Set());
   const [showListMenuDropdown, setShowListMenuDropdown] = useState<boolean>(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const currentUser = dbService.getCurrentUser();
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => themeService.isDark());
+  const [messageReactions, setMessageReactions] = useState<Record<string, string>>(() => {
+    try {
+      const saved = localStorage.getItem('serene_msg_reactions_v1');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+  const [activeReactionPickerMsgId, setActiveReactionPickerMsgId] = useState<string | null>(null);
+
+  const handleSelectReaction = useCallback((msgKey: string, emoji: string) => {
+    setMessageReactions(prev => {
+      const next = { ...prev };
+      if (next[msgKey] === emoji) {
+        delete next[msgKey];
+      } else {
+        next[msgKey] = emoji;
+      }
+      try {
+        localStorage.setItem('serene_msg_reactions_v1', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+    setActiveReactionPickerMsgId(null);
+  }, []);
 
   useEffect(() => {
     return themeService.subscribe((theme) => {
@@ -1592,7 +1618,33 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
 
   // If no active conversation, show conversation list
   if (!activeConv) {
+    const unreadTotalCount = conversations.filter(
+      c => !(c.isOfficial || c.otherUser?.id === 'usr_qurb_official' || c.id.includes('qurb_official')) &&
+        c.lastMessageSenderId !== currentUser.id &&
+        Boolean(c.unreadCount && c.unreadCount > 0)
+    ).length;
+
+    const salamTotalCount = conversations.filter(
+      c => !(c.isOfficial || c.otherUser?.id === 'usr_qurb_official' || c.id.includes('qurb_official')) &&
+        Boolean(c.isDirectSalamPending || c.salamSenderId)
+    ).length;
+
     const filteredConversations = conversations.filter(conv => {
+      const isOfficial = Boolean(
+        conv.isOfficial ||
+        conv.otherUser?.id === 'usr_qurb_official' ||
+        conv.id.includes('qurb_official')
+      );
+      if (chatFilter === 'unread') {
+        if (isOfficial || conv.lastMessageSenderId === currentUser.id || !conv.unreadCount || conv.unreadCount <= 0) {
+          return false;
+        }
+      } else if (chatFilter === 'salam') {
+        if (isOfficial || (!conv.isDirectSalamPending && !conv.salamSenderId)) {
+          return false;
+        }
+      }
+
       if (!chatSearchQuery.trim()) return true;
       const q = chatSearchQuery.toLowerCase().trim();
       const partner = conv.otherUser || {} as any;
@@ -1627,6 +1679,15 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                 <span className="text-[10px] font-semibold text-primary uppercase tracking-widest bg-pastel-rose px-2.5 py-0.5 rounded-full border border-pastel-rose-border shadow-2xs">
                   Conversations
                 </span>
+                {(currentUser?.isVip || (currentUser as any)?.is_vip || localStorage.getItem(`serene_vip_${currentUser.id}`) === 'true') && (
+                  <span
+                    title="Barakah VIP Active"
+                    className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/40 px-2 py-0.5 rounded-full shadow-2xs"
+                  >
+                    <Crown className="w-3 h-3 text-amber-500 fill-amber-400/30 shrink-0" />
+                    <span>VIP</span>
+                  </span>
+                )}
               </div>
               <p className="text-[11px] text-secondary mt-0.5">Respectful & Intentional Matrimonial Discussions</p>
             </div>
@@ -1727,6 +1788,33 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
             )}
           </div>
 
+          {/* Minimal Conversation Filter Pills */}
+          <div className="flex items-center gap-1.5 mt-2.5 overflow-x-auto no-scrollbar">
+            {[
+              { id: 'all', label: 'All', count: conversations.length },
+              { id: 'unread', label: 'Unread', count: unreadTotalCount },
+              { id: 'salam', label: 'Salam Requests', count: salamTotalCount }
+            ].map((tab) => {
+              const isActive = chatFilter === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setChatFilter(tab.id as 'all' | 'unread' | 'salam')}
+                  className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-all whitespace-nowrap border inline-flex items-center gap-1.5 cursor-pointer ${
+                    isActive
+                      ? 'bg-primary text-white border-primary shadow-2xs'
+                      : 'bg-slate-50/80 dark:bg-[#1c1c26] text-secondary border-slate-200/80 dark:border-[#272733] hover:text-on-surface hover:border-primary/40'
+                  }`}
+                >
+                  <span>
+                    {tab.label}{tab.count > 0 ? ` (${tab.count})` : ''}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
           {/* Multi-Select Action Banner */}
           {isSelectMode && (
             <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-outline text-xs">
@@ -1774,14 +1862,14 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
 
         <div className="flex-1 overflow-y-auto p-3 space-y-2.5 pb-8">
           {/* Modern New Matches Horizontal Stories Strip */}
-          {mutualMatches.length > 0 && !chatSearchQuery && (
-            <div className="mb-3 px-1 pt-0.5">
+          {mutualMatches.length > 0 && !chatSearchQuery && chatFilter === 'all' && (
+            <div className="mb-2.5 px-1 pt-0.5">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-secondary flex items-center gap-1.5">
                   <Heart className="w-3.5 h-3.5 text-primary fill-primary" />
                   <span>New Matches</span>
                 </span>
-                <span className="text-[10px] text-primary font-semibold">One-Tap Halal Chat</span>
+                <span className="text-[10px] text-secondary font-medium">One-Tap Halal Chat</span>
               </div>
               <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-1.5 pt-0.5">
                 {mutualMatches.map(match => (
@@ -1793,7 +1881,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                     title={`Start chatting with ${match.fullName}`}
                   >
                     <div className="relative p-0.5 rounded-full bg-gradient-to-tr from-rose-500 via-primary to-amber-400 group-hover:scale-105 group-active:scale-95 transition-transform shadow-xs">
-                      <div className="w-13 h-13 rounded-full p-0.5 bg-white overflow-hidden flex items-center justify-center">
+                      <div className="w-13 h-13 rounded-full p-0.5 bg-white dark:bg-[#16161c] overflow-hidden flex items-center justify-center">
                         {match.photos && match.photos.length > 0 && !match.photos[0].includes('photo-1534528741775-53994a69daeb') ? (
                           <img
                             src={getThumbnailUrl(match.photos[0])}
@@ -1817,13 +1905,21 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                           {(match.fullName || 'M').charAt(0).toUpperCase()}
                         </div>
                       </div>
+                      {(match.isVip || (match as any).is_vip) && (
+                        <span
+                          className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 rounded-full bg-amber-400 border-2 border-white dark:border-[#16161c] flex items-center justify-center shadow-2xs"
+                          title="Barakah VIP Member"
+                        >
+                          <Crown className="w-2.5 h-2.5 text-slate-950 fill-slate-950/20" />
+                        </span>
+                      )}
                       {isUserOnline(match) ? (
-                        <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full shadow-2xs" title="Online" />
+                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white dark:border-[#16161c] rounded-full shadow-2xs" title="Online" />
                       ) : (
-                        <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-amber-400 border-2 border-white rounded-full shadow-2xs" title="Offline / Away" />
+                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-slate-400/75 border-2 border-white dark:border-[#16161c] rounded-full shadow-2xs" title="Offline / Away" />
                       )}
                     </div>
-                    <span className="text-[11px] font-semibold text-slate-800 mt-1.5 max-w-[62px] truncate group-hover:text-primary transition-colors">
+                    <span className="text-[11px] font-semibold text-on-surface mt-1.5 max-w-[62px] truncate group-hover:text-primary transition-colors">
                       {formatDisplayName(match.fullName).split(' ')[0] || 'Match'}
                     </span>
                   </button>
@@ -1844,7 +1940,8 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
             });
 
             return sortedConversations.length > 0 ? (
-              sortedConversations.map(conv => {
+              <div className="bg-white dark:bg-[#16161c] rounded-2xl border border-slate-200/80 dark:border-[#272733] divide-y divide-slate-100 dark:divide-[#272733] overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+              {sortedConversations.map(conv => {
                 const partner = conv.otherUser || { id: conv.participantTwo, fullName: 'Match Candidate', photos: [] } as any;
                 const isConvOfficial = Boolean(
                   conv.isOfficial || 
@@ -1855,6 +1952,8 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                 );
                 const isIncomingUnread = !isConvOfficial && conv.lastMessageSenderId !== currentUser.id && Boolean(conv.unreadCount && conv.unreadCount > 0);
                 const isSelected = selectedConvIds.has(conv.id);
+                const isSentByMe = !isConvOfficial && conv.lastMessageSenderId === currentUser.id;
+                const isStarterPrompt = !isConvOfficial && (!conv.lastMessageText || conv.lastMessageText === 'You matched! Start with Bismillah.' || conv.lastMessageText === 'Tap to start conversation...');
 
                 return (
                   <div
@@ -1874,14 +1973,14 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                         setActiveConvId(conv.id);
                       }
                     }}
-                    className={`p-3.5 bg-white dark:bg-[#16161c] rounded-2xl border transition-all shadow-subtle group flex items-center gap-3 cursor-pointer ${
+                    className={`px-3.5 py-3 transition-colors group flex items-center gap-3 cursor-pointer ${
                       isSelected
-                        ? 'border-primary bg-pastel-rose/30 dark:bg-rose-950/40 ring-1 ring-primary'
+                        ? 'bg-primary/10 ring-1 ring-inset ring-primary/40'
                         : isConvOfficial
-                          ? 'border-primary/25 dark:border-rose-900/40 bg-gradient-to-r from-rose-50/50 via-white to-white dark:from-rose-950/30 dark:via-[#16161c] dark:to-[#16161c] hover:border-primary/50 hover:shadow-brand/5'
+                          ? 'bg-primary/[0.04] hover:bg-primary/[0.08]'
                           : isIncomingUnread 
-                            ? 'border-primary/60 dark:border-primary/70 bg-pastel-rose/25 dark:bg-rose-950/20 border-l-4 border-l-primary shadow-brand/10' 
-                            : 'border-slate-100 dark:border-[#272733] hover:border-primary/40 dark:hover:border-primary/50 hover:shadow-subtle dark:hover:bg-[#1c1c24]'
+                            ? 'bg-primary/[0.05] hover:bg-primary/[0.09] border-l-2 border-l-primary' 
+                            : 'hover:bg-slate-50/90 dark:hover:bg-[#1c1c26]'
                     }`}
                   >
                     {/* Multi-Select Checkbox */}
@@ -1910,10 +2009,10 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                       className="relative shrink-0 cursor-pointer group/avatar"
                       title={isConvOfficial ? "Qurb Official Channel" : `Click to view ${partner.fullName}'s Biodata`}
                     >
-                      <div className={`w-12 h-12 rounded-full overflow-hidden border flex items-center justify-center transition-all shadow-subtle ${
+                      <div className={`w-12 h-12 rounded-full overflow-hidden border flex items-center justify-center transition-all shadow-2xs ${
                         isConvOfficial
-                          ? 'border-primary/20 dark:border-rose-800/40 bg-pastel-rose/40 dark:bg-rose-950/40'
-                          : isIncomingUnread ? 'border-primary ring-2 ring-primary/20 bg-surface-variant dark:bg-[#1c1c24]' : 'border-outline dark:border-[#272733] bg-surface-variant dark:bg-[#1c1c24]'
+                          ? 'border-primary/25 bg-primary/10'
+                          : isIncomingUnread ? 'border-primary ring-2 ring-primary/20 bg-surface-variant dark:bg-[#1c1c24]' : 'border-slate-200/80 dark:border-[#272733] bg-surface-variant dark:bg-[#1c1c24]'
                       }`}>
                         {isConvOfficial ? (
                           <div className="w-full h-full p-2.5 flex items-center justify-center">
@@ -1949,11 +2048,14 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                           </div>
                         )}
                       </div>
+                      {!isConvOfficial && isUserOnline(partner) && (
+                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white dark:border-[#16161c] rounded-full shadow-2xs" title="Online" />
+                      )}
                     </div>
 
                     {/* Conversation Info (Clean Modern Row) */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-0.5">
+                      <div className="flex items-center justify-between mb-0.5 gap-2">
                         <h3 
                           onClick={(e) => {
                             e.stopPropagation();
@@ -1970,9 +2072,14 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                           }`}
                           title={isConvOfficial ? "Qurb Official Channel" : "Click to view full biodata"}
                         >
-                          <span>{isConvOfficial ? 'Qurb Team' : formatDisplayName(partner.fullName, 'Member')}</span>
+                          <span className="truncate">{isConvOfficial ? 'Qurb Team' : formatDisplayName(partner.fullName, 'Member')}</span>
                           {isConvOfficial && (
-                            <VerifiedBlueTick size={15} className="ml-0.5" />
+                            <VerifiedBlueTick size={15} className="ml-0.5 shrink-0" />
+                          )}
+                          {!isConvOfficial && (partner.isVip || (partner as any).is_vip) && (
+                            <span title="Barakah VIP Member" className="inline-flex items-center shrink-0">
+                              <Crown className="w-3.5 h-3.5 text-amber-500 fill-amber-400/25" />
+                            </span>
                           )}
                         </h3>
                         <div className="flex items-center gap-1.5 shrink-0">
@@ -1984,7 +2091,7 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                           )}
                           {!isConvOfficial && (conv.isDirectSalamPending || conv.salamSenderId) && conv.salamSenderId !== currentUser.id && (
                             <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800/40 px-2 py-0.5 rounded-full shadow-2xs">
-                              <Sparkles className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" />
+                              <MessageCircle className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" />
                               <span>Salam Request</span>
                             </span>
                           )}
@@ -2005,41 +2112,56 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                         </div>
                       </div>
 
-                      <div className={`text-xs truncate ${
+                      <div className={`text-xs truncate flex items-center justify-between gap-2 ${
                         isIncomingUnread ? 'font-bold text-on-surface dark:text-white' : 'text-secondary dark:text-slate-400'
                       }`}>
-                        {(() => {
-                          const text = conv.lastMessageText || (isConvOfficial ? 'Official announcements and verified updates.' : 'Tap to start conversation...');
-                          if (text.includes('restored photo blur') || text.includes('photo blur for modesty') || text.startsWith('🔒')) {
-                            const cleanText = text.replace(/^[🔒\s]+/, '').replace(/^dY"'\s*/, '');
-                            return (
-                              <span className="inline-flex items-center gap-1.5 text-slate-600 dark:text-slate-300 font-medium truncate max-w-full">
-                                <span className="w-4 h-4 rounded-full bg-amber-100 dark:bg-amber-950/50 border border-amber-300/80 dark:border-amber-700/50 flex items-center justify-center shrink-0 shadow-2xs">
-                                  <Lock className="w-2.5 h-2.5 text-amber-700 dark:text-amber-400" />
+                        <div className="min-w-0 flex-1 flex items-center gap-1.5 truncate">
+                          {isSentByMe && (
+                            <CheckCheck className="w-3.5 h-3.5 text-primary/80 shrink-0" />
+                          )}
+                          {(() => {
+                            const text = conv.lastMessageText || (isConvOfficial ? 'Official announcements and verified updates.' : 'Tap to start conversation...');
+                            if (text.includes('restored photo blur') || text.includes('photo blur for modesty') || text.startsWith('🔒')) {
+                              const cleanText = text.replace(/^[🔒\s]+/, '').replace(/^dY"'\s*/, '');
+                              return (
+                                <span className="inline-flex items-center gap-1.5 text-slate-600 dark:text-slate-300 font-medium truncate max-w-full">
+                                  <span className="w-4 h-4 rounded-full bg-amber-100 dark:bg-amber-950/50 border border-amber-300/80 dark:border-amber-700/50 flex items-center justify-center shrink-0 shadow-2xs">
+                                    <Lock className="w-2.5 h-2.5 text-amber-700 dark:text-amber-400" />
+                                  </span>
+                                  <span className="truncate">{cleanText}</span>
                                 </span>
-                                <span className="truncate">{cleanText}</span>
+                              );
+                            }
+                            if (text.includes('revealed their unblurred photos') || text.startsWith('📸')) {
+                              const cleanText = text.replace(/^[📸\s]+/, '').replace(/^dY",\s*/, '');
+                              return (
+                                <span className="inline-flex items-center gap-1.5 text-slate-600 dark:text-slate-300 font-medium truncate max-w-full">
+                                  <span className="w-4 h-4 rounded-full bg-emerald-100 dark:bg-emerald-950/50 border border-emerald-300/80 dark:border-emerald-700/50 flex items-center justify-center shrink-0 shadow-2xs">
+                                    <Eye className="w-2.5 h-2.5 text-emerald-700 dark:text-emerald-400" />
+                                  </span>
+                                  <span className="truncate">{cleanText}</span>
+                                </span>
+                              );
+                            }
+                            return (
+                              <span className={`truncate ${isStarterPrompt ? 'italic opacity-80' : ''}`}>
+                                {text}
                               </span>
                             );
-                          }
-                          if (text.includes('revealed their unblurred photos') || text.startsWith('📸')) {
-                            const cleanText = text.replace(/^[📸\s]+/, '').replace(/^dY",\s*/, '');
-                            return (
-                              <span className="inline-flex items-center gap-1.5 text-slate-600 dark:text-slate-300 font-medium truncate max-w-full">
-                                <span className="w-4 h-4 rounded-full bg-emerald-100 dark:bg-emerald-950/50 border border-emerald-300/80 dark:border-emerald-700/50 flex items-center justify-center shrink-0 shadow-2xs">
-                                  <Eye className="w-2.5 h-2.5 text-emerald-700 dark:text-emerald-400" />
-                                </span>
-                                <span className="truncate">{cleanText}</span>
-                              </span>
-                            );
-                          }
-                          return text;
-                        })()}
+                          })()}
+                        </div>
+                        {isStarterPrompt && (
+                          <span className="shrink-0 text-[10px] font-semibold text-primary bg-primary/10 border border-primary/25 px-2 py-0.5 rounded-full">
+                            Say Salam
+                          </span>
+                        )}
                       </div>
                     </div>
 
                   </div>
                 );
-              })
+              })}
+              </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-20 text-center px-4 bg-white dark:bg-[#16161c] rounded-3xl border border-outline dark:border-[#272733] my-6 shadow-card">
                 <div className="w-12 h-12 rounded-full bg-pastel-rose dark:bg-rose-950/40 text-primary flex items-center justify-center mb-3 border border-pastel-rose-border dark:border-rose-900/40">
@@ -2153,6 +2275,11 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
               <span className="truncate">{isOfficialChannel ? 'Qurb Team' : formatDisplayName(activeConv?.otherUser?.fullName)}</span>
               {isOfficialChannel && (
                 <VerifiedBlueTick size={14} />
+              )}
+              {!isOfficialChannel && (activeConv?.otherUser?.isVip || (activeConv?.otherUser as any)?.is_vip) && (
+                <span title="Barakah VIP Member" className="inline-flex items-center shrink-0">
+                  <Crown className="w-3.5 h-3.5 text-amber-500 fill-amber-400/25" />
+                </span>
               )}
             </h2>
             <div className="text-[10px] text-secondary dark:text-slate-400 truncate flex items-center gap-1.5 mt-0.5">
@@ -2553,18 +2680,46 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                 )
               );
 
+              const msgKey = String(msg.id || idx);
+              const selectedReaction = messageReactions[msgKey];
+              const isPickerOpen = activeReactionPickerMsgId === msgKey;
+
               return (
                 <div
-                  key={msg.id || idx}
+                  key={msgKey}
                   className={`flex flex-col gap-0.5 max-w-[82%] ${isMe ? 'items-end ml-auto' : 'items-start mr-auto'}`}
                 >
                   <div
-                    className={`p-3 rounded-2xl text-xs leading-relaxed transition-all ${
+                    onClick={(e) => {
+                      if ((e.target as HTMLElement).closest('button, a')) return;
+                      setActiveReactionPickerMsgId(prev => (prev === msgKey ? null : msgKey));
+                    }}
+                    className={`relative p-3 rounded-2xl text-xs leading-relaxed transition-all cursor-pointer ${
                       isMe
                         ? 'bg-gradient-to-tr from-primary via-rose-600 to-rose-500 text-white rounded-br-2xs shadow-sm shadow-primary/20'
                         : 'bg-white dark:bg-[#1c1c24] text-slate-800 dark:text-slate-100 rounded-bl-2xs border border-slate-200/80 dark:border-[#2a2a36] shadow-xs'
                     }`}
                   >
+                    {isPickerOpen && (
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        className={`absolute -top-9 ${isMe ? 'right-0' : 'left-0'} z-30 flex items-center gap-1 px-2 py-1 rounded-full bg-white dark:bg-[#1f1f2b] border border-slate-200 dark:border-[#323242] shadow-lg animate-fade-in`}
+                      >
+                        {['🤲', '❤️', '✨', '👍'].map((emoji) => (
+                          <span
+                            key={emoji}
+                            role="option"
+                            aria-selected={selectedReaction === emoji}
+                            onClick={() => handleSelectReaction(msgKey, emoji)}
+                            className={`text-sm px-1 py-0.5 rounded-full hover:scale-125 transition-transform cursor-pointer select-none ${
+                              selectedReaction === emoji ? 'bg-rose-100 dark:bg-rose-950/60 scale-110' : ''
+                            }`}
+                          >
+                            {emoji}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     {/* 1. Voice Message Bubble */}
                     {isAudioMsg ? (
                       <div className="flex items-center gap-2.5 min-w-[210px] py-0.5">
@@ -2582,13 +2737,25 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                             <Play className="w-4 h-4 fill-current ml-0.5" />
                           )}
                         </button>
-                        <div className="flex-1 flex flex-col gap-1">
-                          {/* Audio Progress Track */}
-                          <div className={`h-1.5 rounded-full overflow-hidden ${isMe ? 'bg-white/30' : 'bg-outline'}`}>
-                            <div 
-                              className={`h-full transition-all duration-150 ${isMe ? 'bg-white' : 'bg-primary'}`}
-                              style={{ width: `${playingAudioId === msg.id ? audioProgress : 0}%` }}
-                            />
+                        <div className="flex-1 flex flex-col gap-1.5">
+                          {/* 16-Bar Mini Audio Waveform */}
+                          <div className="flex items-center gap-[3px] h-5" aria-label="Voice waveform">
+                            {[38, 65, 90, 50, 80, 100, 55, 75, 45, 92, 68, 85, 48, 72, 58, 40].map((heightPct, barIdx) => {
+                              const currentProg = playingAudioId === msg.id ? audioProgress : 0;
+                              const barThreshold = ((barIdx + 1) / 16) * 100;
+                              const isFilled = currentProg >= barThreshold;
+                              return (
+                                <span
+                                  key={barIdx}
+                                  className={`w-1 rounded-full transition-all duration-150 ${
+                                    isFilled
+                                      ? (isMe ? 'bg-white' : 'bg-primary')
+                                      : (isMe ? 'bg-white/35' : 'bg-slate-300 dark:bg-slate-600')
+                                  }`}
+                                  style={{ height: `${Math.max(25, heightPct)}%` }}
+                                />
+                              );
+                            })}
                           </div>
                           <div className="flex items-center justify-between text-[10px]">
                             <span className="flex items-center gap-1 font-mono">
@@ -2940,8 +3107,20 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
                         })()}
                       </div>
                     )}
+                    {selectedReaction && (
+                      <span
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectReaction(msgKey, selectedReaction);
+                        }}
+                        title="Tap to remove reaction"
+                        className={`absolute -bottom-2.5 ${isMe ? 'left-2' : 'right-2'} px-1.5 py-0.5 rounded-full bg-white dark:bg-[#232330] border border-slate-200 dark:border-[#353545] shadow-sm text-[11px] leading-none cursor-pointer select-none`}
+                      >
+                        {selectedReaction}
+                      </span>
+                    )}
                   </div>
-                  <div className="flex items-center gap-1 text-[9px] text-secondary px-1 font-medium">
+                  <div className={`flex items-center gap-1 text-[9px] text-secondary px-1 font-medium ${selectedReaction ? 'mt-1.5' : ''}`}>
                     <span>{msg.timestamp || 'Just now'}</span>
                     {isMe && <CheckCheck className="w-3 h-3 text-primary" />}
                   </div>
@@ -2958,16 +3137,37 @@ export const ChatScreen: React.FC<Props> = ({ initialConvId, onActiveConvChange,
               
               {/* Quick Salam Chips */}
               <div className="mt-4 flex flex-wrap justify-center gap-2 max-w-xs">
-                {['Assalamu Alaikum wa Rahmatullah 🌟', 'Kese hain aap? ✨', 'JazakAllah Khair for connecting 🤲'].map((salam, sIdx) => (
+                {['Assalamu Alaikum wa Rahmatullah', 'Kese hain aap?', 'JazakAllah Khair for connecting'].map((salam, sIdx) => (
                   <button
                     key={sIdx}
                     type="button"
                     onClick={() => {
                       setInputText(salam);
                     }}
-                    className="text-[11px] font-medium bg-white dark:bg-[#1a1a24] hover:bg-rose-50/80 dark:hover:bg-rose-950/40 text-slate-700 dark:text-slate-200 hover:text-primary dark:hover:text-rose-400 px-3 py-1.5 rounded-full border border-slate-200/90 dark:border-[#272733] shadow-2xs transition-all active:scale-95 cursor-pointer"
+                    className="text-[11px] font-medium bg-white dark:bg-[#1a1a24] hover:bg-primary/10 text-slate-700 dark:text-slate-200 hover:text-primary px-3 py-1.5 rounded-full border border-slate-200/90 dark:border-[#272733] hover:border-primary/40 shadow-2xs transition-all active:scale-95 cursor-pointer"
                   >
                     {salam}
+                  </button>
+                ))}
+              </div>
+
+              {/* Halal Matrimonial Icebreakers */}
+              <div className="mt-4 w-full max-w-xs space-y-1.5 text-left">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 text-center">
+                  Halal Icebreakers
+                </p>
+                {[
+                  'What does your ideal Islamic home look like?',
+                  'How involved is your family in the rishta process?',
+                  'What is your preferred timeline for Nikah?'
+                ].map((prompt, pIdx) => (
+                  <button
+                    key={pIdx}
+                    type="button"
+                    onClick={() => setInputText(prompt)}
+                    className="w-full text-left text-[11px] font-medium bg-white/90 dark:bg-[#1a1a24] hover:bg-primary/10 text-slate-700 dark:text-slate-200 hover:text-primary px-3.5 py-2 rounded-2xl border border-slate-200/80 dark:border-[#272733] hover:border-primary/40 shadow-2xs transition-all active:scale-[0.99] cursor-pointer"
+                  >
+                    {prompt}
                   </button>
                 ))}
               </div>

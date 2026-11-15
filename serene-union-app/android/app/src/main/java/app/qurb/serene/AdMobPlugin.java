@@ -22,6 +22,9 @@ import com.google.android.gms.ads.rewarded.RewardItem;
 import com.google.android.gms.ads.rewarded.RewardedAd;
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @CapacitorPlugin(name = "AdMobPlugin")
 public class AdMobPlugin extends Plugin {
     private static final String TAG = "AdMobPlugin";
@@ -30,6 +33,14 @@ public class AdMobPlugin extends Plugin {
     private static final String LIVE_REWARDED_AD_UNIT_ID = "ca-app-pub-5486823026870276/7539032440";
     // Google's Official Universal Sample Unit ID (for initial propagation warmup)
     private static final String SAMPLE_REWARDED_AD_UNIT_ID = "ca-app-pub-3940256099942544/5224354917";
+
+    private interface LoadFailureCallback {
+        void onFailure(int errorCode, String errorMessage);
+    }
+
+    private final Object loadLock = new Object();
+    private final List<Runnable> pendingSuccessCallbacks = new ArrayList<>();
+    private final List<LoadFailureCallback> pendingFailureCallbacks = new ArrayList<>();
 
     private RewardedAd rewardedAd = null;
     private boolean isInitializing = false;
@@ -59,25 +70,64 @@ public class AdMobPlugin extends Plugin {
         }).start();
     }
 
-    private void preloadRewardedAd(final Runnable onSuccess, final Runnable onFailure) {
-        if (rewardedAd != null) {
-            if (onSuccess != null) onSuccess.run();
-            return;
-        }
-        if (isLoading) {
-            if (onFailure != null) onFailure.run();
-            return;
+    private void preloadRewardedAd(final Runnable onSuccess, final LoadFailureCallback onFailure) {
+        boolean shouldStartLoad = false;
+        synchronized (loadLock) {
+            if (rewardedAd != null) {
+                if (onSuccess != null) onSuccess.run();
+                return;
+            }
+            if (onSuccess != null) pendingSuccessCallbacks.add(onSuccess);
+            if (onFailure != null) pendingFailureCallbacks.add(onFailure);
+            if (!isLoading) {
+                isLoading = true;
+                shouldStartLoad = true;
+            }
         }
 
-        isLoading = true;
-        loadWithUnitId(LIVE_REWARDED_AD_UNIT_ID, onSuccess, onFailure);
+        if (shouldStartLoad) {
+            loadWithUnitId(LIVE_REWARDED_AD_UNIT_ID);
+        }
     }
 
-    private void loadWithUnitId(final String adUnitId, final Runnable onSuccess, final Runnable onFailure) {
+    private void notifyLoadSuccess() {
+        List<Runnable> callbacks;
+        synchronized (loadLock) {
+            isLoading = false;
+            callbacks = new ArrayList<>(pendingSuccessCallbacks);
+            pendingSuccessCallbacks.clear();
+            pendingFailureCallbacks.clear();
+        }
+        for (Runnable cb : callbacks) {
+            try {
+                cb.run();
+            } catch (Exception e) {
+                Log.e(TAG, "Error in load success callback: " + e.getMessage());
+            }
+        }
+    }
+
+    private void notifyLoadFailure(int errorCode, String errorMessage) {
+        List<LoadFailureCallback> callbacks;
+        synchronized (loadLock) {
+            isLoading = false;
+            callbacks = new ArrayList<>(pendingFailureCallbacks);
+            pendingSuccessCallbacks.clear();
+            pendingFailureCallbacks.clear();
+        }
+        for (LoadFailureCallback cb : callbacks) {
+            try {
+                cb.onFailure(errorCode, errorMessage);
+            } catch (Exception e) {
+                Log.e(TAG, "Error in load failure callback: " + e.getMessage());
+            }
+        }
+    }
+
+    private void loadWithUnitId(final String adUnitId) {
         final Activity activity = getActivity();
         if (activity == null) {
-            isLoading = false;
-            if (onFailure != null) onFailure.run();
+            notifyLoadFailure(-1, "Android Activity is unavailable");
             return;
         }
 
@@ -89,29 +139,22 @@ public class AdMobPlugin extends Plugin {
                     @Override
                     public void onAdLoaded(@NonNull RewardedAd ad) {
                         rewardedAd = ad;
-                        isLoading = false;
                         Log.d(TAG, "Google AdMob Rewarded Video successfully loaded: " + adUnitId);
-                        if (onSuccess != null) {
-                            onSuccess.run();
-                        }
+                        notifyLoadSuccess();
                     }
 
                     @Override
                     public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
                         rewardedAd = null;
-                        isLoading = false;
-                        Log.w(TAG, "Google AdMob unit failed to load (" + adUnitId + "): " + loadAdError.getMessage());
-                        if (onFailure != null) {
-                            onFailure.run();
-                        }
+                        int code = loadAdError.getCode();
+                        String msg = loadAdError.getMessage();
+                        Log.w(TAG, "Google AdMob unit failed to load (" + adUnitId + ") [code=" + code + "]: " + msg);
+                        notifyLoadFailure(code, msg);
                     }
                 });
             } catch (Exception e) {
-                isLoading = false;
                 Log.e(TAG, "Exception during RewardedAd.load: " + e.getMessage());
-                if (onFailure != null) {
-                    onFailure.run();
-                }
+                notifyLoadFailure(-1, e.getMessage() != null ? e.getMessage() : "RewardedAd.load exception");
             }
         });
     }
@@ -138,10 +181,12 @@ public class AdMobPlugin extends Plugin {
             ret.put("ready", true);
             ret.put("buffered", true);
             call.resolve(ret);
-        }, () -> {
+        }, (errorCode, errorMessage) -> {
             JSObject ret = new JSObject();
             ret.put("ready", false);
             ret.put("buffered", false);
+            ret.put("errorCode", errorCode);
+            ret.put("errorMessage", errorMessage);
             call.resolve(ret);
         });
     }
@@ -163,8 +208,8 @@ public class AdMobPlugin extends Plugin {
             activity.runOnUiThread(() -> Toast.makeText(getContext(), "Buffering Google AdMob video...", Toast.LENGTH_SHORT).show());
             preloadRewardedAd(() -> {
                 displayRewardedAd(call, userId, rewardType, activity);
-            }, () -> {
-                call.reject("Google AdMob video could not be loaded at this time.");
+            }, (errorCode, errorMessage) -> {
+                call.reject("AdMob load failed (code " + errorCode + "): " + errorMessage, String.valueOf(errorCode));
             });
         }
     }

@@ -202,6 +202,7 @@ chatRouter.get('/', async (c) => {
         u1.marriage_timeline as p1_timeline, u2.marriage_timeline as p2_timeline,
         u1.bio as p1_bio, u2.bio as p2_bio,
         u1.blur_photos_by_default as p1_blur, u2.blur_photos_by_default as p2_blur,
+        u1.is_vip as p1_is_vip, u2.is_vip as p2_is_vip,
         w1.wali_name as w1_wali_name, w2.wali_name as w2_wali_name,
         w1.wali_relationship as w1_wali_rel, w2.wali_relationship as w2_wali_rel,
         rp1.sect as p1_sect, rp2.sect as p2_sect,
@@ -347,6 +348,7 @@ chatRouter.get('/', async (c) => {
       const otherTimeline = isUserP1 ? row.p2_timeline : row.p1_timeline;
       const otherBio = isUserP1 ? row.p2_bio : row.p1_bio;
       const otherBlur = isUserP1 ? Boolean(row.p2_blur) : Boolean(row.p1_blur);
+      const otherIsVip = isUserP1 ? Boolean(row.p2_is_vip) : Boolean(row.p1_is_vip);
       const otherWaliName = isUserP1 ? row.w2_wali_name : row.w1_wali_name;
       const otherWaliRel = isUserP1 ? row.w2_wali_rel : row.w1_wali_rel;
       const otherSect = isUserP1 ? row.p2_sect : row.p1_sect;
@@ -394,6 +396,7 @@ chatRouter.get('/', async (c) => {
           marriageTimeline: otherTimeline || 'within_1_year',
           bio: otherBio || 'Seeking half my deen.',
           blurPhotosByDefault: otherBlur,
+          isVip: otherIsVip,
           isPhotoRevealed,
           hasRevealedToPartner,
           photos: userPhotos.length > 0 ? userPhotos : [],

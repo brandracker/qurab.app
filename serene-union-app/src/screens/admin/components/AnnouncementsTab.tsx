@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Megaphone, 
   Send, 
-  Sparkles, 
   Image as ImageIcon, 
   ExternalLink, 
   RefreshCw, 
@@ -214,7 +213,7 @@ export const AnnouncementsTab: React.FC<AnnouncementsTabProps> = ({
         <div className="lg:col-span-7 bg-[#131D33] border border-white/10 rounded-3xl p-6 shadow-xl space-y-6">
           <div className="flex items-center justify-between pb-4 border-b border-white/10">
             <div className="flex items-center space-x-2.5">
-              <Sparkles className="w-4 h-4 text-amber-400" />
+              <Megaphone className="w-4 h-4 text-amber-400" />
               <h2 className="text-sm font-bold text-white uppercase tracking-wider">Announcement Composer</h2>
             </div>
             {/* Quick Presets */}

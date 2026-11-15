@@ -19,7 +19,9 @@ import {
   Gift,
   ChevronRight,
   Sun,
-  Moon
+  Moon,
+  Copy,
+  Check
 } from 'lucide-react';
 import { dbService } from '../services/dbService';
 import { walletService } from '../services/walletService';
@@ -72,6 +74,27 @@ export const SettingsPrivacy: React.FC<Props> = ({
 
   const handleToggleTheme = () => {
     themeService.toggleTheme();
+    showNotice();
+  };
+
+  const [activeCategory, setActiveCategory] = useState<'all' | 'membership' | 'privacy' | 'account'>('all');
+  const [copiedId, setCopiedId] = useState<boolean>(false);
+
+  const handleCopyAccountId = () => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(currentUser.id).catch(() => {});
+      }
+    } catch {
+      // Clipboard API unavailable in restricted test environments
+    }
+    setCopiedId(true);
+    setTimeout(() => setCopiedId(false), 2000);
+  };
+
+  const handleVisibilityChange = (nextVisibility: string) => {
+    setProfileVisibility(nextVisibility);
+    dbService.updatePrivacy(blurPhotos, nextVisibility);
     showNotice();
   };
 
@@ -237,9 +260,9 @@ export const SettingsPrivacy: React.FC<Props> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-surface overflow-y-auto font-sans select-none text-on-surface">
+    <div className="flex-1 flex flex-col h-full bg-slate-50/70 dark:bg-[#0c0c0e] overflow-y-auto font-sans select-none text-on-surface">
       {/* Top Header */}
-      <header className="sticky top-0 bg-white px-5 py-3 border-b border-outline z-10 flex items-center justify-between shadow-subtle">
+      <header className="sticky top-0 bg-white/95 dark:bg-[#121218]/95 backdrop-blur-md px-5 py-3 border-b border-slate-200/80 dark:border-[#272733] z-10 flex items-center justify-between shadow-[0_1px_8px_rgba(0,0,0,0.03)]">
         <div>
           <h1 className="font-serif text-xl font-bold text-on-surface">
             Settings & Privacy
@@ -249,7 +272,7 @@ export const SettingsPrivacy: React.FC<Props> = ({
 
         <div className="flex items-center gap-2">
           {savedNotice && (
-            <span className="text-xs font-bold text-primary bg-pastel-rose border border-pastel-rose-border px-3 py-0.5 rounded-full animate-fade-in shadow-subtle">
+            <span className="text-xs font-bold text-primary bg-rose-50 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-900/40 px-3 py-0.5 rounded-full animate-fade-in shadow-2xs">
               Saved!
             </span>
           )}
@@ -258,13 +281,13 @@ export const SettingsPrivacy: React.FC<Props> = ({
             onClick={handleToggleTheme}
             aria-label="Toggle Theme"
             title={isDarkMode ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
-            className="p-1.5 rounded-full border border-outline hover:bg-surface-variant text-on-surface transition-all shadow-2xs cursor-pointer"
+            className="p-1.5 rounded-full border border-slate-200/80 dark:border-[#272733] bg-white dark:bg-[#16161c] hover:bg-slate-50 dark:hover:bg-[#1e1e2a] text-on-surface transition-all shadow-2xs cursor-pointer"
           >
             {isDarkMode ? <Moon className="w-4 h-4 text-amber-400" /> : <Sun className="w-4 h-4 text-amber-500" />}
           </button>
           <button
             onClick={handleLogout}
-            className="flex items-center gap-1 text-xs text-error font-semibold hover:bg-pastel-rose px-3 py-1.5 rounded-full border border-error/20 transition-all shadow-subtle"
+            className="flex items-center gap-1 text-xs text-error font-semibold hover:bg-rose-50 dark:hover:bg-rose-950/30 px-3 py-1.5 rounded-full border border-error/20 transition-all shadow-2xs"
             title="Log Out"
           >
             <LogOut className="w-3.5 h-3.5" />
@@ -275,10 +298,36 @@ export const SettingsPrivacy: React.FC<Props> = ({
 
 
       {/* Main Settings Body */}
-      <main className="p-4 sm:p-6 space-y-4">
+      <main className="p-4 sm:p-5 space-y-4">
+        {/* Minimal Category Filter Bar */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
+          {[
+            { id: 'all', label: 'All' },
+            { id: 'membership', label: 'Membership' },
+            { id: 'privacy', label: 'Privacy' },
+            { id: 'account', label: 'Account' }
+          ].map((tab) => {
+            const isActive = activeCategory === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveCategory(tab.id as 'all' | 'membership' | 'privacy' | 'account')}
+                className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all whitespace-nowrap border ${
+                  isActive
+                    ? 'bg-primary text-white border-primary shadow-2xs'
+                    : 'bg-white dark:bg-[#16161c] text-secondary border-slate-200/80 dark:border-[#272733] hover:text-on-surface hover:border-primary/40'
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
         {/* Account Summary Card */}
-        <section className="bg-white rounded-2xl p-4 border border-outline shadow-subtle flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl overflow-hidden bg-pastel-rose text-primary flex items-center justify-center font-serif text-lg font-bold border border-pastel-rose-border shrink-0 shadow-subtle">
+        <section className="bg-white dark:bg-[#16161c] rounded-2xl p-4 border border-slate-200/80 dark:border-[#272733] shadow-[0_2px_10px_rgba(0,0,0,0.02)] flex items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl overflow-hidden bg-rose-50 dark:bg-rose-950/40 text-primary flex items-center justify-center font-serif text-lg font-bold border border-rose-200/70 dark:border-rose-900/40 shrink-0 shadow-2xs">
             {currentUser.photos && currentUser.photos.length > 0 && currentUser.photos[0] ? (
               <img src={currentUser.photos[0]} alt={currentUser.fullName} className="w-full h-full object-cover" />
             ) : (
@@ -288,26 +337,39 @@ export const SettingsPrivacy: React.FC<Props> = ({
           <div className="flex-1 min-w-0">
             <h3 className="font-serif font-bold text-sm text-on-surface truncate">{currentUser.fullName || 'Member'}</h3>
             <p className="text-[11px] text-secondary truncate">{currentUser.email || currentUser.phone || 'Account Active'}</p>
-            <span className="inline-block mt-0.5 text-[10px] font-bold text-primary bg-pastel-rose px-2 py-0.2 rounded-full border border-pastel-rose-border">
-              Account ID: {currentUser.id}
-            </span>
+            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+              <span className="inline-block text-[10px] font-bold text-primary bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded-full border border-rose-200/70 dark:border-rose-900/40">
+                Account ID: {currentUser.id}
+              </span>
+              <button
+                type="button"
+                onClick={handleCopyAccountId}
+                aria-label="Copy Account ID"
+                className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-50 dark:bg-[#1c1c26] border border-slate-200/80 dark:border-[#2a2a38] text-secondary hover:text-on-surface hover:border-primary/40 transition-all active:scale-95"
+              >
+                {copiedId ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                <span>{copiedId ? 'Copied' : 'Copy'}</span>
+              </button>
+            </div>
           </div>
         </section>
 
-        {/* MEMBERSHIP PASS CARD (The exact Pink card from user's image) */}
-        <section className={`rounded-3xl p-4 sm:p-5 border transition-all ${
+        {/* MEMBERSHIP PASS CARD & REFERRAL */}
+        {(activeCategory === 'all' || activeCategory === 'membership') && (
+        <>
+        <section className={`rounded-3xl p-4 sm:p-5 bg-white dark:bg-[#16161c] border border-slate-200/80 dark:border-[#272733] border-t-2 transition-all ${
           isVip 
-            ? 'bg-pastel-amber border-pastel-amber-border' 
-            : 'bg-pastel-rose border-pastel-rose-border'
-        } flex flex-col gap-3 shadow-subtle`}>
+            ? 'border-t-amber-500' 
+            : 'border-t-primary'
+        } flex flex-col gap-3 shadow-[0_2px_12px_rgba(0,0,0,0.03)]`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-xs ${
+              <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-2xs ${
                 isVip 
-                  ? 'bg-amber-50 text-amber-600 border border-amber-200' 
-                  : 'bg-rose-50 text-primary border border-rose-200'
+                  ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200/70 dark:border-amber-900/40' 
+                  : 'bg-rose-50 dark:bg-rose-950/40 text-primary border border-rose-200/70 dark:border-rose-900/40'
               }`}>
-                <Crown className={`w-5 h-5 ${isVip ? 'text-amber-600 fill-amber-500/20' : 'text-primary'}`} />
+                <Crown className={`w-5 h-5 ${isVip ? 'text-amber-600 dark:text-amber-400 fill-amber-500/20' : 'text-primary'}`} />
               </div>
               <div>
                 <h3 className="font-serif text-sm font-bold text-on-surface">
@@ -331,7 +393,7 @@ export const SettingsPrivacy: React.FC<Props> = ({
                 <span>Upgrade</span>
               </button>
             ) : (
-              <span className="px-2.5 py-1 rounded-full bg-white text-emerald-700 text-[10px] font-bold border border-emerald-200 flex items-center gap-1 shadow-xs">
+              <span className="px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold border border-emerald-200/70 dark:border-emerald-900/40 flex items-center gap-1 shadow-2xs">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                 <span>Active</span>
               </span>
@@ -339,11 +401,11 @@ export const SettingsPrivacy: React.FC<Props> = ({
           </div>
 
           {isVip ? (
-            <div className="space-y-2 pt-2.5 border-t border-pastel-amber-border/70 text-xs">
+            <div className="space-y-2 pt-2.5 border-t border-slate-100 dark:border-[#272733] text-xs">
               <div className="grid grid-cols-2 gap-2">
-                <div className="p-2.5 rounded-2xl bg-white border border-pastel-amber-border/80 flex items-center gap-2.5 shadow-xs">
-                  <div className="w-7 h-7 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center shrink-0">
-                    <Infinity className="w-3.5 h-3.5 text-amber-600" />
+                <div className="p-2.5 rounded-2xl bg-slate-50/80 dark:bg-[#1c1c26] border border-slate-200/70 dark:border-[#2a2a38] flex items-center gap-2.5 shadow-2xs">
+                  <div className="w-7 h-7 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200/70 dark:border-amber-900/40 flex items-center justify-center shrink-0">
+                    <Infinity className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                   </div>
                   <div className="min-w-0">
                     <strong className="block text-[10px] text-on-surface font-bold truncate">Unlimited Likes</strong>
@@ -351,22 +413,22 @@ export const SettingsPrivacy: React.FC<Props> = ({
                   </div>
                 </div>
 
-                <div className="p-2.5 rounded-2xl bg-white border border-pastel-amber-border/80 flex items-center gap-2.5 shadow-xs">
-                  <div className="w-7 h-7 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center shrink-0">
-                    <Hand className="w-3.5 h-3.5 text-amber-600" />
+                <div className="p-2.5 rounded-2xl bg-slate-50/80 dark:bg-[#1c1c26] border border-slate-200/70 dark:border-[#2a2a38] flex items-center gap-2.5 shadow-2xs">
+                  <div className="w-7 h-7 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200/70 dark:border-amber-900/40 flex items-center justify-center shrink-0">
+                    <Hand className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                   </div>
                   <div className="min-w-0">
                     <strong className="block text-[10px] text-on-surface font-bold truncate">Direct Salams</strong>
-                    <span className="text-[9px] font-bold text-amber-700">{directSalams} Passes Available</span>
+                    <span className="text-[9px] font-bold text-amber-700 dark:text-amber-400">{directSalams} Passes Available</span>
                   </div>
                 </div>
               </div>
 
               {/* VIP Spotlight Boost Status */}
-              <div className="p-2.5 rounded-2xl bg-white border border-pastel-amber-border/80 flex items-center justify-between shadow-xs">
+              <div className="p-2.5 rounded-2xl bg-slate-50/80 dark:bg-[#1c1c26] border border-slate-200/70 dark:border-[#2a2a38] flex items-center justify-between shadow-2xs">
                 <div className="flex items-center gap-2.5">
                   <div className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 border ${
-                    spotlightInfo.isSpotlightActive ? 'bg-amber-500 text-white border-amber-600 animate-pulse' : 'bg-amber-50 text-amber-600 border-amber-200'
+                    spotlightInfo.isSpotlightActive ? 'bg-amber-500 text-white border-amber-600 animate-pulse' : 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-200/70 dark:border-amber-900/40'
                   }`}>
                     <TrendingUp className="w-3.5 h-3.5" />
                   </div>
@@ -386,7 +448,7 @@ export const SettingsPrivacy: React.FC<Props> = ({
                   <button
                     type="button"
                     onClick={() => setShowUpgradeModal(true)}
-                    className="bg-pastel-amber text-pastel-amber-text border border-pastel-amber-border text-[10px] font-bold px-2.5 py-1 rounded-full hover:bg-pastel-amber/80 transition-all active:scale-95"
+                    className="bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200/80 dark:border-amber-900/40 text-[10px] font-bold px-2.5 py-1 rounded-full hover:bg-amber-100/80 dark:hover:bg-amber-900/50 transition-all active:scale-95"
                   >
                     Boost ($0.99)
                   </button>
@@ -394,7 +456,7 @@ export const SettingsPrivacy: React.FC<Props> = ({
               </div>
             </div>
           ) : (
-            <div className="space-y-2 pt-2 border-t border-outline/50 text-xs">
+            <div className="space-y-2 pt-2.5 border-t border-slate-100 dark:border-[#272733] text-xs">
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
@@ -402,7 +464,7 @@ export const SettingsPrivacy: React.FC<Props> = ({
                     setAdRewardType('likes');
                     setShowAdModal(true);
                   }}
-                  className="p-2 rounded-xl bg-white border border-outline hover:bg-surface-variant text-left flex items-center gap-2 transition-colors active:scale-95 shadow-subtle"
+                  className="p-2.5 rounded-xl bg-slate-50/80 dark:bg-[#1c1c26] border border-slate-200/70 dark:border-[#2a2a38] hover:border-primary/40 text-left flex items-center gap-2 transition-colors active:scale-95 shadow-2xs"
                 >
                   <PlayCircle className="text-primary w-4 h-4 shrink-0" />
                   <div>
@@ -417,7 +479,7 @@ export const SettingsPrivacy: React.FC<Props> = ({
                     setAdRewardType('salam');
                     setShowAdModal(true);
                   }}
-                  className="p-2 rounded-xl bg-white border border-outline hover:bg-surface-variant text-left flex items-center gap-2 transition-colors active:scale-95 shadow-subtle"
+                  className="p-2.5 rounded-xl bg-slate-50/80 dark:bg-[#1c1c26] border border-slate-200/70 dark:border-[#2a2a38] hover:border-primary/40 text-left flex items-center gap-2 transition-colors active:scale-95 shadow-2xs"
                 >
                   <Hand className="text-primary w-4 h-4 shrink-0" />
                   <div>
@@ -432,7 +494,7 @@ export const SettingsPrivacy: React.FC<Props> = ({
                 <button
                   type="button"
                   onClick={() => setShowUpgradeModal(true)}
-                  className="p-2 rounded-xl bg-white border border-outline hover:bg-surface-variant text-left flex items-center gap-2 transition-colors active:scale-95 shadow-subtle"
+                  className="p-2.5 rounded-xl bg-slate-50/80 dark:bg-[#1c1c26] border border-slate-200/70 dark:border-[#2a2a38] hover:border-primary/40 text-left flex items-center gap-2 transition-colors active:scale-95 shadow-2xs"
                 >
                   <TrendingUp className="text-amber-500 w-4 h-4 shrink-0" />
                   <div>
@@ -448,9 +510,9 @@ export const SettingsPrivacy: React.FC<Props> = ({
                 <button
                   type="button"
                   onClick={() => setShowUpgradeModal(true)}
-                  className="p-2 rounded-xl bg-white border border-pastel-amber-border hover:bg-surface-variant text-left flex items-center gap-2 transition-colors active:scale-95 shadow-subtle"
+                  className="p-2.5 rounded-xl bg-slate-50/80 dark:bg-[#1c1c26] border border-amber-200/80 dark:border-amber-900/40 hover:border-amber-400/60 text-left flex items-center gap-2 transition-colors active:scale-95 shadow-2xs"
                 >
-                  <Crown className="text-pastel-amber-text w-4 h-4 shrink-0" />
+                  <Crown className="text-amber-600 dark:text-amber-400 w-4 h-4 shrink-0" />
                   <div>
                     <strong className="block text-[10px] text-primary">Barakah VIP</strong>
                     <span className="text-[9px] text-secondary">20 Passes · PKR 830</span>
@@ -462,7 +524,7 @@ export const SettingsPrivacy: React.FC<Props> = ({
         </section>
 
         {/* REFERRAL PERK BANNER: 30 Invites -> 1 Month Free VIP */}
-        <section className="rounded-3xl p-4 bg-gradient-to-r from-emerald-900 via-emerald-800 to-teal-900 text-white shadow-md border border-emerald-700/60 flex items-center justify-between gap-3 relative overflow-hidden group">
+        <section className="rounded-3xl p-4 bg-gradient-to-r from-emerald-900 via-emerald-800 to-teal-900 text-white shadow-[0_4px_16px_rgba(6,78,59,0.2)] border border-emerald-700/60 flex items-center justify-between gap-3 relative overflow-hidden group">
           <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-white/5 to-transparent pointer-events-none" />
           
           <div className="flex items-center gap-3 min-w-0">
@@ -493,18 +555,23 @@ export const SettingsPrivacy: React.FC<Props> = ({
             <ChevronRight className="w-3.5 h-3.5" />
           </button>
         </section>
+        </>
+        )}
 
+        {/* Appearance & Privacy Sections */}
+        {(activeCategory === 'all' || activeCategory === 'privacy') && (
+        <>
         {/* Appearance & Theme Section */}
         <section className="space-y-2">
           <h2 className="font-serif text-xs font-bold text-on-surface">Appearance & Theme</h2>
 
-          <div className="bg-white rounded-2xl p-4 border border-outline shadow-subtle">
+          <div className="bg-white dark:bg-[#16161c] rounded-2xl p-4 border border-slate-200/80 dark:border-[#272733] shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3 pr-4">
                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center border transition-all ${
                   isDarkMode 
                     ? 'bg-zinc-800 text-amber-400 border-zinc-700' 
-                    : 'bg-pastel-amber text-amber-600 border-pastel-amber-border'
+                    : 'bg-amber-50 text-amber-600 border-amber-200/70'
                 }`}>
                   {isDarkMode ? <Moon className="w-5 h-5 fill-amber-400/20" /> : <Sun className="w-5 h-5" />}
                 </div>
@@ -521,7 +588,7 @@ export const SettingsPrivacy: React.FC<Props> = ({
                 aria-label="Toggle Dark Theme"
                 onClick={handleToggleTheme}
                 className={`w-11 h-6 rounded-full p-0.5 transition-colors relative shrink-0 cursor-pointer ${
-                  isDarkMode ? 'bg-primary' : 'bg-surface-variant'
+                  isDarkMode ? 'bg-primary' : 'bg-slate-200 dark:bg-[#2a2a38]'
                 }`}
               >
                 <div
@@ -538,8 +605,8 @@ export const SettingsPrivacy: React.FC<Props> = ({
         <section className="space-y-2">
           <h2 className="font-serif text-xs font-bold text-on-surface">Islamic Modesty & Privacy</h2>
 
-          <div className="bg-white rounded-2xl p-4 border border-outline shadow-subtle space-y-3.5 divide-y divide-outline">
-            {/* Photo Blur */}
+          <div className="bg-white dark:bg-[#16161c] rounded-2xl p-4 border border-slate-200/80 dark:border-[#272733] shadow-[0_2px_10px_rgba(0,0,0,0.02)] space-y-3.5 divide-y divide-slate-100 dark:divide-[#272733]">
+            {/* Photo Blur (preserved single empty-name toggle button for UI tests) */}
             <div className="flex items-center justify-between pt-0.5">
               <div className="space-y-0.5 pr-4">
                 <span className="font-serif font-bold text-xs text-on-surface block">Blur My Photos</span>
@@ -551,7 +618,7 @@ export const SettingsPrivacy: React.FC<Props> = ({
                 type="button"
                 onClick={handleToggleBlur}
                 className={`w-11 h-6 rounded-full p-0.5 transition-colors relative shrink-0 ${
-                  blurPhotos ? 'bg-primary' : 'bg-surface-variant'
+                  blurPhotos ? 'bg-primary' : 'bg-slate-200 dark:bg-[#2a2a38]'
                 }`}
               >
                 <div
@@ -563,35 +630,60 @@ export const SettingsPrivacy: React.FC<Props> = ({
             </div>
 
             {/* Profile Visibility */}
-            <div className="flex items-center justify-between pt-3.5">
-              <div className="space-y-0.5 pr-4">
-                <span className="font-serif font-bold text-xs text-on-surface block">Profile Visibility</span>
-                <span className="text-[11px] text-secondary leading-relaxed">
-                  Control who can discover your matrimonial profile.
-                </span>
+            <div className="space-y-2.5 pt-3.5">
+              <div className="flex items-center justify-between gap-2">
+                <div className="space-y-0.5 pr-2">
+                  <span className="font-serif font-bold text-xs text-on-surface block">Profile Visibility</span>
+                  <span className="text-[11px] text-secondary leading-relaxed">
+                    Control who can discover your matrimonial profile.
+                  </span>
+                </div>
+                <select
+                  value={profileVisibility}
+                  onChange={(e) => handleVisibilityChange(e.target.value)}
+                  className="bg-slate-50 dark:bg-[#1c1c26] border border-slate-200/80 dark:border-[#2a2a38] rounded-xl py-1.5 px-2.5 text-xs font-sans text-on-surface outline-none focus:border-primary shadow-2xs"
+                >
+                  <option value="all_users">All Verified Users</option>
+                  <option value="approved_only">Approved Matches Only</option>
+                  <option value="hidden">Hidden / Paused</option>
+                </select>
               </div>
-              <select
-                value={profileVisibility}
-                onChange={(e) => {
-                  setProfileVisibility(e.target.value);
-                  dbService.updatePrivacy(blurPhotos, e.target.value);
-                  showNotice();
-                }}
-                className="bg-white border border-outline rounded-xl py-1.5 px-2.5 text-xs font-sans text-on-surface outline-none focus:border-primary shadow-subtle"
-              >
-                <option value="all_users">All Verified Users</option>
-                <option value="approved_only">Approved Matches Only</option>
-                <option value="hidden">Hidden / Paused</option>
-              </select>
+
+              <div className="grid grid-cols-3 gap-1.5">
+                {[
+                  { value: 'all_users', label: 'All Verified' },
+                  { value: 'approved_only', label: 'Approved Only' },
+                  { value: 'hidden', label: 'Hidden' }
+                ].map((opt) => {
+                  const selected = profileVisibility === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => handleVisibilityChange(opt.value)}
+                      className={`py-1.5 px-2 rounded-xl text-[10px] font-semibold border transition-all ${
+                        selected
+                          ? 'bg-primary/10 dark:bg-primary/20 text-primary border-primary/40'
+                          : 'bg-slate-50/80 dark:bg-[#1c1c26] text-secondary border-slate-200/70 dark:border-[#2a2a38] hover:text-on-surface'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </section>
+        </>
+        )}
 
         {/* VIP Privileges Overview Section */}
+        {(activeCategory === 'all' || activeCategory === 'membership') && (
         <section className="space-y-2">
           <h2 className="font-serif text-xs font-bold text-on-surface">VIP Privileges Overview</h2>
-          <div className="bg-white rounded-2xl p-3.5 border border-outline shadow-subtle space-y-1.5 text-[11px]">
-            <div className="flex items-center justify-between p-2 rounded-xl bg-surface-variant/50 border border-outline/50 shadow-2xs">
+          <div className="bg-white dark:bg-[#16161c] rounded-2xl p-3.5 border border-slate-200/80 dark:border-[#272733] shadow-[0_2px_10px_rgba(0,0,0,0.02)] space-y-1.5 text-[11px]">
+            <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50/80 dark:bg-[#1c1c26] border border-slate-200/60 dark:border-[#2a2a38] shadow-2xs">
               <div className="flex items-center gap-2">
                 <Eye className="w-3.5 h-3.5 text-primary" />
                 <span className="text-on-surface font-medium text-xs">See Who Liked You (Unblurred)</span>
@@ -601,7 +693,7 @@ export const SettingsPrivacy: React.FC<Props> = ({
               </span>
             </div>
 
-            <div className="flex items-center justify-between p-2 rounded-xl bg-surface-variant/50 border border-outline/50 shadow-2xs">
+            <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50/80 dark:bg-[#1c1c26] border border-slate-200/60 dark:border-[#2a2a38] shadow-2xs">
               <div className="flex items-center gap-2">
                 <Shield className="w-3.5 h-3.5 text-primary" />
                 <span className="text-on-surface font-medium text-xs">100% Ad-Free (Zero Video Ads)</span>
@@ -611,7 +703,7 @@ export const SettingsPrivacy: React.FC<Props> = ({
               </span>
             </div>
 
-            <div className="flex items-center justify-between p-2 rounded-xl bg-surface-variant/50 border border-outline/50 shadow-2xs">
+            <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50/80 dark:bg-[#1c1c26] border border-slate-200/60 dark:border-[#2a2a38] shadow-2xs">
               <div className="flex items-center gap-2">
                 <TrendingUp className="w-3.5 h-3.5 text-primary" />
                 <span className="text-on-surface font-medium text-xs">Priority Stream Ranking (3x Views)</span>
@@ -621,7 +713,7 @@ export const SettingsPrivacy: React.FC<Props> = ({
               </span>
             </div>
 
-            <div className="flex items-center justify-between p-2 rounded-xl bg-surface-variant/50 border border-outline/50 shadow-2xs">
+            <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50/80 dark:bg-[#1c1c26] border border-slate-200/60 dark:border-[#2a2a38] shadow-2xs">
               <div className="flex items-center gap-2">
                 <Infinity className="w-3.5 h-3.5 text-primary" />
                 <span className="text-on-surface font-medium text-xs">Unlimited Daily Likes (No 50 Cap)</span>
@@ -632,31 +724,35 @@ export const SettingsPrivacy: React.FC<Props> = ({
             </div>
           </div>
         </section>
+        )}
 
+        {/* Halal Guidelines & Account Controls */}
+        {(activeCategory === 'all' || activeCategory === 'account') && (
+        <>
         {/* Halal Guidelines Notice */}
-        <section className="bg-pastel-mint rounded-2xl p-3.5 border border-pastel-mint-border space-y-1 shadow-subtle">
-          <div className="flex items-center gap-1.5 text-pastel-mint-text">
-            <ShieldCheck className="w-4 h-4 text-pastel-mint-text" />
+        <section className="bg-white dark:bg-[#16161c] rounded-2xl p-3.5 border border-slate-200/80 dark:border-[#272733] border-l-2 border-l-emerald-500 space-y-1 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+          <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">
+            <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
             <h4 className="font-serif font-bold text-xs">Halal Matrimony Code of Conduct</h4>
           </div>
-          <p className="text-xs text-on-surface leading-relaxed">
+          <p className="text-xs text-secondary leading-relaxed">
             Qurb is designed for sincere, faith-first marriage intentions. Inappropriate behavior, disrespect, or harassment will result in permanent account removal to protect our community.
           </p>
         </section>
 
         {/* Account & Session Management */}
-        <section className="bg-white rounded-2xl p-4 border border-outline space-y-4 shadow-subtle">
-          <div className="flex items-center justify-between">
-            <div>
+        <section className="bg-white dark:bg-[#16161c] rounded-2xl p-4 border border-slate-200/80 dark:border-[#272733] space-y-3.5 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
               <h4 className="font-serif font-bold text-xs text-on-surface">Account Status & Controls</h4>
-              <p className="text-xs text-secondary mt-0.5">
+              <p className="text-xs text-secondary mt-0.5 truncate">
                 Logged in as <strong className="text-on-surface">{currentUser.email || currentUser.phone || currentUser.fullName}</strong>
               </p>
             </div>
-            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border flex items-center gap-1 ${
+            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border flex items-center gap-1 shrink-0 ${
               isDeactivated 
-                ? 'bg-pastel-amber text-pastel-amber-text border-pastel-amber-border' 
-                : 'bg-pastel-mint text-pastel-mint-text border-pastel-mint-border'
+                ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200/70 dark:border-amber-900/40' 
+                : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200/70 dark:border-emerald-900/40'
             }`}>
               <span className={`w-1.5 h-1.5 rounded-full ${isDeactivated ? 'bg-amber-500' : 'bg-emerald-500'}`} />
               <span>{isDeactivated ? 'Paused / Hidden' : 'Active on Discover'}</span>
@@ -664,14 +760,14 @@ export const SettingsPrivacy: React.FC<Props> = ({
           </div>
 
           {actionMessage && (
-            <div className="p-3 rounded-xl bg-pastel-sky border border-pastel-sky-border text-xs text-pastel-sky-text font-medium animate-fade-in flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 shrink-0 text-sky-600" />
+            <div className="p-3 rounded-xl bg-sky-50 dark:bg-sky-950/40 border border-sky-200/80 dark:border-sky-900/40 text-xs text-sky-700 dark:text-sky-300 font-medium animate-fade-in flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-sky-600 dark:text-sky-400" />
               <span>{actionMessage}</span>
             </div>
           )}
 
           {/* Pause / Reactivate Profile Card */}
-          <div className="p-3 rounded-xl bg-surface-variant/40 border border-outline flex items-center justify-between gap-3">
+          <div className="p-3 rounded-xl bg-slate-50/80 dark:bg-[#1c1c26] border border-slate-200/70 dark:border-[#2a2a38] flex items-center justify-between gap-3">
             <div className="space-y-0.5">
               <div className="flex items-center gap-1.5">
                 <PauseCircle className="w-4 h-4 text-secondary" />
@@ -700,7 +796,7 @@ export const SettingsPrivacy: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => setShowDeactivateModal(true)}
-                className="px-3 py-1.5 rounded-xl bg-white border border-outline text-secondary hover:text-on-surface hover:bg-surface text-xs font-semibold shadow-2xs active:scale-95 transition-all shrink-0 flex items-center gap-1"
+                className="px-3 py-1.5 rounded-xl bg-white dark:bg-[#16161c] border border-slate-200/80 dark:border-[#2f2f3f] text-secondary hover:text-on-surface hover:bg-slate-50 dark:hover:bg-[#22222e] text-xs font-semibold shadow-2xs active:scale-95 transition-all shrink-0 flex items-center gap-1"
               >
                 <PauseCircle className="w-3.5 h-3.5" />
                 <span>Pause</span>
@@ -709,7 +805,7 @@ export const SettingsPrivacy: React.FC<Props> = ({
           </div>
 
           {/* Permanent Delete Card */}
-          <div className="p-3 rounded-xl bg-pastel-rose/30 border border-pastel-rose-border flex items-center justify-between gap-3">
+          <div className="p-3 rounded-xl bg-rose-50/50 dark:bg-rose-950/20 border border-rose-200/80 dark:border-rose-900/40 flex items-center justify-between gap-3">
             <div className="space-y-0.5">
               <div className="flex items-center gap-1.5 text-error">
                 <Trash2 className="w-4 h-4" />
@@ -726,7 +822,7 @@ export const SettingsPrivacy: React.FC<Props> = ({
                 setDeleteConfirmText('');
                 setShowDeleteModal(true);
               }}
-              className="px-3 py-1.5 rounded-xl bg-white text-error border border-error/30 hover:bg-error hover:text-white text-xs font-bold transition-all shrink-0 flex items-center gap-1 shadow-2xs active:scale-95"
+              className="px-3 py-1.5 rounded-xl bg-white dark:bg-[#16161c] text-error border border-error/30 hover:bg-error hover:text-white text-xs font-bold transition-all shrink-0 flex items-center gap-1 shadow-2xs active:scale-95"
             >
               <Trash2 className="w-3.5 h-3.5" />
               <span>Delete</span>
@@ -734,7 +830,7 @@ export const SettingsPrivacy: React.FC<Props> = ({
           </div>
 
           {/* Legal & Compliance Policies */}
-          <div className="p-3.5 rounded-2xl bg-white border border-outline shadow-subtle space-y-2">
+          <div className="p-3.5 rounded-2xl bg-slate-50/80 dark:bg-[#1c1c26] border border-slate-200/70 dark:border-[#2a2a38] space-y-2">
             <div className="flex items-center gap-1.5 text-on-surface">
               <Shield className="w-3.5 h-3.5 text-primary" />
               <h3 className="font-serif text-xs font-bold">Legal & Policies</h3>
@@ -743,14 +839,14 @@ export const SettingsPrivacy: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={onOpenPrivacyPolicy}
-                className="py-2 px-3 rounded-xl bg-surface border border-outline hover:bg-surface-variant text-[11px] font-semibold text-secondary hover:text-on-surface text-center transition-all cursor-pointer"
+                className="py-2 px-3 rounded-xl bg-white dark:bg-[#16161c] border border-slate-200/80 dark:border-[#2f2f3f] hover:border-primary/40 text-[11px] font-semibold text-secondary hover:text-on-surface text-center transition-all cursor-pointer"
               >
                 Privacy Policy
               </button>
               <button
                 type="button"
                 onClick={onOpenTerms}
-                className="py-2 px-3 rounded-xl bg-surface border border-outline hover:bg-surface-variant text-[11px] font-semibold text-secondary hover:text-on-surface text-center transition-all cursor-pointer"
+                className="py-2 px-3 rounded-xl bg-white dark:bg-[#16161c] border border-slate-200/80 dark:border-[#2f2f3f] hover:border-primary/40 text-[11px] font-semibold text-secondary hover:text-on-surface text-center transition-all cursor-pointer"
               >
                 Terms of Service
               </button>
@@ -762,12 +858,14 @@ export const SettingsPrivacy: React.FC<Props> = ({
 
           <button
             onClick={handleLogout}
-            className="w-full py-2.5 rounded-xl bg-surface border border-outline hover:bg-surface-variant text-secondary hover:text-on-surface transition-all font-semibold text-xs flex items-center justify-center gap-2 shadow-2xs active:scale-98"
+            className="w-full py-2.5 rounded-xl bg-slate-50/80 dark:bg-[#1c1c26] border border-slate-200/80 dark:border-[#2a2a38] hover:border-primary/40 text-secondary hover:text-on-surface transition-all font-semibold text-xs flex items-center justify-center gap-2 shadow-2xs active:scale-98"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Log Out of Qurb</span>
           </button>
         </section>
+        </>
+        )}
       </main>
 
 

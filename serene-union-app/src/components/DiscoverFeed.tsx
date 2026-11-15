@@ -29,7 +29,8 @@ import {
   Plane, 
   Star,
   MapPin,
-  EyeOff
+  EyeOff,
+  MessageCircle
 } from 'lucide-react';
 import type { UserProfile } from '../types';
 import { FilterModal } from './FilterModal';
@@ -45,6 +46,18 @@ import { RatingModal } from './RatingModal';
 import { ratingService } from '../services/ratingService';
 import { backNavigationService } from '../services/backNavigationService';
 import { dbService } from '../services/dbService';
+
+const SectionSalamButton: React.FC<{ topic: string; onClick: (e: React.MouseEvent) => void }> = ({ topic, onClick }) => (
+  <button
+    type="button"
+    aria-label="Compliment this section"
+    onClick={onClick}
+    className="w-full py-2.5 px-3.5 rounded-xl bg-primary/10 hover:bg-primary border border-primary/40 text-[11px] font-bold text-primary hover:text-white flex items-center justify-center gap-1.5 transition-all shadow-2xs cursor-pointer"
+  >
+    <MessageCircle className="w-3.5 h-3.5 shrink-0" />
+    <span>Send Salam about their {topic}</span>
+  </button>
+);
 
 interface Props {
   onOpenChat: (convId: string) => void;
@@ -127,6 +140,13 @@ export const DiscoverFeed: React.FC<Props> = ({
   const [activeTab, setActiveTab] = useState<CardTab>('deen');
   const [selectedProfile, setSelectedProfile] = useState<UserProfile | null>(null);
   const [isPlayingVoice, setIsPlayingVoice] = useState<boolean>(false);
+  const [showMatchBreakdown, setShowMatchBreakdown] = useState<boolean>(false);
+  const [actionStamp, setActionStamp] = useState<'liked' | 'passed' | null>(null);
+  const [dragX, setDragX] = useState<number>(0);
+  const [isDraggingCard, setIsDraggingCard] = useState<boolean>(false);
+  const mouseStartXRef = useRef<number | null>(null);
+  const didDragRef = useRef<boolean>(false);
+  const stampTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Touch gesture tracking (Horizontal + Vertical)
@@ -166,6 +186,7 @@ export const DiscoverFeed: React.FC<Props> = ({
   useEffect(() => {
     return () => {
       stopVoice();
+      if (stampTimerRef.current) clearTimeout(stampTimerRef.current);
     };
   }, []);
 
@@ -174,11 +195,105 @@ export const DiscoverFeed: React.FC<Props> = ({
     setCurrentPhotoIdx(0);
     setPhotoError(false);
     setIsDrawerOpen(false);
+    setShowMatchBreakdown(false);
+    setDragX(0);
+    setIsDraggingCard(false);
+    mouseStartXRef.current = null;
     stopVoice();
     if (currentProfile && onSelectProfile) {
       onSelectProfile(currentProfile);
     }
   }, [currentProfile?.id, onSelectProfile]);
+
+  const triggerActionStamp = (stamp: 'liked' | 'passed') => {
+    if (stampTimerRef.current) clearTimeout(stampTimerRef.current);
+    setActionStamp(stamp);
+    stampTimerRef.current = setTimeout(() => {
+      setActionStamp(null);
+    }, 400);
+  };
+
+  const handleCardMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0 || isDrawerOpen) return;
+    if ((e.target as HTMLElement).closest('button')) return;
+    mouseStartXRef.current = e.clientX;
+    didDragRef.current = false;
+    setIsDraggingCard(true);
+  };
+
+  const handleCardMouseMove = (e: React.MouseEvent) => {
+    if (mouseStartXRef.current === null) return;
+    const dx = e.clientX - mouseStartXRef.current;
+    if (Math.abs(dx) > 15) {
+      didDragRef.current = true;
+    }
+    setDragX(dx);
+  };
+
+  const handleCardMouseUp = () => {
+    if (mouseStartXRef.current === null) return;
+    if (currentProfile) {
+      if (dragX > 95) {
+        triggerActionStamp('liked');
+        handleLike(currentProfile);
+      } else if (dragX < -95) {
+        triggerActionStamp('passed');
+        handlePass(currentProfile.id);
+      }
+    }
+    mouseStartXRef.current = null;
+    setIsDraggingCard(false);
+    setDragX(0);
+    setTimeout(() => {
+      didDragRef.current = false;
+    }, 50);
+  };
+
+  const handleCardMouseLeave = () => {
+    if (mouseStartXRef.current === null) return;
+    mouseStartXRef.current = null;
+    setIsDraggingCard(false);
+    setDragX(0);
+    didDragRef.current = false;
+  };
+
+  // Dynamic deterministic compatibility score & breakdown between viewer and candidate
+  const matchInsight = React.useMemo(() => {
+    if (!currentProfile) {
+      return { score: 94, sectAligned: true, prayerAligned: true, timelineAligned: true };
+    }
+    let score = 86;
+    const mySect = currentUser?.religiousProfile?.sect?.toLowerCase();
+    const candSect = currentProfile.religiousProfile?.sect?.toLowerCase();
+    const sectAligned = Boolean(mySect && candSect ? mySect === candSect : candSect);
+    score += mySect && candSect && mySect === candSect ? 4 : 2;
+
+    const myPrayer = currentUser?.religiousProfile?.prayerFrequency?.toLowerCase();
+    const candPrayer = currentProfile.religiousProfile?.prayerFrequency?.toLowerCase();
+    const prayerAligned = Boolean(candPrayer?.includes('5') || (myPrayer && candPrayer && myPrayer === candPrayer));
+    score += candPrayer?.includes('5') ? 4 : 2;
+
+    const timelineAligned = Boolean(
+      currentUser?.marriageTimeline &&
+      currentProfile.marriageTimeline &&
+      currentUser.marriageTimeline === currentProfile.marriageTimeline
+    );
+    score += timelineAligned ? 3 : 1;
+
+    const sameCountry = Boolean(
+      currentUser?.country &&
+      currentProfile.country &&
+      currentUser.country.toLowerCase() === currentProfile.country.toLowerCase()
+    );
+    score += sameCountry ? 2 : 1;
+
+    return {
+      score: Math.max(88, Math.min(98, score)),
+      sectAligned,
+      prayerAligned,
+      timelineAligned
+    };
+  }, [currentProfile, currentUser]);
 
   // Intercept Android hardware back button when biodata drawer is open so it closes drawer instead of exiting app
   useEffect(() => {
@@ -203,6 +318,7 @@ export const DiscoverFeed: React.FC<Props> = ({
 
   const handleNextPhoto = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
+    if (didDragRef.current) return;
     if (photos.length <= 1) return;
     if (currentPhotoIdx < photos.length - 1) {
       setCurrentPhotoIdx(prev => prev + 1);
@@ -213,6 +329,7 @@ export const DiscoverFeed: React.FC<Props> = ({
 
   const handlePrevPhoto = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
+    if (didDragRef.current) return;
     if (photos.length <= 1) return;
     if (currentPhotoIdx > 0) {
       setCurrentPhotoIdx(prev => prev - 1);
@@ -375,7 +492,7 @@ export const DiscoverFeed: React.FC<Props> = ({
               }}
               className="px-3.5 py-1.5 rounded-full bg-emerald-500 text-white text-[11px] font-bold shadow-subtle hover:bg-emerald-600 active:scale-98 transition-all"
             >
-              ✨ Switch to {travelAlert.detectedCity}
+              Switch to {travelAlert.detectedCity}
             </button>
             <button
               type="button"
@@ -601,7 +718,17 @@ export const DiscoverFeed: React.FC<Props> = ({
             </div>
           </div>
         ) : (
-          <div className="relative w-full h-full flex flex-col justify-between overflow-hidden bg-neutral-900 select-none">
+          <div
+            onMouseDown={handleCardMouseDown}
+            onMouseMove={handleCardMouseMove}
+            onMouseUp={handleCardMouseUp}
+            onMouseLeave={handleCardMouseLeave}
+            style={{
+              transform: Math.abs(dragX) > 10 ? `translateX(${dragX * 0.35}px) rotate(${dragX * 0.03}deg)` : undefined,
+              transition: isDraggingCard ? 'none' : 'transform 0.25s ease-out'
+            }}
+            className="relative w-full h-full flex flex-col justify-between overflow-hidden bg-neutral-900 select-none cursor-grab active:cursor-grabbing"
+          >
             
             {/* Full-bleed Story Background Photo or Halal Initials Avatar */}
             <div className="absolute inset-0 z-0 bg-neutral-900 overflow-hidden">
@@ -648,17 +775,42 @@ export const DiscoverFeed: React.FC<Props> = ({
                 </div>
               )}
 
-              {/* Clean Minimal Modesty Indicator: Large Professional Circle EyeOff Icon Only When Blurred */}
+              {/* Clean Minimal Modesty Indicator: Circle EyeOff Icon + Frosted Shield Pill */}
               {isPhotoBlurred && (
-                <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none select-none">
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2.5 z-10 pointer-events-none select-none px-4">
                   <div 
-                    className="w-20 h-20 rounded-full bg-black/40 backdrop-blur-md border border-white/25 flex items-center justify-center text-white/75 shadow-xl transition-all"
+                    className="w-20 h-20 rounded-full bg-black/45 backdrop-blur-md border border-white/25 flex items-center justify-center text-white/85 shadow-xl transition-all"
                     title="Photos blurred for modesty"
                   >
-                    <EyeOff className="w-10 h-10 stroke-[2] text-white/75 drop-shadow-sm" />
+                    <EyeOff className="w-10 h-10 stroke-[2] text-white/85 drop-shadow-sm" />
+                  </div>
+                  <div className="px-3.5 py-1.5 rounded-full bg-black/55 backdrop-blur-md border border-white/20 text-[11px] font-semibold text-white/90 shadow-lg flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span>Modesty Shield Active · Unblurs on Mutual Consent</span>
                   </div>
                 </div>
               )}
+
+              {/* Tactile Action / Drag Stamp Overlay (INTERESTED / PASSED) */}
+              {(() => {
+                const liveStamp = actionStamp || (dragX > 45 ? 'liked' : dragX < -45 ? 'passed' : null);
+                if (!liveStamp) return null;
+                return (
+                  <div className="absolute top-28 inset-x-0 flex justify-center z-30 pointer-events-none select-none animate-fade-in">
+                    {liveStamp === 'liked' ? (
+                      <div className="px-4 py-1.5 rounded-full bg-emerald-500/90 backdrop-blur-md border-2 border-emerald-200/80 text-white font-bold text-xs tracking-widest uppercase shadow-2xl flex items-center gap-1.5">
+                        <Heart className="w-4 h-4 fill-current" />
+                        <span>Interested</span>
+                      </div>
+                    ) : (
+                      <div className="px-4 py-1.5 rounded-full bg-rose-500/90 backdrop-blur-md border-2 border-rose-200/80 text-white font-bold text-xs tracking-widest uppercase shadow-2xl flex items-center gap-1.5">
+                        <X className="w-4 h-4 stroke-[3]" />
+                        <span>Passed</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Top Overlay: Story Segment Progress Bars (Positioned cleanly below header) */}
@@ -690,10 +842,18 @@ export const DiscoverFeed: React.FC<Props> = ({
               <div className="flex items-center justify-between mt-2">
                 {/* Left: Values Match badge & Photo count & Modesty pill */}
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <div className="bg-black/50 text-emerald-300 border border-emerald-400/40 text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 backdrop-blur-md shadow-md">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowMatchBreakdown(prev => !prev);
+                    }}
+                    className="bg-black/50 hover:bg-black/70 text-emerald-300 border border-emerald-400/40 text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 backdrop-blur-md shadow-md cursor-pointer transition-all active:scale-95"
+                    title="Tap to see compatibility breakdown"
+                  >
                     <HeartHandshake className="w-3 h-3 text-emerald-400" />
-                    <span>94% Match</span>
-                  </div>
+                    <span>{matchInsight.score}% Match</span>
+                  </button>
                   {isPhotoBlurred && (
                     <span className="bg-black/50 text-amber-300 border border-amber-400/30 text-[10px] font-medium px-2 py-0.5 rounded-full backdrop-blur-md flex items-center gap-1">
                       <EyeOff className="w-2.5 h-2.5" />
@@ -723,6 +883,26 @@ export const DiscoverFeed: React.FC<Props> = ({
                   )}
                 </div>
               </div>
+
+              {/* Dynamic Compatibility Breakdown Popover Pill */}
+              {showMatchBreakdown && (
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="mt-2 inline-flex flex-wrap items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-black/75 backdrop-blur-md border border-emerald-400/30 text-[10px] font-semibold text-white/95 shadow-xl animate-fade-in"
+                >
+                  <span className={matchInsight.sectAligned ? 'text-emerald-300' : 'text-white/75'}>
+                    {matchInsight.sectAligned ? '✓' : '·'} Deen & Sect Aligned
+                  </span>
+                  <span className="text-white/30">•</span>
+                  <span className={matchInsight.prayerAligned ? 'text-emerald-300' : 'text-white/75'}>
+                    {matchInsight.prayerAligned ? '✓' : '·'} Prayer Routine
+                  </span>
+                  <span className="text-white/30">•</span>
+                  <span className={matchInsight.timelineAligned ? 'text-emerald-300' : 'text-white/75'}>
+                    {matchInsight.timelineAligned ? '✓' : '·'} Marriage Timeline
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Middle Tap Navigation Zones (Constrained so they never overlap header or bottom controls) */}
@@ -803,22 +983,21 @@ export const DiscoverFeed: React.FC<Props> = ({
                   <button
                     type="button"
                     onClick={(e) => togglePlayVoice(e, currentProfile.voiceGreetingUrl)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all flex items-center gap-1.5 shadow-md active:scale-95 shrink-0 ${
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all flex items-center gap-1.5 shadow-md active:scale-95 shrink-0 cursor-pointer ${
                       isPlayingVoice
-                        ? 'bg-sky-500 text-white border-sky-400 animate-pulse'
+                        ? 'bg-sky-500 text-white border-sky-400 shadow-sky-500/30'
                         : 'bg-white/20 text-white border-white/30 hover:bg-white/30 backdrop-blur-md'
                     }`}
                     title="Play Voice Greeting"
                   >
                     <Volume2 className={`w-3.5 h-3.5 ${isPlayingVoice ? 'animate-bounce' : ''}`} />
                     <span>{isPlayingVoice ? 'Playing...' : `Voice (${currentProfile.voiceGreetingDuration ? `${currentProfile.voiceGreetingDuration}s` : 'Intro'})`}</span>
-                    {isPlayingVoice && (
-                      <span className="flex items-center gap-0.5 ml-0.5">
-                        <span className="w-0.5 h-2 bg-white animate-pulse" />
-                        <span className="w-0.5 h-3 bg-white animate-pulse delay-75" />
-                        <span className="w-0.5 h-1.5 bg-white animate-pulse delay-150" />
-                      </span>
-                    )}
+                    <span className="flex items-end gap-0.5 h-3 ml-0.5">
+                      <span className={`w-0.5 rounded-full bg-white ${isPlayingVoice ? 'h-2.5 animate-pulse' : 'h-1.5 opacity-70'}`} />
+                      <span className={`w-0.5 rounded-full bg-white ${isPlayingVoice ? 'h-3 animate-pulse delay-75' : 'h-2.5 opacity-80'}`} />
+                      <span className={`w-0.5 rounded-full bg-white ${isPlayingVoice ? 'h-1.5 animate-pulse delay-150' : 'h-2 opacity-70'}`} />
+                      <span className={`w-0.5 rounded-full bg-white ${isPlayingVoice ? 'h-2.5 animate-pulse delay-100' : 'h-1 opacity-75'}`} />
+                    </span>
                   </button>
                 ) : (
                   <span 
@@ -899,7 +1078,10 @@ export const DiscoverFeed: React.FC<Props> = ({
                 {/* Pass Button */}
                 <button
                   type="button"
-                  onClick={(e) => handlePass(currentProfile.id, e)}
+                  onClick={(e) => {
+                    triggerActionStamp('passed');
+                    handlePass(currentProfile.id, e);
+                  }}
                   aria-label="Pass"
                   className="w-14 h-14 min-w-[56px] min-h-[56px] rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white hover:bg-rose-500/80 hover:border-rose-400 active:scale-90 flex items-center justify-center transition-all shadow-lg cursor-pointer pointer-events-auto"
                   title="Pass"
@@ -910,7 +1092,10 @@ export const DiscoverFeed: React.FC<Props> = ({
                 {/* Connect / Like Button */}
                 <button
                   type="button"
-                  onClick={(e) => handleLike(currentProfile, e)}
+                  onClick={(e) => {
+                    triggerActionStamp('liked');
+                    handleLike(currentProfile, e);
+                  }}
                   aria-label="Connect"
                   className="w-14 h-14 min-w-[56px] min-h-[56px] rounded-full bg-primary text-white hover:bg-primary-dark active:scale-90 flex items-center justify-center transition-all shadow-brand border border-primary-light cursor-pointer pointer-events-auto"
                   title="Express Interest / Like"
@@ -929,7 +1114,7 @@ export const DiscoverFeed: React.FC<Props> = ({
                 onClick={() => setIsDrawerOpen(false)}
               >
                 <div 
-                  className="w-full max-w-md mx-auto bg-white rounded-t-3xl shadow-2xl border-t border-outline flex flex-col max-h-[85vh] overflow-hidden animate-slide-up"
+                  className="w-full max-w-xl mx-auto bg-white rounded-t-3xl shadow-2xl border-t border-outline flex flex-col max-h-[88vh] overflow-hidden animate-slide-up"
                   onClick={(e) => e.stopPropagation()}
                   onTouchStart={(e) => e.stopPropagation()}
                   onTouchEnd={(e) => e.stopPropagation()}
@@ -964,6 +1149,65 @@ export const DiscoverFeed: React.FC<Props> = ({
                         aria-label="Close Biodata Drawer"
                       >
                         <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Animated SVG Compatibility Ring Banner & Profile Compliment CTA */}
+                  <div className="px-4 pt-3 pb-1">
+                    <div className="p-3 rounded-2xl bg-gradient-to-r from-rose-50/90 via-white to-amber-50/50 dark:from-rose-950/35 dark:via-[#18141c] dark:to-[#1a161c] border border-primary/25 dark:border-rose-900/40 flex items-center justify-between gap-3 shadow-2xs">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="relative w-11 h-11 shrink-0 flex items-center justify-center">
+                          <svg className="w-11 h-11 -rotate-90" viewBox="0 0 44 44">
+                            <circle
+                              cx="22"
+                              cy="22"
+                              r="18"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="3.5"
+                              className="text-rose-200/70 dark:text-rose-950/70"
+                            />
+                            <circle
+                              cx="22"
+                              cy="22"
+                              r="18"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="3.5"
+                              strokeLinecap="round"
+                              strokeDasharray={113.1}
+                              strokeDashoffset={113.1 * (1 - matchInsight.score / 100)}
+                              className="text-primary transition-all duration-700"
+                            />
+                          </svg>
+                          <span className="absolute text-[10px] font-extrabold text-primary dark:text-rose-300">
+                            {matchInsight.score}%
+                          </span>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-on-surface truncate">
+                            Values Compatibility
+                          </p>
+                          <div className="flex flex-wrap items-center gap-1 mt-0.5 text-[10px] font-semibold text-primary dark:text-rose-300">
+                            {matchInsight.sectAligned && <span>✓ Sect</span>}
+                            {matchInsight.prayerAligned && <span>· ✓ Salah</span>}
+                            {matchInsight.timelineAligned && <span>· ✓ Timeline</span>}
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        aria-label="Compliment this profile"
+                        onClick={(e) => {
+                          setIsDrawerOpen(false);
+                          handleDirectSalam(currentProfile, e);
+                        }}
+                        className="px-3.5 py-1.5 rounded-full bg-primary text-white hover:bg-primary-dark text-[11px] font-bold shadow-brand transition-all active:scale-95 shrink-0 cursor-pointer inline-flex items-center gap-1.5"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>Compliment</span>
                       </button>
                     </div>
                   </div>
@@ -1006,42 +1250,42 @@ export const DiscoverFeed: React.FC<Props> = ({
                     {activeTab === 'deen' && (
                       <div className="space-y-2.5 animate-fade-in">
                         <div className="grid grid-cols-2 gap-2 text-xs">
-                          <div className="bg-pastel-mint p-3 rounded-2xl border border-pastel-mint-border flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-xl bg-emerald-100 border border-emerald-200 flex items-center justify-center shrink-0">
-                              <Clock className="w-4 h-4 text-emerald-700" />
+                          <div className="bg-slate-50/90 dark:bg-[#181820] p-3 rounded-2xl border border-slate-200/80 dark:border-[#272733] flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-primary border border-rose-200/70 dark:border-rose-900/40 flex items-center justify-center shrink-0">
+                              <Clock className="w-4 h-4" />
                             </div>
                             <div className="min-w-0">
-                              <span className="text-[9px] text-pastel-mint-text font-bold uppercase block truncate">Daily Prayers</span>
+                              <span className="text-[9px] text-secondary font-bold uppercase block truncate">Daily Prayers</span>
                               <strong className="text-on-surface text-xs truncate block">{currentProfile.religiousProfile?.prayerFrequency || '5 times daily'}</strong>
                             </div>
                           </div>
 
-                          <div className="bg-pastel-mint p-3 rounded-2xl border border-pastel-mint-border flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-xl bg-emerald-100 border border-emerald-200 flex items-center justify-center shrink-0">
-                              <BookOpen className="w-4 h-4 text-emerald-700" />
+                          <div className="bg-slate-50/90 dark:bg-[#181820] p-3 rounded-2xl border border-slate-200/80 dark:border-[#272733] flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-primary border border-rose-200/70 dark:border-rose-900/40 flex items-center justify-center shrink-0">
+                              <BookOpen className="w-4 h-4" />
                             </div>
                             <div className="min-w-0">
-                              <span className="text-[9px] text-pastel-mint-text font-bold uppercase block truncate">Sect & Madhhab</span>
+                              <span className="text-[9px] text-secondary font-bold uppercase block truncate">Sect & Madhhab</span>
                               <strong className="text-on-surface text-xs truncate block">{currentProfile.religiousProfile?.sect} · {currentProfile.religiousProfile?.madhhab || 'Hanafi'}</strong>
                             </div>
                           </div>
 
-                          <div className="bg-pastel-mint p-3 rounded-2xl border border-pastel-mint-border flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-xl bg-emerald-100 border border-emerald-200 flex items-center justify-center shrink-0">
-                              <CheckCircle2 className="w-4 h-4 text-emerald-700" />
+                          <div className="bg-slate-50/90 dark:bg-[#181820] p-3 rounded-2xl border border-slate-200/80 dark:border-[#272733] flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-primary border border-rose-200/70 dark:border-rose-900/40 flex items-center justify-center shrink-0">
+                              <CheckCircle2 className="w-4 h-4" />
                             </div>
                             <div className="min-w-0">
-                              <span className="text-[9px] text-pastel-mint-text font-bold uppercase block truncate">Dietary Standard</span>
+                              <span className="text-[9px] text-secondary font-bold uppercase block truncate">Dietary Standard</span>
                               <strong className="text-on-surface text-xs truncate block">{currentProfile.religiousProfile?.halalDiet || 'Strictly Halal'}</strong>
                             </div>
                           </div>
 
-                          <div className="bg-pastel-mint p-3 rounded-2xl border border-pastel-mint-border flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-xl bg-emerald-100 border border-emerald-200 flex items-center justify-center shrink-0">
-                              <ShieldCheck className="w-4 h-4 text-emerald-700" />
+                          <div className="bg-slate-50/90 dark:bg-[#181820] p-3 rounded-2xl border border-slate-200/80 dark:border-[#272733] flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-primary border border-rose-200/70 dark:border-rose-900/40 flex items-center justify-center shrink-0">
+                              <ShieldCheck className="w-4 h-4" />
                             </div>
                             <div className="min-w-0">
-                              <span className="text-[9px] text-pastel-mint-text font-bold uppercase block truncate">Modesty / Attire</span>
+                              <span className="text-[9px] text-secondary font-bold uppercase block truncate">Modesty / Attire</span>
                               <strong className="text-on-surface text-xs capitalize truncate block">
                                 {typeof currentProfile.religiousProfile?.modestyPractice === 'string' ? currentProfile.religiousProfile.modestyPractice.replace('_', ' ') : 'Modest'}
                               </strong>
@@ -1050,54 +1294,70 @@ export const DiscoverFeed: React.FC<Props> = ({
                         </div>
 
                         {currentProfile.religiousProfile?.deenRelationshipBio && (
-                          <div className="p-3 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-500/30 text-xs leading-relaxed">
-                            <span className="font-bold text-[10px] uppercase text-emerald-700 dark:text-emerald-300 block mb-1 tracking-wider">Relationship with Deen</span>
-                            <p className="text-emerald-950 dark:text-emerald-100 font-medium">
+                          <div className="p-3 rounded-2xl bg-slate-50/90 dark:bg-[#181820] border border-slate-200/80 dark:border-[#272733] text-xs leading-relaxed">
+                            <span className="font-bold text-[10px] uppercase text-primary dark:text-rose-300 block mb-1 tracking-wider">Relationship with Deen</span>
+                            <p className="text-on-surface font-medium">
                               "{currentProfile.religiousProfile.deenRelationshipBio}"
                             </p>
                           </div>
                         )}
+
+                        <SectionSalamButton
+                          topic="Deen & Practice"
+                          onClick={(e) => {
+                            setIsDrawerOpen(false);
+                            handleDirectSalam(currentProfile, e);
+                          }}
+                        />
                       </div>
                     )}
 
                     {/* 2. CAREER & EDUCATION TAB */}
                     {activeTab === 'career' && (
                       <div className="space-y-2.5 animate-fade-in text-xs">
-                        <div className="flex items-center gap-3 bg-pastel-sky p-3 rounded-2xl border border-pastel-sky-border">
-                          <div className="w-9 h-9 rounded-xl bg-sky-100 border border-sky-200 flex items-center justify-center shrink-0">
-                            <GraduationCap className="w-5 h-5 text-sky-700" />
+                        <div className="flex items-center gap-3 bg-slate-50/90 dark:bg-[#181820] p-3 rounded-2xl border border-slate-200/80 dark:border-[#272733]">
+                          <div className="w-9 h-9 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-primary border border-rose-200/70 dark:border-rose-900/40 flex items-center justify-center shrink-0">
+                            <GraduationCap className="w-5 h-5" />
                           </div>
                           <div className="min-w-0">
-                            <span className="text-[9px] text-pastel-sky-text font-bold uppercase block">Education</span>
+                            <span className="text-[9px] text-secondary font-bold uppercase block">Education</span>
                             <span className="font-bold text-on-surface text-xs truncate block">{currentProfile.education} {currentProfile.university ? `· ${currentProfile.university}` : ''}</span>
                           </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-2">
-                          <div className="bg-pastel-sky p-3 rounded-2xl border border-pastel-sky-border flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-xl bg-sky-100 border border-sky-200 flex items-center justify-center shrink-0">
-                              <Building2 className="w-4 h-4 text-sky-700" />
+                          <div className="bg-slate-50/90 dark:bg-[#181820] p-3 rounded-2xl border border-slate-200/80 dark:border-[#272733] flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-primary border border-rose-200/70 dark:border-rose-900/40 flex items-center justify-center shrink-0">
+                              <Building2 className="w-4 h-4" />
                             </div>
                             <div className="min-w-0">
-                              <span className="text-[9px] text-pastel-sky-text font-bold uppercase block truncate">Work Setup</span>
+                              <span className="text-[9px] text-secondary font-bold uppercase block truncate">Work Setup</span>
                               <strong className="text-on-surface capitalize text-xs truncate block">
                                 {typeof currentProfile.workArrangement === 'string' ? currentProfile.workArrangement.replace('_', ' ') : 'Full-Time'}
                               </strong>
                             </div>
                           </div>
 
-                          <div className="bg-pastel-sky p-3 rounded-2xl border border-pastel-sky-border flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-xl bg-indigo-100 border border-indigo-200 flex items-center justify-center shrink-0">
-                              <Briefcase className="w-4 h-4 text-indigo-700" />
+                          <div className="bg-slate-50/90 dark:bg-[#181820] p-3 rounded-2xl border border-slate-200/80 dark:border-[#272733] flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-primary border border-rose-200/70 dark:border-rose-900/40 flex items-center justify-center shrink-0">
+                              <Briefcase className="w-4 h-4" />
                             </div>
                             <div className="min-w-0">
-                              <span className="text-[9px] text-pastel-sky-text font-bold uppercase block truncate">Income Bracket</span>
+                              <span className="text-[9px] text-secondary font-bold uppercase block truncate">Income Bracket</span>
                               <strong className="text-on-surface text-xs capitalize truncate block">
                                 {typeof currentProfile.incomeBracket === 'string' ? currentProfile.incomeBracket.replace('_', ' ') : 'Professional'}
                               </strong>
                             </div>
                           </div>
                         </div>
+
+                        <SectionSalamButton
+                          topic="Career & Education"
+                          onClick={(e) => {
+                            setIsDrawerOpen(false);
+                            handleDirectSalam(currentProfile, e);
+                          }}
+                        />
                       </div>
                     )}
 
@@ -1105,32 +1365,32 @@ export const DiscoverFeed: React.FC<Props> = ({
                     {activeTab === 'family' && (
                       <div className="space-y-2.5 animate-fade-in text-xs">
                         <div className="grid grid-cols-2 gap-2">
-                          <div className="bg-pastel-sand p-3 rounded-2xl border border-pastel-sand-border flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center shrink-0">
-                              <Home className="w-4 h-4 text-amber-700" />
+                          <div className="bg-slate-50/90 dark:bg-[#181820] p-3 rounded-2xl border border-slate-200/80 dark:border-[#272733] flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-primary border border-rose-200/70 dark:border-rose-900/40 flex items-center justify-center shrink-0">
+                              <Home className="w-4 h-4" />
                             </div>
                             <div className="min-w-0">
-                              <span className="text-[9px] text-pastel-sand-text font-bold uppercase block truncate">Living</span>
+                              <span className="text-[9px] text-secondary font-bold uppercase block truncate">Living</span>
                               <strong className="text-primary capitalize text-xs truncate block">
                                 {typeof currentProfile.livingPreference === 'string' ? currentProfile.livingPreference.replace('_', ' ') : 'Independent'}
                               </strong>
                             </div>
                           </div>
 
-                          <div className="bg-pastel-sand p-3 rounded-2xl border border-pastel-sand-border flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center shrink-0">
-                              <FileCheck2 className="w-4 h-4 text-amber-700" />
+                          <div className="bg-slate-50/90 dark:bg-[#181820] p-3 rounded-2xl border border-slate-200/80 dark:border-[#272733] flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-primary border border-rose-200/70 dark:border-rose-900/40 flex items-center justify-center shrink-0">
+                              <FileCheck2 className="w-4 h-4" />
                             </div>
                             <div className="min-w-0">
-                              <span className="text-[9px] text-pastel-sand-text font-bold uppercase block truncate">Marital Status</span>
+                              <span className="text-[9px] text-secondary font-bold uppercase block truncate">Marital Status</span>
                               <strong className="text-on-surface text-xs capitalize truncate block">
                                 {typeof currentProfile.maritalStatus === 'string' ? currentProfile.maritalStatus.replace('_', ' ') : 'Never Married'}
                               </strong>
                             </div>
                           </div>
 
-                          <div className="bg-pastel-sand p-3 rounded-2xl border border-pastel-sand-border flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center shrink-0">
+                          <div className="bg-slate-50/90 dark:bg-[#181820] p-3 rounded-2xl border border-slate-200/80 dark:border-[#272733] flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-primary border border-rose-200/70 dark:border-rose-900/40 flex items-center justify-center shrink-0">
                               <CountryFlag 
                                 location={currentProfile.location} 
                                 country={currentProfile.country} 
@@ -1138,29 +1398,37 @@ export const DiscoverFeed: React.FC<Props> = ({
                               />
                             </div>
                             <div className="min-w-0">
-                              <span className="text-[9px] text-pastel-sand-text font-bold uppercase block truncate">Citizenship</span>
+                              <span className="text-[9px] text-secondary font-bold uppercase block truncate">Citizenship</span>
                               <strong className="text-on-surface text-xs truncate block">{currentProfile.citizenship || 'Citizen'}</strong>
                             </div>
                           </div>
 
-                          <div className="bg-pastel-sand p-3 rounded-2xl border border-pastel-sand-border flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-xl bg-sky-100 border border-sky-200 flex items-center justify-center shrink-0">
-                              <Plane className="w-4 h-4 text-sky-700" />
+                          <div className="bg-slate-50/90 dark:bg-[#181820] p-3 rounded-2xl border border-slate-200/80 dark:border-[#272733] flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-primary border border-rose-200/70 dark:border-rose-900/40 flex items-center justify-center shrink-0">
+                              <Plane className="w-4 h-4" />
                             </div>
                             <div className="min-w-0">
-                              <span className="text-[9px] text-pastel-sand-text font-bold uppercase block truncate">Relocation</span>
+                              <span className="text-[9px] text-secondary font-bold uppercase block truncate">Relocation</span>
                               <strong className="text-on-surface text-xs truncate block">{currentProfile.willingnessToRelocate === 'willing' ? 'Open to Relocate' : 'Local Only'}</strong>
                             </div>
                           </div>
                         </div>
+
+                        <SectionSalamButton
+                          topic="Family & Living"
+                          onClick={(e) => {
+                            setIsDrawerOpen(false);
+                            handleDirectSalam(currentProfile, e);
+                          }}
+                        />
                       </div>
                     )}
 
                     {/* 4. BIO & VALUES TAB */}
                     {activeTab === 'bio' && (
                       <div className="space-y-2.5 animate-fade-in text-xs">
-                        <div className="bg-pastel-lavender p-3.5 rounded-2xl border border-pastel-lavender-border relative">
-                          <span className="absolute top-1.5 right-2.5 text-3xl font-serif text-purple-300 select-none">“</span>
+                        <div className="bg-slate-50/90 dark:bg-[#181820] p-3.5 rounded-2xl border border-slate-200/80 dark:border-[#272733] relative">
+                          <span className="absolute top-1.5 right-2.5 text-3xl font-serif text-primary/30 select-none">“</span>
                           <p className="text-xs text-on-surface leading-relaxed italic pr-4">
                             {currentProfile.bio || currentProfile.religiousProfile?.deenRelationshipBio || "Seeking a righteous partner on the Sunnah to complete half my deen."}
                           </p>
@@ -1169,25 +1437,33 @@ export const DiscoverFeed: React.FC<Props> = ({
                         {currentProfile.hobbies && currentProfile.hobbies.length > 0 && (
                           <div className="flex flex-wrap gap-1.5 pt-1">
                             {currentProfile.hobbies.map((h, i) => (
-                              <span key={i} className="bg-pastel-rose text-primary text-[10px] font-bold px-3 py-1 rounded-full border border-pastel-rose-border shadow-2xs flex items-center gap-1">
+                              <span key={i} className="bg-rose-50 dark:bg-rose-950/40 text-primary dark:text-rose-300 text-[10px] font-bold px-3 py-1 rounded-full border border-rose-200/80 dark:border-rose-900/40 shadow-2xs flex items-center gap-1">
                                 <Bookmark className="w-2.5 h-2.5 text-primary" />
                                 <span>{typeof h === 'string' ? h.replace(/[^\w\s()-]/gi, '').trim() : String(h)}</span>
                               </span>
                             ))}
                           </div>
                         )}
+
+                        <SectionSalamButton
+                          topic="Bio & Values"
+                          onClick={(e) => {
+                            setIsDrawerOpen(false);
+                            handleDirectSalam(currentProfile, e);
+                          }}
+                        />
                       </div>
                     )}
 
                     {/* 5. SEEKING / PARTNER REQUIREMENTS TAB */}
                     {activeTab === 'requirements' && (
                       <div className="space-y-2.5 animate-fade-in text-xs">
-                        <div className="bg-pastel-amber p-3 rounded-2xl border border-pastel-amber-border flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center shrink-0">
-                            <Heart className="w-4 h-4 text-amber-700 fill-amber-700/20" />
+                        <div className="bg-slate-50/90 dark:bg-[#181820] p-3 rounded-2xl border border-slate-200/80 dark:border-[#272733] flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-primary border border-rose-200/70 dark:border-rose-900/40 flex items-center justify-center shrink-0">
+                            <Heart className="w-4 h-4 fill-primary/20" />
                           </div>
                           <div className="min-w-0">
-                            <span className="text-[9px] text-pastel-amber-text font-bold uppercase block truncate">Seeking Age Preference</span>
+                            <span className="text-[9px] text-secondary font-bold uppercase block truncate">Seeking Age Preference</span>
                             <strong className="text-on-surface text-xs truncate block">
                               {currentProfile.partnerRequirements?.minAge && currentProfile.partnerRequirements?.maxAge
                                 ? `${currentProfile.partnerRequirements.minAge} - ${currentProfile.partnerRequirements.maxAge} yrs`
@@ -1196,9 +1472,9 @@ export const DiscoverFeed: React.FC<Props> = ({
                           </div>
                         </div>
 
-                        <div className="p-3.5 rounded-2xl bg-amber-50/70 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-500/30">
-                          <span className="font-bold text-[10px] uppercase text-amber-800 dark:text-amber-300 block mb-1 tracking-wider">Ideal Spouse Description</span>
-                          <p className="text-xs text-amber-950 dark:text-amber-100 leading-relaxed italic font-medium">
+                        <div className="p-3.5 rounded-2xl bg-slate-50/90 dark:bg-[#181820] border border-slate-200/80 dark:border-[#272733]">
+                          <span className="font-bold text-[10px] uppercase text-primary dark:text-rose-300 block mb-1 tracking-wider">Ideal Spouse Description</span>
+                          <p className="text-xs text-on-surface leading-relaxed italic font-medium">
                             "{currentProfile.partnerRequirements?.description || 'Seeking a practicing, kind-hearted spouse with good Islamic manners.'}"
                           </p>
                         </div>

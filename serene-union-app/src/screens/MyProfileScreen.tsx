@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   LogOut, 
   Crown, 
+  Eye,
   EyeOff, 
 
   MapPin, 
@@ -267,6 +268,19 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
       setIsDarkMode(theme === 'dark');
     });
   }, []);
+
+  const [activeProfileSection, setActiveProfileSection] = useState<'all' | 'deen' | 'family' | 'career' | 'partner'>('all');
+
+  const handleToggleModestyBlur = useCallback(() => {
+    const nextVal = !Boolean(user.blurPhotosByDefault);
+    const updatedUser: UserProfile = { ...user, blurPhotosByDefault: nextVal };
+    setCurrentUserProfile(updatedUser);
+    dbService.setCurrentUser(updatedUser);
+    dbService.updatePrivacy(nextVal, user.profileVisibility || 'all_users');
+    if (onProfileUpdated) onProfileUpdated(updatedUser);
+    setPhotoUploadToast(nextVal ? '🔒 Modesty blur enabled' : '👁️ Photos clear on feed');
+    setTimeout(() => setPhotoUploadToast(null), 2500);
+  }, [user, onProfileUpdated]);
 
   const [isEditingBio, setIsEditingBio] = useState<boolean>(false);
   const [editedBioText, setEditedBioText] = useState<string>(() => user.bio || user.religiousProfile?.deenRelationshipBio || '');
@@ -538,7 +552,7 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
 
 
   return (
-    <div className="w-full h-full flex flex-col bg-background font-sans overflow-y-auto pb-24 select-none text-on-surface">
+    <div className="w-full h-full flex flex-col bg-slate-50/70 dark:bg-[#0c0c0e] font-sans overflow-y-auto pb-24 select-none text-on-surface">
       {/* Hidden File Input for Add Photo */}
       <input
         ref={photoFileInputRef}
@@ -557,7 +571,7 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
         </div>
       )}
       {/* Top Header */}
-      <header className="sticky top-0 bg-white px-4 py-3 border-b border-outline flex items-center justify-between z-20 shadow-subtle">
+      <header className="sticky top-0 bg-white/95 dark:bg-[#121218]/95 backdrop-blur-md px-4 py-3 border-b border-slate-200/80 dark:border-[#272733] flex items-center justify-between z-20 shadow-[0_1px_8px_rgba(0,0,0,0.03)]">
         <div>
           <h1 className="font-serif text-xl font-bold text-on-surface">
             My Matrimonial Biodata
@@ -595,7 +609,7 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
           const isHigh = comp.score >= 80;
           const isMid = comp.score >= 60;
           return (
-            <div className="bg-white rounded-3xl p-4 border border-outline shadow-card">
+            <div className="bg-white dark:bg-[#16161c] rounded-3xl p-4 border border-slate-200/80 dark:border-[#272733] shadow-[0_2px_12px_rgba(0,0,0,0.03)]">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2.5">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
@@ -623,12 +637,19 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
               </div>
 
               {/* Progress Bar */}
-              <div className="w-full bg-surface-variant rounded-full h-2.5 overflow-hidden border border-outline/50 mb-2.5">
+              <div className="w-full bg-slate-100 dark:bg-white/10 rounded-full h-2 overflow-hidden border border-slate-200/70 dark:border-white/10 mb-2.5">
                 <div 
                   className={`h-full rounded-full transition-all duration-700 ${
-                    isHigh ? 'bg-emerald-500' : (isMid ? 'bg-amber-500' : 'bg-rose-500')
+                    isHigh ? 'shadow-[0_0_10px_rgba(16,185,129,0.4)]' : ''
                   }`}
-                  style={{ width: `${comp.score}%` }}
+                  style={{
+                    width: `${comp.score}%`,
+                    background: isHigh
+                      ? 'linear-gradient(90deg, #059669 0%, #34d399 100%)'
+                      : isMid
+                        ? 'linear-gradient(90deg, #d97706 0%, #fbbf24 100%)'
+                        : 'linear-gradient(90deg, #e11d48 0%, #fb7185 100%)'
+                  }}
                 />
               </div>
 
@@ -650,7 +671,7 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
         })()}
 
         {/* Main Profile Card (Photo Banner & Biodata Details) */}
-        <div className="bg-white rounded-3xl overflow-hidden shadow-card border border-outline flex flex-col">
+        <div className="bg-white dark:bg-[#16161c] rounded-3xl overflow-hidden shadow-[0_2px_14px_rgba(0,0,0,0.04)] border border-slate-200/80 dark:border-[#272733] flex flex-col">
           {/* Main Photo Banner */}
           <div className="relative w-full h-72 sm:h-80 bg-surface-variant overflow-hidden group select-none">
             {profilePhotos.length > 0 ? (
@@ -783,17 +804,17 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
 
             {/* Top-Left Membership Pill / Upgrade Action */}
             {isVip ? (
-              <div className={`absolute ${profilePhotos.length > 1 ? 'top-6' : 'top-3.5'} left-3 bg-pastel-amber text-pastel-amber-text border border-pastel-amber-border px-3 py-1 rounded-full flex items-center gap-1.5 text-xs font-bold shadow-subtle z-20`}>
-                <Crown className="w-3.5 h-3.5 text-pastel-amber-text shrink-0" />
+              <div className={`absolute ${profilePhotos.length > 1 ? 'top-6' : 'top-3.5'} left-3 bg-black/60 backdrop-blur-md text-amber-300 border border-amber-400/40 px-3 py-1 rounded-full flex items-center gap-1.5 text-[11px] font-bold shadow-lg z-20`}>
+                <Crown className="w-3.5 h-3.5 text-amber-400 fill-amber-400/20 shrink-0" />
                 <span>Barakah VIP</span>
               </div>
             ) : (
               <button
                 type="button"
                 onClick={() => setShowUpgradeModal(true)}
-                className={`absolute ${profilePhotos.length > 1 ? 'top-6' : 'top-3.5'} left-3 bg-white/95 backdrop-blur-xs text-primary border border-primary/30 px-3 py-1 rounded-full flex items-center gap-1.5 text-xs font-bold shadow-subtle z-20 hover:bg-white active:scale-95 transition-all cursor-pointer`}
+                className={`absolute ${profilePhotos.length > 1 ? 'top-6' : 'top-3.5'} left-3 bg-black/60 hover:bg-primary backdrop-blur-md text-white border border-white/20 hover:border-primary px-3 py-1.5 rounded-full flex items-center gap-1.5 text-[11px] font-semibold shadow-lg z-20 active:scale-95 transition-all cursor-pointer`}
               >
-                <Crown className="w-3.5 h-3.5 text-amber-500 fill-amber-400 shrink-0" />
+                <Crown className="w-3.5 h-3.5 text-amber-400 fill-amber-400/90 shrink-0" />
                 <span>Free Member · Upgrade</span>
               </button>
             )}
@@ -840,6 +861,34 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
                 </span>
                 <span className="text-secondary/60 font-bold">·</span>
                 <span>{user.profession || 'Professional'}</span>
+              </div>
+
+              {/* 1-Tap Modesty Photo Blur Toggle */}
+              <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-[#272733] flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
+                    user.blurPhotosByDefault
+                      ? 'bg-rose-50 dark:bg-rose-950/40 text-primary'
+                      : 'bg-slate-100 dark:bg-[#22222e] text-secondary'
+                  }`}>
+                    {user.blurPhotosByDefault ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </div>
+                  <span className="text-[11px] font-medium text-secondary truncate">
+                    {user.blurPhotosByDefault ? 'Modesty Photo Blur Active' : 'Photos Clear on Feed'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleToggleModestyBlur}
+                  aria-label="Toggle profile photo blur"
+                  className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all active:scale-95 shrink-0 ${
+                    user.blurPhotosByDefault
+                      ? 'bg-primary text-white border-primary shadow-2xs'
+                      : 'bg-slate-50 dark:bg-[#1e1e2a] text-on-surface border-slate-200/80 dark:border-[#2f2f3f] hover:border-primary/40'
+                  }`}
+                >
+                  {user.blurPhotosByDefault ? 'Blur On' : 'Blur Off'}
+                </button>
               </div>
             </div>
 
@@ -948,7 +997,7 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
             )}
 
             {/* 🎙️ Voice Greeting / Deen Introduction Card (Live R2 & D1) */}
-            <div className="bg-white rounded-2xl p-4 border border-outline shadow-subtle space-y-3">
+            <div className="bg-white dark:bg-[#16161c] rounded-2xl p-4 border border-slate-200/80 dark:border-[#272733] shadow-[0_2px_10px_rgba(0,0,0,0.02)] space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div className="w-8 h-8 rounded-xl bg-pastel-sky text-sky-700 border border-pastel-sky-border flex items-center justify-center shrink-0">
@@ -1091,15 +1140,43 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
               )}
             </div>
 
-            {/* 1. Personal Background & Biodata (Pastel Rose) */}
-            <div className="bg-pastel-rose rounded-2xl p-3.5 border border-pastel-rose-border space-y-2.5 shadow-subtle">
-              <h3 className="font-serif text-xs font-bold text-primary flex items-center gap-1.5">
+            {/* Minimal Biodata Section Filter Bar */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+              {[
+                { id: 'all', label: 'All' },
+                { id: 'deen', label: 'Deen' },
+                { id: 'family', label: 'Family' },
+                { id: 'career', label: 'Career' },
+                { id: 'partner', label: 'Seeking' }
+              ].map((tab) => {
+                const isActive = activeProfileSection === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveProfileSection(tab.id as 'all' | 'deen' | 'family' | 'career' | 'partner')}
+                    className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all whitespace-nowrap border ${
+                      isActive
+                        ? 'bg-primary text-white border-primary shadow-2xs'
+                        : 'bg-slate-50/80 dark:bg-[#1c1c26] text-secondary border-slate-200/80 dark:border-[#2a2a38] hover:text-on-surface hover:border-primary/40'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* 1. Personal Background & Biodata */}
+            {activeProfileSection === 'all' && (
+            <div className="bg-white dark:bg-[#16161c] rounded-2xl p-3.5 border border-slate-200/80 dark:border-[#272733] space-y-2.5 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+              <h3 className="font-serif text-xs font-bold text-on-surface flex items-center gap-1.5">
                 <User className="w-3.5 h-3.5 text-primary" />
                 <span>Personal Background & Biodata</span>
               </h3>
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="bg-white p-2.5 rounded-xl border border-pastel-rose-border shadow-2xs flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-pink-50 text-primary border border-pink-200 flex items-center justify-center shrink-0">
+                <div className="bg-slate-50/80 dark:bg-[#1c1c26] p-2.5 rounded-xl border border-slate-200/60 dark:border-[#2a2a38] flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-primary border border-rose-200/70 dark:border-rose-900/40 flex items-center justify-center shrink-0">
                     <Ruler className="w-3.5 h-3.5" />
                   </div>
                   <div className="min-w-0">
@@ -1108,8 +1185,8 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
                   </div>
                 </div>
 
-                <div className="bg-white p-2.5 rounded-xl border border-pastel-rose-border shadow-2xs flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 border border-purple-200 flex items-center justify-center shrink-0">
+                <div className="bg-slate-50/80 dark:bg-[#1c1c26] p-2.5 rounded-xl border border-slate-200/60 dark:border-[#2a2a38] flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 border border-purple-200/70 dark:border-purple-900/40 flex items-center justify-center shrink-0">
                     <Globe2 className="w-3.5 h-3.5" />
                   </div>
                   <div className="min-w-0">
@@ -1118,8 +1195,8 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
                   </div>
                 </div>
 
-                <div className="bg-white p-2.5 rounded-xl border border-pastel-rose-border shadow-2xs flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-200 flex items-center justify-center shrink-0">
+                <div className="bg-slate-50/80 dark:bg-[#1c1c26] p-2.5 rounded-xl border border-slate-200/60 dark:border-[#2a2a38] flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200/70 dark:border-indigo-900/40 flex items-center justify-center shrink-0">
                     <ShieldCheck className="w-3.5 h-3.5" />
                   </div>
                   <div className="min-w-0">
@@ -1128,8 +1205,8 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
                   </div>
                 </div>
 
-                <div className="bg-white p-2.5 rounded-xl border border-pastel-rose-border shadow-2xs flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center shrink-0">
+                <div className="bg-slate-50/80 dark:bg-[#1c1c26] p-2.5 rounded-xl border border-slate-200/60 dark:border-[#2a2a38] flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200/70 dark:border-blue-900/40 flex items-center justify-center shrink-0">
                     <FileCheck2 className="w-3.5 h-3.5" />
                   </div>
                   <div className="min-w-0">
@@ -1141,165 +1218,169 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
                 </div>
               </div>
             </div>
+            )}
 
-            {/* 2. Deen & Religious Routine (Pastel Mint) */}
-            <div className="bg-pastel-mint rounded-2xl p-3.5 border border-pastel-mint-border space-y-2.5 shadow-subtle">
-              <h3 className="font-serif text-xs font-bold text-pastel-mint-text flex items-center gap-1.5">
-                <BookOpen className="w-3.5 h-3.5 text-pastel-mint-text" />
+            {/* 2. Deen & Religious Routine */}
+            {(activeProfileSection === 'all' || activeProfileSection === 'deen') && (
+            <div className="bg-white dark:bg-[#16161c] rounded-2xl p-3.5 border border-slate-200/80 dark:border-[#272733] space-y-2.5 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+              <h3 className="font-serif text-xs font-bold text-on-surface flex items-center gap-1.5">
+                <BookOpen className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 <span>Deen & Religious Routine</span>
               </h3>
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="bg-white p-2.5 rounded-xl border border-pastel-mint-border shadow-2xs flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center shrink-0">
+                <div className="bg-slate-50/80 dark:bg-[#1c1c26] p-2.5 rounded-xl border border-slate-200/60 dark:border-[#2a2a38] flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/70 dark:border-emerald-900/40 flex items-center justify-center shrink-0">
                     <Clock className="w-3.5 h-3.5" />
                   </div>
                   <div className="min-w-0">
-                    <span className="text-[10px] text-pastel-mint-text font-medium block">Daily Prayers</span>
+                    <span className="text-[10px] text-secondary font-medium block">Daily Prayers</span>
                     <strong className="text-on-surface text-[11px] block truncate">{rel?.prayerFrequency || '5 times daily'}</strong>
                   </div>
                 </div>
 
-                <div className="bg-white p-2.5 rounded-xl border border-pastel-mint-border shadow-2xs flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center shrink-0">
+                <div className="bg-slate-50/80 dark:bg-[#1c1c26] p-2.5 rounded-xl border border-slate-200/60 dark:border-[#2a2a38] flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/70 dark:border-emerald-900/40 flex items-center justify-center shrink-0">
                     <Compass className="w-3.5 h-3.5" />
                   </div>
                   <div className="min-w-0">
-                    <span className="text-[10px] text-pastel-mint-text font-medium block">Sect & Madhhab</span>
+                    <span className="text-[10px] text-secondary font-medium block">Sect & Madhhab</span>
                     <strong className="text-on-surface text-[11px] block truncate">
                       {rel?.sect || 'Sunni'}{rel?.madhhab ? ` · ${rel.madhhab}` : ''}
                     </strong>
                   </div>
                 </div>
 
-                <div className="bg-white p-2.5 rounded-xl border border-pastel-mint-border shadow-2xs flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center shrink-0">
+                <div className="bg-slate-50/80 dark:bg-[#1c1c26] p-2.5 rounded-xl border border-slate-200/60 dark:border-[#2a2a38] flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/70 dark:border-emerald-900/40 flex items-center justify-center shrink-0">
                     <ShieldCheck className="w-3.5 h-3.5" />
                   </div>
                   <div className="min-w-0">
-                    <span className="text-[10px] text-pastel-mint-text font-medium block">Dietary Standard</span>
+                    <span className="text-[10px] text-secondary font-medium block">Dietary Standard</span>
                     <strong className="text-on-surface text-[11px] block truncate capitalize">
                       {rel?.halalDiet || (user.dietaryStandard ? user.dietaryStandard.replace(/_/g, ' ') : 'Strictly Halal')}
                     </strong>
                   </div>
                 </div>
 
-                <div className="bg-white p-2.5 rounded-xl border border-pastel-mint-border shadow-2xs flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center shrink-0">
+                <div className="bg-slate-50/80 dark:bg-[#1c1c26] p-2.5 rounded-xl border border-slate-200/60 dark:border-[#2a2a38] flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/70 dark:border-emerald-900/40 flex items-center justify-center shrink-0">
                     <BookOpen className="w-3.5 h-3.5" />
                   </div>
                   <div className="min-w-0">
-                    <span className="text-[10px] text-pastel-mint-text font-medium block">Quran Recitation</span>
+                    <span className="text-[10px] text-secondary font-medium block">Quran Recitation</span>
                     <strong className="text-on-surface text-[11px] block truncate capitalize">{rel?.quranRecitation || 'Daily'}</strong>
                   </div>
                 </div>
 
-                <div className="bg-white p-2.5 rounded-xl border border-pastel-mint-border shadow-2xs flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center shrink-0">
+                <div className="bg-slate-50/80 dark:bg-[#1c1c26] p-2.5 rounded-xl border border-slate-200/60 dark:border-[#2a2a38] flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/70 dark:border-emerald-900/40 flex items-center justify-center shrink-0">
                     <ShieldCheck className="w-3.5 h-3.5" />
                   </div>
                   <div className="min-w-0">
-                    <span className="text-[10px] text-pastel-mint-text font-medium block">Modesty Style</span>
+                    <span className="text-[10px] text-secondary font-medium block">Modesty Style</span>
                     <strong className="text-on-surface text-[11px] block truncate capitalize">{rel?.modestyPractice?.replace('_', ' ') || 'Modest'}</strong>
                   </div>
                 </div>
 
-                <div className="bg-white p-2.5 rounded-xl border border-pastel-mint-border shadow-2xs flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center shrink-0">
+                <div className="bg-slate-50/80 dark:bg-[#1c1c26] p-2.5 rounded-xl border border-slate-200/60 dark:border-[#2a2a38] flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/70 dark:border-emerald-900/40 flex items-center justify-center shrink-0">
                     <Compass className="w-3.5 h-3.5" />
                   </div>
                   <div className="min-w-0">
-                    <span className="text-[10px] text-pastel-mint-text font-medium block">Hajj / Umrah</span>
+                    <span className="text-[10px] text-secondary font-medium block">Hajj / Umrah</span>
                     <strong className="text-on-surface text-[11px] block truncate capitalize">{rel?.hajjUmrahStatus || 'Planning'}</strong>
                   </div>
                 </div>
               </div>
             </div>
+            )}
 
-            {/* 3. Family & Post-Marriage Living (Pastel Sand) */}
-            <div className="bg-pastel-sand rounded-2xl p-3.5 border border-pastel-sand-border space-y-2.5 shadow-subtle">
-              <h3 className="text-xs font-bold text-pastel-sand-text uppercase tracking-wider flex items-center gap-1.5">
-                <Home className="w-3.5 h-3.5 text-pastel-sand-text" />
+            {/* 3. Family & Post-Marriage Living */}
+            {(activeProfileSection === 'all' || activeProfileSection === 'family') && (
+            <div className="bg-white dark:bg-[#16161c] rounded-2xl p-3.5 border border-slate-200/80 dark:border-[#272733] space-y-2.5 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+              <h3 className="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-1.5">
+                <Home className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                 <span>Family & Living Arrangements</span>
               </h3>
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="bg-white p-2.5 rounded-xl border border-pastel-sand-border shadow-2xs flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center shrink-0">
+                <div className="bg-slate-50/80 dark:bg-[#1c1c26] p-2.5 rounded-xl border border-slate-200/60 dark:border-[#2a2a38] flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/70 dark:border-emerald-900/40 flex items-center justify-center shrink-0">
                     <Home className="w-3.5 h-3.5" />
                   </div>
                   <div className="min-w-0">
-                    <span className="text-[10px] text-pastel-sand-text font-medium block">Post-Marriage Living</span>
+                    <span className="text-[10px] text-secondary font-medium block">Post-Marriage Living</span>
                     <strong className="text-primary capitalize text-[11px] block truncate">
                       {user.livingPreference?.replace('_', ' ') || 'Independent'}
                     </strong>
                   </div>
                 </div>
 
-                <div className="bg-white p-2.5 rounded-xl border border-pastel-sand-border shadow-2xs flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center shrink-0">
+                <div className="bg-slate-50/80 dark:bg-[#1c1c26] p-2.5 rounded-xl border border-slate-200/60 dark:border-[#2a2a38] flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200/70 dark:border-amber-900/40 flex items-center justify-center shrink-0">
                     <Users className="w-3.5 h-3.5" />
                   </div>
                   <div className="min-w-0">
-                    <span className="text-[10px] text-pastel-sand-text font-medium block">Family Structure</span>
+                    <span className="text-[10px] text-secondary font-medium block">Family Structure</span>
                     <strong className="text-on-surface capitalize text-[11px] block truncate">
                       {user.familyStructure || 'Nuclear'} ({user.siblingsCount ?? 2} Siblings)
                     </strong>
                   </div>
                 </div>
 
-                <div className="bg-white p-2.5 rounded-xl border border-pastel-sand-border shadow-2xs flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-pink-50 text-pink-600 border border-pink-200 flex items-center justify-center shrink-0">
+                <div className="bg-slate-50/80 dark:bg-[#1c1c26] p-2.5 rounded-xl border border-slate-200/60 dark:border-[#2a2a38] flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-pink-50 dark:bg-pink-950/40 text-pink-600 dark:text-pink-400 border border-pink-200/70 dark:border-pink-900/40 flex items-center justify-center shrink-0">
                     <Users className="w-3.5 h-3.5" />
                   </div>
                   <div className="min-w-0">
-                    <span className="text-[10px] text-pastel-sand-text font-medium block">Desire for Children</span>
+                    <span className="text-[10px] text-secondary font-medium block">Desire for Children</span>
                     <strong className="text-on-surface capitalize text-[11px] block truncate">
                       {user.childrenDesire ? user.childrenDesire.replace(/_/g, ' ') : 'Wants Children'}
                     </strong>
                   </div>
                 </div>
 
-                <div className="bg-white p-2.5 rounded-xl border border-pastel-sand-border shadow-2xs flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center shrink-0">
+                <div className="bg-slate-50/80 dark:bg-[#1c1c26] p-2.5 rounded-xl border border-slate-200/60 dark:border-[#2a2a38] flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200/70 dark:border-rose-900/40 flex items-center justify-center shrink-0">
                     <Heart className="w-3.5 h-3.5" />
                   </div>
                   <div className="min-w-0">
-                    <span className="text-[10px] text-pastel-sand-text font-medium block">Mahr Philosophy</span>
+                    <span className="text-[10px] text-secondary font-medium block">Mahr Philosophy</span>
                     <strong className="text-on-surface capitalize text-[11px] block truncate">
                       {user.mahrPhilosophy ? user.mahrPhilosophy.replace(/_/g, ' ') : 'Sunnah / Mutual Agreement'}
                     </strong>
                   </div>
                 </div>
 
-                <div className="bg-white p-2.5 rounded-xl border border-pastel-sand-border shadow-2xs flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-200 flex items-center justify-center shrink-0">
+                <div className="bg-slate-50/80 dark:bg-[#1c1c26] p-2.5 rounded-xl border border-slate-200/60 dark:border-[#2a2a38] flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200/70 dark:border-indigo-900/40 flex items-center justify-center shrink-0">
                     <Briefcase className="w-3.5 h-3.5" />
                   </div>
                   <div className="min-w-0">
-                    <span className="text-[10px] text-pastel-sand-text font-medium block">Dual-Income</span>
+                    <span className="text-[10px] text-secondary font-medium block">Dual-Income</span>
                     <strong className="text-on-surface capitalize text-[11px] block truncate">
                       {user.dualIncomePreference ? user.dualIncomePreference.replace('_', ' ') : 'Career Supportive'}
                     </strong>
                   </div>
                 </div>
 
-                <div className="bg-white p-2.5 rounded-xl border border-pastel-sand-border shadow-2xs flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-sky-50 text-sky-600 border border-sky-200 flex items-center justify-center shrink-0">
+                <div className="bg-slate-50/80 dark:bg-[#1c1c26] p-2.5 rounded-xl border border-slate-200/60 dark:border-[#2a2a38] flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 border border-sky-200/70 dark:border-sky-900/40 flex items-center justify-center shrink-0">
                     <Plane className="w-3.5 h-3.5" />
                   </div>
                   <div className="min-w-0">
-                    <span className="text-[10px] text-pastel-sand-text font-medium block">Relocation</span>
+                    <span className="text-[10px] text-secondary font-medium block">Relocation</span>
                     <strong className="text-on-surface capitalize text-[11px] block truncate">
                       {user.willingnessToRelocate ? user.willingnessToRelocate.replace('_', ' ') : 'Flexible'}
                     </strong>
                   </div>
                 </div>
 
-                <div className="bg-white p-2.5 rounded-xl border border-pastel-sand-border shadow-2xs flex items-center gap-2.5 col-span-2">
-                  <div className="w-7 h-7 rounded-lg bg-slate-50 text-slate-600 border border-slate-200 flex items-center justify-center shrink-0">
+                <div className="bg-slate-50/80 dark:bg-[#1c1c26] p-2.5 rounded-xl border border-slate-200/60 dark:border-[#2a2a38] flex items-center gap-2.5 col-span-2">
+                  <div className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-[#252533] text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-[#323244] flex items-center justify-center shrink-0">
                     <ShieldCheck className="w-3.5 h-3.5" />
                   </div>
                   <div className="min-w-0">
-                    <span className="text-[10px] text-pastel-sand-text font-medium block">Smoking & Substance Status</span>
+                    <span className="text-[10px] text-secondary font-medium block">Smoking & Substance Status</span>
                     <strong className="text-on-surface capitalize text-[11px] block truncate">
                       {user.smokingStatus ? user.smokingStatus.replace('_', ' ') : 'Non-Smoker'}
                     </strong>
@@ -1307,32 +1388,34 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
                 </div>
               </div>
             </div>
+            )}
 
-            {/* 4. Career & Education (Pastel Sky) */}
-            <div className="bg-pastel-sky rounded-2xl p-3.5 border border-pastel-sky-border space-y-2.5 text-xs shadow-subtle">
-              <h3 className="text-xs font-bold text-pastel-sky-text uppercase tracking-wider flex items-center gap-1.5">
-                <GraduationCap className="w-3.5 h-3.5 text-pastel-sky-text" />
+            {/* 4. Career & Education */}
+            {(activeProfileSection === 'all' || activeProfileSection === 'career') && (
+            <div className="bg-white dark:bg-[#16161c] rounded-2xl p-3.5 border border-slate-200/80 dark:border-[#272733] space-y-2.5 text-xs shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+              <h3 className="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-1.5">
+                <GraduationCap className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
                 <span>Education & Career Intent</span>
               </h3>
               <div className="grid grid-cols-2 gap-2">
-                <div className="bg-white p-2.5 rounded-xl border border-pastel-sky-border shadow-2xs flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-sky-50 text-sky-600 border border-sky-200 flex items-center justify-center shrink-0">
+                <div className="bg-slate-50/80 dark:bg-[#1c1c26] p-2.5 rounded-xl border border-slate-200/60 dark:border-[#2a2a38] flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 border border-sky-200/70 dark:border-sky-900/40 flex items-center justify-center shrink-0">
                     <GraduationCap className="w-3.5 h-3.5" />
                   </div>
                   <div className="min-w-0">
-                    <span className="text-[10px] text-pastel-sky-text font-medium block">Education</span>
+                    <span className="text-[10px] text-secondary font-medium block">Education</span>
                     <strong className="text-on-surface text-[11px] block truncate">
                       {user.education || 'Graduate'} {user.university ? `· ${user.university}` : ''}
                     </strong>
                   </div>
                 </div>
 
-                <div className="bg-white p-2.5 rounded-xl border border-pastel-sky-border shadow-2xs flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-200 flex items-center justify-center shrink-0">
+                <div className="bg-slate-50/80 dark:bg-[#1c1c26] p-2.5 rounded-xl border border-slate-200/60 dark:border-[#2a2a38] flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200/70 dark:border-indigo-900/40 flex items-center justify-center shrink-0">
                     <Briefcase className="w-3.5 h-3.5" />
                   </div>
                   <div className="min-w-0">
-                    <span className="text-[10px] text-pastel-sky-text font-medium block">Profession</span>
+                    <span className="text-[10px] text-secondary font-medium block">Profession</span>
                     <strong className="text-on-surface text-[11px] block truncate">
                       {user.profession || 'Professional'}
                     </strong>
@@ -1340,12 +1423,12 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
                 </div>
 
                 {user.workArrangement && (
-                  <div className="bg-white p-2.5 rounded-xl border border-pastel-sky-border shadow-2xs flex items-center gap-2.5">
-                    <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center shrink-0">
+                  <div className="bg-slate-50/80 dark:bg-[#1c1c26] p-2.5 rounded-xl border border-slate-200/60 dark:border-[#2a2a38] flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200/70 dark:border-amber-900/40 flex items-center justify-center shrink-0">
                       <Building2 className="w-3.5 h-3.5" />
                     </div>
                     <div className="min-w-0">
-                      <span className="text-[10px] text-pastel-sky-text font-medium block">Work Setup</span>
+                      <span className="text-[10px] text-secondary font-medium block">Work Setup</span>
                       <strong className="text-on-surface text-[11px] block truncate capitalize">
                         {user.workArrangement.replace('_', ' ')}
                       </strong>
@@ -1354,12 +1437,12 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
                 )}
 
                 {user.marriageTimeline && (
-                  <div className="bg-white p-2.5 rounded-xl border border-pastel-sky-border shadow-2xs flex items-center gap-2.5">
-                    <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 border border-purple-200 flex items-center justify-center shrink-0">
+                  <div className="bg-slate-50/80 dark:bg-[#1c1c26] p-2.5 rounded-xl border border-slate-200/60 dark:border-[#2a2a38] flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-lg bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 border border-purple-200/70 dark:border-purple-900/40 flex items-center justify-center shrink-0">
                       <Hourglass className="w-3.5 h-3.5" />
                     </div>
                     <div className="min-w-0">
-                      <span className="text-[10px] text-pastel-sky-text font-medium block">Marriage Timeline</span>
+                      <span className="text-[10px] text-secondary font-medium block">Marriage Timeline</span>
                       <strong className="text-on-surface text-[11px] block truncate capitalize">
                         {user.marriageTimeline.replace('_', ' ')}
                       </strong>
@@ -1367,24 +1450,24 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
                   </div>
                 )}
 
-                <div className="bg-white p-2.5 rounded-xl border border-pastel-sky-border shadow-2xs flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center shrink-0">
+                <div className="bg-slate-50/80 dark:bg-[#1c1c26] p-2.5 rounded-xl border border-slate-200/60 dark:border-[#2a2a38] flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/70 dark:border-emerald-900/40 flex items-center justify-center shrink-0">
                     <TrendingUp className="w-3.5 h-3.5" />
                   </div>
                   <div className="min-w-0">
-                    <span className="text-[10px] text-pastel-sky-text font-medium block">Income Bracket</span>
+                    <span className="text-[10px] text-secondary font-medium block">Income Bracket</span>
                     <strong className="text-on-surface text-[11px] block truncate capitalize">
                       {user.incomeBracket ? user.incomeBracket.replace(/_/g, ' ') : 'Undisclosed'}
                     </strong>
                   </div>
                 </div>
 
-                <div className="bg-white p-2.5 rounded-xl border border-pastel-sky-border shadow-2xs flex items-center gap-2.5 col-span-2">
-                  <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center shrink-0">
+                <div className="bg-slate-50/80 dark:bg-[#1c1c26] p-2.5 rounded-xl border border-slate-200/60 dark:border-[#2a2a38] flex items-center gap-2.5 col-span-2">
+                  <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200/70 dark:border-blue-900/40 flex items-center justify-center shrink-0">
                     <Languages className="w-3.5 h-3.5" />
                   </div>
                   <div className="min-w-0">
-                    <span className="text-[10px] text-pastel-sky-text font-medium block">Languages Spoken</span>
+                    <span className="text-[10px] text-secondary font-medium block">Languages Spoken</span>
                     <strong className="text-on-surface text-[11px] block truncate">
                       {user.languagesSpoken || 'English, Urdu'}
                     </strong>
@@ -1392,11 +1475,11 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
                 </div>
 
                 {user.hobbies && user.hobbies.length > 0 && (
-                  <div className="col-span-2 bg-white/80 p-2.5 rounded-xl border border-pastel-sky-border shadow-2xs">
-                    <span className="text-[10px] text-pastel-sky-text font-bold block mb-1">Passions & Interests</span>
+                  <div className="col-span-2 bg-slate-50/80 dark:bg-[#1c1c26] p-2.5 rounded-xl border border-slate-200/60 dark:border-[#2a2a38]">
+                    <span className="text-[10px] text-secondary font-bold block mb-1">Passions & Interests</span>
                     <div className="flex flex-wrap gap-1">
                       {user.hobbies.map((h, i) => (
-                        <span key={i} className="text-[10px] font-semibold bg-sky-50 text-sky-700 px-2 py-0.5 rounded-full border border-sky-200">
+                        <span key={i} className="text-[10px] font-semibold bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 px-2 py-0.5 rounded-full border border-sky-200/70 dark:border-sky-900/40">
                           {h}
                         </span>
                       ))}
@@ -1405,11 +1488,11 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
                 )}
 
                 {user.personalityTraits && user.personalityTraits.length > 0 && (
-                  <div className="col-span-2 bg-white/80 p-2.5 rounded-xl border border-pastel-sky-border shadow-2xs">
-                    <span className="text-[10px] text-pastel-sky-text font-bold block mb-1">Character & Personality</span>
+                  <div className="col-span-2 bg-slate-50/80 dark:bg-[#1c1c26] p-2.5 rounded-xl border border-slate-200/60 dark:border-[#2a2a38]">
+                    <span className="text-[10px] text-secondary font-bold block mb-1">Character & Personality</span>
                     <div className="flex flex-wrap gap-1">
                       {user.personalityTraits.map((t, i) => (
-                        <span key={i} className="text-[10px] font-semibold bg-amber-50 text-amber-800 px-2 py-0.5 rounded-full border border-amber-200">
+                        <span key={i} className="text-[10px] font-semibold bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-full border border-amber-200/70 dark:border-amber-900/40">
                           {t}
                         </span>
                       ))}
@@ -1418,12 +1501,14 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
                 )}
               </div>
             </div>
+            )}
 
-            {/* 5. About My Deen & Character (Pastel Lavender with Quick-Edit) */}
-            <div className="bg-pastel-lavender rounded-2xl p-3.5 border border-pastel-lavender-border space-y-2 shadow-subtle">
+            {/* 5. About My Deen & Character (Quick-Edit) */}
+            {(activeProfileSection === 'all' || activeProfileSection === 'deen') && (
+            <div className="bg-white dark:bg-[#16161c] rounded-2xl p-3.5 border border-slate-200/80 dark:border-[#272733] space-y-2 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold text-pastel-lavender-text uppercase tracking-wider flex items-center gap-1.5">
-                  <BookOpen className="w-3.5 h-3.5 text-pastel-lavender-text" />
+                <h3 className="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-1.5">
+                  <BookOpen className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
                   <span>About My Deen & Character</span>
                 </h3>
                 {!isEditingBio && (
@@ -1433,7 +1518,7 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
                       setEditedBioText(user.bio || rel?.deenRelationshipBio || '');
                       setIsEditingBio(true);
                     }}
-                    className="text-[11px] font-bold text-primary hover:underline flex items-center gap-1 px-2.5 py-1 rounded-xl bg-white/80 border border-pastel-lavender-border shadow-2xs hover:bg-white active:scale-98 transition-all"
+                    className="text-[11px] font-bold text-primary hover:underline flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-50 dark:bg-[#1c1c26] border border-slate-200/80 dark:border-[#2a2a38] shadow-2xs hover:border-primary/40 active:scale-98 transition-all"
                   >
                     <Edit3 className="w-3 h-3" />
                     <span>Edit Bio</span>
@@ -1442,7 +1527,7 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
               </div>
 
               {bioToast && (
-                <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-bold flex items-center gap-2 animate-fade-in">
+                <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs font-bold flex items-center gap-2 animate-fade-in">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
                   <span>{bioToast}</span>
                 </div>
@@ -1455,7 +1540,7 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
                     value={editedBioText}
                     onChange={(e) => setEditedBioText(e.target.value)}
                     placeholder="Share what practicing Islam means in your daily life, your character values, and matrimonial expectations..."
-                    className="w-full bg-white border-2 border-primary rounded-xl p-3 text-xs text-on-surface outline-none leading-relaxed shadow-subtle focus:ring-2 focus:ring-primary/20"
+                    className="w-full bg-slate-50 dark:bg-[#1c1c26] border-2 border-primary rounded-xl p-3 text-xs text-on-surface outline-none leading-relaxed shadow-subtle focus:ring-2 focus:ring-primary/20"
                   />
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] text-secondary font-medium">
@@ -1465,7 +1550,7 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
                       <button
                         type="button"
                         onClick={() => setIsEditingBio(false)}
-                        className="px-3 py-1.5 rounded-xl border border-outline bg-white text-secondary text-xs font-semibold hover:bg-surface-variant transition-colors"
+                        className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-[#2f2f3f] bg-white dark:bg-[#1c1c26] text-secondary text-xs font-semibold hover:bg-slate-50 dark:hover:bg-[#252533] transition-colors"
                       >
                         Cancel
                       </button>
@@ -1482,23 +1567,25 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
                   </div>
                 </div>
               ) : (
-                <p className="text-xs text-on-surface leading-relaxed italic bg-white/60 p-3 rounded-xl border border-pastel-lavender-border">
+                <p className="text-xs text-on-surface leading-relaxed italic bg-slate-50/80 dark:bg-[#1c1c26] p-3 rounded-xl border border-slate-200/60 dark:border-[#2a2a38]">
                   "{user.bio || rel?.deenRelationshipBio || "Seeking a righteous spouse to complete half our deen in harmony and mutual respect."}"
                 </p>
               )}
             </div>
+            )}
 
             {/* 6. My Partner Requirements & Expectations */}
-            <div className="bg-pastel-amber/60 rounded-2xl p-3.5 border border-pastel-amber-border space-y-2.5 shadow-subtle">
+            {(activeProfileSection === 'all' || activeProfileSection === 'partner') && (
+            <div className="bg-white dark:bg-[#16161c] rounded-2xl p-3.5 border border-slate-200/80 dark:border-[#272733] space-y-2.5 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold text-pastel-amber-text uppercase tracking-wider flex items-center gap-1.5">
-                  <Heart className="w-3.5 h-3.5 text-pastel-amber-text fill-pastel-amber-text/30" />
+                <h3 className="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-1.5">
+                  <Heart className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 fill-amber-500/20" />
                   <span>My Partner Requirements & Expectations</span>
                 </h3>
                 <button
                   type="button"
                   onClick={handleOpenEditCriteria}
-                  className="text-[10px] font-bold text-primary bg-white px-2.5 py-1 rounded-full border border-pastel-amber-border hover:bg-rose-50 shadow-2xs flex items-center gap-1 cursor-pointer transition-colors"
+                  className="text-[10px] font-bold text-primary bg-slate-50 dark:bg-[#1c1c26] px-2.5 py-1 rounded-full border border-slate-200/80 dark:border-[#2a2a38] hover:border-primary/40 shadow-2xs flex items-center gap-1 cursor-pointer transition-colors"
                 >
                   <span>Edit Criteria</span>
                   <Sliders className="w-3 h-3 text-primary" />
@@ -1506,11 +1593,11 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
               </div>
               
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="bg-white p-2.5 rounded-xl border border-pastel-amber-border shadow-2xs">
+                <div className="bg-slate-50/80 dark:bg-[#1c1c26] p-2.5 rounded-xl border border-slate-200/60 dark:border-[#2a2a38]">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-pastel-amber-text font-medium block">Preferred Age</span>
+                    <span className="text-[10px] text-secondary font-medium block">Preferred Age</span>
                     {user.partnerRequirements?.strictAgeDealbreaker && (
-                      <span className="text-[9px] bg-rose-50 text-rose-700 font-bold px-1.5 py-0.5 rounded-md border border-rose-200">
+                      <span className="text-[9px] bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 font-bold px-1.5 py-0.5 rounded-md border border-rose-200/70 dark:border-rose-900/40">
                         Strict 🔒
                       </span>
                     )}
@@ -1522,36 +1609,36 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
                   </strong>
                 </div>
 
-                <div className="bg-white p-2.5 rounded-xl border border-pastel-amber-border shadow-2xs">
-                  <span className="text-[10px] text-pastel-amber-text font-medium block">Marital Status</span>
+                <div className="bg-slate-50/80 dark:bg-[#1c1c26] p-2.5 rounded-xl border border-slate-200/60 dark:border-[#2a2a38]">
+                  <span className="text-[10px] text-secondary font-medium block">Marital Status</span>
                   <strong className="text-on-surface text-[11px] block truncate capitalize">
                     {user.partnerRequirements?.maritalStatus ? user.partnerRequirements.maritalStatus.replace(/_/g, ' ') : 'Open to All'}
                   </strong>
                 </div>
 
-                <div className="bg-white p-2.5 rounded-xl border border-pastel-amber-border shadow-2xs">
-                  <span className="text-[10px] text-pastel-amber-text font-medium block">Deen & Practice</span>
+                <div className="bg-slate-50/80 dark:bg-[#1c1c26] p-2.5 rounded-xl border border-slate-200/60 dark:border-[#2a2a38]">
+                  <span className="text-[10px] text-secondary font-medium block">Deen & Practice</span>
                   <strong className="text-on-surface text-[11px] block truncate capitalize">
                     {user.partnerRequirements?.practiceLevel ? user.partnerRequirements.practiceLevel.replace(/_/g, ' ') : 'Practicing'}
                   </strong>
                 </div>
 
-                <div className="bg-white p-2.5 rounded-xl border border-pastel-amber-border shadow-2xs">
-                  <span className="text-[10px] text-pastel-amber-text font-medium block">Relocation</span>
+                <div className="bg-slate-50/80 dark:bg-[#1c1c26] p-2.5 rounded-xl border border-slate-200/60 dark:border-[#2a2a38]">
+                  <span className="text-[10px] text-secondary font-medium block">Relocation</span>
                   <strong className="text-on-surface text-[11px] block truncate capitalize">
                     {user.partnerRequirements?.relocation ? user.partnerRequirements.relocation.replace(/_/g, ' ') : 'Flexible / Open'}
                   </strong>
                 </div>
 
-                <div className="bg-white p-2.5 rounded-xl border border-pastel-amber-border shadow-2xs">
-                  <span className="text-[10px] text-pastel-amber-text font-medium block">Preferred Education</span>
+                <div className="bg-slate-50/80 dark:bg-[#1c1c26] p-2.5 rounded-xl border border-slate-200/60 dark:border-[#2a2a38]">
+                  <span className="text-[10px] text-secondary font-medium block">Preferred Education</span>
                   <strong className="text-on-surface text-[11px] block truncate capitalize">
                     {user.partnerRequirements?.education ? user.partnerRequirements.education.replace(/_/g, ' ') : 'Open to Any'}
                   </strong>
                 </div>
 
-                <div className="bg-white p-2.5 rounded-xl border border-pastel-amber-border shadow-2xs">
-                  <span className="text-[10px] text-pastel-amber-text font-medium block">Preferred Ethnicity</span>
+                <div className="bg-slate-50/80 dark:bg-[#1c1c26] p-2.5 rounded-xl border border-slate-200/60 dark:border-[#2a2a38]">
+                  <span className="text-[10px] text-secondary font-medium block">Preferred Ethnicity</span>
                   <strong className="text-on-surface text-[11px] block truncate capitalize">
                     {user.partnerRequirements?.ethnicities && user.partnerRequirements.ethnicities.length > 0
                       ? user.partnerRequirements.ethnicities.join(', ')
@@ -1563,7 +1650,7 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
               {/* Active Dealbreakers Display */}
               {user.partnerRequirements?.dealbreakers && user.partnerRequirements.dealbreakers.length > 0 && (
                 <div className="pt-0.5">
-                  <span className="text-[10px] text-pastel-amber-text font-bold uppercase tracking-wider block mb-1">
+                  <span className="text-[10px] text-secondary font-bold uppercase tracking-wider block mb-1">
                     Active Non-Negotiables:
                   </span>
                   <div className="flex flex-wrap gap-1.5">
@@ -1576,7 +1663,7 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
                       };
                       const item = labels[db] || { label: db.replace(/_/g, ' '), emoji: '🔒' };
                       return (
-                        <span key={idx} className="bg-white text-rose-700 px-2 py-0.5 rounded-xl text-[10px] font-bold border border-rose-200 shadow-2xs flex items-center gap-1.5">
+                        <span key={idx} className="bg-rose-50/80 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 px-2 py-0.5 rounded-xl text-[10px] font-bold border border-rose-200/80 dark:border-rose-900/40 shadow-2xs flex items-center gap-1.5">
                           <span>{item.emoji}</span>
                           <span>{item.label}</span>
                         </span>
@@ -1587,21 +1674,22 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
               )}
 
               {/* Expectations Note */}
-              <div className="bg-white/80 p-2.5 rounded-xl border border-pastel-amber-border text-xs leading-relaxed text-on-surface">
-                <span className="text-[10px] text-pastel-amber-text font-bold uppercase tracking-wider block mb-0.5">What I am looking for:</span>
+              <div className="bg-slate-50/80 dark:bg-[#1c1c26] p-2.5 rounded-xl border border-slate-200/60 dark:border-[#2a2a38] text-xs leading-relaxed text-on-surface">
+                <span className="text-[10px] text-secondary font-bold uppercase tracking-wider block mb-0.5">What I am looking for:</span>
                 <p className="italic text-[11px] text-on-surface">
                   "{user.partnerRequirements?.description || 'Seeking a practicing, kind-hearted spouse with good Islamic manners.'}"
                 </p>
               </div>
             </div>
+            )}
 
           </div>
         </div>
 
         {/* 20-Questions Values Alignment Card */}
-        <div className="bg-white p-4 rounded-3xl border border-outline flex flex-col gap-3 shadow-card">
+        <div className="bg-white dark:bg-[#16161c] p-4 rounded-3xl border border-slate-200/80 dark:border-[#272733] flex flex-col gap-3 shadow-[0_2px_12px_rgba(0,0,0,0.03)]">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-2xl bg-pastel-rose text-primary flex items-center justify-center">
+            <div className="w-9 h-9 rounded-2xl bg-rose-50 dark:bg-rose-950/40 text-primary flex items-center justify-center border border-rose-200/60 dark:border-rose-900/40">
               <HelpCircle className="w-5 h-5 text-primary" />
             </div>
             <div>
@@ -1621,7 +1709,7 @@ export const MyProfileScreen: React.FC<Props> = ({ user: propUser, onEditProfile
         {/* Action Button */}
         <button
           onClick={handleOpenEditProfile}
-          className="w-full py-3 rounded-full bg-white border border-primary text-primary font-sans text-xs font-bold hover:bg-pastel-rose active:scale-98 transition-all flex items-center justify-center gap-1.5 shadow-subtle"
+          className="w-full py-3 rounded-full bg-white dark:bg-[#16161c] border border-primary/80 text-primary font-sans text-xs font-bold hover:bg-rose-50/70 dark:hover:bg-rose-950/30 active:scale-98 transition-all flex items-center justify-center gap-1.5 shadow-[0_2px_10px_rgba(0,0,0,0.02)]"
         >
           <Edit3 className="w-3.5 h-3.5" />
           <span>Edit Profile Details</span>

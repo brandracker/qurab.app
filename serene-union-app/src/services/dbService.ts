@@ -2065,6 +2065,10 @@ class DBService {
       if (data.success && Array.isArray(data.conversations)) {
         const localConvs = this.getConversations();
         const convMap = new Map<string, Conversation>();
+        const cachedVipMap = new Map<string, boolean>();
+        this.getAllProfiles().forEach((p: any) => {
+          if (p?.id && (p.isVip || p.is_vip)) cachedVipMap.set(p.id, true);
+        });
 
         // Preload local conversations so messages and local drafts are preserved, excluding blocked users and corrupted ghost accounts
         localConvs.forEach(c => {
@@ -2098,8 +2102,10 @@ class DBService {
               ? rawPhotos.filter((p: string) => typeof p === 'string' && !p.includes('photo-1534528741775-53994a69daeb'))
               : [];
 
+            const rawOther = (rc.otherUser || existing?.otherUser || {}) as any;
             const otherUserMerged = {
-              ...(rc.otherUser || existing?.otherUser),
+              ...rawOther,
+              isVip: Boolean(rawOther.isVip ?? rawOther.is_vip ?? existing?.otherUser?.isVip ?? cachedVipMap.get(rawOther.id)),
               photos: sanitizedPhotos,
               isPhotoRevealed,
               hasRevealedToPartner

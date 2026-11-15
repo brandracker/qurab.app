@@ -83,10 +83,15 @@ class AdMobService {
   }
 
   /**
-   * Show native Google AdMob Fullscreen Rewarded Video Ad
+   * Show native Google AdMob Fullscreen Rewarded Video Ad with detailed status
    */
-  public async showRewardedAd(userId: string, rewardType: 'likes' | 'salam' | 'messages' | 'photo_unblur' | 'undo' = 'likes'): Promise<boolean> {
-    if (!Capacitor.isNativePlatform()) return false;
+  public async showRewardedAdWithStatus(
+    userId: string,
+    rewardType: 'likes' | 'salam' | 'messages' | 'photo_unblur' | 'undo' = 'likes'
+  ): Promise<{ rewarded: boolean; failedToLoad: boolean; errorCode?: string; errorMessage?: string }> {
+    if (!Capacitor.isNativePlatform()) {
+      return { rewarded: false, failedToLoad: true, errorMessage: 'Not native platform' };
+    }
 
     try {
       const res = await AdMobNative.showRewardedAd({ userId, rewardType });
@@ -95,13 +100,23 @@ class AdMobService {
         this.claimReward(userId, rewardType).catch(err => {
           console.warn('Background reward claim notice:', err);
         });
-        return true;
+        return { rewarded: true, failedToLoad: false };
       }
-      return false;
-    } catch (err) {
-      console.warn('AdMob playback notice:', err);
-      return false;
+      return { rewarded: false, failedToLoad: false };
+    } catch (err: any) {
+      const errorCode = err?.code ? String(err.code) : undefined;
+      const errorMessage = err?.message ? String(err.message) : 'AdMob failed to load';
+      console.warn(`AdMob playback notice [code=${errorCode || 'unknown'}]:`, errorMessage);
+      return { rewarded: false, failedToLoad: true, errorCode, errorMessage };
     }
+  }
+
+  /**
+   * Show native Google AdMob Fullscreen Rewarded Video Ad
+   */
+  public async showRewardedAd(userId: string, rewardType: 'likes' | 'salam' | 'messages' | 'photo_unblur' | 'undo' = 'likes'): Promise<boolean> {
+    const result = await this.showRewardedAdWithStatus(userId, rewardType);
+    return result.rewarded;
   }
 
   /**

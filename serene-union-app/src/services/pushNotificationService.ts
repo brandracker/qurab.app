@@ -70,7 +70,7 @@ class PushNotificationService {
         vibration: true,
         lights: true,
         lightColor: '#10B981'
-      }).catch(() => {});
+      }).catch(() => { });
 
       // 2. Request Notification Permissions (Android 13+ POST_NOTIFICATIONS)
       let permStatus = await PushNotifications.checkPermissions();
@@ -78,7 +78,7 @@ class PushNotificationService {
         permStatus = await PushNotifications.requestPermissions();
       }
 
-      await LocalNotifications.requestPermissions().catch(() => {});
+      await LocalNotifications.requestPermissions().catch(() => { });
 
       if (permStatus.receive === 'granted') {
         // 3. Register with Google FCM
@@ -89,7 +89,7 @@ class PushNotificationService {
       PushNotifications.addListener('registration', async (token) => {
         console.log('[Push] Native FCM registration token received:', token.value.slice(0, 15) + '...');
         localStorage.setItem('qurb_fcm_token', token.value);
-        
+
         const currentUser = dbService.getCurrentUser();
         if (currentUser?.id && currentUser.id !== 'usr_guest') {
           await this.syncTokenWithBackend(currentUser.id, token.value);
@@ -104,7 +104,7 @@ class PushNotificationService {
       PushNotifications.addListener('pushNotificationReceived', (notification) => {
         console.log('[Push] Notification received (isForeground:', this.isForeground, '):', notification);
         const data = notification.data || {};
-        
+
         // WhatsApp-Style Incoming Call Push
         if (data.type === 'incoming_call') {
           window.dispatchEvent(
@@ -122,7 +122,7 @@ class PushNotificationService {
                 sound: 'default'
               }
             ]
-          }).catch(() => {});
+          }).catch(() => { });
           return;
         }
 
@@ -155,7 +155,7 @@ class PushNotificationService {
                 const parsed = JSON.parse(saved);
                 if (parsed?.id) return String(parsed.id);
               }
-            } catch {}
+            } catch { }
             return localStorage.getItem('qurb_user_id') || '';
           })();
           if (rawUserId && (data.campaignId || data.notificationId || data.type === 'daily_engagement')) {
@@ -170,7 +170,7 @@ class PushNotificationService {
               })
             }).catch(e => console.warn('[Push] Click tracking notice:', e));
           }
-        } catch {}
+        } catch { }
 
         if (data.type === 'incoming_call') {
           window.dispatchEvent(
@@ -204,7 +204,7 @@ class PushNotificationService {
                 const parsed = JSON.parse(saved);
                 if (parsed?.id) return String(parsed.id);
               }
-            } catch {}
+            } catch { }
             return localStorage.getItem('qurb_user_id') || '';
           })();
           if (rawUserId && (extra.campaignId || extra.notificationId || extra.type === 'daily_engagement')) {
@@ -219,7 +219,7 @@ class PushNotificationService {
               })
             }).catch(e => console.warn('[Push] Click tracking notice:', e));
           }
-        } catch {}
+        } catch { }
         if (extra.type === 'incoming_call') {
           window.dispatchEvent(
             new CustomEvent('qurb_incoming_call_push', { detail: extra })

@@ -342,7 +342,7 @@ async function ensureInAppPurchasesTable(db: any) {
     await db.prepare(`
       CREATE INDEX IF NOT EXISTS idx_iap_user_id ON in_app_purchases(user_id)
     `).run();
-  } catch {}
+  } catch { }
 }
 
 // 2. Process Google Play In-App Purchase
@@ -388,7 +388,7 @@ walletRouter.post('/purchase-google-play', async (c) => {
         await c.env.DB.prepare(
           'UPDATE in_app_purchases SET purchase_token = ? WHERE id = ? AND user_id = ? AND purchase_token IS NULL'
         ).bind(cleanToken, existingPurchase.id, userId).run();
-      } catch {}
+      } catch { }
     }
 
     const isSubscription = (productId === 'qurb_barakah_monthly' || productId === 'serene_barakah_monthly');
@@ -801,7 +801,7 @@ walletRouter.post('/google-play/webhook', async (c) => {
       try {
         const decodedStr = Buffer.from(body.message.data, 'base64').toString('utf8');
         notificationData = JSON.parse(decodedStr);
-      } catch {}
+      } catch { }
     } else if (body?.subscriptionNotification) {
       notificationData = body;
     }

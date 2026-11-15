@@ -374,44 +374,71 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
             {/* 1. You Liked */}
             <button
               onClick={() => setActiveTab('sent')}
-              className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all border ${
+              className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border cursor-pointer ${
                 activeTab === 'sent'
                   ? 'bg-gradient-to-r from-primary to-primary-dark text-white border-transparent shadow-brand'
                   : 'bg-white dark:bg-[#16161c] text-slate-600 dark:text-slate-300 border-slate-200/80 dark:border-[#272733] hover:bg-slate-50 dark:hover:bg-[#1f1f28] shadow-2xs'
               }`}
             >
               <span>You Liked</span>
+              {sentLikes.length > 0 && (
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                  activeTab === 'sent'
+                    ? 'bg-white/25 text-white'
+                    : 'bg-rose-50 dark:bg-rose-950/50 text-primary dark:text-rose-300'
+                }`}>
+                  {sentLikes.length}
+                </span>
+              )}
             </button>
 
             {/* 2. Mutual */}
             <button
               onClick={() => setActiveTab('mutual')}
-              className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all border ${
+              className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border cursor-pointer ${
                 activeTab === 'mutual'
                   ? 'bg-gradient-to-r from-primary to-primary-dark text-white border-transparent shadow-brand'
                   : 'bg-white dark:bg-[#16161c] text-slate-600 dark:text-slate-300 border-slate-200/80 dark:border-[#272733] hover:bg-slate-50 dark:hover:bg-[#1f1f28] shadow-2xs'
               }`}
             >
               <span>Mutual</span>
+              {mutualMatches.length > 0 && (
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                  activeTab === 'mutual'
+                    ? 'bg-white/25 text-white'
+                    : 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300'
+                }`}>
+                  {mutualMatches.length}
+                </span>
+              )}
             </button>
 
             {/* 3. Liked You */}
             <button
               onClick={() => setActiveTab('received')}
-              className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all border ${
+              className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border cursor-pointer ${
                 activeTab === 'received'
                   ? 'bg-gradient-to-r from-primary to-primary-dark text-white border-transparent shadow-brand'
                   : 'bg-white dark:bg-[#16161c] text-slate-600 dark:text-slate-300 border-slate-200/80 dark:border-[#272733] hover:bg-slate-50 dark:hover:bg-[#1f1f28] shadow-2xs'
               }`}
             >
               <span>Liked You</span>
+              {interestedProfiles.length > 0 && (
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                  activeTab === 'received'
+                    ? 'bg-white/25 text-white'
+                    : 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300'
+                }`}>
+                  {interestedProfiles.length}
+                </span>
+              )}
             </button>
           </>
         ) : (
           <>
             <button
               onClick={() => setActiveTab('passed')}
-              className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all border ${
+              className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border cursor-pointer ${
                 activeTab === 'passed'
                   ? 'bg-gradient-to-r from-primary to-primary-dark text-white border-transparent shadow-brand'
                   : 'bg-white dark:bg-[#16161c] text-slate-600 dark:text-slate-300 border-slate-200/80 dark:border-[#272733] hover:bg-slate-50 dark:hover:bg-[#1f1f28] shadow-2xs'
@@ -419,11 +446,21 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
             >
               <Undo2 className="w-3.5 h-3.5" />
               <span>Passed History</span>
+              {passedProfiles.length > 0 && (
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                  activeTab === 'passed'
+                    ? 'bg-white/25 text-white'
+                    : 'bg-slate-100 dark:bg-[#232330] text-slate-600 dark:text-slate-300'
+                }`}>
+                  {passedProfiles.length}
+                </span>
+              )}
             </button>
 
             <button
               onClick={() => setActiveTab('blocked')}
-              className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all border ${
+              aria-label="Blocked"
+              className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all border cursor-pointer ${
                 activeTab === 'blocked'
                   ? 'bg-gradient-to-r from-primary to-primary-dark text-white border-transparent shadow-brand'
                   : 'bg-white dark:bg-[#16161c] text-slate-600 dark:text-slate-300 border-slate-200/80 dark:border-[#272733] hover:bg-slate-50 dark:hover:bg-[#1f1f28] shadow-2xs'
@@ -508,7 +545,9 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
                 return (
                   <div
                     key={candidate.id}
-                    className="bg-white dark:bg-[#16161c] rounded-2xl border border-slate-200/80 dark:border-[#272733] overflow-hidden flex flex-col shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] hover:border-primary/40 dark:hover:border-primary/50 transition-all duration-200 relative group"
+                    className={`bg-white dark:bg-[#16161c] rounded-2xl border border-slate-200/80 dark:border-[#272733] overflow-hidden flex flex-col shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] hover:border-primary/40 dark:hover:border-primary/50 transition-all duration-200 relative group ${
+                      !isVip ? 'ring-1 ring-amber-400/30 border-amber-300/60 dark:border-amber-500/30' : ''
+                    }`}
                   >
                     <div 
                       onClick={() => {
@@ -582,6 +621,9 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
                             <span className="text-[11px] font-bold text-white tracking-tight drop-shadow-md">
                               Liked You!
                             </span>
+                            <span className="text-[9px] font-medium text-amber-200/95 drop-shadow mt-0.5">
+                              Liked your profile · Tap to unlock
+                            </span>
                           </div>
 
                           {/* Bottom CTA Pill */}
@@ -615,6 +657,11 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
                       >
                         <h3 className="font-serif font-bold text-xs text-slate-800 dark:text-white truncate hover:text-primary transition-colors flex items-center gap-1">
                           <span className="truncate">{formatDisplayName(candidate.fullName || 'Member')}</span>
+                          {(candidate.isVip || (candidate as any).is_vip) && (
+                            <span title="Barakah VIP Member" className="inline-flex items-center shrink-0">
+                              <Crown className="w-3.5 h-3.5 text-amber-500 fill-amber-400/25" />
+                            </span>
+                          )}
                           {!isVip && (
                             <span className="shrink-0 text-[9px] text-amber-800 dark:text-amber-200 bg-amber-100/90 dark:bg-amber-950/40 font-bold px-1.5 py-0.2 rounded border border-amber-200/60 dark:border-amber-500/40">
                               Liked You
@@ -862,8 +909,13 @@ export const MatchesLikedYouScreen: React.FC<Props> = ({
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 min-w-0">
-                          <h4 className="font-serif font-bold text-sm text-slate-800 dark:text-white group-hover:text-primary transition-colors truncate">
-                            {formatDisplayName(match.fullName)}
+                          <h4 className="font-serif font-bold text-sm text-slate-800 dark:text-white group-hover:text-primary transition-colors truncate flex items-center gap-1">
+                            <span className="truncate">{formatDisplayName(match.fullName)}</span>
+                            {(match.isVip || (match as any).is_vip) && (
+                              <span title="Barakah VIP Member" className="inline-flex items-center shrink-0">
+                                <Crown className="w-3.5 h-3.5 text-amber-500 fill-amber-400/25" />
+                              </span>
+                            )}
                           </h4>
                           {isUserOnline(match) ? (
                             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-100 dark:ring-emerald-950 shrink-0 shadow-2xs" title="Online" />

@@ -96,12 +96,20 @@ export const AdminPortal: React.FC = () => {
     setTimeout(() => setToastMsg(''), 4000);
   };
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     sessionStorage.removeItem('qurb_admin_token');
     sessionStorage.removeItem('qurb_admin_profile');
     setAdminToken(null);
     setAdminProfile(null);
-  };
+  }, []);
+
+  const handleAuthResponse = useCallback((res: Response): boolean => {
+    if (res.status === 401 || res.status === 403) {
+      handleLogout();
+      return false;
+    }
+    return true;
+  }, [handleLogout]);
 
   // 1. Fetch Dashboard Stats
   const fetchStats = useCallback(async () => {
@@ -113,6 +121,7 @@ export const AdminPortal: React.FC = () => {
         },
         cache: 'no-store'
       });
+      if (!handleAuthResponse(res)) return;
       const data = await res.json();
       if (data.success && data.stats) {
         setStats(data.stats);
@@ -120,7 +129,7 @@ export const AdminPortal: React.FC = () => {
     } catch (err) {
       console.error('Failed to fetch stats:', err);
     }
-  }, [adminToken]);
+  }, [adminToken, handleAuthResponse]);
 
   // 2. Fetch Available Cities
   const fetchCities = useCallback(async () => {
@@ -129,6 +138,7 @@ export const AdminPortal: React.FC = () => {
       const res = await fetch(`${API_BASE}/admin/cities`, {
         headers: { 'Authorization': `Bearer ${adminToken}` }
       });
+      if (!handleAuthResponse(res)) return;
       const data = await res.json();
       if (data.success && data.cities) {
         setAvailableCities(data.cities);
@@ -136,7 +146,7 @@ export const AdminPortal: React.FC = () => {
     } catch (err) {
       console.error('Failed to fetch cities:', err);
     }
-  }, [adminToken]);
+  }, [adminToken, handleAuthResponse]);
 
   // 3. Fetch Paginated Users
   const fetchUsers = useCallback(async () => {
@@ -156,6 +166,7 @@ export const AdminPortal: React.FC = () => {
       const res = await fetch(`${API_BASE}/admin/users?${params.toString()}`, {
         headers: { 'Authorization': `Bearer ${adminToken}` }
       });
+      if (!handleAuthResponse(res)) return;
       const data = await res.json();
       if (data.success && data.users) {
         setUsers(data.users);
@@ -167,7 +178,7 @@ export const AdminPortal: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [adminToken, currentPage, pageSize, userSearch, genderFilter, cityFilter, statusFilter, membershipFilter, sortOrder]);
+  }, [adminToken, handleAuthResponse, currentPage, pageSize, userSearch, genderFilter, cityFilter, statusFilter, membershipFilter, sortOrder]);
 
   // 4. Fetch Photos for Moderation
   const fetchPhotos = useCallback(async () => {
@@ -180,6 +191,7 @@ export const AdminPortal: React.FC = () => {
       const res = await fetch(`${API_BASE}/admin/photos/moderation?${params.toString()}`, {
         headers: { 'Authorization': `Bearer ${adminToken}` }
       });
+      if (!handleAuthResponse(res)) return;
       const data = await res.json();
       if (data.success && data.photos) {
         setPhotos(data.photos);
@@ -189,7 +201,7 @@ export const AdminPortal: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [adminToken, photoGenderFilter]);
+  }, [adminToken, handleAuthResponse, photoGenderFilter]);
 
   useEffect(() => {
     if (!adminToken) return;

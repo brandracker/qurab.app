@@ -8,8 +8,7 @@ import {
   Clock, 
   Calendar, 
   ShoppingBag, 
-  RotateCcw,
-  Sparkles
+  RotateCcw
 } from 'lucide-react';
 import type { CandidateUser, InAppPurchaseRecord } from '../types';
 import { API_BASE } from '../../../services/dbService';
@@ -468,7 +467,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
             disabled={isSubmitting}
             className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black text-xs font-bold shadow-lg shadow-amber-500/20 cursor-pointer disabled:opacity-50 transition-all flex items-center space-x-1.5"
           >
-            <Sparkles className="w-4 h-4" />
+            <CheckCircle2 className="w-4 h-4" />
             <span>{isSubmitting ? 'Saving Changes...' : 'Save & Sync Subscription'}</span>
           </button>
         </div>

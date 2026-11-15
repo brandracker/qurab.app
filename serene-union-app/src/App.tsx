@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Compass, Heart, MessageCircle, User, Settings, CheckCircle2, X } from 'lucide-react';
+import { Compass, Heart, MessageCircle, User, Settings, CheckCircle2, X, Sun, Moon } from 'lucide-react';
 import type { UserProfile } from './types';
 
 import { WelcomeScreen } from './screens/WelcomeScreen';
@@ -177,12 +177,40 @@ const MainUserApp: React.FC = () => {
   const [showVipUpgradeModal, setShowVipUpgradeModal] = useState<boolean>(false);
   const [hardUpdateData, setHardUpdateData] = useState<VersionPolicy | null>(null);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => themeService.isDark());
+  const [viewportPreset, setViewportPreset] = useState<'compact' | 'muzz' | 'wide'>(() => {
+    try {
+      const saved = localStorage.getItem('qurb_viewport_preset');
+      if (saved === 'compact' || saved === 'muzz' || saved === 'wide') return saved;
+    } catch {}
+    return 'muzz';
+  });
 
   useEffect(() => {
     return themeService.subscribe((theme) => {
       setIsDarkMode(theme === 'dark');
     });
   }, []);
+
+  // Scale root rem unit proportionally for Muzz-style spacious web preview
+  useEffect(() => {
+    if (isNative || typeof document === 'undefined') return;
+    if (showLanding) {
+      document.documentElement.style.fontSize = '16px';
+      return;
+    }
+    const fontMap: Record<'compact' | 'muzz' | 'wide', string> = {
+      compact: '16px',
+      muzz: '17.25px',
+      wide: '18px'
+    };
+    document.documentElement.style.fontSize = fontMap[viewportPreset];
+    try {
+      localStorage.setItem('qurb_viewport_preset', viewportPreset);
+    } catch {}
+    return () => {
+      document.documentElement.style.fontSize = '';
+    };
+  }, [viewportPreset, isNative, showLanding]);
 
   // Remote Version Check & Hard Force-Update Gate
   useEffect(() => {
@@ -1060,21 +1088,74 @@ const MainUserApp: React.FC = () => {
   }
 
   return (
-    <div className="w-full min-h-screen bg-[#121212] flex items-center justify-center font-sans antialiased text-on-surface">
+    <div className="w-full min-h-screen bg-[#0b0d0e] flex items-center justify-center font-sans antialiased text-on-surface relative overflow-hidden">
+      {/* Subtle Desktop Ambient Radial Glows */}
+      <div className="hidden sm:block pointer-events-none absolute -top-28 -left-28 w-[420px] h-[420px] rounded-full bg-emerald-600/15 blur-[120px]" />
+      <div className="hidden sm:block pointer-events-none absolute -bottom-28 -right-28 w-[420px] h-[420px] rounded-full bg-rose-600/15 blur-[120px]" />
+
+      {/* Desktop Local Preview Floating Badge, Size Switcher & Quick Theme Toggle */}
+      <div className="hidden lg:flex fixed top-5 left-5 z-40 flex-col gap-2">
+        <div className="flex items-center gap-2.5 px-3.5 py-2 rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 text-white/85 shadow-xl">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-[11px] font-semibold tracking-wide">Qurb Web Preview · Local Mode</span>
+          <button
+            type="button"
+            onClick={() => themeService.toggleTheme()}
+            aria-label="Toggle Preview Theme"
+            title={isDarkMode ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+            className="ml-1 p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+          >
+            {isDarkMode ? <Moon className="w-3.5 h-3.5 text-amber-300" /> : <Sun className="w-3.5 h-3.5 text-amber-300" />}
+          </button>
+        </div>
+
+        <div className="flex items-center gap-1 p-1 rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 shadow-xl w-fit">
+          {[
+            { id: 'compact', label: '440px' },
+            { id: 'muzz', label: '500px' },
+            { id: 'wide', label: '580px' }
+          ].map(({ id, label }) => {
+            const active = viewportPreset === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setViewportPreset(id as 'compact' | 'muzz' | 'wide')}
+                className={`px-2.5 py-1 rounded-xl text-[10px] font-bold transition-all cursor-pointer ${
+                  active
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'text-white/65 hover:text-white hover:bg-white/10'
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Centered Mobile Screen Container */}
-      <div className={`w-full max-w-[440px] h-[100dvh] sm:h-[90vh] sm:max-h-[900px] ${['basic_info', 'practice', 'family_lifestyle', 'career_intent', 'photos_modesty'].includes(currentStep) ? 'bg-[#FF2560]' : activeTab === 'discover' && currentStep === 'main_app' ? 'bg-black' : isDarkMode ? 'bg-[#161619]' : 'bg-white'} sm:rounded-[36px] overflow-hidden shadow-2xl flex flex-col relative border border-[#262626]`}>
+      <div className={`relative z-10 w-full h-[100dvh] transition-[max-width,height] duration-300 ${
+        viewportPreset === 'wide'
+          ? 'max-w-[580px] sm:h-[95vh] sm:max-h-[1040px]'
+          : viewportPreset === 'muzz'
+            ? 'max-w-[500px] sm:h-[94vh] sm:max-h-[980px]'
+            : 'max-w-[440px] sm:h-[90vh] sm:max-h-[900px]'
+      } ${['basic_info', 'practice', 'family_lifestyle', 'career_intent', 'photos_modesty'].includes(currentStep) ? 'bg-[#FF2560]' : activeTab === 'discover' && currentStep === 'main_app' ? 'bg-black' : isDarkMode ? 'bg-[#161619]' : 'bg-white'} sm:rounded-[36px] overflow-hidden shadow-2xl flex flex-col border border-[#262626]`}>
         
-        {/* Top Simulated Status Bar on Mobile View */}
-        <div className={`hidden sm:flex w-full ${['basic_info', 'practice', 'family_lifestyle', 'career_intent', 'photos_modesty'].includes(currentStep) ? 'bg-[#FF2560] text-white border-white/10' : (activeTab === 'discover' || isDarkMode) && currentStep === 'main_app' ? 'bg-[#111114] text-white/70 border-white/5' : 'bg-white text-[#737373] border-[#F4F4F5]'} px-6 pt-3 pb-1 items-center justify-between z-40 select-none text-[11px] font-medium border-b`}>
-          <span>9:41</span>
-          <div className={`w-20 h-4 ${['basic_info', 'practice', 'family_lifestyle', 'career_intent', 'photos_modesty'].includes(currentStep) ? 'bg-black/20' : 'bg-[#171717]'} rounded-full mx-auto`} />
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px]">5G</span>
-            <div className="w-4 h-2.5 border border-[#737373] rounded-xs p-0.5 flex items-center">
-              <div className="w-full h-full bg-[#737373] rounded-2xs" />
+        {/* Top Simulated Status Bar on Compact Mode */}
+        {viewportPreset === 'compact' && (
+          <div className={`hidden sm:flex w-full ${['basic_info', 'practice', 'family_lifestyle', 'career_intent', 'photos_modesty'].includes(currentStep) ? 'bg-[#FF2560] text-white border-white/10' : (activeTab === 'discover' || isDarkMode) && currentStep === 'main_app' ? 'bg-[#111114] text-white/70 border-white/5' : 'bg-white text-[#737373] border-[#F4F4F5]'} px-6 pt-3 pb-1 items-center justify-between z-40 select-none text-[11px] font-medium border-b`}>
+            <span>9:41</span>
+            <div className={`w-20 h-4 ${['basic_info', 'practice', 'family_lifestyle', 'career_intent', 'photos_modesty'].includes(currentStep) ? 'bg-black/20' : 'bg-[#171717]'} rounded-full mx-auto`} />
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px]">5G</span>
+              <div className="w-4 h-2.5 border border-[#737373] rounded-xs p-0.5 flex items-center">
+                <div className="w-full h-full bg-[#737373] rounded-2xs" />
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Stripe Success Notification Banner */}
         {stripeSuccessNotice && (
@@ -1331,6 +1412,9 @@ const MainUserApp: React.FC = () => {
                         : (isDiscoverMode ? 'text-zinc-400 hover:text-white' : 'text-secondary hover:text-on-surface')
                     }`}
                   >
+                    {isActive && (
+                      <span className="w-5 h-0.5 rounded-full bg-current shadow-sm mb-0.5" />
+                    )}
                     <Icon className={`w-5 h-5 transition-transform ${isActive ? 'stroke-[2.5px] scale-105' : 'stroke-[1.75px]'}`} />
                     {id === 'matches' && hasUnreadNotifs && (
                       <span className={`w-2 h-2 bg-primary rounded-full absolute top-1 right-3 ring-2 ${isDiscoverMode ? 'ring-black' : 'ring-white'}`} />

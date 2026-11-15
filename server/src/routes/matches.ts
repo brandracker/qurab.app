@@ -287,6 +287,7 @@ matchesRouter.get('/hub', async (c) => {
           COALESCE(u.marriage_timeline, 'within_1_year') as marriageTimeline,
           COALESCE(u.bio, 'Seeking half my deen.') as bio,
           COALESCE(u.blur_photos_by_default, 0) as blurPhotosByDefault,
+          COALESCE(u.is_vip, 0) as isVip,
           m.action as matchAction,
           m.created_at as likedAt
         FROM matches_and_likes m
@@ -315,6 +316,7 @@ matchesRouter.get('/hub', async (c) => {
           COALESCE(u.marriage_timeline, 'within_1_year') as marriageTimeline,
           COALESCE(u.bio, 'Connected on Qurb.') as bio,
           COALESCE(u.blur_photos_by_default, 0) as blurPhotosByDefault,
+          COALESCE(u.is_vip, 0) as isVip,
           m.created_at as matchedAt
         FROM matches_and_likes m
         LEFT JOIN users u ON u.id = CASE WHEN m.sender_id = ? THEN m.receiver_id ELSE m.sender_id END
@@ -336,6 +338,7 @@ matchesRouter.get('/hub', async (c) => {
           COALESCE(u.profession, 'Professional') as profession,
           COALESCE(u.marriage_timeline, 'within_1_year') as marriageTimeline,
           COALESCE(u.blur_photos_by_default, 0) as blurPhotosByDefault,
+          COALESCE(u.is_vip, 0) as isVip,
           m.action, m.created_at as actionTime
         FROM matches_and_likes m
         LEFT JOIN users u ON m.receiver_id = u.id
@@ -353,6 +356,7 @@ matchesRouter.get('/hub', async (c) => {
           COALESCE(u.full_name, 'Candidate') as fullName,
           COALESCE(u.location, 'Global') as location,
           COALESCE(u.profession, 'Professional') as profession,
+          COALESCE(u.is_vip, 0) as isVip,
           m.created_at as actionTime
         FROM matches_and_likes m
         LEFT JOIN users u ON m.receiver_id = u.id
@@ -418,6 +422,7 @@ matchesRouter.get('/hub', async (c) => {
       }
       return {
         ...row,
+        isVip: Boolean(row.isVip),
         age: age || 26,
         photos
       };
@@ -429,10 +434,12 @@ matchesRouter.get('/hub', async (c) => {
       mutual: (mutualRes.results || []).map(mapCandidate),
       sentLikes: (sentLikesRes.results || []).map((row: any) => ({
         ...row,
+        isVip: Boolean(row.isVip),
         photos: resolveSeedPhoto(row.id, photoMap[row.id] || [])
       })),
       passed: (passedRes.results || []).map((row: any) => ({
         ...row,
+        isVip: Boolean(row.isVip),
         photos: resolveSeedPhoto(row.id, photoMap[row.id] || [])
       })),
       blocked: blockedRes.results || []
@@ -476,6 +483,7 @@ matchesRouter.get('/received', async (c) => {
         COALESCE(u.children_desire, 'desires_children') as childrenDesire,
         COALESCE(u.blur_photos_by_default, 0) as blurPhotosByDefault, 
         COALESCE(u.profile_visibility, 'all_users') as profileVisibility,
+        COALESCE(u.is_vip, 0) as isVip,
         rp.practice_level as practiceLevel, rp.sect, rp.madhhab, rp.prayer_frequency as prayerFrequency, 
         rp.halal_diet as halalDiet, rp.quran_recitation as quranRecitation,
         rp.modesty_practice as modestyPractice, rp.hajj_umrah_status as hajjUmrahStatus,
@@ -556,6 +564,7 @@ matchesRouter.get('/received', async (c) => {
         bio: row.bio || row.deenRelationshipBio || 'Seeking half my deen.',
         blurPhotosByDefault: Boolean(row.blurPhotosByDefault),
         profileVisibility: row.profileVisibility || 'all_users',
+        isVip: Boolean(row.isVip),
         photos: userPhotos.length > 0 ? userPhotos : [],
         action: row.matchAction || 'liked',
         religiousProfile: {
@@ -620,6 +629,7 @@ matchesRouter.get('/mutual', async (c) => {
         COALESCE(u.children_desire, 'desires_children') as childrenDesire,
         COALESCE(u.blur_photos_by_default, 0) as blurPhotosByDefault, 
         COALESCE(u.profile_visibility, 'all_users') as profileVisibility,
+        COALESCE(u.is_vip, 0) as isVip,
         rp.practice_level as practiceLevel, rp.sect, rp.madhhab, rp.prayer_frequency as prayerFrequency, 
         rp.halal_diet as halalDiet, rp.quran_recitation as quranRecitation,
         rp.modesty_practice as modestyPractice, rp.hajj_umrah_status as hajjUmrahStatus,
@@ -704,6 +714,7 @@ matchesRouter.get('/mutual', async (c) => {
         bio: row.bio || row.deenRelationshipBio || 'Seeking half my deen.',
         blurPhotosByDefault: Boolean(row.blurPhotosByDefault),
         profileVisibility: row.profileVisibility || 'all_users',
+        isVip: Boolean(row.isVip),
         photos: userPhotos.length > 0 ? userPhotos : [],
         religiousProfile: {
           practiceLevel: row.practiceLevel || 'practicing',
@@ -749,6 +760,7 @@ matchesRouter.get('/activity', async (c) => {
         COALESCE(u.location, 'Global') as location, 
         COALESCE(u.profession, 'Professional') as profession, 
         COALESCE(u.marriage_timeline, 'within_1_year') as marriageTimeline,
+        COALESCE(u.is_vip, 0) as isVip,
         (SELECT photo_url FROM user_photos WHERE user_id = u.id ORDER BY is_primary DESC LIMIT 1) as photoUrl,
         m.action, m.created_at as actionTime
       FROM matches_and_likes m
@@ -788,6 +800,7 @@ matchesRouter.get('/activity', async (c) => {
       location: row.location,
       profession: row.profession,
       marriageTimeline: row.marriageTimeline,
+      isVip: Boolean(row.isVip),
       action: row.action,
       actionTime: row.actionTime,
       photos: resolveActivityPhoto(row.id, row.photoUrl)
@@ -800,6 +813,7 @@ matchesRouter.get('/activity', async (c) => {
         COALESCE(u.full_name, 'Candidate') as fullName,
         COALESCE(u.location, 'Global') as location,
         COALESCE(u.profession, 'Professional') as profession,
+        COALESCE(u.is_vip, 0) as isVip,
         (SELECT photo_url FROM user_photos WHERE user_id = u.id ORDER BY is_primary DESC LIMIT 1) as photoUrl,
         m.created_at as actionTime
       FROM matches_and_likes m
@@ -815,6 +829,7 @@ matchesRouter.get('/activity', async (c) => {
       fullName: row.fullName,
       location: row.location,
       profession: row.profession,
+      isVip: Boolean(row.isVip),
       actionTime: row.actionTime,
       photos: resolveActivityPhoto(row.id, row.photoUrl)
     }));

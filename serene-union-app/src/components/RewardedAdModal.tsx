@@ -17,6 +17,7 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes',
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [isClaiming, setIsClaiming] = useState<boolean>(false);
+  const [useFallback, setUseFallback] = useState<boolean>(false);
 
   // Task 10: 15-second cooldown timer buffer
   const [cooldownRemaining, setCooldownRemaining] = useState<number>(() => {
@@ -73,29 +74,40 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes',
       setTimeLeft(5);
       setIsCompleted(false);
       setIsClaiming(false);
+      setUseFallback(false);
       return;
     }
 
     if (cooldownRemaining > 0) return;
 
-    // If on native Android, display full-screen Google AdMob rewarded video
-    if (admobService.isNativeBridgeAvailable()) {
-      admobService.showRewardedAd(userId, rewardType).then((rewarded) => {
-        if (rewarded) {
+    // If on native Android and not in fallback mode, display full-screen Google AdMob rewarded video
+    if (admobService.isNativeBridgeAvailable() && !useFallback) {
+      let cancelled = false;
+      admobService.showRewardedAdWithStatus(userId, rewardType).then((result) => {
+        if (cancelled) return;
+        if (result.rewarded) {
           try {
             localStorage.setItem('qurb_ad_last_completed', Date.now().toString());
           } catch {}
           onRewardClaimed();
+          onClose();
+        } else if (result.failedToLoad) {
+          // Switch to 5-second Qurb Sponsor fallback on No Fill / load failure
+          setUseFallback(true);
+        } else {
+          onClose();
         }
-        onClose();
       }).catch((err) => {
+        if (cancelled) return;
         console.warn('Native AdMob display notice:', err);
-        onClose();
+        setUseFallback(true);
       });
-      return;
+      return () => {
+        cancelled = true;
+      };
     }
 
-    // Web Fallback: Direct, reliable 5-second countdown for browsers where native AdMob is unavailable
+    // Web & No-Fill Fallback: Direct, reliable 5-second countdown
     const timer = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
@@ -108,7 +120,7 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes',
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isOpen, userId, rewardType, cooldownRemaining, onClose, onRewardClaimed]);
+  }, [isOpen, userId, rewardType, cooldownRemaining, useFallback, onClose, onRewardClaimed]);
 
   if (!isOpen) return null;
 
@@ -133,8 +145,8 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes',
     );
   }
 
-  // On Native Android, show a sleek and clean transition overlay while AdMob Activity transitions
-  if (admobService.isNativeBridgeAvailable()) {
+  // On Native Android (before fallback), show a sleek and clean transition overlay while AdMob Activity transitions
+  if (admobService.isNativeBridgeAvailable() && !useFallback) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 font-sans select-none text-white backdrop-blur-xs">
         <div className="flex flex-col items-center gap-3 bg-white/10 p-6 rounded-3xl border border-white/20 shadow-2xl backdrop-blur-md">

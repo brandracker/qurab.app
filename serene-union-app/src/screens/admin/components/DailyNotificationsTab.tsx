@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { 
   BellRing, 
   Send, 
-  Sparkles, 
   RefreshCw, 
   TrendingUp, 
   Smartphone, 
@@ -11,7 +10,6 @@ import {
   Clock, 
   Search, 
   Crown,
-  Zap,
   Heart,
   UserCheck
 } from 'lucide-react';
@@ -243,7 +241,7 @@ export const DailyNotificationsTab: React.FC<DailyNotificationsTabProps> = ({
           <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Campaigns Sent</div>
           <div className="mt-2 text-2xl font-black text-white">{summary.totalCampaigns}</div>
           <div className="mt-1 text-[11px] text-purple-400 flex items-center space-x-1">
-            <Sparkles className="w-3 h-3" />
+            <Send className="w-3 h-3" />
             <span>Auto & Manual</span>
           </div>
         </div>
@@ -531,7 +529,7 @@ export const DailyNotificationsTab: React.FC<DailyNotificationsTabProps> = ({
             <div className="p-6 border-b border-white/10 flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white">
-                  <Zap className="w-5 h-5 text-amber-300" />
+                  <BellRing className="w-5 h-5 text-amber-300" />
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-white">Manual Trigger Push Campaign</h3>
@@ -565,7 +563,7 @@ export const DailyNotificationsTab: React.FC<DailyNotificationsTabProps> = ({
                     }`}
                   >
                     <div className="text-xs font-bold text-white flex items-center space-x-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                      <TrendingUp className="w-3.5 h-3.5 text-purple-400" />
                       <span>Smart Adaptive Mix (Rec)</span>
                     </div>
                     <div className="text-[11px] text-slate-400 mt-1">
@@ -641,7 +639,7 @@ export const DailyNotificationsTab: React.FC<DailyNotificationsTabProps> = ({
                     }`}
                   >
                     <div className="text-xs font-bold text-white flex items-center space-x-1.5">
-                      <Zap className="w-3.5 h-3.5 text-emerald-400" />
+                      <Send className="w-3.5 h-3.5 text-emerald-400" />
                       <span>Custom Psychological Hook</span>
                     </div>
                     <div className="text-[11px] text-slate-400 mt-1">

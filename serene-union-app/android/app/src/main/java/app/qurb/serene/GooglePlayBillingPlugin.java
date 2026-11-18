@@ -98,7 +98,7 @@ public class GooglePlayBillingPlugin extends Plugin implements PurchasesUpdatedL
         String productId = call.getString("productId");
         String productTypeStr = call.getString("productType", "inapp");
         String userId = call.getString("userId", "");
-        boolean preferTrial = call.getBoolean("preferTrial", true);
+        boolean preferTrial = call.getBoolean("preferTrial", false);
 
         if (productId == null || productId.isEmpty()) {
             call.reject("Product ID is required");
@@ -167,6 +167,23 @@ public class GooglePlayBillingPlugin extends Plugin implements PurchasesUpdatedL
                                 }
                             }
                             if (selectedOfferToken != null) break;
+                        }
+                    } else {
+                        for (ProductDetails.SubscriptionOfferDetails offer : offerDetails) {
+                            boolean hasFreePhase = false;
+                            if (offer.getPricingPhases() != null) {
+                                for (ProductDetails.PricingPhase phase : offer.getPricingPhases().getPricingPhaseList()) {
+                                    if (phase.getPriceAmountMicros() == 0) {
+                                        hasFreePhase = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (!hasFreePhase) {
+                                selectedOfferToken = offer.getOfferToken();
+                                Log.d(TAG, "Selected direct paid base offer token: " + selectedOfferToken);
+                                break;
+                            }
                         }
                     }
                     if (selectedOfferToken == null) {

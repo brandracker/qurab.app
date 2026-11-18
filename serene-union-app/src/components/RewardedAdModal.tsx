@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Volume2, VolumeX, X, PlayCircle, Gift, CheckCircle2, ShieldCheck, HeartHandshake, Clock } from 'lucide-react';
-import { admobService, ADMOB_CONFIG } from '../services/admobService';
+import { metaAdsService, META_ADS_CONFIG } from '../services/metaAdsService';
 import { dbService } from '../services/dbService';
 import { backNavigationService } from '../services/backNavigationService';
 
@@ -80,10 +80,10 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes',
 
     if (cooldownRemaining > 0) return;
 
-    // If on native Android and not in fallback mode, display full-screen Google AdMob rewarded video
-    if (admobService.isNativeBridgeAvailable() && !useFallback) {
+    // If on native Android and not in fallback mode, display full-screen Meta Audience Network rewarded video
+    if (metaAdsService.isNativeBridgeAvailable() && !useFallback) {
       let cancelled = false;
-      admobService.showRewardedAdWithStatus(userId, rewardType).then((result) => {
+      metaAdsService.showRewardedAdWithStatus(userId, rewardType).then((result) => {
         if (cancelled) return;
         if (result.rewarded) {
           try {
@@ -99,7 +99,7 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes',
         }
       }).catch((err) => {
         if (cancelled) return;
-        console.warn('Native AdMob display notice:', err);
+        console.warn('Native Meta Ads display notice:', err);
         setUseFallback(true);
       });
       return () => {
@@ -145,13 +145,13 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes',
     );
   }
 
-  // On Native Android (before fallback), show a sleek and clean transition overlay while AdMob Activity transitions
-  if (admobService.isNativeBridgeAvailable() && !useFallback) {
+  // On Native Android (before fallback), show a sleek and clean transition overlay while Meta Activity transitions
+  if (metaAdsService.isNativeBridgeAvailable() && !useFallback) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 font-sans select-none text-white backdrop-blur-xs">
         <div className="flex flex-col items-center gap-3 bg-white/10 p-6 rounded-3xl border border-white/20 shadow-2xl backdrop-blur-md">
           <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs font-semibold text-white/90">Loading Google AdMob Sponsored Video...</p>
+          <p className="text-xs font-semibold text-white/90">Loading Meta Sponsored Video...</p>
         </div>
       </div>
     );
@@ -162,8 +162,8 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes',
     setIsClaiming(true);
     try {
       localStorage.setItem('qurb_ad_last_completed', Date.now().toString());
-      if (admobService.isNativeBridgeAvailable()) {
-        await admobService.claimReward(userId, rewardType);
+      if (metaAdsService.isNativeBridgeAvailable()) {
+        await metaAdsService.claimReward(userId, rewardType);
       } else {
         await dbService.claimAdReward(userId, rewardType);
       }
@@ -173,9 +173,9 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes',
     onClose();
   };
 
-  const handleLaunchNativeAdMob = async () => {
-    if (admobService.isNativeBridgeAvailable()) {
-      const rewarded = await admobService.showRewardedAd(userId, rewardType);
+  const handleLaunchNativeMetaAds = async () => {
+    if (metaAdsService.isNativeBridgeAvailable()) {
+      const rewarded = await metaAdsService.showRewardedAd(userId, rewardType);
       if (rewarded) {
         onRewardClaimed();
         onClose();
@@ -197,7 +197,7 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes',
         <div className="p-3.5 bg-surface-variant flex items-center justify-between border-b border-outline">
           <div className="flex items-center gap-2">
             <span className="bg-pastel-amber text-pastel-amber-text border border-pastel-amber-border text-[10px] font-bold px-2 py-0.5 rounded-full font-mono uppercase tracking-wide">
-              Google AdMob · Rewarded Sponsor
+              Meta Audience Network · Rewarded Sponsor
             </span>
             <span className="text-xs font-bold text-on-surface">
               {isCompleted ? 'Reward Unlocked!' : `Reward in: ${timeLeft}s`}
@@ -231,7 +231,7 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes',
           <div className="relative z-10 flex flex-col items-center">
             <button
               type="button"
-              onClick={handleLaunchNativeAdMob}
+              onClick={handleLaunchNativeMetaAds}
               className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-primary to-rose-400 text-white flex items-center justify-center mb-3 shadow-brand animate-pulse cursor-pointer hover:scale-105 active:scale-95 transition-transform"
               title="Play Video Ad"
             >
@@ -249,7 +249,7 @@ export const RewardedAdModal: React.FC<Props> = ({ userId, rewardType = 'likes',
 
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-white/90 text-[10px] font-mono border border-white/20 backdrop-blur-none">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-              <span>AdMob Unit: {ADMOB_CONFIG.rewardedAdUnitId.slice(0, 23)}...</span>
+              <span>Placement: {META_ADS_CONFIG.placementId.slice(0, 23)}...</span>
             </div>
           </div>
 

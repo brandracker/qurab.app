@@ -17,6 +17,7 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        registerPlugin(MetaAdsPlugin.class);
         registerPlugin(AdMobPlugin.class);
         registerPlugin(GooglePlayBillingPlugin.class);
         registerPlugin(GoogleAuthPlugin.class);
@@ -24,6 +25,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(AppUpdatePlugin.class);
         super.onCreate(savedInstanceState);
         try {
+            com.facebook.ads.AudienceNetworkAds.initialize(this);
             com.facebook.FacebookSdk.setAutoInitEnabled(true);
             com.facebook.FacebookSdk.setAutoLogAppEventsEnabled(true);
             com.facebook.FacebookSdk.setAdvertiserIDCollectionEnabled(true);

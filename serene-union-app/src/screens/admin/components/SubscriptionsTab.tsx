@@ -101,11 +101,11 @@ const KNOWN_PRODUCTS: Record<string, ProductMeta> = {
     name: 'Qurb Barakah VIP Club',
     badge: 'Monthly Subscription',
     category: 'subscription',
-    priceLabel: '$2.99 / mo',
-    priceUsd: 2.99,
-    pkrEst: 830,
-    description: 'Premier matrimonial tier with 7-day free trial, unlimited likes, rewinds, and secret admirers reveal.',
-    features: ['Unlimited Likes & Rewind', '20 Direct Salams / mo', 'See Who Liked You', '0 In-App Ads', 'City Feed Top Priority']
+    priceLabel: '$4.99 / mo',
+    priceUsd: 4.99,
+    pkrEst: 1499,
+    description: 'Premier matrimonial tier with Free 24h City Spotlight Boost, unlimited likes, rewinds, and secret admirers reveal.',
+    features: ['Free 24h Spotlight Boost', 'Unlimited Likes & Rewind', '20 Direct Salams / mo', 'See Who Liked You', '0 In-App Ads', 'City Feed Top Priority']
   },
   'serene_barakah_monthly': {
     name: 'Serene Barakah VIP Club (Legacy)',
@@ -121,9 +121,9 @@ const KNOWN_PRODUCTS: Record<string, ProductMeta> = {
     name: '20 Direct Salam Passes',
     badge: 'Instant Connect Pack',
     category: 'salams',
-    priceLabel: '$1.99',
-    priceUsd: 1.99,
-    pkrEst: 550,
+    priceLabel: '$2.99',
+    priceUsd: 2.99,
+    pkrEst: 850,
     description: 'Send direct intro messages to candidate profiles immediately without waiting for a mutual match.',
     features: ['20 Direct Introductions', 'Bypasses Mutual Match Gate', 'Permanent until used', 'Direct In-Chat Message']
   },
@@ -161,9 +161,9 @@ const KNOWN_PRODUCTS: Record<string, ProductMeta> = {
     name: '24-Hour City Spotlight Boost',
     badge: '10x City Visibility',
     category: 'spotlight',
-    priceLabel: '$0.99',
-    priceUsd: 0.99,
-    pkrEst: 275,
+    priceLabel: '$1.99',
+    priceUsd: 1.99,
+    pkrEst: 550,
     description: 'Pins profile at the #1 top spot in the user’s local city Discover feed for a full 24 hours.',
     features: ['#1 Pinned in City Feed', '10x Profile Views', 'Glow Ring & Spotlight Badge', 'Lasts 24 Hours']
   },
@@ -187,9 +187,9 @@ const getKnownProductMeta = (productId: string): ProductMeta => {
       name: `${productId.replace(/_/g, ' ')}`,
       badge: 'Direct Salams',
       category: 'salams',
-      priceLabel: '$1.99',
-      priceUsd: 1.99,
-      pkrEst: 550,
+      priceLabel: '$2.99',
+      priceUsd: 2.99,
+      pkrEst: 850,
       description: 'Direct message introductions pack.',
       features: ['Direct Reachout']
     };
@@ -199,9 +199,9 @@ const getKnownProductMeta = (productId: string): ProductMeta => {
       name: `${productId.replace(/_/g, ' ')}`,
       badge: 'Profile Boost',
       category: 'spotlight',
-      priceLabel: '$0.99',
-      priceUsd: 0.99,
-      pkrEst: 275,
+      priceLabel: '$1.99',
+      priceUsd: 1.99,
+      pkrEst: 550,
       description: 'City Discover feed priority spotlight.',
       features: ['10x Views', 'City Spotlight']
     };
@@ -211,9 +211,9 @@ const getKnownProductMeta = (productId: string): ProductMeta => {
       name: `${productId.replace(/_/g, ' ')}`,
       badge: 'Subscription',
       category: 'subscription',
-      priceLabel: '$2.99 / mo',
-      priceUsd: 2.99,
-      pkrEst: 830,
+      priceLabel: '$4.99 / mo',
+      priceUsd: 4.99,
+      pkrEst: 1499,
       description: 'VIP Matrimonial membership.',
       features: ['VIP Access']
     };
@@ -759,10 +759,10 @@ export const SubscriptionsTab: React.FC<SubscriptionsTabProps> = ({
               <option value="salams">💌 All Direct Salam Passes</option>
               <option value="spotlight">🚀 All City Spotlight Boosts</option>
               <option disabled>────────── Specific SKUs ──────────</option>
-              <option value="exact:qurb_barakah_monthly">Qurb Barakah VIP Monthly ($2.99)</option>
-              <option value="exact:qurb_direct_salam_20">20 Direct Salam Passes ($1.99)</option>
+              <option value="exact:qurb_barakah_monthly">Qurb Barakah VIP Monthly ($4.99)</option>
+              <option value="exact:qurb_direct_salam_20">20 Direct Salam Passes ($2.99)</option>
               <option value="exact:qurb_direct_salam_5">5 Direct Salam Passes ($0.99)</option>
-              <option value="exact:qurb_spotlight_boost_24h">24-Hour City Spotlight Boost ($0.99)</option>
+              <option value="exact:qurb_spotlight_boost_24h">24-Hour City Spotlight Boost ($1.99)</option>
               <option value="exact:serene_barakah_monthly">Serene Barakah VIP (Legacy)</option>
             </select>
 

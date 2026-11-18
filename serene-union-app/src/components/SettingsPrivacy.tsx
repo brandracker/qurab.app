@@ -442,7 +442,7 @@ export const SettingsPrivacy: React.FC<Props> = ({
                     onClick={() => setShowUpgradeModal(true)}
                     className="bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200/80 dark:border-amber-900/40 text-[10px] font-bold px-2.5 py-1 rounded-full hover:bg-amber-100/80 dark:hover:bg-amber-900/50 transition-all active:scale-95"
                   >
-                    Boost ($0.99)
+                    Boost ($1.99)
                   </button>
                 )}
               </div>
@@ -494,7 +494,7 @@ export const SettingsPrivacy: React.FC<Props> = ({
                       {spotlightInfo.isSpotlightActive ? 'Boost Active' : 'City Spotlight'}
                     </strong>
                     <span className="text-[9px] text-secondary">
-                      {spotlightInfo.isSpotlightActive ? formatSpotlightRemaining(spotlightInfo.spotlightExpiresAt) : 'Rank #1 ($0.99)'}
+                      {spotlightInfo.isSpotlightActive ? formatSpotlightRemaining(spotlightInfo.spotlightExpiresAt) : 'Rank #1 ($1.99)'}
                     </span>
                   </div>
                 </button>
@@ -507,7 +507,7 @@ export const SettingsPrivacy: React.FC<Props> = ({
                   <Crown className="text-amber-600 dark:text-amber-400 w-4 h-4 shrink-0" />
                   <div>
                     <strong className="block text-[10px] text-primary">Barakah VIP</strong>
-                    <span className="text-[9px] text-secondary">20 Passes · PKR 830</span>
+                    <span className="text-[9px] text-secondary">Free Boost · PKR 1,499</span>
                   </div>
                 </button>
               </div>

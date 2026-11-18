@@ -1573,7 +1573,7 @@ export const DiscoverFeed: React.FC<Props> = ({
               </h3>
               <p className="text-xs text-secondary mt-1 leading-relaxed">
                 {likesRemaining <= 0 
-                  ? 'You have used your free likes quota. Watch a quick 15s sponsored ad to unlock +10 More Likes right now, or start a 7-day free trial of Barakah VIP for unlimited likes!'
+                  ? 'You have used your free likes quota. Watch a quick 15s sponsored ad to unlock +10 More Likes right now, or upgrade to Barakah VIP for unlimited likes & a Free 24h Boost!'
                   : 'Want more likes? Watch a quick 15s sponsored ad for +10 Extra Likes, or upgrade to VIP for unlimited likes.'}
               </p>
             </div>

@@ -240,11 +240,10 @@ export function useDiscoverFeed(options?: UseDiscoverFeedOptions) {
       localStorage.setItem('serene_filters_v2', JSON.stringify(newFilters));
     } catch {}
     const searchSummary = [
-      newFilters.practiceLevels?.length ? newFilters.practiceLevels.join('/') : '',
-      newFilters.sects?.length ? newFilters.sects.join('/') : '',
-      newFilters.minAge ? `${newFilters.minAge}-${newFilters.maxAge}` : ''
+      newFilters.minAge ? `${newFilters.minAge}-${newFilters.maxAge}` : '',
+      newFilters.maxDistance ? `${newFilters.maxDistance}km` : ''
     ].filter(Boolean).join(', ');
-    facebookEventsService.logSearch(searchSummary || 'all_candidates', 'matrimonial_candidate');
+    facebookEventsService.logSearch(searchSummary || 'all_profiles', 'user_profile');
 
     const updated = dbService.getDiscoverFeed(newFilters);
     setProfiles(updated);

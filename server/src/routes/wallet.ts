@@ -392,16 +392,23 @@ walletRouter.post('/purchase-google-play', async (c) => {
     }
 
     const isSubscription = (productId === 'qurb_barakah_monthly' || productId === 'serene_barakah_monthly');
-    // Treat as 7-Day Free Trial if explicitly flagged as trial/7d, OR if durationDays and amountCents are omitted (initial trial grant).
-    // Paid purchases with amountCents > 0 or isTrial === false default to 30 days.
+    // Only treat as 7-Day Free Trial when explicitly flagged as trial/7d or zero-amount trial.
+    // Direct paid purchases (or omitted amount/duration) default to 30 days at the updated pricing tier.
     const isFreeTrial = isSubscription && isTrial !== false && (
       isTrial === true ||
       durationDays === 7 ||
       durationDays === '7' ||
-      (!durationDays && !(Number(amountCents) > 0))
+      (amountCents !== undefined && Number(amountCents) === 0)
     );
     const resolvedDays = isFreeTrial ? 7 : (durationDays ? Number(durationDays) : 30);
-    const resolvedAmountCents = isFreeTrial ? 0 : (amountCents !== undefined ? Number(amountCents) : (isSubscription ? 299 : 99));
+    const defaultAmountCents = isSubscription
+      ? 499
+      : (productId === 'qurb_direct_salam_20' || productId === 'serene_direct_salam_20')
+        ? 299
+        : (productId === 'qurb_spotlight_boost_24h' || productId === 'serene_spotlight_boost_24h')
+          ? 199
+          : 99;
+    const resolvedAmountCents = isFreeTrial ? 0 : (amountCents !== undefined ? Number(amountCents) : defaultAmountCents);
 
     // Deduplication lock: prevent concurrent double-hits (e.g. onPurchaseCompleted listener + handleConfirmBilling within 15s)
     const purchaseLockKey = cleanOrderId || cleanToken || `${userId}_${productId}`;
@@ -484,14 +491,17 @@ walletRouter.post('/purchase-google-play', async (c) => {
       `).bind(userId, expiresAt, expiresAt).run();
     } else if (isSubscription) {
       expiryIso = calculateSubscriptionExpiry(resolvedDays);
+      const includedSpotlightExpiresAt = !isFreeTrial
+        ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+        : null;
 
       await c.env.DB.prepare(`
         UPDATE users SET is_vip = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?
       `).bind(userId).run();
 
       await c.env.DB.prepare(`
-        INSERT INTO user_wallets (user_id, subscription_tier, direct_salams_balance, daily_messages_quota, subscription_expiry)
-        VALUES (?, 'barakah_vip', 20, 9999, ?)
+        INSERT INTO user_wallets (user_id, subscription_tier, direct_salams_balance, daily_messages_quota, subscription_expiry, is_spotlight_active, spotlight_expires_at)
+        VALUES (?, 'barakah_vip', 20, 9999, ?, ?, ?)
         ON CONFLICT(user_id) DO UPDATE SET 
           subscription_tier = 'barakah_vip', 
           daily_messages_quota = 9999, 
@@ -503,8 +513,17 @@ walletRouter.post('/purchase-google-play', async (c) => {
           direct_salams_balance = CASE 
             WHEN user_wallets.subscription_tier = 'barakah_vip' AND (user_wallets.subscription_expiry IS NULL OR user_wallets.subscription_expiry > datetime('now')) THEN user_wallets.direct_salams_balance
             ELSE user_wallets.direct_salams_balance + 20
+          END,
+          is_spotlight_active = CASE
+            WHEN excluded.is_spotlight_active = 1 THEN 1
+            ELSE user_wallets.is_spotlight_active
+          END,
+          spotlight_expires_at = CASE
+            WHEN excluded.spotlight_expires_at IS NOT NULL AND (user_wallets.spotlight_expires_at IS NULL OR excluded.spotlight_expires_at > user_wallets.spotlight_expires_at)
+            THEN excluded.spotlight_expires_at
+            ELSE user_wallets.spotlight_expires_at
           END
-      `).bind(userId, expiryIso).run();
+      `).bind(userId, expiryIso, includedSpotlightExpiresAt ? 1 : 0, includedSpotlightExpiresAt).run();
     }
 
     return c.json({
@@ -515,6 +534,7 @@ walletRouter.post('/purchase-google-play', async (c) => {
       isTrial: isFreeTrial,
       daysGranted: resolvedDays,
       subscriptionExpiry: expiryIso,
+      spotlightBoostGranted: isSubscription && !isFreeTrial,
       alreadyCredited: false,
       directSalamsCredited: isSubscription || productId.includes('direct_salam') ? 20 : 0
     });
@@ -628,18 +648,18 @@ walletRouter.post('/stripe/create-checkout-session', async (c) => {
       return c.json({ success: false, error: 'userId and productId are required' }, 400);
     }
 
-    let unitAmount = 299; // $2.99
+    let unitAmount = 499; // $4.99
     let productName = 'Qurb Barakah VIP Club (Monthly)';
-    let productDesc = 'Unlimited likes, See Who Liked You, 20 Direct Salams, 100% Ad-Free & Priority discovery ranking.';
+    let productDesc = 'Free 24-Hour City Spotlight Boost, Unlimited likes, See Who Liked You, 20 Direct Salams, 100% Ad-Free & Priority discovery ranking.';
     let isSubscription = true;
 
     if (productId === 'qurb_spotlight_boost_24h' || productId === 'serene_spotlight_boost_24h') {
-      unitAmount = 99; // $0.99
+      unitAmount = 199; // $1.99
       productName = '24-Hour City Spotlight Boost';
       productDesc = 'Feature profile at #1 top spot in city Discover stream for 24 hours.';
       isSubscription = false;
     } else if (productId === 'qurb_direct_salam_20' || productId === 'serene_direct_salam_20' || productId === 'serene_direct_salam_5' || productId === 'qurb_direct_salam_5') {
-      unitAmount = 199; // $1.99
+      unitAmount = 299; // $2.99
       productName = '20 Direct Salam Passes';
       productDesc = 'Send 20 direct intro messages without waiting for mutual match.';
       isSubscription = false;
@@ -737,24 +757,31 @@ walletRouter.post('/stripe/verify-session', async (c) => {
         INSERT INTO in_app_purchases (id, user_id, platform, product_id, purchase_token, amount_cents, currency, status)
         VALUES (?, ?, 'stripe', ?, ?, ?, ?, 'completed')
         ON CONFLICT(id) DO NOTHING
-      `).bind(purchaseId, userId, productId, session.id, session.amount_total || 299, session.currency || 'usd').run();
+      `).bind(purchaseId, userId, productId, session.id, session.amount_total || 499, session.currency || 'usd').run();
 
       if (productId === 'qurb_barakah_monthly' || productId === 'serene_barakah_monthly') {
         const expiryIso = calculateSubscriptionExpiry(31);
+        const boostExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
         await c.env.DB.prepare(`
           UPDATE users SET is_vip = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?
         `).bind(userId).run();
 
         await c.env.DB.prepare(`
-          INSERT INTO user_wallets (user_id, subscription_tier, direct_salams_balance, daily_messages_quota, subscription_expiry)
-          VALUES (?, 'barakah_vip', 20, 9999, ?)
+          INSERT INTO user_wallets (user_id, subscription_tier, direct_salams_balance, daily_messages_quota, subscription_expiry, is_spotlight_active, spotlight_expires_at)
+          VALUES (?, 'barakah_vip', 20, 9999, ?, 1, ?)
           ON CONFLICT(user_id) DO UPDATE SET 
             subscription_tier = 'barakah_vip', 
             daily_messages_quota = 9999, 
             subscription_expiry = excluded.subscription_expiry,
-            direct_salams_balance = direct_salams_balance + 20
-        `).bind(userId, expiryIso).run();
+            direct_salams_balance = direct_salams_balance + 20,
+            is_spotlight_active = 1,
+            spotlight_expires_at = CASE
+              WHEN user_wallets.spotlight_expires_at IS NOT NULL AND user_wallets.spotlight_expires_at > excluded.spotlight_expires_at
+              THEN user_wallets.spotlight_expires_at
+              ELSE excluded.spotlight_expires_at
+            END
+        `).bind(userId, expiryIso, boostExpiresAt).run();
       } else if (productId === 'qurb_spotlight_boost_24h' || productId === 'serene_spotlight_boost_24h') {
         const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
         await c.env.DB.prepare(`
@@ -819,7 +846,7 @@ walletRouter.post('/google-play/webhook', async (c) => {
       }
 
       const purchase: any = await c.env.DB.prepare(
-        'SELECT user_id, product_id FROM in_app_purchases WHERE purchase_token = ? ORDER BY created_at DESC LIMIT 1'
+        'SELECT user_id, product_id, amount_cents FROM in_app_purchases WHERE purchase_token = ? ORDER BY created_at DESC LIMIT 1'
       ).bind(purchaseToken).first();
 
       const userId = purchase?.user_id;
@@ -851,10 +878,11 @@ walletRouter.post('/google-play/webhook', async (c) => {
           }
         } else if (notificationType === 2 || notificationType === 1 || notificationType === 4 || notificationType === 7) {
           // Google Play RTDN event handling:
-          // 4 = SUBSCRIPTION_PURCHASED -> Initial 7-Day Free Trial
-          // 2 = SUBSCRIPTION_RENEWED -> 30-Day Monthly renewal after trial ends
+          // 4 = SUBSCRIPTION_PURCHASED -> 30-Day Paid Subscription (or 7-Day if legacy zero-amount trial record)
+          // 2 = SUBSCRIPTION_RENEWED -> 30-Day Monthly renewal
           // 1 = RECOVERED, 7 = RESTARTED -> 30-Day Paid access
-          const daysGranted = (notificationType === 4) ? 7 : 30;
+          const isLegacyZeroTrial = (notificationType === 4 && purchase?.amount_cents === 0);
+          const daysGranted = isLegacyZeroTrial ? 7 : 30;
           const newExpiry = calculateSubscriptionExpiry(daysGranted);
           await c.env.DB.prepare("UPDATE users SET is_vip = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(userId).run();
           await c.env.DB.prepare(`

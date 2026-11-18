@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  X, 
-  Gift, 
-  Copy, 
-  Check, 
-  Users, 
-  Crown, 
-  ShieldCheck, 
-  Clock, 
-  CheckCircle2, 
+import {
+  X,
+  Gift,
+  Copy,
+  Check,
+  Users,
+  Crown,
+  ShieldCheck,
+  Clock,
+  CheckCircle2,
   MessageCircle
 } from 'lucide-react';
 import { referralService, type ReferralStats, type ReferredFriend } from '../services/referralService';
@@ -67,7 +67,7 @@ export const ReferralHubModal: React.FC<Props> = ({
   };
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
       role="dialog"
       aria-modal="true"
@@ -97,38 +97,35 @@ export const ReferralHubModal: React.FC<Props> = ({
           </h2>
 
           <p className="text-xs sm:text-sm text-emerald-100/90 mt-1.5 leading-relaxed">
-            Invite <strong className="text-amber-300 font-bold">{target} genuine users</strong> to complete their matrimony profile and enjoy <strong className="text-white font-bold">1 Month Barakah VIP ($2.99 value) 100% Free!</strong>
+            Invite <strong className="text-amber-300 font-bold">{target} genuine users</strong> to complete their matrimony profile and enjoy <strong className="text-white font-bold">1 Month Barakah VIP ($4.99 value) 100% Free!</strong>
           </p>
 
           {/* Quick Sub-tabs */}
           <div className="flex items-center gap-1.5 mt-4 bg-emerald-950/40 p-1 rounded-2xl border border-white/10 text-xs">
             <button
               onClick={() => setActiveTab('progress')}
-              className={`flex-1 py-1.5 rounded-xl font-medium transition-all ${
-                activeTab === 'progress' 
-                  ? 'bg-white text-emerald-900 shadow-sm font-bold' 
-                  : 'text-emerald-100 hover:text-white'
-              }`}
+              className={`flex-1 py-1.5 rounded-xl font-medium transition-all ${activeTab === 'progress'
+                ? 'bg-white text-emerald-900 shadow-sm font-bold'
+                : 'text-emerald-100 hover:text-white'
+                }`}
             >
               Progress ({completed}/{target})
             </button>
             <button
               onClick={() => setActiveTab('friends')}
-              className={`flex-1 py-1.5 rounded-xl font-medium transition-all ${
-                activeTab === 'friends' 
-                  ? 'bg-white text-emerald-900 shadow-sm font-bold' 
-                  : 'text-emerald-100 hover:text-white'
-              }`}
+              className={`flex-1 py-1.5 rounded-xl font-medium transition-all ${activeTab === 'friends'
+                ? 'bg-white text-emerald-900 shadow-sm font-bold'
+                : 'text-emerald-100 hover:text-white'
+                }`}
             >
               Invited Friends ({friends.length})
             </button>
             <button
               onClick={() => setActiveTab('rules')}
-              className={`flex-1 py-1.5 rounded-xl font-medium transition-all ${
-                activeTab === 'rules' 
-                  ? 'bg-white text-emerald-900 shadow-sm font-bold' 
-                  : 'text-emerald-100 hover:text-white'
-              }`}
+              className={`flex-1 py-1.5 rounded-xl font-medium transition-all ${activeTab === 'rules'
+                ? 'bg-white text-emerald-900 shadow-sm font-bold'
+                : 'text-emerald-100 hover:text-white'
+                }`}
             >
               Fair Rules & Anti-Fraud
             </button>
@@ -145,16 +142,14 @@ export const ReferralHubModal: React.FC<Props> = ({
           ) : activeTab === 'progress' ? (
             <>
               {/* STATUS CARD */}
-              <div className={`p-4 rounded-3xl border transition-all ${
-                isUnlocked 
-                  ? 'bg-gradient-to-r from-amber-50 to-amber-100/70 border-amber-300 shadow-sm' 
-                  : 'bg-white border-outline/70 shadow-xs'
-              }`}>
+              <div className={`p-4 rounded-3xl border transition-all ${isUnlocked
+                ? 'bg-gradient-to-r from-amber-50 to-amber-100/70 border-amber-300 shadow-sm'
+                : 'bg-white border-outline/70 shadow-xs'
+                }`}>
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <div className={`w-9 h-9 rounded-2xl flex items-center justify-center ${
-                      isUnlocked ? 'bg-amber-500 text-white shadow-xs' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                    }`}>
+                    <div className={`w-9 h-9 rounded-2xl flex items-center justify-center ${isUnlocked ? 'bg-amber-500 text-white shadow-xs' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                      }`}>
                       {isUnlocked ? <Crown className="w-5 h-5 fill-white" /> : <Users className="w-5 h-5" />}
                     </div>
                     <div>
@@ -162,8 +157,8 @@ export const ReferralHubModal: React.FC<Props> = ({
                         {isUnlocked ? '🎉 Reward Achieved!' : 'Your Live Milestone'}
                       </h3>
                       <p className="text-[11px] text-secondary">
-                        {isUnlocked 
-                          ? '1 Month Barakah VIP Membership is Active on your account!' 
+                        {isUnlocked
+                          ? '1 Month Barakah VIP Membership is Active on your account!'
                           : `${target - completed} more verified friend${(target - completed) === 1 ? '' : 's'} needed`}
                       </p>
                     </div>
@@ -176,10 +171,9 @@ export const ReferralHubModal: React.FC<Props> = ({
 
                 {/* Progress Bar */}
                 <div className="w-full bg-stone-100 h-3 rounded-full overflow-hidden border border-outline/30 relative">
-                  <div 
-                    className={`h-full transition-all duration-700 rounded-full ${
-                      isUnlocked ? 'bg-gradient-to-r from-amber-400 to-amber-500' : 'bg-gradient-to-r from-emerald-500 to-teal-600'
-                    }`}
+                  <div
+                    className={`h-full transition-all duration-700 rounded-full ${isUnlocked ? 'bg-gradient-to-r from-amber-400 to-amber-500' : 'bg-gradient-to-r from-emerald-500 to-teal-600'
+                      }`}
                     style={{ width: `${percent}%` }}
                   />
                 </div>
@@ -213,11 +207,10 @@ export const ReferralHubModal: React.FC<Props> = ({
 
                   <button
                     onClick={handleCopy}
-                    className={`px-4 py-2.5 rounded-2xl border text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs shrink-0 ${
-                      copied 
-                        ? 'bg-emerald-50 border-emerald-300 text-emerald-700' 
-                        : 'bg-white border-outline hover:bg-stone-50 text-on-surface'
-                    }`}
+                    className={`px-4 py-2.5 rounded-2xl border text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs shrink-0 ${copied
+                      ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                      : 'bg-white border-outline hover:bg-stone-50 text-on-surface'
+                      }`}
                   >
                     {copied ? (
                       <>
@@ -310,18 +303,17 @@ export const ReferralHubModal: React.FC<Props> = ({
                     const isDisqualified = friend.status === 'disqualified';
 
                     return (
-                      <div 
-                        key={friend.id} 
+                      <div
+                        key={friend.id}
                         className="bg-white p-3 rounded-2xl border border-outline/60 flex items-center justify-between shadow-xs"
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                            isVerified 
-                              ? 'bg-emerald-100 text-emerald-800' 
-                              : isDisqualified 
-                                ? 'bg-rose-100 text-rose-800' 
-                                : 'bg-amber-100 text-amber-800'
-                          }`}>
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${isVerified
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : isDisqualified
+                              ? 'bg-rose-100 text-rose-800'
+                              : 'bg-amber-100 text-amber-800'
+                            }`}>
                             {friend.name.charAt(0)}
                           </div>
                           <div className="min-w-0">

@@ -133,14 +133,14 @@ jobs:
         continue-on-error: true
         with:
           fail_on_unmatched_files: false
-          tag_name: v1.0.55
-          name: "Qurb v1.0.55 (Build 56 - Pre-Phase-3 Auth Headers, FCM Match Push & Full Hardening)"
+          tag_name: v1.0.56
+          name: "Qurb v1.0.56 (Build 57 - Direct Meta Audience Network Ads, VIP Boost Bundle & Direct Paid Pricing)"
           body: |
-            ### Qurb Matrimony v1.0.55 (Build 56)
-            - **Pre-Phase-3 Auth & Identity Readiness**: Added global `Authorization: Bearer <sessionToken>` (`authFetch`) and WebSocket `token` injection (`withAuthWsUrl`) across services, calling, and chat channels; added verifiable Google/Firebase `idToken` forwarding on AuthScreen and automatic session token backfill on heartbeat.
-            - **Android Native Security & Battery**: Restricted `FLAG_KEEP_SCREEN_ON`, `showWhenLocked`, and `turnScreenOn` exclusively to incoming calls; added origin checks to WebView `onPermissionRequest` (`localhost`, `qurb.app`, `*.qurb.app`), `escapeJsString` sanitization on deep-link `evaluateJavascript` calls, and call rejection dispatch in `CallDismissReceiver`.
-            - **App Core, Navigation & Calling Reliability**: Fixed React Rules of Hooks in `App.tsx` and `AdminPortal.tsx`, merged duplicate user WebSockets (`incoming_call` + `call_ended`), fixed hardware Back button listener leak and `YourIntentScreen` sub-step back navigation, mapped `'profile'` tab to `'my_profile'`, stabilized global chat sync poll ref, enhanced logout cleanup, fixed push click tracking, and guarded WebRTC connection fallback timer against terminal ICE states.
-            - **Billing, Modesty Blur & Onboarding**: Stopped `restorePurchases` from overwriting paid subscriptions with a 7-day trial, aligned `/wallet/use-direct-salam`, enforced `!isVip` tap guard on Liked You, removed synthetic `fallbackSeed` photo injection, applied `blur(12px)` on Sent Likes avatars, and fixed age validation, calendar day clamping, dynamic birth years, Step 5 photo upload race (12s timeout), edit-mode phone/photo bugs, date-scoped like priority, and leftover `"Wali"` copy.
+            ### Qurb Matrimony v1.0.56 (Build 57)
+            - **Direct Meta Audience Network Monetization**: Replaced Google AdMob rewarded videos with Meta Audience Network SDK (`6.18.0`), native `MetaAdsPlugin.java`, and `metaAdsService.ts` wired to live placement `2431468010959063_2431468194292378`.
+            - **Direct Paid Conversion Pricing (7-Day Trial Removed)**: Removed 7-day free trial flow in UI, `GooglePlayBillingPlugin` (`preferTrial` defaults to `false`), and backend RTDN webhook defaults (`SUBSCRIPTION_PURCHASED` grants 30 days for paid subscriptions while honoring legacy zero-amount trials). Updated prices to $4.99/mo (PKR 1,499) for Barakah VIP, $2.99 (PKR 850) for 20 Direct Salams, and $1.99 (PKR 550) for 24h City Spotlight Boost.
+            - **VIP + Free 24h City Spotlight Boost Bundle**: Purchasing Barakah VIP automatically activates a 24-hour City Spotlight Boost on Google Play and Stripe.
+            - **Meta Events Privacy Cleanup**: Removed religious filter parameters (`practiceLevels`, `sects`, `barakah_vip`, `direct_salam`) from `facebookEventsService` and `useDiscoverFeed` search logs to resolve EU GDPR diagnostics warnings.
             - **app-release.apk**: Production Signed APK for direct device installation & testing.
             - **app-release.aab**: Production Signed Android App Bundle (.aab) ready for Google Play Console submission.
           files: |

@@ -736,9 +736,9 @@ const MainUserApp: React.FC = () => {
         .then(res => res.json())
         .then(data => {
           if (data.success && data.fulfilled) {
-            setStripeSuccessNotice('Barakah VIP Activated! Unlimited likes & VIP features are now active.');
-            facebookEventsService.logSubscribe('barakah_vip', 2.99, 'USD');
-            facebookEventsService.logPurchase(2.99, 'USD', 'qurb_barakah_monthly');
+            setStripeSuccessNotice('Barakah VIP Activated! Free 24h Spotlight Boost & VIP features are now active.');
+            facebookEventsService.logSubscribe('vip_monthly', 4.99, 'USD');
+            facebookEventsService.logPurchase(4.99, 'USD', 'qurb_barakah_monthly');
             const uid = data.userId || currentUser.id;
             if (uid) {
               localStorage.setItem(`serene_vip_${uid}`, 'true');

@@ -38,7 +38,7 @@ export const TrialPromoModal: React.FC<TrialPromoModalProps> = ({
         <button
           onClick={onClose}
           type="button"
-          aria-label="Close 7-day trial promo"
+          aria-label="Close VIP upgrade promo"
           className="absolute top-3 right-3 z-30 w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 border border-white/20 backdrop-blur-md flex items-center justify-center text-white/90 hover:text-white transition-all cursor-pointer shadow-lg active:scale-90"
         >
           <X className="w-4 h-4 stroke-[2.5]" />
@@ -48,7 +48,7 @@ export const TrialPromoModal: React.FC<TrialPromoModalProps> = ({
         <div className="relative w-full h-44 bg-gradient-to-b from-emerald-950 via-stone-900 to-neutral-900 overflow-hidden flex items-center justify-center">
           <img
             src="/trial_promo_banner.jpg"
-            alt="7-Day Free Trial Qurb Barakah VIP"
+            alt="Qurb Barakah VIP + Free 24h Boost"
             className="w-full h-full object-cover object-center"
             onError={(e) => {
               // Graceful fallback if image fails to load
@@ -69,13 +69,13 @@ export const TrialPromoModal: React.FC<TrialPromoModalProps> = ({
           <div>
             <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/40 text-[10px] font-bold text-amber-300 font-mono uppercase tracking-wider mb-1.5">
               <Crown className="w-3 h-3 text-amber-300" />
-              <span>Special Matrimony Gift</span>
+              <span>VIP + Free 24h Boost</span>
             </div>
             <h3 id="trial-promo-title" className="font-serif text-xl font-bold text-white tracking-tight leading-tight">
-              Start Your 7-Day Free Trial
+              Unlock Barakah VIP &amp; 10x Views
             </h3>
             <p className="text-xs text-neutral-300 mt-1 leading-relaxed">
-              Experience the full power of <strong className="text-amber-300">Qurb Barakah VIP Club</strong> with 7 days 100% free. Find your righteous spouse with premium privileges.
+              Get instant <strong className="text-amber-300">24-Hour City Spotlight Boost</strong> included free with <strong className="text-amber-300">Qurb Barakah VIP Club</strong> to get noticed first.
             </p>
           </div>
 
@@ -85,14 +85,14 @@ export const TrialPromoModal: React.FC<TrialPromoModalProps> = ({
               <div className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
                 <CheckCircle2 className="w-3.5 h-3.5" />
               </div>
-              <span className="flex-1"><strong>Unlimited Daily Likes</strong> (No swipe limits)</span>
+              <span className="flex-1"><strong>Free 24h City Spotlight Boost</strong> (#1 Top Spot)</span>
             </div>
 
             <div className="flex items-center gap-2.5 text-xs text-neutral-200">
               <div className="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
                 <RotateCcw className="w-3.5 h-3.5" />
               </div>
-              <span className="flex-1"><strong>Unlimited Undo / Rewind</strong> passed profiles</span>
+              <span className="flex-1"><strong>Unlimited Likes &amp; Rewind</strong> passed profiles</span>
             </div>
 
             <div className="flex items-center gap-2.5 text-xs text-neutral-200">
@@ -114,7 +114,7 @@ export const TrialPromoModal: React.FC<TrialPromoModalProps> = ({
           <div className="flex items-center justify-between px-1 text-[11px] text-neutral-400">
             <span className="flex items-center gap-1">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-              <span>PKR 0 today · 7 days free</span>
+              <span>$4.99 / mo · PKR 1,499</span>
             </span>
             <span className="text-amber-300 font-medium">Cancel anytime</span>
           </div>
@@ -130,7 +130,7 @@ export const TrialPromoModal: React.FC<TrialPromoModalProps> = ({
               className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 via-rose-500 to-primary text-white font-bold text-xs tracking-wide shadow-lg shadow-rose-900/40 hover:opacity-95 active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer border border-amber-300/30"
             >
               <Crown className="w-4 h-4 text-amber-200" />
-              <span>Claim 7-Day Free Trial</span>
+              <span>Unlock Barakah VIP ($4.99/mo)</span>
               <ArrowRight className="w-3.5 h-3.5 text-white/90" />
             </button>
 

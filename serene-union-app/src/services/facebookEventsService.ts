@@ -67,13 +67,13 @@ class FacebookEventsService {
 
   /**
    * 3. View Content
-   * Triggered when candidate biodata is viewed
+   * Triggered when candidate profile is viewed
    */
   async logViewContent(contentId: string, candidateName: string = ''): Promise<void> {
     await this.logEvent('fb_mobile_content_view', {
       fb_content_id: contentId,
-      fb_content_type: 'matrimonial_candidate',
-      candidate_name: candidateName
+      fb_content_type: 'user_profile',
+      profile_name: candidateName
     });
   }
 
@@ -93,12 +93,13 @@ class FacebookEventsService {
 
   /**
    * 5. Subscribe
-   * Triggered when member activates Barakah VIP Club
+   * Triggered when member activates VIP Membership
    */
-  async logSubscribe(tier: string = 'barakah_vip', price: number = 29.99, currency: string = 'USD'): Promise<void> {
+  async logSubscribe(tier: string = 'vip_monthly', price: number = 4.99, currency: string = 'USD'): Promise<void> {
+    const safeTier = tier === 'barakah_vip' ? 'vip_monthly' : tier;
     await this.logEvent('Subscribe', {
-      fb_content_id: tier,
-      tier_name: 'Barakah VIP',
+      fb_content_id: safeTier,
+      tier_name: 'Qurb VIP',
       value: price,
       currency
     });
@@ -125,23 +126,24 @@ class FacebookEventsService {
   }
 
   /**
-   * 7. Spend Credits (e.g. Sent Direct Salam / Complimentary compliment)
+   * 7. Spend Credits (e.g. Sent Direct Message / Complimentary intro)
    */
-  async logSpendCredits(creditsAmount: number = 1, purpose: string = 'direct_salam'): Promise<void> {
+  async logSpendCredits(creditsAmount: number = 1, purpose: string = 'direct_message'): Promise<void> {
+    const safePurpose = purpose === 'direct_salam' ? 'direct_message' : purpose;
     await this.logEvent('fb_mobile_spent_credits', {
       fb_value_to_sum: creditsAmount,
-      fb_content_type: purpose
+      fb_content_type: safePurpose
     });
   }
 
   /**
-   * 8. Contact / Direct Salam
-   * Triggered when user sends a Direct Salam to a candidate
+   * 8. Contact / Direct Intro
+   * Triggered when user sends a Direct Intro to a profile
    */
   async logContact(candidateId: string): Promise<void> {
     await this.logEvent('Contact', {
       fb_content_id: candidateId,
-      method: 'direct_salam'
+      method: 'direct_message'
     });
   }
 }

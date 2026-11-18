@@ -98,20 +98,20 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
     {
       id: 'qurb_barakah_monthly',
       title: 'Qurb Barakah VIP Club',
-      tag: '7-Day Free Trial',
-      price: '$2.99 / mo',
-      localPrice: 'PKR 0 today · then PKR 830/mo',
-      description: 'Start with 7 days 100% free: Unlimited likes, Unlimited Undo / Rewind, See Who Liked You, 20 Direct Salams, Zero Ads & Top Priority.',
+      tag: 'Free 24h Boost',
+      price: '$4.99 / mo',
+      localPrice: 'PKR 1,499 / month',
+      description: 'Includes Free 24-Hour City Spotlight Boost (10x Views), Unlimited likes, Unlimited Undo / Rewind, See Who Liked You, 20 Direct Salams & Zero Ads.',
       Icon: Crown,
       isSubscription: true,
-      hasFreeTrial: true
+      hasFreeTrial: false
     },
     {
       id: 'qurb_direct_salam_20',
       title: '20 Direct Salam Passes',
       tag: 'Instant Connect',
-      price: '$1.99',
-      localPrice: 'PKR 550 (20 Passes)',
+      price: '$2.99',
+      localPrice: 'PKR 850 (20 Passes)',
       description: 'Send 20 direct intro messages to candidates without waiting for a mutual match.',
       Icon: Send,
       isSubscription: false
@@ -120,8 +120,8 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
       id: 'qurb_spotlight_boost_24h',
       title: '24-Hour City Spotlight Boost',
       tag: '10x Views',
-      price: '$0.99',
-      localPrice: 'PKR 275 (24 Hours)',
+      price: '$1.99',
+      localPrice: 'PKR 550 (24 Hours)',
       description: 'Feature your profile at the #1 top spot in your city’s Discover stream for 24 hours.',
       Icon: TrendingUp,
       isSubscription: false
@@ -129,7 +129,7 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
   ];
 
   const currentItem = products.find(p => p.id === selectedProduct)!;
-  const currentPriceVal = currentItem.id === 'qurb_barakah_monthly' ? 2.99 : (currentItem.id === 'qurb_direct_salam_20' ? 1.99 : 0.99);
+  const currentPriceVal = currentItem.id === 'qurb_barakah_monthly' ? 4.99 : (currentItem.id === 'qurb_direct_salam_20' ? 2.99 : 1.99);
 
   const handleInitiatePurchase = async () => {
     facebookEventsService.logInitiateCheckout(currentItem.id, currentPriceVal, 'USD');
@@ -244,10 +244,10 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
           productId: currentItem.id,
           purchaseToken,
           orderId,
-          amountCents: currentItem.hasFreeTrial ? 0 : (currentItem.id === 'serene_barakah_monthly' || currentItem.id === 'qurb_barakah_monthly' ? 299 : 99),
+          amountCents: Math.round(currentPriceVal * 100),
           currency: 'USD',
-          isTrial: Boolean(currentItem.hasFreeTrial),
-          durationDays: currentItem.hasFreeTrial ? 7 : 30
+          isTrial: false,
+          durationDays: 30
         })
       });
 
@@ -533,7 +533,7 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
                   {isProcessing
                     ? 'Connecting to Google...'
                     : currentItem.isSubscription
-                      ? 'Start 7-Day Free Trial ($0 Today)'
+                      ? 'Upgrade to Barakah VIP ($4.99/mo)'
                       : Capacitor.isNativePlatform()
                         ? `Google Play 1-Tap Buy (${currentItem.price})`
                         : `Pay with Google Pay (${currentItem.price})`
@@ -544,7 +544,7 @@ export const MembershipUpgradeModal: React.FC<Props> = ({
                 <Lock className="w-3 h-3 text-emerald-600 shrink-0 inline" />
                 <span>
                   {currentItem.isSubscription
-                    ? '7 days 100% free · Then PKR 830/month · Cancel anytime in Google Play Subscriptions'
+                    ? 'PKR 1,499/month · Includes Free 24h Boost · Cancel anytime in Google Play Subscriptions'
                     : 'Instant activation · 256-bit encrypted secure checkout via Google'}
                 </span>
               </p>

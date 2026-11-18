@@ -490,11 +490,11 @@ describe('Wallet, In-App Purchases & Rewarded Ads API Integration Tests', () => 
     expect(checkData.wallet.dailyLikesQuota).toBe(60);
   });
 
-  it('21. POST /api/wallet/purchase-google-play records GPA order ID and activates 7-day trial', async () => {
+  it('21. POST /api/wallet/purchase-google-play records GPA order ID, activates 30-day paid VIP and Free 24h Spotlight Boost', async () => {
     const payload = {
-      userId: 'usr_trial_gpa_user',
+      userId: 'usr_paid_gpa_user',
       productId: 'qurb_barakah_monthly',
-      purchaseToken: 'gp_token_gpa_trial',
+      purchaseToken: 'gp_token_gpa_paid',
       orderId: 'GPA.3393-0422-6807-92094'
     };
 
@@ -508,55 +508,58 @@ describe('Wallet, In-App Purchases & Rewarded Ads API Integration Tests', () => 
     const data: any = await res.json();
     expect(data.success).toBe(true);
     expect(data.purchaseId).toBe('GPA.3393-0422-6807-92094');
-    expect(data.isTrial).toBe(true);
-    expect(data.daysGranted).toBe(7);
+    expect(data.isTrial).toBe(false);
+    expect(data.daysGranted).toBe(30);
+    expect(data.spotlightBoostGranted).toBe(true);
 
-    // Verify wallet reflects 7 days remaining
-    const getRes = await app.request('/api/wallet/usr_trial_gpa_user', { method: 'GET' }, env);
+    // Verify wallet reflects 30 days remaining and active 24h spotlight boost
+    const getRes = await app.request('/api/wallet/usr_paid_gpa_user', { method: 'GET' }, env);
     const getData = await getRes.json();
     expect(getData.wallet.isVip).toBe(true);
-    expect(getData.wallet.daysRemaining).toBeLessThanOrEqual(7);
+    expect(getData.wallet.daysRemaining).toBeGreaterThanOrEqual(29);
+    expect(getData.wallet.isSpotlightActive).toBe(true);
   });
 
-  it('22. Google Play RTDN Webhook type 4 grants 7-day trial and type 2 grants 30-day renewal', async () => {
-    // 0. Initial baseline purchase
+  it('22. Google Play RTDN Webhook type 4 grants 30-day paid VIP (or 7-day for legacy zero-amount trial) and type 2 grants 30-day renewal', async () => {
+    // 0. Initial paid purchase (no trial)
     await app.request('/api/wallet/purchase-google-play', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         userId: 'usr_test_wallet_1',
         productId: 'qurb_barakah_monthly',
-        purchaseToken: 'gp_token_gpa_trial',
-        orderId: 'GPA.3393-0422-6807-92094'
+        purchaseToken: 'gp_token_gpa_paid_rtdn',
+        orderId: 'GPA.3393-0422-6807-92095',
+        amountCents: 499
       })
     }, env);
 
-    // 1. Initial trial purchase notificationType 4
-    const pubsubTrial = {
+    // 1. Initial purchase notificationType 4 -> 30 days
+    const pubsubPaid = {
       message: {
         data: Buffer.from(JSON.stringify({
           version: '1.0',
           packageName: 'app.qurb.serene',
           subscriptionNotification: {
             notificationType: 4,
-            purchaseToken: 'gp_token_gpa_trial',
+            purchaseToken: 'gp_token_gpa_paid_rtdn',
             subscriptionId: 'qurb_barakah_monthly'
           }
         })).toString('base64')
       }
     };
 
-    const trialRes = await app.request('/api/wallet/google-play/webhook', {
+    const paidRes = await app.request('/api/wallet/google-play/webhook', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(pubsubTrial)
+      body: JSON.stringify(pubsubPaid)
     }, env);
-    expect(trialRes.status).toBe(200);
+    expect(paidRes.status).toBe(200);
 
     let check = await app.request('/api/wallet/usr_test_wallet_1', { method: 'GET' }, env);
     let checkData = await check.json();
     expect(checkData.wallet.isVip).toBe(true);
-    expect(checkData.wallet.daysRemaining).toBeLessThanOrEqual(7);
+    expect(checkData.wallet.daysRemaining).toBeGreaterThanOrEqual(29);
 
     // 2. Renewal notificationType 2
     const pubsubRenew = {
@@ -566,7 +569,7 @@ describe('Wallet, In-App Purchases & Rewarded Ads API Integration Tests', () => 
           packageName: 'app.qurb.serene',
           subscriptionNotification: {
             notificationType: 2,
-            purchaseToken: 'gp_token_gpa_trial',
+            purchaseToken: 'gp_token_gpa_paid_rtdn',
             subscriptionId: 'qurb_barakah_monthly'
           }
         })).toString('base64')
